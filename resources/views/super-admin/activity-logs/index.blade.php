@@ -50,12 +50,12 @@
             @endif
         </header>
 
-        <form action="{{ route('management.activity-logs.index') }}" method="GET" class="grid gap-x-4 gap-y-4 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-4">
+        <form action="{{ route('management.activity-logs.index') }}" method="GET" class="grid gap-x-4 gap-y-4 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-4" x-data>
             <label class="form-control sm:col-span-2 xl:col-span-2">
                 <span class="mb-2 block text-xs font-semibold text-slate-600 dark:text-slate-300">{{ __('Search activities') }}</span>
                 <div class="relative">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m2.1-5.4a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z" /></svg>
-                    <input type="search" name="search" value="{{ $filters['search'] ?? '' }}" class="input input-bordered w-full ps-10" placeholder="{{ __('User, model, route, or description') }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="pointer-events-none absolute end-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35m2.1-5.4a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z" /></svg>
+                    <input type="search" name="search" value="{{ $filters['search'] ?? '' }}" class="input input-bordered w-full" placeholder="{{ __('User, model, route, or description') }}">
                 </div>
             </label>
 
@@ -101,12 +101,12 @@
 
             <div class="form-control">
                 <span class="mb-2 block text-xs font-semibold text-slate-600 dark:text-slate-300">{{ __('From date') }}</span>
-                <x-date-picker name="date_from" id="date_from" title="" :value="$dateFromValue" :placeholder="__('Select date')" />
+                <x-date-picker name="date_from" id="date_from" title="" :value="$dateFromValue" :placeholder="__('Select date')" x-bind:readonly="true" />
             </div>
 
             <div class="form-control">
                 <span class="mb-2 block text-xs font-semibold text-slate-600 dark:text-slate-300">{{ __('To date') }}</span>
-                <x-date-picker name="date_to" id="date_to" title="" :value="$dateToValue" :placeholder="__('Select date')" />
+                <x-date-picker name="date_to" id="date_to" title="" :value="$dateToValue" :placeholder="__('Select date')" x-bind:readonly="true" />
             </div>
 
             <div class="grid grid-cols-2 gap-2 sm:col-span-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end xl:col-span-4">
