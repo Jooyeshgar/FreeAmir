@@ -63,7 +63,7 @@
 
         <section class="space-y-4">
             @if ((auth()->user()->can('budgets.store') && auth()->user()->can('budgets.search-subjects')) || $hasOverlappingForecasts)
-                <div role="alert" class="alert alert-warning border border-warning/30 bg-warning/10 text-sm">
+                <div role="alert" class="alert alert-warning border border-warning/30 bg-warning/10 text-sm text-amber-900 dark:text-slate-100">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.6 2.7 17.2A2 2 0 0 0 4.4 20h15.2a2 2 0 0 0 1.7-2.8L13.7 3.6a2 2 0 0 0-3.4 0Z" />
                     </svg>

@@ -153,6 +153,22 @@ class CostIncomeDashboardTest extends TestCase
         ], collect($summary)->only(['totalIncome', 'totalCost', 'profit', 'margin', 'incomeBreakdown', 'costBreakdown'])->all());
     }
 
+    public function test_approved_subject_sum_includes_transactions_on_the_root_and_its_descendants(): void
+    {
+        $root = $this->nonPermanentSubject('Approved hierarchy root', SubjectType::CREDITOR);
+        $child = $this->childSubject($root, 'Approved hierarchy child', SubjectType::CREDITOR);
+
+        $this->transaction($root->id, 700);
+        $this->transaction($child->id, 300);
+        $this->transaction($root->id, 500, approved: false);
+
+        $subjectService = new SubjectService;
+
+        $this->assertSame(1000.0, SubjectService::sumSubject($root, approvedOnly: true));
+        $this->assertSame(1500, $subjectService->sumSubjectWithDateRange($root)[1]);
+        $this->assertSame(1000, $subjectService->sumApprovedSubjectWithDateRange($root)[1]);
+    }
+
     public function test_summary_excludes_permanent_subjects(): void
     {
         $income = $this->nonPermanentSubject('Service revenue');

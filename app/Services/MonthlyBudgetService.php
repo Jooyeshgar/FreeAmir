@@ -300,19 +300,18 @@ class MonthlyBudgetService
                     $appliedForecastCache
                 );
 
-            if ($budget) {
-                $systemIncomeForecast = 0.0;
-                $systemExpenseForecast = 0.0;
-                $forecast = $manualForecast;
-                $source = 'manual';
-            } else {
-                $forecast = $systemForecast;
-                $systemIncomeForecast = $type === 'income' ? $systemForecast : 0.0;
-                $systemExpenseForecast = $type === 'expense' ? $systemForecast : 0.0;
-                $source = 'system';
+            $forecast = $budget ? $manualForecast : $systemForecast;
+            $source = $budget ? 'manual' : 'system';
+
+            // With no amount to classify, show the configured normal balance instead of an unrelated historical direction.
+            if ($hasDocuments && $forecast == 0.0 && $rawCurrentBalance == 0.0) {
+                $type = $this->directionFromSubjectType($subject, $type);
             }
 
-            // The annual balance determines the bucket, while the monthly balance keeps its accounting sign.
+            $systemIncomeForecast = ! $budget && $type === 'income' ? $systemForecast : 0.0;
+            $systemExpenseForecast = ! $budget && $type === 'expense' ? $systemForecast : 0.0;
+
+            // The resolved direction determines the bucket, while the monthly balance keeps its accounting sign.
             $actual = $hasDocuments ? $currentBalance : null;
             $variance = is_null($actual) ? null : $actual - $forecast;
             $forecastMagnitude = $forecast < 0 ? -1 * $forecast : $forecast;
@@ -532,6 +531,16 @@ class MonthlyBudgetService
         }
 
         return $subject->type === SubjectType::DEBTOR ? 'expense' : 'income';
+    }
+
+    /** Map a single-direction normal balance; a BOTH subject keeps its previously resolved direction. */
+    private function directionFromSubjectType(Subject $subject, string $fallbackDirection): string
+    {
+        return match ($subject->type) {
+            SubjectType::DEBTOR => 'expense',
+            SubjectType::CREDITOR => 'income',
+            SubjectType::BOTH => $fallbackDirection,
+        };
     }
 
     private function monthIsCompleted(int $month): bool

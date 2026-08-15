@@ -77,7 +77,17 @@ class SubjectService
         return $this->buildSubjectTreeFromCollection($subjects);
     }
 
-    public function sumSubjectWithDateRange(?Subject $subject, bool $approvedOnly = false)
+    public function sumSubjectWithDateRange(?Subject $subject)
+    {
+        return $this->sumSubjectWithDateRangeQuery($subject, false);
+    }
+
+    public function sumApprovedSubjectWithDateRange(?Subject $subject)
+    {
+        return $this->sumSubjectWithDateRangeQuery($subject, true);
+    }
+
+    private function sumSubjectWithDateRangeQuery(?Subject $subject, bool $approvedOnly)
     {
         if (is_null($subject)) {
             return [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0, 6 => 0, 7 => 0, 8 => 0, 9 => 0, 10 => 0, 11 => 0, 12 => 0];
@@ -100,7 +110,7 @@ class SubjectService
             12 => [1, jcheckdate(12, 30, $year) ? 30 : 29],
         ];
 
-        $subjectIds = $subject->getAllDescendantIds();
+        $subjectIds = self::subjectAndDescendantIds($subject);
         $transactionQuery = Transaction::query()->whereIn('subject_id', $subjectIds);
         $monthlySum = [];
 
@@ -149,7 +159,7 @@ class SubjectService
             return (float) Transaction::query()
                 ->join('documents', 'documents.id', '=', 'transactions.document_id')
                 ->whereNotNull('documents.approved_at')
-                ->whereIn('transactions.subject_id', $subject->getAllDescendantIds())
+                ->whereIn('transactions.subject_id', self::subjectAndDescendantIds($subject))
                 ->when(! $both, fn ($query) => $query->where('transactions.value', $debit ? '<' : '>', 0))
                 ->sum('transactions.value');
         }
@@ -157,6 +167,15 @@ class SubjectService
         self::eagerLoadDescendants($subject);
 
         return self::sumSubjectRecursively($subject, $both, $debit);
+    }
+
+    /** Include the selected subject explicitly, regardless of descendant-helper semantics. */
+    private static function subjectAndDescendantIds(Subject $subject): array
+    {
+        return array_values(array_unique([
+            (int) $subject->getKey(),
+            ...$subject->getAllDescendantIds(),
+        ]));
     }
 
     /**

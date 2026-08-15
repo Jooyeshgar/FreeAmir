@@ -56,6 +56,8 @@ Actual Expense = SUM(signed monthly balances of expense roots)
 
 The complete approved hierarchy balance determines the actual-income or actual-expense classification, not merely the configured subject type or only the selected month's movement. For a manual forecast row on a subject configured as **Both**, the entered sign determines that forecast row's direction; it does not reclassify the actual totals.
 
+If both the applied forecast and the available actual value are zero, there is no amount to classify. In that case, the workbench uses the configured subject type: **Debtor** is shown as expense and **Creditor** as income. A **Both** subject retains its hierarchy-based direction because its configured type has no single direction.
+
 ### Example
 
 | Temporary root | Net balance | Income | Expense |

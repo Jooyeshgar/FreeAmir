@@ -117,7 +117,7 @@ class CostIncomeService
         $nonPermanentSubjects = Subject::where('is_permanent', false)->whereIsRoot()->get();
 
         foreach ($nonPermanentSubjects as $subject) {
-            $monthly = $this->subjectService->sumSubjectWithDateRange($subject, true);
+            $monthly = $this->subjectService->sumApprovedSubjectWithDateRange($subject);
             $classificationBalance = (float) $this->subjectService->sumSubject($subject, true, false, true);
 
             foreach (self::MONTHS as $number => $name) {

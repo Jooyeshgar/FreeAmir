@@ -552,6 +552,31 @@ class MonthlyBudgetTest extends TestCase
         $this->assertSame(-400.0, $analysis['forecastExpense']);
     }
 
+    public function test_zero_applied_forecast_and_actual_use_the_subject_type_for_direction(): void
+    {
+        $this->travelTo(Carbon::parse(jalali_to_gregorian(1405, 3, 15, '-').' 12:00:00'));
+        $cost = $this->temporarySubject('Cost with prior opposite-signed activity', SubjectType::DEBTOR);
+        $income = $this->temporarySubject('Income with prior opposite-signed activity', SubjectType::CREDITOR);
+        $other = $this->temporarySubject('Other activity', SubjectType::CREDITOR);
+
+        // These prior balances would normally classify both rows opposite to their configured types.
+        $this->transaction($cost, 500, 1);
+        $this->transaction($income, -300, 1);
+        // Make actual values available in month 2 without moving either subject.
+        $this->transaction($other, 100, 2);
+
+        $lines = $this->service->analysis(2)['budgetLines'];
+        $costLine = $lines->first(fn (array $item) => $item['subject']->id === $cost->id);
+        $incomeLine = $lines->first(fn (array $item) => $item['subject']->id === $income->id);
+
+        $this->assertSame(0.0, $costLine['forecast']);
+        $this->assertSame(0.0, $costLine['actual']);
+        $this->assertSame('expense', $costLine['type']);
+        $this->assertSame(0.0, $incomeLine['forecast']);
+        $this->assertSame(0.0, $incomeLine['actual']);
+        $this->assertSame('income', $incomeLine['type']);
+    }
+
     public function test_system_forecast_rolls_leaf_invoice_and_payroll_postings_up_to_their_roots(): void
     {
         $this->travelTo(Carbon::parse(jalali_to_gregorian(1405, 3, 15, '-').' 12:00:00'));
