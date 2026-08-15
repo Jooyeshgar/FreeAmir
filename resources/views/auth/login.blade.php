@@ -11,6 +11,9 @@
                     
                     <x-text-input class="mt-1 w-full max-w-xs" title="{{ __('Email') }}" input_name="email" type="email" placeHolder="{{ __('Enter your email') }}" x-model="email" />
                     <x-text-input class="mt-1 w-full max-w-xs" title="{{ __('Password') }}" input_name="password" type="password" placeHolder="{{ __('Enter your password') }}" />
+                    <div class="mt-3">
+                        <x-checkbox name="remember" id="remember" value="1" :title="__('Remember Me')" :checked="old('remember', '0')" />
+                    </div>
                     <div class="flex items-center justify-between mt-4 pl-2">
                         <button type="submit" class="btn bg-blue-500 hover:bg-blue-600 text-white py-2 px-8 rounded">{{ __('Login') }}</button>
                         <a href="{{ route('password.request') }}" class="btn bg-gray-300 hover:bg-gray-400 text-black py-2 px-8 rounded">{{ __('Forgot Password') }}</a>

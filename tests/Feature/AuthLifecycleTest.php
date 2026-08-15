@@ -12,6 +12,7 @@ use Illuminate\Auth\Events\Verified;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -504,6 +505,47 @@ class AuthLifecycleTest extends TestCase
 
         $response->assertRedirect(route('home'));
         $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_login_form_displays_a_remember_me_checkbox(): void
+    {
+        $this->get(route('login'))->assertOk()->assertSee('name="remember"', false)->assertSee('id="remember"', false)->assertSee(__('Remember Me'));
+    }
+
+    public function test_user_can_be_remembered_after_login(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->post(route('login'), ['email' => $user->email, 'password' => 'password', 'remember' => '1']);
+
+        $response->assertCookie(Auth::guard()->getRecallerName());
+        $this->assertAuthenticatedAs($user);
+        $this->assertNotNull($user->fresh()->getRememberToken());
+    }
+
+    public function test_remember_cookie_restores_authentication_without_the_original_session(): void
+    {
+        $user = User::factory()->create();
+        $company = Company::create([
+            'name' => 'Remember Me Company',
+            'fiscal_year' => 1405,
+            'currency' => 'Rial',
+        ]);
+        $user->companies()->attach($company);
+
+        $loginResponse = $this->post(route('login'), ['email' => $user->email, 'password' => 'password', 'remember' => '1']);
+
+        $guard = Auth::guard();
+        $recallerName = $guard->getRecallerName();
+        $recallerValue = $loginResponse->getCookie($recallerName)->getValue();
+
+        $this->flushSession();
+        Auth::forgetGuards();
+
+        $this->withCookie($recallerName, $recallerValue)->get(route('home'))->assertOk();
+
+        $this->assertAuthenticatedAs($user);
+        $this->assertTrue(Auth::guard()->viaRemember());
     }
 
     public function test_verified_user_without_a_company_is_redirected_to_company_creation_after_login(): void

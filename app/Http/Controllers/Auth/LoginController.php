@@ -22,12 +22,16 @@ class LoginController extends Controller
         $credentials = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required'],
+            'remember' => ['nullable', 'boolean'],
         ]);
 
-        if (! Auth::attempt($credentials)) {
+        $remember = (bool) ($credentials['remember'] ?? false);
+        unset($credentials['remember']);
+
+        if (! Auth::attempt($credentials, $remember)) {
             return back()->withErrors([
                 'email' => __('The provided credentials do not match our records.'),
-            ])->onlyInput('email');
+            ])->onlyInput('email', 'remember');
         }
 
         $request->session()->regenerate();
