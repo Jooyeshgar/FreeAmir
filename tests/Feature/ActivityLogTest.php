@@ -25,7 +25,7 @@ class ActivityLogTest extends TestCase
     {
         $regularUser = User::factory()->create();
         $superAdmin = User::factory()->create();
-        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
 
         $this->get(route('management.activity-logs.index'))->assertRedirect(route('login'));
         $this->actingAs($regularUser)->get(route('management.activity-logs.index'))->assertForbidden();
@@ -89,7 +89,7 @@ class ActivityLogTest extends TestCase
     public function test_activity_log_can_be_filtered_by_action_company_and_date(): void
     {
         $superAdmin = User::factory()->create();
-        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
         $company = Company::factory()->create(['name' => 'Audit Company']);
 
         activity('model')
@@ -147,7 +147,7 @@ class ActivityLogTest extends TestCase
     public function test_activity_log_is_paginated(): void
     {
         $superAdmin = User::factory()->create();
-        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
 
         foreach (range(1, 26) as $index) {
             activity('request')
@@ -166,7 +166,7 @@ class ActivityLogTest extends TestCase
     public function test_request_and_its_model_change_are_shown_as_one_activity(): void
     {
         $superAdmin = User::factory()->create();
-        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
         $company = Company::factory()->create(['name' => 'Merged Company']);
 
         activity('model')
@@ -211,7 +211,7 @@ class ActivityLogTest extends TestCase
     public function test_store_activity_keeps_request_details_without_rendering_created_fields_as_changes(): void
     {
         $superAdmin = User::factory()->create();
-        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
         $company = Company::factory()->create(['name' => 'Created Company']);
 
         activity('model')
@@ -262,7 +262,7 @@ class ActivityLogTest extends TestCase
     public function test_request_and_all_of_its_model_events_are_shown_as_one_activity(): void
     {
         $superAdmin = User::factory()->create();
-        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
         $firstCompany = Company::factory()->create(['name' => 'First related model']);
         $secondCompany = Company::factory()->create(['name' => 'Second related model']);
 
@@ -310,7 +310,7 @@ class ActivityLogTest extends TestCase
     public function test_merged_changes_identify_their_affected_model(): void
     {
         $superAdmin = User::factory()->create();
-        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
         $firstCompany = Company::factory()->create();
         $secondCompany = Company::factory()->create();
 
@@ -355,7 +355,7 @@ class ActivityLogTest extends TestCase
     public function test_request_and_model_events_are_merged_before_pagination(): void
     {
         $superAdmin = User::factory()->create();
-        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
         $firstCompany = Company::factory()->create();
         $secondCompany = Company::factory()->create();
 
@@ -400,7 +400,7 @@ class ActivityLogTest extends TestCase
     public function test_unrelated_request_and_model_rows_are_not_merged(): void
     {
         $superAdmin = User::factory()->create();
-        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
         $company = Company::factory()->create();
 
         activity('model')
@@ -426,7 +426,7 @@ class ActivityLogTest extends TestCase
     public function test_activity_details_have_responsive_mobile_and_desktop_change_layouts(): void
     {
         $superAdmin = User::factory()->create();
-        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
         $company = Company::factory()->create();
 
         activity('model')
@@ -450,8 +450,8 @@ class ActivityLogTest extends TestCase
     {
         $superAdmin = User::factory()->create();
         $superAdmin->givePermissionTo(
-            Permission::create(['name' => 'access-super-admin-panel']),
-            Permission::create(['name' => 'update-global-configs']),
+            Permission::firstOrCreate(['name' => 'access-super-admin-panel']),
+            Permission::firstOrCreate(['name' => 'update-global-configs']),
         );
 
         $this->actingAs($superAdmin)->get(route('management.settings'))
@@ -484,7 +484,7 @@ class ActivityLogTest extends TestCase
     public function test_management_dashboard_shows_activity_summary_and_recent_events(): void
     {
         $superAdmin = User::factory()->create(['name' => 'Audit Administrator']);
-        $superAdmin->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
         $company = Company::factory()->create(['name' => 'Dashboard Audit Company']);
 
         activity('model')

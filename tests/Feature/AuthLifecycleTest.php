@@ -48,7 +48,7 @@ class AuthLifecycleTest extends TestCase
             'users.create',
             'users.store',
             'users.edit',
-        ])->mapWithKeys(fn (string $name) => [$name => Permission::create(['name' => $name])]);
+        ])->mapWithKeys(fn (string $name) => [$name => Permission::firstOrCreate(['name' => $name])]);
 
         $adminRole = Role::create(['name' => __('Admin')]);
         $adminRole->syncPermissions($permissions);
@@ -112,8 +112,8 @@ class AuthLifecycleTest extends TestCase
 
     public function test_role_and_permission_pages_are_not_available_in_the_workspace(): void
     {
-        $roleIndex = Permission::create(['name' => 'roles.index']);
-        $permissionIndex = Permission::create(['name' => 'permissions.index']);
+        $roleIndex = Permission::firstOrCreate(['name' => 'roles.index']);
+        $permissionIndex = Permission::firstOrCreate(['name' => 'permissions.index']);
         $viewerRole = Role::create(['name' => 'management-viewer']);
         $viewerRole->syncPermissions([$roleIndex, $permissionIndex]);
 
@@ -151,7 +151,7 @@ class AuthLifecycleTest extends TestCase
     public function test_platform_admin_can_change_language_from_the_management_header(): void
     {
         $user = User::factory()->create();
-        $user->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $user->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
 
         $management = $this->actingAs($user)->get(route('management.dashboard'));
 
@@ -169,13 +169,13 @@ class AuthLifecycleTest extends TestCase
     {
         $user = User::factory()->create();
         $user->givePermissionTo(
-            Permission::create(['name' => 'access-super-admin-panel']),
-            Permission::create(['name' => 'home']),
-            Permission::create(['name' => 'customers.index']),
-            Permission::create(['name' => 'companies.index']),
-            Permission::create(['name' => 'users.index']),
-            Permission::create(['name' => 'roles.index']),
-            Permission::create(['name' => 'permissions.index']),
+            Permission::firstOrCreate(['name' => 'access-super-admin-panel']),
+            Permission::firstOrCreate(['name' => 'home']),
+            Permission::firstOrCreate(['name' => 'customers.index']),
+            Permission::firstOrCreate(['name' => 'companies.index']),
+            Permission::firstOrCreate(['name' => 'users.index']),
+            Permission::firstOrCreate(['name' => 'roles.index']),
+            Permission::firstOrCreate(['name' => 'permissions.index']),
         );
 
         $company = Company::create([
@@ -239,8 +239,8 @@ class AuthLifecycleTest extends TestCase
     {
         $actor = User::factory()->create();
         $actor->givePermissionTo(
-            Permission::create(['name' => 'access-super-admin-panel']),
-            Permission::create(['name' => 'users.index']),
+            Permission::firstOrCreate(['name' => 'access-super-admin-panel']),
+            Permission::firstOrCreate(['name' => 'users.index']),
         );
 
         $superAdmin = User::factory()->create(['email' => 'hidden-super-admin@example.com']);
@@ -337,12 +337,12 @@ class AuthLifecycleTest extends TestCase
     {
         $target = User::factory()->create();
         $workspaceViewer = User::factory()->create();
-        $workspaceViewer->givePermissionTo(Permission::create(['name' => 'users.show']));
+        $workspaceViewer->givePermissionTo(Permission::firstOrCreate(['name' => 'users.show']));
 
         $this->actingAs($workspaceViewer)->get(route('users.show', $target))->assertForbidden();
 
         $platformViewer = User::factory()->create();
-        $platformViewer->givePermissionTo(Permission::create(['name' => 'access-super-admin-panel']));
+        $platformViewer->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
 
         $this->actingAs($platformViewer)->get(route('users.show', $target))->assertOk();
     }
@@ -425,11 +425,11 @@ class AuthLifecycleTest extends TestCase
 
         $actor = User::factory()->create();
         $actor->givePermissionTo(
-            Permission::create(['name' => 'access-super-admin-panel']),
-            Permission::create(['name' => 'users.create']),
-            Permission::create(['name' => 'users.store']),
-            Permission::create(['name' => 'users.edit']),
-            Permission::create(['name' => 'users.update']),
+            Permission::firstOrCreate(['name' => 'access-super-admin-panel']),
+            Permission::firstOrCreate(['name' => 'users.create']),
+            Permission::firstOrCreate(['name' => 'users.store']),
+            Permission::firstOrCreate(['name' => 'users.edit']),
+            Permission::firstOrCreate(['name' => 'users.update']),
         );
         Role::create(['name' => 'Super-Admin']);
         $adminRole = Role::create(['name' => __('Admin')]);

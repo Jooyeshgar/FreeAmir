@@ -645,7 +645,7 @@ class UserImpersonationTest extends TestCase
     {
         $company = $this->company('Shared Company');
         $admin = $this->userWithRole('Admin', $company);
-        $admin->givePermissionTo(Permission::create(['name' => 'users.*']));
+        $admin->givePermissionTo(Permission::firstOrCreate(['name' => 'users.*']));
         $target = $this->userWithRole('Employee', $company);
         $this->setActiveCompany($company);
 
