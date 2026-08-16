@@ -10,7 +10,7 @@
             <span class="card-title">{{ __('Add Company') }}</span>
             <form action="{{ route('companies.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
-                @cannot('access-super-admin-panel')
+                @if ($previousYears->isNotEmpty())
                     <fieldset id="previousYears" class="grid grid-cols-2 gap-6 border p-5 my-3"
                         x-data="{
                             subjectsChecked: @js(in_array(FiscalYearSection::SUBJECTS->value, old('tables_to_copy', array_map(fn ($c) => $c->value, FiscalYearSection::cases())))),
@@ -65,7 +65,7 @@
                         </div>
                     </div>
                     </fieldset>
-                @endcannot
+                @endif
 
                 <fieldset id="companyForm" class="grid grid-cols-2 gap-6 border p-5 my-3">
                     <legend>{{ __('company') }}</legend>

@@ -37,15 +37,6 @@ class HomeController extends Controller
     public function index(Request $request)
     {
         $user = auth()->user();
-
-        if ($user->can('access-super-admin-panel')) {
-            $hasCurrentWorkspace = $user->companies()->whereKey(getActiveCompany())->where('fiscal_year', toEnglish(jdate('Y')))->exists();
-
-            if (! $hasCurrentWorkspace) {
-                return redirect()->route('management.dashboard');
-            }
-        }
-
         $request->session()->put('interface_mode', 'workspace');
 
         // Use can() (not Spatie's hasAnyPermission) so AppServiceProvider's

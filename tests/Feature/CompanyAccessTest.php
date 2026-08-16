@@ -10,6 +10,7 @@ use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class CompanyAccessTest extends TestCase
@@ -49,6 +50,27 @@ class CompanyAccessTest extends TestCase
         $response->assertOk();
         $response->assertSee('Accessible Source');
         $response->assertDontSee('Inaccessible Source');
+    }
+
+    public function test_super_admin_without_a_source_company_can_create_their_first_company(): void
+    {
+        $superAdmin = User::factory()->create();
+        $superAdmin->assignRole(Role::firstOrCreate(['name' => 'Super-Admin']));
+
+        $form = $this->actingAs($superAdmin)->get(route('companies.create'));
+
+        $form->assertOk()->assertDontSee('id="previousYears"', false)->assertDontSee('name="source_year_id"', false);
+
+        $response = $this->post(route('companies.store'), [
+            'name' => 'First Company',
+            'fiscal_year' => 1405,
+            'currency' => 'Rial',
+        ]);
+
+        $response->assertRedirect(route('companies.index'));
+
+        $company = Company::where('name', 'First Company')->firstOrFail();
+        $this->assertTrue($company->users()->whereKey($superAdmin->id)->exists());
     }
 
     public function test_store_rejects_inaccessible_source_company(): void

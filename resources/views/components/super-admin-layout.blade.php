@@ -87,11 +87,9 @@
             <nav aria-label="{{ __('User menu') }}">
                 <ul class="app-main-menu menu menu-horizontal flex-nowrap px-1" data-main-menu>
                     <li class="!flex flex-row items-center gap-1">
-                        @if ($hasCurrentWorkspace)
-                            <a href="{{ route('home') }}" class="btn btn-ghost btn-sm">
-                                {{ __('Workspace') }}
-                            </a>
-                        @endif
+                        <a href="{{ route('home') }}" class="btn btn-ghost btn-sm">
+                            {{ __('Workspace') }}
+                        </a>
                         <label class="swap swap-rotate btn btn-ghost btn-square btn-sm" aria-label="{{ __('Dark mode') }}">
                             <input type="checkbox" value="dark" class="theme-controller">
                             <svg class="swap-off h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0-16v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" /></svg>

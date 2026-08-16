@@ -83,8 +83,6 @@ class CompanyController extends Controller
      */
     public function create(Request $request): View
     {
-        abort_if($request->user()->can('access-super-admin-panel'), 404);
-
         // Get previous fiscal years for the current company
         $previousYears = $request->user()->companies()->orderByDesc('fiscal_year')->get();
 
@@ -144,8 +142,6 @@ class CompanyController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        abort_if($request->user()->can('access-super-admin-panel'), 404);
-
         $fiscalYearRules = [
             'source_year_id' => [
                 'nullable',
@@ -181,7 +177,8 @@ class CompanyController extends Controller
         $data['currency'] ??= 'Rial'; // default
 
         try {
-            $this->createCompany($request->user(), $data, isset($validated['source_year_id']) ? (int) $validated['source_year_id'] : null, $validated['tables_to_copy'] ?? []);
+            $company = $this->createCompany($request->user(), $data, isset($validated['source_year_id']) ? (int) $validated['source_year_id'] : null, $validated['tables_to_copy'] ?? []);
+            Cookie::queue('active-company-id', $company->id, 362 * 24 * 60);
         } catch (\Throwable $e) {
             Log::error('Company initialization failed.', [
                 'creator_id' => $request->user()->id,

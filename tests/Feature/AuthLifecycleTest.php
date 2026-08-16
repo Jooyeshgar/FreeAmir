@@ -233,7 +233,7 @@ class AuthLifecycleTest extends TestCase
 
         $company->update(['fiscal_year' => (int) toEnglish(jdate('Y')) - 1]);
 
-        $this->get(route('home'))->assertRedirect(route('management.dashboard'));
+        $this->get(route('home'))->assertok();
     }
 
     public function test_super_admin_is_hidden_from_workspace_users_but_visible_in_management_users(): void
