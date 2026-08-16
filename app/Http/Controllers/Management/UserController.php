@@ -28,12 +28,7 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $actor = auth()->user();
-        $isProduction = config('app.env') === 'production';
         $isManagementUserIndex = $request->session()->get('interface_mode') === 'management' && $actor->can('access-super-admin-panel');
-
-        if ($isProduction) {
-            abort_unless($actor->can('access-super-admin-panel'), 403);
-        }
 
         $users = User::query()
             ->unless($actor->can('access-super-admin-panel'), function ($query) use ($actor) {

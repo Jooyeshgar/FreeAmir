@@ -509,7 +509,17 @@ class AuthLifecycleTest extends TestCase
 
     public function test_login_form_displays_a_remember_me_checkbox(): void
     {
-        $this->get(route('login'))->assertOk()->assertSee('name="remember"', false)->assertSee('id="remember"', false)->assertSee(__('Remember Me'));
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertSee('name="email"', false)
+            ->assertSee('type="email"', false)
+            ->assertSee('autocomplete="username"', false)
+            ->assertSee('name="password"', false)
+            ->assertSee('type="password"', false)
+            ->assertSee('autocomplete="current-password"', false)
+            ->assertSee('name="remember"', false)
+            ->assertSee('id="remember"', false)
+            ->assertSee(__('Remember Me'));
     }
 
     public function test_user_can_be_remembered_after_login(): void
@@ -542,6 +552,10 @@ class AuthLifecycleTest extends TestCase
         $this->flushSession();
         Auth::forgetGuards();
 
+        $user->givePermissionTo(
+            Permission::firstOrCreate(['name' => 'home']),
+            Permission::firstOrCreate(['name' => 'customers.index']),
+        );
         $this->withCookie($recallerName, $recallerValue)->get(route('home'))->assertOk();
 
         $this->assertAuthenticatedAs($user);
