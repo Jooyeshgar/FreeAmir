@@ -519,6 +519,7 @@ class AuthLifecycleTest extends TestCase
             ->assertSee('autocomplete="current-password"', false)
             ->assertSee('name="remember"', false)
             ->assertSee('id="remember"', false)
+            ->assertSee('type="hidden" name="remember" value="0"', false)
             ->assertSee(__('Remember Me'));
     }
 
@@ -531,6 +532,20 @@ class AuthLifecycleTest extends TestCase
         $response->assertCookie(Auth::guard()->getRecallerName());
         $this->assertAuthenticatedAs($user);
         $this->assertNotNull($user->fresh()->getRememberToken());
+    }
+
+    public function test_user_is_not_remembered_when_the_option_is_not_selected(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->post(route('login'), [
+            'email' => $user->email,
+            'password' => 'password',
+            'remember' => '0',
+        ]);
+
+        $response->assertCookieMissing(Auth::guard()->getRecallerName());
+        $this->assertAuthenticatedAs($user);
     }
 
     public function test_remember_cookie_restores_authentication_without_the_original_session(): void

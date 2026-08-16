@@ -25,7 +25,7 @@ class LoginController extends Controller
             'remember' => ['nullable', 'boolean'],
         ]);
 
-        $remember = (bool) ($credentials['remember'] ?? false);
+        $remember = $request->boolean('remember');
         unset($credentials['remember']);
 
         if (! Auth::attempt($credentials, $remember)) {

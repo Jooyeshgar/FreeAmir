@@ -1,17 +1,20 @@
 <x-login-layout>
     @include('auth.partials.header')
 
-    <div x-data="loginForm()" class="login-bg bg-cover bg-center rounded-t-3xl flex-1 border-8 border-gray-200 p-0 border-opacity-85 overflow-hidden">
+    <div x-data="loginForm(@js(old('email', '')))" class="login-bg bg-cover bg-center rounded-t-3xl flex-1 border-8 border-gray-200 p-0 border-opacity-85 overflow-hidden">
         <div class="flex items-center justify-center rounded-3xl">
             <div class="card w-96 p-7 mt-16 bg-white">
-                <form method="POST" action="{{ route('login') }}">
+                <form method="POST" action="{{ route('login') }}" autocomplete="on">
                     @csrf
                     <h1 class="font-bold text-center">{{ __('Login') }}</h1>
                     <x-show-message-bags />
                     
-                    <x-text-input class="mt-1 w-full max-w-xs" title="{{ __('Email') }}" input_name="email" type="email" placeHolder="{{ __('Enter your email') }}" x-model="email" />
-                    <x-text-input class="mt-1 w-full max-w-xs" title="{{ __('Password') }}" input_name="password" type="password" placeHolder="{{ __('Enter your password') }}" />
+                    <x-text-input class="mt-1 w-full max-w-xs" :title="__('Email')" input_name="email" id_input="email"
+                        type="email" :placeholder="__('Enter your email')" x-model="email" autocomplete="username" required autofocus />
+                    <x-text-input class="mt-1 w-full max-w-xs" :title="__('Password')" input_name="password" id_input="password"
+                        type="password" :placeholder="__('Enter your password')" autocomplete="current-password" required />
                     <div class="mt-3">
+                        <input type="hidden" name="remember" value="0">
                         <x-checkbox name="remember" id="remember" value="1" :title="__('Remember Me')" :checked="old('remember', '0')" />
                     </div>
                     <div class="flex items-center justify-between mt-4 pl-2">
@@ -53,9 +56,9 @@
         @include('auth.partials.footer')
     </div>
     <script>
-        function loginForm() {
+        function loginForm(initialEmail = '') {
             return {
-                email: '',
+                email: initialEmail,
                 demoUsers: [
                     'admin@example.com',
                     'accountant@example.com',
