@@ -19,8 +19,18 @@
                 <td style="padding: 28px 24px; line-height: 1.8;">
                     <h3 style="margin-top: 0; color: #111827;">{{ __('Your report is ready') }}</h3>
 
-                    <p>{{ __('Hello :name,', ['name' => $userName]) }}</p>
+                    @if($sentToAnotherRecipient)
+                        <p>{{ __('Hello,') }}</p>
+                    @else
+                        <p>{{ __('Hello :name,', ['name' => $userName]) }}</p>
+                    @endif
                     <p>{{ __('The report you requested is attached to this email.') }}</p>
+
+                    @if($sentToAnotherRecipient)
+                        <div style="margin: 20px 0; padding: 14px 16px; border: 1px solid #fde68a; border-radius: 6px; background-color: #fffbeb;">
+                            {{ __('This report was requested and sent to you by :name (:email).', ['name' => $userName, 'email' => $requesterEmail]) }}
+                        </div>
+                    @endif
 
                     <div style="margin: 20px 0; padding: 14px 16px; border: 1px solid #dbeafe; border-radius: 6px; background-color: #eff6ff;">
                         <strong>{{ __('Attached file') }}:</strong>

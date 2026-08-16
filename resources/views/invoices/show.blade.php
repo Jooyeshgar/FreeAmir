@@ -1185,7 +1185,7 @@
                     @endcan
 
                     @if ($invoice->status->isApproved())
-                        <x-export-delivery-choice :id="'invoice-pdf-delivery-'.$invoice->id" export="invoice_pdf" :filters="['invoice_id' => $invoice->id]" :label="__('Get PDF')" class="btn btn-outline gap-2" />
+                        <x-export-delivery-choice :id="'invoice-pdf-delivery-'.$invoice->id" export="invoice_pdf" :filters="['invoice_id' => $invoice->id]" class="btn btn-outline gap-2" />
                     @else
                         <a href="{{ route('invoices.print', $invoice) }}" class="btn btn-outline gap-2" target="_blank" rel="noopener">
                             {{ __('Print') }}

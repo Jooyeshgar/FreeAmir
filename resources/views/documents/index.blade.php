@@ -19,7 +19,7 @@
                 </form>
             @endcan
             @can('documents.export')
-                <a href="{{ route('documents.export') }}" class="btn btn-secondary btn-sm gap-1.5">{{ __('Export CSV') }}</a>
+                <a href="{{ route('documents.export') }}" class="btn btn-secondary btn-sm gap-1.5">{{ __('Receive Report') }}</a>
             @endcan
             @can('documents.import')
                 <a href="{{ route('documents.import') }}" class="btn btn-accent btn-sm gap-1.5">{{ __('Import CSV') }}</a>

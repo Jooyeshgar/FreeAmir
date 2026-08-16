@@ -10,7 +10,7 @@
 
         <div class="flex flex-wrap items-center justify-start gap-2">
             <a href="{{ route('customers.create') }}" class="btn btn-sm btn-primary">{{ __('Create Customer') }}</a>
-            <x-export-delivery-choice id="customers-export-delivery" export="customers_csv" :label="__('Export CSV')" />
+            <x-export-delivery-choice id="customers-export-delivery" export="customers_csv" />
             <a href="{{ route('customers.import') }}" class="btn btn-sm btn-outline">{{ __('Import CSV') }}</a>
         </div>
     </div>

@@ -15,7 +15,7 @@
                         <a href="{{ route('reports.trial-balance', array_merge(request()->query(), ['parent_id' => $currentParent->parent_id])) }}" class="btn btn-outline btn-sm">{{ __('Go Up').' - '.( !is_null($currentParent->parent) ? $currentParent->parent->name : __('General Level') ) }}</a>
                     @endif
                     @can('reports.trial-balance.export-csv')
-                        <x-export-delivery-choice id="trial-balance-export-delivery" export="trial_balance_csv" :filters="request()->query()" :label="__('Export CSV')" />
+                        <x-export-delivery-choice id="trial-balance-export-delivery" export="trial_balance_csv" :filters="request()->query()" />
                     @endcan
                 </div>
             </div>
