@@ -62,7 +62,7 @@
     "Absent": "Absent",
     "Absent Days": "Absent Days",
     "Access control": "Access control",
-    "Access denied. You must be a registered employee to access this area.": "Access denied. You must be a registered employee to access this area.",
+    "Access denied. You must be a registered employee to access this area. From menu bar, go to Management → System → Users, locate your user, and click \"Create Employee\" to associate an employee record with your account.": "Access denied. You must be a registered employee to access this area. From menu bar, go to Management → System → Users, locate your user, and click \"Create Employee\" to associate an employee record with your account.",
     "Access policy": "Access policy",
     "Account": "Account",
     "Account 1": "Account 1",
