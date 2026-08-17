@@ -123,13 +123,21 @@
 
     <section class="space-y-3 sm:space-y-4" aria-label="{{ __('Activity') }}">
         @forelse ($activities as $activity)
-            <article x-data="{ detailsOpen: false }" class="group rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition duration-200 hover:border-slate-300 hover:shadow-md sm:p-4 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700">
+            <article x-data="{ detailsOpen: false, requestInputOpen: false }" class="group rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition duration-200 hover:border-slate-300 hover:shadow-md sm:p-4 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                     <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-                        <bdi class="max-w-full truncate font-mono text-xs font-semibold text-slate-600 sm:max-w-80 dark:text-slate-300" dir="ltr">{{ $activity['contextLabel'] }}</bdi>
-                        @foreach ($activity['modelContextLabels'] as $modelContextLabel)
-                            @if ($modelContextLabel !== $activity['contextLabel'])
-                                <bdi class="max-w-full truncate font-mono text-xs font-semibold text-sky-700 sm:max-w-64 dark:text-sky-300" dir="ltr">{{ $modelContextLabel }}</bdi>
+                        @if ($activity['contextUrl'])
+                            <a href="{{ $activity['contextUrl'] }}" class="max-w-full truncate font-mono text-xs font-semibold text-slate-600 hover:underline sm:max-w-80 dark:text-slate-300" dir="ltr">{{ $activity['contextLabel'] }}</a>
+                        @else
+                            <bdi class="max-w-full truncate font-mono text-xs font-semibold text-slate-600 sm:max-w-80 dark:text-slate-300" dir="ltr">{{ $activity['contextLabel'] }}</bdi>
+                        @endif
+                        @foreach ($activity['modelContextLinks'] as $modelContextLink)
+                            @if ($modelContextLink['label'] !== $activity['contextLabel'])
+                                @if ($modelContextLink['url'])
+                                    <a href="{{ $modelContextLink['url'] }}" class="max-w-full truncate font-mono text-xs font-semibold text-sky-700 hover:underline sm:max-w-64 dark:text-sky-300" dir="ltr">{{ $modelContextLink['label'] }}</a>
+                                @else
+                                    <bdi class="max-w-full truncate font-mono text-xs font-semibold text-sky-700 sm:max-w-64 dark:text-sky-300" dir="ltr">{{ $modelContextLink['label'] }}</bdi>
+                                @endif
                             @endif
                         @endforeach
                         @if ($activity['userUrl'])
@@ -166,12 +174,22 @@
                                 @foreach ($activity['requestContext'] as $context)
                                     <div class="rounded-xl bg-slate-50 p-3 dark:bg-slate-950/40">
                                         <dt class="font-semibold text-slate-500">{{ $context['label'] }}</dt>
-                                        <dd class="mt-1 break-all font-mono text-slate-800 dark:text-slate-200" dir="ltr">{{ $context['value'] }}</dd>
+                                        <dd class="mt-1 break-all font-mono text-slate-800 dark:text-slate-200" dir="ltr">
+                                            @if ($context['url'] ?? null)
+                                                <a href="{{ $context['url'] }}" class="text-sky-700 hover:underline dark:text-sky-300">{{ $context['value'] }}</a>
+                                            @else
+                                                {{ $context['value'] }}
+                                            @endif
+                                        </dd>
                                     </div>
                                 @endforeach
                             </dl>
                             @if ($activity['requestInput'])
-                                <pre class="mt-3 max-h-72 max-w-full overflow-auto rounded-xl bg-slate-950 p-3 text-[11px] leading-5 text-slate-100 sm:p-4 sm:text-xs sm:leading-6" dir="ltr">{{ $activity['requestInput'] }}</pre>
+                                <button type="button" class="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700" @click="requestInputOpen = ! requestInputOpen" :aria-expanded="requestInputOpen" aria-controls="request-input-{{ $activity['id'] }}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3.5 w-3.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3.75h9m-9 3.75h5.25M5.25 3.75h13.5a1.5 1.5 0 0 1 1.5 1.5v13.5a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5V5.25a1.5 1.5 0 0 1 1.5-1.5Z" /></svg>
+                                    {{ __('Request details') }}
+                                </button>
+                                <pre id="request-input-{{ $activity['id'] }}" x-cloak x-show="requestInputOpen" class="mt-2 max-h-72 max-w-full overflow-auto rounded-xl bg-slate-950 p-3 text-[11px] leading-5 text-slate-100 sm:p-4 sm:text-xs sm:leading-6" dir="ltr">{{ $activity['requestInput'] }}</pre>
                             @endif
                         @endif
                         @if ($activity['changes']->isNotEmpty())
@@ -180,7 +198,11 @@
                                     <section class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800" data-affected-model="{{ $affectedModel }}">
                                         <header class="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-950/40">
                                             <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">{{ __('Affected model') }}</span>
-                                            <bdi class="font-mono text-xs font-bold text-sky-700 dark:text-sky-300" dir="ltr">{{ $affectedModel }}</bdi>
+                                            @if ($modelChanges->first()['url'] ?? null)
+                                                <a href="{{ $modelChanges->first()['url'] }}" class="font-mono text-xs font-bold text-sky-700 hover:underline dark:text-sky-300" dir="ltr">{{ $affectedModel }}</a>
+                                            @else
+                                                <bdi class="font-mono text-xs font-bold text-sky-700 dark:text-sky-300" dir="ltr">{{ $affectedModel }}</bdi>
+                                            @endif
                                         </header>
 
                                         <div class="space-y-2 sm:hidden p-3">

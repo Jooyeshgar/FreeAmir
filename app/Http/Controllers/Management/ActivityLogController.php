@@ -8,12 +8,20 @@ use App\Models\Company;
 use App\Services\ActivityLogService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Exceptions\UrlGenerationException;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class ActivityLogController extends Controller
 {
+    private array $numberColumnByModel = [];
+
+    private array $showRouteByModel = [];
+
     public function __construct(private readonly ActivityLogService $activityLogService) {}
 
     public function index(Request $request): View
@@ -158,16 +166,17 @@ class ActivityLogController extends Controller
             'delete' => 'deleted',
             default => $activity->action,
         };
-        if ($canonicalAction === 'created') {
-            $changeKeys = collect();
-        }
         $action = $this->actionOptions()[$canonicalAction] ?? [
             'label' => __(ucfirst($activity->action ?? 'activity')),
             'style' => 'bg-slate-100 text-slate-700 ring-slate-600/20 dark:bg-slate-800 dark:text-slate-300',
         ];
         $modelTitle = __(class_basename($activity->model_type ?? 'Activity'));
-        $modelContextLabel = $modelTitle.' #'.$activity->model_id;
+        $hasNumberColumn = $this->modelHasNumberColumn($activity->model_type);
+        $modelNumber = $hasNumberColumn ? $this->modelNumber($details) : null;
+        $modelContextLabel = $modelTitle.($hasNumberColumn ? (filled($modelNumber) ? ' #'.$modelNumber : '') : ' #'.$activity->model_id);
+        $modelUrl = $isRequest ? null : $this->modelUrl($activity->model_type, $activity->model_id);
         $route = $details->get('route');
+        $routeUrl = $isRequest ? $this->namedRouteUrl($route) : null;
 
         return [
             'id' => $activity->id,
@@ -180,23 +189,25 @@ class ActivityLogController extends Controller
             'userUrl' => $activity->user ? route('users.show', $activity->user) : null,
             'companyLabel' => $company ? $company->name.' - '.localizeNumber($company->fiscal_year) : null,
             'title' => $isRequest ? ($route ?: $activity->description) : $modelTitle,
-            'titleDetail' => $isRequest ? null : $details->get('model_label', '#'.$activity->model_id),
+            'titleDetail' => $isRequest ? null : $details->get('model_label', $hasNumberColumn ? null : '#'.$activity->model_id),
             'requestMethod' => $isRequest
                 ? strtoupper((string) ($details->get('method') ?: $activity->action))
                 : null,
             'route' => $route,
             'contextLabel' => $route ?: ($isRequest ? $activity->description : $modelContextLabel),
+            'contextUrl' => $isRequest ? null : $modelUrl,
             'modelContextLabel' => $isRequest ? null : $modelContextLabel,
             'modelContextLabels' => $isRequest ? collect() : collect([$modelContextLabel]),
+            'modelContextLinks' => $isRequest ? collect() : collect([['label' => $modelContextLabel, 'url' => $modelUrl]]),
             'modelId' => $isRequest ? null : $activity->model_id,
             'ipAddress' => $details->get('ip_address'),
             'impersonatedUserName' => $impersonatedUser?->name,
-            'createdAt' => $activity->created_at?->toAtomString(),
+            'createdAt' => $activity->created_at?->copy()->setTimezone(config('app.timezone'))->toAtomString(),
             'createdAtTimestamp' => $activity->created_at?->getTimestamp(),
-            'createdAtLabel' => formatDateTime($activity->created_at),
+            'createdAtLabel' => formatDateTime($activity->created_at?->copy()->setTimezone(config('app.timezone'))),
             'hasDetails' => $isRequest || $changeKeys->isNotEmpty(),
             'requestContext' => $isRequest ? [
-                ['label' => __('Route'), 'value' => $details->get('route') ?: '—'],
+                ['label' => __('Route'), 'value' => $details->get('route') ?: '—', 'url' => $routeUrl],
                 ['label' => __('Method'), 'value' => $details->get('method') ?: '—'],
                 ['label' => __('Path'), 'value' => $details->get('path') ?: '—'],
                 ['label' => __('IP address'), 'value' => $details->get('ip_address') ?: '—'],
@@ -207,11 +218,79 @@ class ActivityLogController extends Controller
                 : null,
             'changes' => $changeKeys->map(fn (string $key): array => [
                 'model' => $modelContextLabel,
+                'url' => $modelUrl,
                 'field' => $key,
                 'old' => $this->formatValue($old->get($key)),
                 'new' => $this->formatValue($attributes->get($key)),
             ]),
         ];
+    }
+
+    private function modelHasNumberColumn(?string $modelType): bool
+    {
+        if (! $modelType || ! class_exists($modelType)) {
+            return false;
+        }
+
+        return $this->numberColumnByModel[$modelType] ??= Schema::hasColumn((new $modelType)->getTable(), 'number');
+    }
+
+    private function modelNumber(Collection $details): int|float|string|null
+    {
+        $number = $details->get('model_number') ?? collect($details->get('attributes', []))->get('number') ?? collect($details->get('old', []))->get('number');
+
+        return is_scalar($number) && (string) $number !== '' ? $number : null;
+    }
+
+    private function modelUrl(?string $modelType, int|string|null $modelId): ?string
+    {
+        if (! $modelType || $modelId === null || ! class_exists($modelType)) {
+            return null;
+        }
+
+        $routeName = $this->showRouteByModel[$modelType] ??= $this->findModelShowRoute($modelType);
+
+        return $routeName ? route($routeName, $modelId) : null;
+    }
+
+    private function namedRouteUrl(?string $routeName): ?string
+    {
+        if (blank($routeName) || ! Route::has($routeName)) {
+            return null;
+        }
+
+        try {
+            return route($routeName);
+        } catch (UrlGenerationException) {
+            return null;
+        }
+    }
+
+    private function findModelShowRoute(string $modelType): ?string
+    {
+        $resourceSuffix = Str::plural(Str::kebab(class_basename($modelType))).'.show';
+
+        foreach (Route::getRoutes() as $route) {
+            if ($route->getActionMethod() !== 'show' || ! $route->getName() || ! Str::endsWith($route->getName(), $resourceSuffix) || count($route->parameterNames()) !== 1) {
+                continue;
+            }
+
+            $controllerClass = $route->getControllerClass();
+
+            if (! $controllerClass || ! method_exists($controllerClass, 'show')) {
+                continue;
+            }
+
+            foreach ((new \ReflectionMethod($controllerClass, 'show'))->getParameters() as $parameter) {
+                $type = $parameter->getType();
+
+                if ($type instanceof \ReflectionNamedType && ! $type->isBuiltin() && $type->getName() === $modelType) {
+                    return $route->getName();
+                }
+            }
+        }
+
+        return null;
     }
 
     private function mergeRequestRows(Collection $rows): Collection
@@ -237,7 +316,8 @@ class ActivityLogController extends Controller
             $modelRow['requestContext'] = $requestRow['requestContext'];
             $modelRow['requestInput'] = $requestRow['requestInput'];
             $modelRow['modelContextLabels'] = $modelRows->flatMap(fn (array $row): Collection => $row['modelContextLabels'])->unique()->values();
-            $modelRow['changes'] = $modelRows->flatMap(fn (array $row): Collection => $row['changes'])->values();
+            $modelRow['modelContextLinks'] = $modelRows->flatMap(fn (array $row): Collection => $row['modelContextLinks'])->unique(fn (array $link): string => $link['label'])->values();
+            $modelRow['changes'] = $modelRows->sortByDesc(fn (array $row): int => $row['createdAtTimestamp'] ?? 0)->flatMap(fn (array $row): Collection => $row['changes'])->values();
             $modelRow['companyLabel'] ??= $requestRow['companyLabel'];
             $modelRow['impersonatedUserName'] ??= $requestRow['impersonatedUserName'];
             $modelRow['hasDetails'] = true;

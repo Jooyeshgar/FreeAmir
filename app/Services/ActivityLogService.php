@@ -101,6 +101,7 @@ class ActivityLogService
         activity('model')->causedBy($actor)->performedOn($model)->event($event)->withProperties(array_filter([
             ...$changes,
             'model_label' => $this->modelLabel($model),
+            'model_number' => $this->modelNumber($model),
             'company_id' => $this->modelCompanyId($model, $request),
             'route' => $request->route()?->getName(),
             'method' => $request->method(),
@@ -182,6 +183,8 @@ class ActivityLogService
             if (! $pendingRequest) {
                 return;
             }
+
+            $pendingModels = $pendingModels->sortByDesc(fn (Activity $activity): int => $activity->created_at?->getTimestamp() ?? 0)->values();
 
             $relatedIndexes = $pendingModels->keys()
                 ->filter(fn (int $index): bool => $this->belongsToRequest($pendingRequest, $pendingModels[$index]));
@@ -272,7 +275,8 @@ class ActivityLogService
             return ['old' => $this->sanitizeModelAttributes($model->getAttributes())];
         }
 
-        $attributes = $this->sanitizeModelAttributes($model->getChanges());
+        $changes = collect($model->getChanges())->filter(fn (mixed $value, string $key): bool => ! $model->originalIsEquivalent($key))->all();
+        $attributes = $this->sanitizeModelAttributes($changes);
         $old = [];
 
         foreach (array_keys($attributes) as $key) {
@@ -305,6 +309,13 @@ class ActivityLogService
         }
 
         return class_basename($model).' #'.$model->getKey();
+    }
+
+    private function modelNumber(Model $model): int|float|string|null
+    {
+        $number = $model->getAttribute('number');
+
+        return is_scalar($number) && (string) $number !== '' ? $number : null;
     }
 
     private function modelCompanyId(Model $model, Request $request): ?int

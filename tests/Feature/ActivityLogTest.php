@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Activity;
 use App\Models\Company;
 use App\Models\Config;
+use App\Models\Document;
 use App\Models\Scopes\FiscalYearScope;
 use App\Models\User;
 use App\Services\ActivityLogService;
@@ -114,7 +115,7 @@ class ActivityLogTest extends TestCase
             ->assertSee('Audit Company')
             ->assertSee(__('Company').' #'.$company->id)
             ->assertDontSee('POST locale')
-            ->assertViewHas('activities', fn ($activities): bool => $activities->getCollection()->first()['changes']->isEmpty())
+            ->assertViewHas('activities', fn ($activities): bool => $activities->getCollection()->first()['changes']->contains(fn (array $change): bool => $change['field'] === 'name'))
             ->assertViewHas('modelOptions', fn ($options): bool => $options->contains(fn (array $option): bool => $option === [
                 'value' => Company::class,
                 'label' => __('Company'),
@@ -208,7 +209,7 @@ class ActivityLogTest extends TestCase
             ->assertSee('Merged Company');
     }
 
-    public function test_store_activity_keeps_request_details_without_rendering_created_fields_as_changes(): void
+    public function test_store_activity_keeps_request_details_and_renders_created_fields_as_changes(): void
     {
         $superAdmin = User::factory()->create();
         $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
@@ -249,14 +250,49 @@ class ActivityLogTest extends TestCase
                     && $row['modelContextLabel'] === __('Company').' #'.$company->id
                     && $row['requestInput'] !== null
                     && $row['requestContext'] !== []
-                    && $row['changes']->isEmpty()
+                    && $row['changes']->contains(fn (array $change): bool => $change['field'] === 'name')
                     && $row['hasDetails'];
             })
             ->assertSee('companies.store')
             ->assertSee(__('Company').' #'.$company->id)
             ->assertSee('127.0.0.1')
             ->assertSee('Created Company')
-            ->assertDontSee('fiscal_year');
+            ->assertSee(__('Request details'))
+            ->assertSee('requestInputOpen: false', false)
+            ->assertSee('href="'.route('companies.store').'"', false)
+            ->assertSee('fiscal_year');
+    }
+
+    public function test_model_event_with_no_real_changes_is_not_recorded(): void
+    {
+        $actor = User::factory()->create();
+        $target = User::factory()->create(['name' => 'Unchanged']);
+
+        $this->actingAs($actor);
+        app(ActivityLogService::class)->recordModelEvent('updated', $target);
+
+        $this->assertDatabaseMissing('activity_log', [
+            'source' => 'model',
+            'action' => 'updated',
+            'model_type' => User::class,
+            'model_id' => $target->id,
+        ]);
+    }
+
+    public function test_numbered_models_do_not_show_the_database_id_in_the_activity_header(): void
+    {
+        $superAdmin = User::factory()->create();
+        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+        $this->actingAs($superAdmin);
+        $document = Document::create(['number' => 123]);
+
+        $this->get(route('management.activity-logs.index'))
+            ->assertOk()
+            ->assertViewHas('activities', function ($activities) use ($document): bool {
+                $row = $activities->getCollection()->first(fn (array $activity): bool => $activity['modelId'] === $document->id);
+
+                return $row !== null && $row['modelContextLabel'] === __('Document').' #123' && $row['contextUrl'] === route('documents.show', $document);
+            });
     }
 
     public function test_request_and_all_of_its_model_events_are_shown_as_one_activity(): void
