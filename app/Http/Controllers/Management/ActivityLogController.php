@@ -24,6 +24,7 @@ class ActivityLogController extends Controller
 
     public function __construct(private readonly ActivityLogService $activityLogService) {}
 
+    /** Render the activity log with validated filters and localized dates. */
     public function index(Request $request): View
     {
         $request->session()->put('interface_mode', 'management');
@@ -33,6 +34,7 @@ class ActivityLogController extends Controller
             'action' => ['nullable', Rule::in(['created', 'updated', 'deleted'])],
             'user_id' => ['nullable', 'integer'],
             'model_type' => ['nullable', 'string', 'max:255'],
+            'model_identifier' => ['nullable', 'string', 'max:100'],
             'company_id' => ['nullable', 'integer'],
             'date_from' => ['nullable', 'string', 'max:10'],
             'date_to' => ['nullable', 'string', 'max:10'],
@@ -71,6 +73,7 @@ class ActivityLogController extends Controller
             $data['filters']['user_id'] ?? null,
             $data['filters']['company_id'] ?? null,
             $data['filters']['model_type'] ?? null,
+            $data['filters']['model_identifier'] ?? null,
             $request->input('date_from'),
             $request->input('date_to'),
         ])->filter(fn (mixed $value): bool => filled($value))->count();
@@ -151,9 +154,11 @@ class ActivityLogController extends Controller
         ];
     }
 
+    /** Convert a stored activity record into the view model used by Blade. */
     private function activityRow(Activity $activity, Collection $companyLookup, Collection $impersonatedUsers): array
     {
         $details = $activity->details ?? collect();
+        $requestModels = collect($details->get('models', []));
         $attributes = collect($details->get('attributes', []));
         $old = collect($details->get('old', []));
         $changeKeys = $attributes->keys()->merge($old->keys())->unique();
@@ -177,30 +182,52 @@ class ActivityLogController extends Controller
         $modelUrl = $isRequest ? null : $this->modelUrl($activity->model_type, $activity->model_id);
         $route = $details->get('route');
         $routeUrl = $isRequest ? $this->namedRouteUrl($route) : null;
+        $modelRows = $isRequest
+            ? $requestModels->map(function (array $model): array {
+                $type = $model['model_type'] ?? null;
+                $id = $model['model_id'] ?? null;
+                $hasNumberColumn = $this->modelHasNumberColumn($type);
+                $number = $model['model_number'] ?? null;
+                $label = __(class_basename($type ?: 'Activity')).($hasNumberColumn && filled($number) ? ' #'.$number : ' #'.$id);
+
+                return [
+                    'label' => $label,
+                    'url' => $this->modelUrl($type, $id),
+                    'changes' => collect($model['new_data'] ?? [])->keys()->merge(collect($model['old_data'] ?? [])->keys())->unique()->map(fn (string $key): array => [
+                        'model' => $label,
+                        'url' => $this->modelUrl($type, $id),
+                        'field' => $key,
+                        'old' => $this->formatValue(collect($model['old_data'] ?? [])->get($key)),
+                        'new' => $this->formatValue(collect($model['new_data'] ?? [])->get($key)),
+                    ]),
+                ];
+            })
+            : collect();
+        $allModelLinks = $isRequest ? $modelRows->map(fn (array $model): array => ['label' => $model['label'], 'url' => $model['url']])->unique(fn (array $link): string => $link['label'])->values() : collect();
+        $allModelLabels = $allModelLinks->pluck('label')->values();
+        $requestChanges = $modelRows->flatMap(fn (array $model): Collection => $model['changes'])->values();
 
         return [
             'id' => $activity->id,
             'userId' => $activity->user_id,
             'isRequest' => $isRequest,
-            'actionLabel' => $action['label'],
+            'actionLabel' => $isRequest && $requestModels->isNotEmpty()
+                ? ($this->actionOptions()[$requestModels->first()['event'] ?? $canonicalAction]['label'] ?? $action['label'])
+                : $action['label'],
             'actionStyle' => $action['style'],
-            'userInitial' => mb_strtoupper(mb_substr($activity->user?->name ?? '?', 0, 1)),
             'userName' => $activity->user?->name ?? __('System'),
             'userUrl' => $activity->user ? route('users.show', $activity->user) : null,
             'companyLabel' => $company ? $company->name.' - '.localizeNumber($company->fiscal_year) : null,
-            'title' => $isRequest ? ($route ?: $activity->description) : $modelTitle,
-            'titleDetail' => $isRequest ? null : $details->get('model_label', $hasNumberColumn ? null : '#'.$activity->model_id),
             'requestMethod' => $isRequest
                 ? strtoupper((string) ($details->get('method') ?: $activity->action))
                 : null,
             'route' => $route,
-            'contextLabel' => $route ?: ($isRequest ? $activity->description : $modelContextLabel),
+            'contextLabel' => $route ?: ($isRequest ? ($allModelLabels->first() ?: $activity->description) : $modelContextLabel),
             'contextUrl' => $isRequest ? null : $modelUrl,
             'modelContextLabel' => $isRequest ? null : $modelContextLabel,
-            'modelContextLabels' => $isRequest ? collect() : collect([$modelContextLabel]),
-            'modelContextLinks' => $isRequest ? collect() : collect([['label' => $modelContextLabel, 'url' => $modelUrl]]),
-            'modelId' => $isRequest ? null : $activity->model_id,
-            'ipAddress' => $details->get('ip_address'),
+            'modelContextLabels' => $isRequest ? $allModelLabels : collect([$modelContextLabel]),
+            'modelContextLinks' => $isRequest ? $allModelLinks : collect([['label' => $modelContextLabel, 'url' => $modelUrl]]),
+            'modelId' => $isRequest ? ($requestModels->first()['model_id'] ?? null) : $activity->model_id,
             'impersonatedUserName' => $impersonatedUser?->name,
             'createdAt' => $activity->created_at?->copy()->setTimezone(config('app.timezone'))->toAtomString(),
             'createdAtTimestamp' => $activity->created_at?->getTimestamp(),
@@ -216,13 +243,13 @@ class ActivityLogController extends Controller
             'requestInput' => filled($details->get('request_input'))
                 ? (json_encode($details->get('request_input'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) ?: '—')
                 : null,
-            'changes' => $changeKeys->map(fn (string $key): array => [
+            'changes' => ($isRequest ? $requestChanges : $changeKeys->map(fn (string $key): array => [
                 'model' => $modelContextLabel,
                 'url' => $modelUrl,
                 'field' => $key,
                 'old' => $this->formatValue($old->get($key)),
                 'new' => $this->formatValue($attributes->get($key)),
-            ]),
+            ]))->values(),
         ];
     }
 
@@ -293,6 +320,7 @@ class ActivityLogController extends Controller
         return null;
     }
 
+    /** Merge legacy model rows with their request row for pre-refactor history. */
     private function mergeRequestRows(Collection $rows): Collection
     {
         $rows = $rows->values();

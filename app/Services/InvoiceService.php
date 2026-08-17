@@ -228,7 +228,7 @@ class InvoiceService
             $chequeIds = $invoice->payments()->whereNotNull('cheque_id')->pluck('cheque_id')->unique();
             Cheque::whereIn('id', $chequeIds)->each(fn (Cheque $cheque) => app(ChequeService::class)->delete($cheque));
 
-            $invoice->items()->delete();
+            $invoice->items()->get()->each(fn (InvoiceItem $item) => $item->delete());
 
             $invoice->delete();
         });
@@ -354,7 +354,7 @@ class InvoiceService
 
         CostOfGoodsService::refreshProductCOGAfterItemsDeletion($invoice, $itemId);
 
-        $invoice->items()->whereNotIn('id', $itemId)->delete();
+        $invoice->items()->whereNotIn('id', $itemId)->get()->each(fn (InvoiceItem $item) => $item->delete());
     }
 
     public function changeInvoiceStatus(Invoice $invoice, string $status): void

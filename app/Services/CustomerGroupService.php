@@ -97,7 +97,7 @@ class CustomerGroupService
     {
         DB::transaction(function () use ($customerGroup) {
             foreach ($customerGroup->customers as $customer) {
-                $customer->comments()->delete();
+                $customer->comments()->get()->each->delete();
                 $customer->delete();
                 $customer->subject?->delete();
             }
@@ -146,7 +146,7 @@ class CustomerGroupService
         $customerGroup->setRelation($relation, $subject);
 
         if ($subject->id !== $customerGroup->subject_id) {
-            $customerGroup->updateQuietly(['subject_id' => $subject->id]);
+            $customerGroup->update(['subject_id' => $subject->id]);
         }
     }
 }

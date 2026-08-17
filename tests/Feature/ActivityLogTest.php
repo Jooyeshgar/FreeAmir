@@ -648,13 +648,12 @@ class ActivityLogTest extends TestCase
 
         $this->post('/test/activity-log/multiple-model-events')->assertNoContent();
 
-        $modelActivities = Activity::query()->where('source', 'model')->where('model_type', Company::class)->get();
+        $requestActivity = Activity::query()->where('source', 'request')->latest('id')->firstOrFail();
 
-        $this->assertCount(3, $modelActivities);
-        $this->assertTrue($modelActivities->every(
-            fn (Activity $activity): bool => (int) $activity->user_id === $impersonator->id
-                && (int) $activity->details->get('impersonated_user_id') === $impersonated->id,
-        ));
+        $this->assertSame($impersonator->id, $requestActivity->user_id);
+        $this->assertSame($impersonated->id, $requestActivity->details->get('impersonated_user_id'));
+        $this->assertCount(3, $requestActivity->details->get('models'));
+        $this->assertCount(0, Activity::query()->where('source', 'model')->where('model_type', Company::class)->get());
         $this->assertLessThanOrEqual(1, $impersonatorLookupCount);
     }
 

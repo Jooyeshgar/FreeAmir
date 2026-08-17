@@ -96,7 +96,8 @@ class PayrollService
                 ->where('employee_id', $attendance->employee_id)
                 ->where('year', $attendance->year)
                 ->where('month', $attendance->month)
-                ->delete();
+                ->get()
+                ->each(fn (Payroll $payroll) => $payroll->delete());
 
             $breakdown = $this->calculate($attendance, $decree, $companyId);
 

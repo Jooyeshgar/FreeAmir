@@ -142,7 +142,7 @@ class ServiceGroupService
         }
 
         if ($dirtyIds) {
-            $serviceGroup->updateQuietly($dirtyIds);
+            $serviceGroup->update($dirtyIds);
         }
     }
 

@@ -159,7 +159,7 @@ class DocumentNumberService
 
         DB::transaction(function () use ($batch, &$nextNumber, &$state) {
             foreach ($batch as $document) {
-                Document::whereKey($document->id)->update(['number' => $nextNumber]);
+                Document::findOrFail($document->id)->update(['number' => $nextNumber]);
 
                 $nextNumber++;
                 $state['last_id'] = $document->id;

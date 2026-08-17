@@ -146,7 +146,7 @@ class ProductGroupService
         }
 
         if ($dirtyIds) {
-            $productGroup->updateQuietly($dirtyIds);
+            $productGroup->update($dirtyIds);
         }
     }
 

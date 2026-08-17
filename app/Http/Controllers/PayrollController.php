@@ -295,7 +295,7 @@ class PayrollController extends Controller
     public function destroy(Payroll $payroll): RedirectResponse
     {
         $attendanceId = $payroll->monthly_attendance_id;
-        $payroll->items()->delete();
+        $payroll->items()->get()->each->delete();
         $payroll->delete();
 
         if ($attendanceId) {

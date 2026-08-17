@@ -125,7 +125,7 @@ class SalaryDecreeController extends Controller
                 'is_active' => $request->boolean('is_active', false),
             ]);
 
-            $salaryDecree->benefits()->delete();
+            $salaryDecree->benefits()->get()->each->delete();
 
             foreach ($validated['benefits'] ?? [] as $benefit) {
                 DecreeBenefit::create([
@@ -142,7 +142,7 @@ class SalaryDecreeController extends Controller
 
     public function destroy(SalaryDecree $salaryDecree): RedirectResponse
     {
-        $salaryDecree->benefits()->delete();
+        $salaryDecree->benefits()->get()->each->delete();
         $salaryDecree->delete();
 
         return redirect()->route('salary.salary-decrees.index')

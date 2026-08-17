@@ -363,7 +363,8 @@ class AttendanceService
 
         AttendanceLog::where('employee_id', $employeeId)
             ->whereBetween('log_date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->update(['monthly_attendance_id' => $attendance->id]);
+            ->get()
+            ->each(fn (AttendanceLog $log) => $log->update(['monthly_attendance_id' => $attendance->id]));
 
         return $attendance;
     }

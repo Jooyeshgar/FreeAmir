@@ -45,7 +45,7 @@ class ProductService
 
     public function delete(Product $product): void
     {
-        $product->productWebsites()->delete();
+        $product->productWebsites()->get()->each->delete();
         $product->delete();
         $this->deleteSubjects($product);
     }
@@ -185,13 +185,13 @@ class ProductService
         }
 
         if ($dirtyIds) {
-            $product->updateQuietly($dirtyIds);
+            $product->update($dirtyIds);
         }
     }
 
     protected function syncWebsites(Product $product, array $websites): void
     {
-        $product->productWebsites()->delete();
+        $product->productWebsites()->get()->each->delete();
 
         $prepared = [];
 

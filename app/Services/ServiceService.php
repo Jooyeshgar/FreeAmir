@@ -119,7 +119,7 @@ class ServiceService
         }
 
         if ($dirtyIds) {
-            $service->updateQuietly($dirtyIds);
+            $service->update($dirtyIds);
         }
     }
 

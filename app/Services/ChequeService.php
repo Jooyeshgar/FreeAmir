@@ -164,7 +164,7 @@ class ChequeService
                 ->merge(Document::withoutGlobalScopes()->where('documentable_type', $lockedCheque->getMorphClass())->where('documentable_id', $lockedCheque->id)->pluck('id'))
                 ->filter()->unique()->values();
 
-            $lockedCheque->payments()->delete();
+            $lockedCheque->payments()->get()->each->delete();
             $lockedCheque->delete();
 
             foreach ($documentIds as $documentId) {
@@ -435,7 +435,8 @@ class ChequeService
         }
 
         $leaf = $chequebook->next_leaf;
-        $chequebook->increment('next_leaf');
+        $chequebook->next_leaf++;
+        $chequebook->save();
 
         return (string) $leaf;
     }

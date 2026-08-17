@@ -50,7 +50,7 @@
             @endif
         </header>
 
-        <form action="{{ route('management.activity-logs.index') }}" method="GET" class="grid gap-x-4 gap-y-4 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-4" x-data>
+        <form action="{{ route('management.activity-logs.index') }}" method="GET" class="grid gap-x-4 gap-y-4 p-4 sm:grid-cols-2 sm:p-5 xl:grid-cols-5" x-data>
             <label class="form-control sm:col-span-2 xl:col-span-2">
                 <span class="mb-2 block text-xs font-semibold text-slate-600 dark:text-slate-300">{{ __('Search activities') }}</span>
                 <div class="relative">
@@ -99,6 +99,11 @@
                 </select>
             </label>
 
+            <label class="form-control">
+                <span class="mb-2 block text-xs font-semibold text-slate-600 dark:text-slate-300">{{ __('Model number or ID') }}</span>
+                <input type="search" name="model_identifier" value="{{ $filters['model_identifier'] ?? '' }}" class="input input-bordered w-full" placeholder="{{ __('Number or ID') }}" dir="ltr">
+            </label>
+
             <div class="form-control">
                 <span class="mb-2 block text-xs font-semibold text-slate-600 dark:text-slate-300">{{ __('From date') }}</span>
                 <x-date-picker name="date_from" id="date_from" title="" :value="$dateFromValue" :placeholder="__('Select date')" x-bind:readonly="true" />
@@ -109,7 +114,7 @@
                 <x-date-picker name="date_to" id="date_to" title="" :value="$dateToValue" :placeholder="__('Select date')" x-bind:readonly="true" />
             </div>
 
-            <div class="grid grid-cols-2 gap-2 sm:col-span-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end xl:col-span-4">
+            <div class="grid grid-cols-2 gap-2 sm:col-span-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end xl:col-span-5">
                 <button type="submit" class="btn btn-primary w-full sm:w-auto sm:min-w-36">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.5h16.5l-6.375 7.084v5.166l-3.75 2.75v-7.916L3.75 4.5Z" /></svg>
                     {{ __('Apply filters') }}
@@ -195,37 +200,43 @@
                         @if ($activity['changes']->isNotEmpty())
                             <div @class(['space-y-3', 'mt-3' => $activity['requestContext']])>
                                 @foreach ($activity['changes']->groupBy('model') as $affectedModel => $modelChanges)
-                                    <section class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800" data-affected-model="{{ $affectedModel }}">
-                                        <header class="flex flex-wrap items-center gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-950/40">
-                                            <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">{{ __('Affected model') }}</span>
-                                            @if ($modelChanges->first()['url'] ?? null)
-                                                <a href="{{ $modelChanges->first()['url'] }}" class="font-mono text-xs font-bold text-sky-700 hover:underline dark:text-sky-300" dir="ltr">{{ $affectedModel }}</a>
-                                            @else
-                                                <bdi class="font-mono text-xs font-bold text-sky-700 dark:text-sky-300" dir="ltr">{{ $affectedModel }}</bdi>
-                                            @endif
+                                    <section x-data="{ modelOpen: false }" class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800" data-affected-model="{{ $affectedModel }}">
+                                        <header class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-950/40">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">{{ __('Affected model') }}</span>
+                                                @if ($modelChanges->first()['url'] ?? null)
+                                                    <a href="{{ $modelChanges->first()['url'] }}" class="font-mono text-xs font-bold text-sky-700 hover:underline dark:text-sky-300" dir="ltr">{{ $affectedModel }}</a>
+                                                @else
+                                                    <bdi class="font-mono text-xs font-bold text-sky-700 dark:text-sky-300" dir="ltr">{{ $affectedModel }}</bdi>
+                                                @endif
+                                            </div>
+                                            <button type="button" class="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-800" @click="modelOpen = ! modelOpen" :aria-expanded="modelOpen" aria-label="{{ __('Details') }}">
+                                                <span x-text="modelOpen ? '{{ __('Close') }}' : '{{ __('Details') }}'"></span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3.5 w-3.5 transition-transform" :class="modelOpen ? 'rotate-180' : ''" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" /></svg>
+                                            </button>
                                         </header>
 
-                                        <div class="space-y-2 sm:hidden p-3">
+                                        <div x-cloak x-show="modelOpen" class="space-y-2 sm:hidden p-3">
                                             @foreach ($modelChanges as $change)
-                                                <div class="rounded-lg border border-slate-200 p-3 text-xs dark:border-slate-800">
+                                                <div @class(['rounded-lg border border-slate-200 p-3 text-xs dark:border-slate-800', 'bg-amber-50/70 font-bold dark:bg-amber-950/20' => $change['old'] !== $change['new']])>
                                                     <p class="mb-2 font-mono font-bold text-slate-700 dark:text-slate-200" dir="ltr">{{ $change['field'] }}</p>
                                                     <dl class="grid gap-2">
-                                                        <div><dt class="text-[11px] font-semibold text-slate-400">{{ __('Previous value') }}</dt><dd><pre class="mt-1 whitespace-pre-wrap break-all" dir="ltr">{{ $change['old'] }}</pre></dd></div>
-                                                        <div><dt class="text-[11px] font-semibold text-slate-400">{{ __('New value') }}</dt><dd><pre class="mt-1 whitespace-pre-wrap break-all" dir="ltr">{{ $change['new'] }}</pre></dd></div>
+                                                        <div @class(['rounded-lg p-2', 'bg-rose-50 dark:bg-rose-950/30' => $change['old'] !== $change['new']])><dt class="text-[11px] font-semibold text-slate-400">{{ __('Previous value') }}</dt><dd><pre @class(['mt-1 whitespace-pre-wrap break-all', 'font-bold text-rose-700 dark:text-rose-300' => $change['old'] !== $change['new']]) dir="ltr">{{ $change['old'] }}</pre></dd></div>
+                                                        <div @class(['rounded-lg p-2', 'bg-emerald-50 dark:bg-emerald-950/30' => $change['old'] !== $change['new']])><dt class="text-[11px] font-semibold text-slate-400">{{ __('New value') }}</dt><dd><pre @class(['mt-1 whitespace-pre-wrap break-all', 'font-bold text-emerald-700 dark:text-emerald-300' => $change['old'] !== $change['new']]) dir="ltr">{{ $change['new'] }}</pre></dd></div>
                                                     </dl>
                                                 </div>
                                             @endforeach
                                         </div>
 
-                                        <div class="hidden overflow-x-auto sm:block">
+                                        <div x-cloak x-show="modelOpen" class="hidden overflow-x-auto sm:block">
                                             <table class="table table-sm min-w-[32rem]">
                                                 <thead><tr><th>{{ __('Field') }}</th><th>{{ __('Previous value') }}</th><th>{{ __('New value') }}</th></tr></thead>
                                                 <tbody>
                                                     @foreach ($modelChanges as $change)
-                                                        <tr>
-                                                            <td class="font-mono text-xs" dir="ltr">{{ $change['field'] }}</td>
-                                                            <td><pre class="whitespace-pre-wrap break-all text-xs" dir="ltr">{{ $change['old'] }}</pre></td>
-                                                            <td><pre class="whitespace-pre-wrap break-all text-xs" dir="ltr">{{ $change['new'] }}</pre></td>
+                                                        <tr @class(['bg-amber-50/70 font-bold dark:bg-amber-950/20' => $change['old'] !== $change['new']])>
+                                                            <td @class(['font-mono text-xs', 'font-bold' => $change['old'] !== $change['new']]) dir="ltr">{{ $change['field'] }}</td>
+                                                            <td><pre @class(['whitespace-pre-wrap break-all text-xs', 'font-bold text-rose-700 dark:text-rose-300' => $change['old'] !== $change['new']]) dir="ltr">{{ $change['old'] }}</pre></td>
+                                                            <td><pre @class(['whitespace-pre-wrap break-all text-xs', 'font-bold text-emerald-700 dark:text-emerald-300' => $change['old'] !== $change['new']]) dir="ltr">{{ $change['new'] }}</pre></td>
                                                         </tr>
                                                     @endforeach
                                                 </tbody>

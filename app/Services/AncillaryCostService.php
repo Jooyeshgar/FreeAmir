@@ -206,7 +206,7 @@ class AncillaryCostService
                 DocumentService::deleteDocument($ancillaryCost->document_id);
             }
 
-            $ancillaryCost->items()->delete();
+            $ancillaryCost->items()->get()->each->delete();
             $ancillaryCost->delete();
 
             CostOfGoodsService::updateProductsAverageCost($invoice);
@@ -233,7 +233,7 @@ class AncillaryCostService
             $itemIds[] = $ancillaryCostItem->id;
         }
 
-        $ancillaryCost->items()->whereNotIn('id', $itemIds)->delete();
+        $ancillaryCost->items()->whereNotIn('id', $itemIds)->get()->each->delete();
     }
 
     /**

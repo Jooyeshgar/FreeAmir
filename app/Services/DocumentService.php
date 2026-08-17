@@ -166,26 +166,25 @@ class DocumentService
 
     public static function updateDocumentTransactions(int $documentId, array $transactionsData): void
     {
-        DB::beginTransaction();
+        DB::transaction(function () use ($documentId, $transactionsData): void {
+            $existingTransactionIds = [];
 
-        $existingTransactionIds = [];
-        foreach ($transactionsData as $transactionData) {
-            $transaction = Transaction::updateOrCreate(
-                ['id' => $transactionData['transaction_id'] ?? null],
-                [
-                    'document_id' => $documentId,
-                    'subject_id' => $transactionData['subject_id'],
-                    'desc' => $transactionData['desc'],
-                    'value' => floatval($transactionData['value']),
-                ]
-            );
-            $existingTransactionIds[] = $transaction->id;
-        }
-        Transaction::where('document_id', $documentId)
-            ->whereNotIn('id', $existingTransactionIds)
-            ->delete();
+            foreach ($transactionsData as $transactionData) {
+                $transaction = Transaction::updateOrCreate(
+                    ['id' => $transactionData['transaction_id'] ?? null],
+                    [
+                        'document_id' => $documentId,
+                        'subject_id' => $transactionData['subject_id'],
+                        'desc' => $transactionData['desc'],
+                        'value' => floatval($transactionData['value']),
+                    ]
+                );
+                $existingTransactionIds[] = $transaction->id;
+            }
 
-        DB::commit();
+            Transaction::where('document_id', $documentId)->whereNotIn('id', $existingTransactionIds)
+                ->get()->each(fn (Transaction $transaction) => $transaction->delete());
+        });
     }
 
     public static function deleteDocument(int $documentId): void
@@ -197,8 +196,10 @@ class DocumentService
                 $documentFileService->delete($documentFile);
             }
 
-            Transaction::where('document_id', $documentId)->delete();
-            Document::where('id', $documentId)->delete();
+            Transaction::where('document_id', $documentId)
+                ->get()
+                ->each(fn (Transaction $transaction) => $transaction->delete());
+            Document::where('id', $documentId)->get()->each->delete();
         });
     }
 

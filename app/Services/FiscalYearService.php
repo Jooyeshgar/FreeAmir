@@ -1635,7 +1635,7 @@ class FiscalYearService
             $newAccount->bank_id = $bankMapping[$oldBankId];
             $newAccount->company_id = $targetYearId;
             $newAccount->subject_id = $subjectMapping[$oldSubjectId];
-            $newAccount->saveQuietly();
+            $newAccount->save();
 
             $subject = Subject::withoutGlobalScope(FiscalYearScope::class)->find($newAccount->subject_id);
             $subject->subjectable()->associate($newAccount);
@@ -1714,7 +1714,7 @@ class FiscalYearService
             $newCustomer->introducer_id = $oldIntroducerId ? $mapping[$oldIntroducerId] : null;
             $newCustomer->group_id = $groupMapping[$oldGroupId];
             $newCustomer->subject_id = $subjectMapping[$oldSubjectId];
-            $newCustomer->saveQuietly();
+            $newCustomer->save();
 
             $subject = Subject::withoutGlobalScope(FiscalYearScope::class)->find($newCustomer->subject_id);
             $subject->subjectable()->associate($newCustomer);
@@ -2182,7 +2182,7 @@ class FiscalYearService
             $newChequebook->fill(collect($chequebookData)->except(['id', 'company_id', 'bank_account_id'])->toArray());
             $newChequebook->company_id = $targetYearId;
             $newChequebook->bank_account_id = $bankAccountMapping[$oldBankAccountId];
-            $newChequebook->saveQuietly();
+            $newChequebook->save();
 
             $mapping[$chequebookData['id']] = $newChequebook->id;
         }
@@ -2240,7 +2240,7 @@ class FiscalYearService
             $newCheque->endorsed_to_id = $oldEndorsedToId !== null ? $customerMapping[$oldEndorsedToId] : null;
             $newCheque->bank_account_id = $oldBankAccountId !== null ? $bankAccountMapping[$oldBankAccountId] : null;
             $newCheque->chequebook_id = $oldChequebookId !== null ? $chequebookMapping[$oldChequebookId] : null;
-            $newCheque->saveQuietly();
+            $newCheque->save();
 
             $mapping[$chequeData['id']] = $newCheque->id;
         }
@@ -2269,6 +2269,7 @@ class FiscalYearService
 
             Document::withoutGlobalScope(FiscalYearScope::class)
                 ->whereKey($documentMapping[$oldDocumentId])
+                ->firstOrFail()
                 ->update(['documentable_id' => $chequeMapping[$oldChequeId]]);
         }
     }
@@ -2338,7 +2339,7 @@ class FiscalYearService
             $newInvoice->customer_id = $customerMapping[$oldCustomerId];
             $newInvoice->document_id = $oldDocumentId ? ($documentMapping[$oldDocumentId] ?? null) : null;
             $newInvoice->company_id = $targetYearId;
-            $newInvoice->saveQuietly();
+            $newInvoice->save();
 
             $mapping[$invoiceData['id']] = $newInvoice->id;
         }
@@ -2373,7 +2374,7 @@ class FiscalYearService
             $newInvoice->returned_invoice_id = $mapping[$oldReturnedInvoiceId];
             $newInvoice->document_id = $oldDocumentId ? ($documentMapping[$oldDocumentId] ?? null) : null;
             $newInvoice->company_id = $targetYearId;
-            $newInvoice->saveQuietly();
+            $newInvoice->save();
 
             $mapping[$invoiceData['id']] = $newInvoice->id;
         }
