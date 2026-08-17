@@ -152,6 +152,7 @@ class ChequeController extends Controller
     private function validateCheque(Request $request, ?Cheque $cheque = null): array
     {
         $normalized = [
+            'title' => trim($request->input('title')),
             'amount' => convertToFloat($request->input('amount', 0)),
             'sayad_number' => preg_replace('/\D/', '', toEnglish((string) $request->input('sayad_number'))),
             'serial' => trim(toEnglish((string) $request->input('serial'))),
@@ -168,6 +169,7 @@ class ChequeController extends Controller
         $validator = Validator::make(
             $input,
             [
+                'title' => ['nullable', 'string', 'min:2', 'max:255'],
                 'direction' => ['required', 'integer', Rule::in(ChequeType::directionValues())],
                 'purpose' => ['required', 'integer', Rule::in(ChequeType::purposeValues())],
                 'amount' => ['required', 'numeric', 'gt:0'],
@@ -179,7 +181,7 @@ class ChequeController extends Controller
                     Rule::unique('cheques', 'sayad_number')->ignore($cheque?->id),
                 ],
                 'cheque_number' => ['nullable', 'string', 'max:50'],
-                'account_side_id' => ['required', Rule::exists('customers', 'id')->where('company_id', getActiveCompany())],
+                'customer_id' => ['required', Rule::exists('customers', 'id')->where('company_id', getActiveCompany())],
                 'bank_account_id' => [
                     Rule::requiredIf($direction === ChequeType::PAYABLE->value),
                     'nullable',
@@ -220,7 +222,7 @@ class ChequeController extends Controller
             [
                 'date' => ['nullable', 'date'],
                 'bank_account_id' => ['nullable', Rule::exists('bank_accounts', 'id')->where('company_id', getActiveCompany())],
-                'account_side_id' => ['nullable', Rule::exists('customers', 'id')->where('company_id', getActiveCompany())],
+                'customer_id' => ['nullable', Rule::exists('customers', 'id')->where('company_id', getActiveCompany())],
                 'description' => ['nullable', 'string', 'max:1000'],
             ],
         );

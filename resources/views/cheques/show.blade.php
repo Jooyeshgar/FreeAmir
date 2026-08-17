@@ -8,12 +8,9 @@
         'cancel' => __('Cancel / take back'),
         'execute' => __('Execute guarantee'),
     ];
-
-    $pageTitle = $cheque->cheque_number ? __('Cheque #:number', ['number' => $cheque->cheque_number]) : __('Cheque');
-    $canEdit = $cheque->histories->whereNotNull('from_status')->isEmpty();
 @endphp
 
-<x-app-layout :title="$pageTitle">
+<x-app-layout :title="$cheque->title ?? $cheque->cheque_number ? __('Cheque #:number', ['number' => $cheque->cheque_number]) : __('Cheque')">
     <x-show-message-bags />
 
     <div class="space-y-5 px-1 pb-6">
@@ -37,7 +34,7 @@
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
                                 <h1 class="text-xl font-bold text-base-content sm:text-2xl">
-                                    {{ $cheque->cheque_number ? __('Cheque #:number', ['number' => localizeNumber($cheque->cheque_number)]) : __('Cheque') }}
+                                    {{ $cheque->title }}
                                 </h1>
                                 <span class="badge badge-{{ $cheque->status->color() }} badge-outline">
                                     {{ $cheque->status->label() }}
@@ -76,7 +73,7 @@
                             </span>
                         </div>
 
-                        @if ($canEdit)
+                        @if ($cheque->histories->whereNotNull('from_status')->isEmpty())
                             <a class="btn btn-primary btn-sm gap-1.5" href="{{ route('cheques.edit', $cheque) }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor">
@@ -128,13 +125,13 @@
 
                 <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     @foreach ([
-        ['label' => __('Cheque serial'), 'value' => localizeNumber($cheque->serial), 'url' => null],
+        ['label' => __('Cheque serial'), 'value' => localizeNumber($cheque->serial ?? $cheque->chequebook?->serial_prefix), 'url' => null],
         ['label' => __('Sayad number'), 'value' => localizeNumber($cheque->sayad_number), 'url' => null],
         ['label' => __('Issue date'), 'value' => formatDate($cheque->write_date), 'url' => null],
         ['label' => __('Due date'), 'value' => formatDate($cheque->due_date), 'url' => null],
                         ['label' => __('Bank'), 'value' => $cheque->bankAccount?->bank?->name, 'url' => null],
         ['label' => __('Bank account'), 'value' => $cheque->bankAccount?->name, 'url' => $cheque->bankAccount ? route('bank-accounts.show', $cheque->bankAccount) : null],
-        ['label' => __('Chequebook'), 'value' => $cheque->chequebook?->displayName(), 'url' => $cheque->chequebook ? route('chequebooks.show', $cheque->chequebook) : null],
+        ['label' => __('Chequebook'), 'value' => $cheque->chequebook?->bankAccount?->name, 'url' => $cheque->chequebook ? route('chequebooks.show', $cheque->chequebook) : null],
         ['label' => __('Endorsed to'), 'value' => $cheque->endorsedTo?->name, 'url' => $cheque->endorsedTo ? route('customers.show', $cheque->endorsedTo) : null],
     ] as $item)
                         <div class="min-w-0 rounded-xl border border-base-200 bg-base-200/25 p-4">
@@ -197,7 +194,7 @@
                                     </select>
                                 @elseif($action === 'endorse')
                                     @php
-                                        $initialEndorseeId = old('account_side_id');
+                                        $initialEndorseeId = old('customer_id');
                                         $initialEndorseeValue = $initialEndorseeId
                                             ? "customer-{$initialEndorseeId}"
                                             : '';
@@ -209,7 +206,7 @@
                                         <x-select-box :options="[['headerGroup' => 'customer', 'options' => $accountSides]]" x-model="selectedAccountSide"
                                             placeholder="{{ __('Vendor / endorsee') }}"
                                             @selected="accountSideId = $event.detail.id" />
-                                        <x-input name="account_side_id" x-bind:value="accountSideId" hidden />
+                                        <x-input name="customer_id" x-bind:value="accountSideId" hidden />
                                     </div>
                                 @endif
                                 <div class="mt-3 grid gap-2 sm:grid-cols-2">

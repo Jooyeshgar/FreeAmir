@@ -46,22 +46,23 @@
                     <div class="col-span-2 md:col-span-1">
                         <fieldset class="w-full">
                             <label for="purpose" class="label">{{ __('Purpose') }}</label>
-                            <select id="purpose" name="purpose" class="select w-full border-slate-400 @error('purpose') select-error @enderror">
+                            <select id="purpose" name="purpose" class="select w-full border-slate-400">
                                 @foreach (\App\Enums\ChequeType::purposes() as $purpose)
                                     <option value="{{ $purpose->value }}" @selected((string) old('purpose', $cheque?->purpose->value ?? \App\Enums\ChequeType::SETTLEMENT->value) === (string) $purpose->value)>
                                         {{ $purpose->label() }}
                                     </option>
                                 @endforeach
                             </select>
-                            @error('purpose')
-                                <span class="label text-xs text-rose-700">{{ $message }}</span>
-                            @enderror
                         </fieldset>
                     </div>
 
+                    <x-text-input input_name="title" title="{{ __('Cheque Title') }}"
+                        input_value="{{ old('title') ?? ($cheque?->title ?? '') }}" placeholder="{{ __('Cheque Title') }}"
+                        label_text_class="text-sm text-gray-500 text-nowrap"></x-text-input>
+
                     <div class="col-span-2 md:col-span-1">
                         @php
-                            $initialAccountSideId = old('account_side_id', $cheque?->customer_id);
+                            $initialAccountSideId = old('customer_id', $cheque?->customer_id);
                             $initialAccountSideValue = $initialAccountSideId ? "customer-{$initialAccountSideId}" : '';
                         @endphp
                         <div class="w-full" x-data="{
@@ -71,12 +72,10 @@
                             <label class="label">{{ __('Account side') }}</label>
                             <x-select-box :options="[['headerGroup' => 'customer', 'options' => $accountSides]]"
                                 x-model="selectedAccountSide"
+                                x-init="selectedValue = selectedAccountSide"
                                 placeholder="{{ __('Select account side') }}"
                                 @selected="accountSideId = $event.detail.id" />
-                            <x-input name="account_side_id" x-bind:value="accountSideId" hidden />
-                            @error('account_side_id')
-                                <span class="label text-xs text-rose-700">{{ $message }}</span>
-                            @enderror
+                            <x-input name="customer_id" x-bind:value="accountSideId" hidden />
                         </div>
                     </div>
 
@@ -90,9 +89,6 @@
                             id_input="issue_date" placeholder="{{ __('Issue date') }}" readonly required
                             input_value="{{ old('issue_date') ?? convertToJalali($cheque?->write_date ?? now(), true) }}"
                             label_text_class="text-sm text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
-                        @error('issue_date')
-                            <span class="label text-xs text-rose-700">{{ $message }}</span>
-                        @enderror
                     </div>
 
                     <div class="col-span-2 md:col-span-1">
@@ -100,9 +96,6 @@
                             id_input="due_date" placeholder="{{ __('Due date') }}" readonly required
                             input_value="{{ old('due_date') ?? ($cheque ? convertToJalali($cheque->due_date, true) : '') }}"
                             label_text_class="text-sm text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
-                        @error('due_date')
-                            <span class="label text-xs text-rose-700">{{ $message }}</span>
-                        @enderror
                     </div>
 
                     <div class="col-span-2 md:col-span-1">
@@ -135,7 +128,7 @@
                             <fieldset class="w-full">
                                 <label for="bank_account_id" class="label">{{ __('Bank account') }}</label>
                                 <select id="bank_account_id" name="bank_account_id" x-model="bankAccountId"
-                                    class="select w-full border-slate-400 @error('bank_account_id') select-error @enderror"
+                                    class="select w-full border-slate-400"
                                     :required="direction === @js($payableDirectionValue)"
                                     :disabled="direction !== @js($payableDirectionValue)">
                                     <option value="">{{ __('Select bank account') }}</option>
@@ -145,25 +138,19 @@
                                         </option>
                                     @endforeach
                                 </select>
-                                @error('bank_account_id')
-                                    <span class="label text-xs text-rose-700">{{ $message }}</span>
-                                @enderror
                             </fieldset>
 
                             <fieldset class="w-full">
                                 <label for="chequebook_id" class="label">{{ __('Chequebook') }}</label>
-                                <select id="chequebook_id" name="chequebook_id" class="select w-full border-slate-400 @error('chequebook_id') select-error @enderror" :disabled="direction !== @js($payableDirectionValue)">
+                                <select id="chequebook_id" name="chequebook_id" class="select w-full border-slate-400" :disabled="direction !== @js($payableDirectionValue)">
                                     <option value="">{{ __('No chequebook') }}</option>
                                     @foreach ($chequebooks as $chequebook)
                                         <option value="{{ $chequebook->id }}" @selected((string) $selectedChequebookId === (string) $chequebook->id)>
-                                            {{ $chequebook->displayName() }}
+                                            {{ $chequebook->bankAccount?->name }}
                                         </option>
                                     @endforeach
                                 </select>
                                 <div class="label text-xs opacity-60">{{ __('Selecting a chequebook automatically assigns its next leaf as the cheque number.') }}</div>
-                                @error('chequebook_id')
-                                    <span class="label text-xs text-rose-700">{{ $message }}</span>
-                                @enderror
                             </fieldset>
                         </div>
                     </div>

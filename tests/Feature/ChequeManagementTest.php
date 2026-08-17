@@ -171,7 +171,7 @@ class ChequeManagementTest extends TestCase
     public function test_received_cheque_can_be_endorsed_to_vendor_as_a_cheque_payment(): void
     {
         $cheque = $this->receivedCheque();
-        $cheque = $this->service->transition($cheque, $this->user, 'endorse', ['account_side_id' => $this->vendor->id]);
+        $cheque = $this->service->transition($cheque, $this->user, 'endorse', ['customer_id' => $this->vendor->id]);
 
         $this->assertSame(ChequeType::ENDORSED, $cheque->status);
         $this->assertSame($this->vendor->id, $cheque->endorsed_to_id);
@@ -197,7 +197,7 @@ class ChequeManagementTest extends TestCase
             $this->receivedCheque();
             $this->fail('Expected a cross-company account-side subject to be rejected.');
         } catch (ValidationException $exception) {
-            $this->assertArrayHasKey('account_side_id', $exception->errors());
+            $this->assertArrayHasKey('customer_id', $exception->errors());
         }
 
         $this->assertSame(0, Cheque::count());
@@ -853,7 +853,7 @@ class ChequeManagementTest extends TestCase
             ->assertSee(__('Issue cheque'))
             ->assertSee('x-model="direction"', false)
             ->assertSee('searchSelect({', false)
-            ->assertSee('name="account_side_id"', false)
+            ->assertSee('name="customer_id"', false)
             ->assertSee('name="bank_account_id"', false)
             ->assertSee('name="chequebook_id"', false)
             ->assertSee('value="'.$chequebook->id.'" selected', false)
@@ -869,7 +869,7 @@ class ChequeManagementTest extends TestCase
         $this->withoutMiddleware(CheckPermission::class);
         $originalCheque = $this->receivedCheque();
         $endorsedCheque = $this->service->register($this->user, $this->data(ChequeType::RECEIVABLE, ChequeType::SETTLEMENT, $this->vendor));
-        $endorsedCheque = $this->service->transition($endorsedCheque, $this->user, 'endorse', ['account_side_id' => $this->customer->id]);
+        $endorsedCheque = $this->service->transition($endorsedCheque, $this->user, 'endorse', ['customer_id' => $this->customer->id]);
         $unrelatedCheque = $this->issuedCheque();
 
         $response = $this->get(route('customers.show', $this->customer));
@@ -905,7 +905,7 @@ class ChequeManagementTest extends TestCase
             'serial' => 'S-'.$this->sayadSequence,
             'cheque_number' => 'N-'.$this->sayadSequence,
             'sayad_number' => (string) $this->sayadSequence++,
-            'account_side_id' => $accountSide->id,
+            'customer_id' => $accountSide->id,
             'bank_account_id' => null,
             'description' => 'Test cheque',
         ];

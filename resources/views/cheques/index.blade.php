@@ -124,11 +124,11 @@
                                         <div class="min-w-0">
                                             <h3 class="truncate text-base font-bold text-base-content">
                                                 <a href="{{ route('cheques.show', $cheque) }}" class="hover:text-primary">
-                                                    {{ $cheque->cheque_number ? __('Cheque #:number', ['number' => localizeNumber($cheque->cheque_number)]) : __('Cheque') }}
+                                                    {{ $cheque->title }}
                                                 </a>
                                             </h3>
                                             <p class="truncate text-xs text-base-content/50">
-                                                {{ __('Cheque serial') }}: {{ localizeNumber($cheque->serial) ?: '—' }}
+                                                {{ __('Cheque serial') }}: {{ localizeNumber($cheque->serial ?? $cheque->chequebook?->serial_prefix ) ?: '—' }}
                                             </p>
                                             <p class="truncate text-xs text-base-content/50">
                                                 {{ __('Sayad number') }}: {{ localizeNumber($cheque->sayad_number) }}

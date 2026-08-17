@@ -989,7 +989,7 @@
                                                     <select name="chequebook_id" class="select select-bordered w-full">
                                                         <option value="">{{ __('No chequebook') }}</option>
                                                         @foreach($chequebooks as $chequebook)
-                                                            <option value="{{ $chequebook->id }}">{{ $chequebook->displayName() }}</option>
+                                                            <option value="{{ $chequebook->id }}">{{ $chequebook->bankAccount?->name }}</option>
                                                         @endforeach
                                                     </select>
                                                 </div>

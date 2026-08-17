@@ -77,7 +77,7 @@ class PaymentController extends Controller
             'invoice_id' => $invoice->id,
             'direction' => $direction->value,
             'purpose' => ChequeType::SETTLEMENT->value,
-            'account_side_id' => $invoice->customer_id,
+            'customer_id' => $invoice->customer_id,
         ]);
 
         return redirect()->route('invoices.show', $invoice)->with('success', __('Invoice payment cheque registered successfully.'));

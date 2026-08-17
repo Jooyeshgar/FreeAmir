@@ -57,6 +57,7 @@ class ChequeService
 
             $cheque = Cheque::create([
                 'company_id' => getActiveCompany(),
+                'title' => filled($data['title'] ?? null) ? trim($data['title']) : __('Cheque #').($data['cheque_number'] ?? ''),
                 'amount' => $data['amount'],
                 'write_date' => $data['issue_date'],
                 'due_date' => $data['due_date'],
@@ -66,7 +67,7 @@ class ChequeService
                 'direction' => $direction,
                 'purpose' => $purpose,
                 'status' => $status,
-                'customer_id' => $data['account_side_id'],
+                'customer_id' => $data['customer_id'],
                 'bank_account_id' => $data['bank_account_id'] ?? null,
                 'chequebook_id' => $data['chequebook_id'] ?? null,
                 'desc' => $data['description'] ?? null,
@@ -111,6 +112,7 @@ class ChequeService
 
             $status = $this->initialStatus($direction, $purpose);
             $lockedCheque->update([
+                'title' => filled($data['title'] ?? null) ? trim($data['title']) : __('Cheque #').($data['cheque_number'] ?? ''),
                 'amount' => $data['amount'],
                 'write_date' => $data['issue_date'],
                 'due_date' => $data['due_date'],
@@ -120,7 +122,7 @@ class ChequeService
                 'direction' => $direction,
                 'purpose' => $purpose,
                 'status' => $status,
-                'customer_id' => $data['account_side_id'],
+                'customer_id' => $data['customer_id'],
                 'endorsed_to_id' => null,
                 'bank_account_id' => $data['bank_account_id'] ?? null,
                 'chequebook_id' => $data['chequebook_id'] ?? null,
@@ -251,11 +253,11 @@ class ChequeService
 
     private function endorse(Cheque $cheque, User $user, array $data): Cheque
     {
-        if (empty($data['account_side_id'])) {
-            throw ValidationException::withMessages(['account_side_id' => __('Select the vendor receiving the endorsed cheque.')]);
+        if (empty($data['customer_id'])) {
+            throw ValidationException::withMessages(['customer_id' => __('Select the vendor receiving the endorsed cheque.')]);
         }
 
-        $vendor = Customer::findOrFail($data['account_side_id']);
+        $vendor = Customer::findOrFail($data['customer_id']);
         $vendorSubject = $this->customerSubject($vendor, $cheque);
 
         $from = $cheque->status;
@@ -379,8 +381,8 @@ class ChequeService
         if ($duplicateSayad) {
             throw ValidationException::withMessages(['sayad_number' => __('validation.unique', ['attribute' => __('16-digit Sayad number')])]);
         }
-        if (! Customer::whereKey($data['account_side_id'] ?? null)->exists()) {
-            throw ValidationException::withMessages(['account_side_id' => __('validation.exists', ['attribute' => __('Account side')])]);
+        if (! Customer::whereKey($data['customer_id'] ?? null)->exists()) {
+            throw ValidationException::withMessages(['customer_id' => __('validation.exists', ['attribute' => __('Account side')])]);
         }
         $account = ! empty($data['bank_account_id']) ? BankAccount::find($data['bank_account_id']) : null;
         if ($direction === ChequeType::PAYABLE && ! $account) {
@@ -411,8 +413,8 @@ class ChequeService
         if ($direction !== $expectedDirection) {
             throw ValidationException::withMessages(['direction' => __('The cheque direction does not match the invoice type.')]);
         }
-        if ((int) ($data['account_side_id'] ?? 0) !== (int) $invoice->customer_id) {
-            throw ValidationException::withMessages(['account_side_id' => __('The cheque account side must match the invoice account side.')]);
+        if ((int) ($data['customer_id'] ?? 0) !== (int) $invoice->customer_id) {
+            throw ValidationException::withMessages(['customer_id' => __('The cheque account side must match the invoice account side.')]);
         }
 
         $decision = $this->paymentService->validateInvoicePayment($invoice, [
@@ -440,7 +442,8 @@ class ChequeService
 
     private function post(User $user, Cheque $cheque, string $event, array $entries, ?string $date = null): Document
     {
-        $description = $this->accountingDescription($event, $cheque);
+        $title = $cheque->title ?? $this->accountingDescription($event, $cheque);
+        $description = $cheque->desc ?? $this->accountingDescription($event, $cheque);
         $transactions = array_map(fn (array $entry) => [
             'subject_id' => $entry[0],
             'value' => $entry[1],
@@ -449,7 +452,7 @@ class ChequeService
 
         $document = DocumentService::createDocument($user, [
             'date' => $date ?? now()->toDateString(),
-            'title' => $description,
+            'title' => $title,
             'number' => null,
             'documentable' => $cheque,
         ], $transactions);
@@ -519,7 +522,7 @@ class ChequeService
     {
         $customer = $cheque->customer;
         if (! $customer) {
-            throw ValidationException::withMessages(['account_side_id' => __('The account side has no accounting subject.')]);
+            throw ValidationException::withMessages(['customer_id' => __('The account side has no accounting subject.')]);
         }
 
         return $this->customerSubject($customer, $cheque);
@@ -528,13 +531,13 @@ class ChequeService
     private function customerSubject(Customer $customer, Cheque $cheque): int
     {
         if ((int) $customer->company_id != (int) $cheque->company_id) {
-            throw ValidationException::withMessages(['account_side_id' => __('The selected account side is invalid.')]);
+            throw ValidationException::withMessages(['customer_id' => __('The selected account side is invalid.')]);
         }
 
         $subjectId = (int) ($customer->subject_id ?: $customer->subject?->id);
         $subjectBelongsToCompany = $subjectId && Subject::where('company_id', $cheque->company_id)->whereKey($subjectId)->exists();
         if (! $subjectBelongsToCompany) {
-            throw ValidationException::withMessages(['account_side_id' => __('The account side has no accounting subject.')]);
+            throw ValidationException::withMessages(['customer_id' => __('The account side has no accounting subject.')]);
         }
 
         return $subjectId;

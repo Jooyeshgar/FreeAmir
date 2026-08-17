@@ -43,12 +43,4 @@ class Chequebook extends Model
     {
         return $this->hasMany(Cheque::class);
     }
-
-    public function displayName(): string
-    {
-        $range = localizeNumber($this->first_leaf).'–'.localizeNumber($this->last_leaf);
-        $prefix = $this->serial_prefix ? $this->serial_prefix.' ' : '';
-
-        return trim($this->bankAccount?->name.' — '.$prefix.$range);
-    }
 }

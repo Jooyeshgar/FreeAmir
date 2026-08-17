@@ -12,6 +12,7 @@ class Cheque extends Model
 {
     protected $fillable = [
         'company_id',
+        'title',
         'amount',
         'write_date',
         'due_date',
