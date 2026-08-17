@@ -528,7 +528,9 @@ class SubjectService
             $sum = (clone $query)->sum('value');
             $count = $query->count();
 
-            $query->get()->each(fn (Transaction $transaction) => $transaction->update(['subject_id' => $destination->id]));
+            $query->get()->each(function (Transaction $transaction) use ($destination) {
+                $transaction->update(['subject_id' => $destination->id]);
+            });
 
             return [
                 'count' => $count,
@@ -593,7 +595,10 @@ class SubjectService
 
             $sum = (clone $query)->sum('value');
             $count = $query->count();
-            $query->get()->each(fn (Transaction $transaction) => $transaction->update(['subject_id' => $newSubject->id]));
+
+            $query->get()->each(function (Transaction $transaction) use ($newSubject) {
+                $transaction->update(['subject_id' => $newSubject->id]);
+            });
 
             return [
                 'count' => $count,
