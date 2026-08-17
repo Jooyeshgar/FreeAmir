@@ -37,9 +37,10 @@
 
             @if ($allowedToResolve)
                 <div class="px-4 py-2 text-left">
-                    <a href="{{ route('invoices.group-action', $invoice) }}" class="btn btn-primary">
-                        {{ __('Delete All Documents') }}
-                    </a>
+                    <form method="POST" action="{{ route('invoices.group-action', $invoice) }}">
+                        @csrf
+                        <button type="submit" class="btn btn-primary">{{ __('Delete All Documents') }}</button>
+                    </form>
                 </div>
             @endif
         </div>
