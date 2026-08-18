@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Management;
 
 use App\Http\Controllers\Controller;
 use App\Models\Activity;
+use App\Models\Company;
 use App\Services\ActivityLogService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
@@ -89,7 +90,7 @@ class ActivityLogController extends Controller
             'activeFilterCount' => $activeFilterCount,
             'activeFilterCountLabel' => localizeNumber($activeFilterCount),
             'actionOptions' => $this->actionOptions(),
-            'companyOptions' => $data['companies']->map(fn ($company): array => [
+            'companyOptions' => $data['companies']->map(fn (Company $company): array => [
                 'value' => $company->id,
                 'label' => $company->name.' - '.localizeNumber($company->fiscal_year),
             ]),
@@ -239,6 +240,9 @@ class ActivityLogController extends Controller
                 ['label' => __('IP address'), 'value' => $details->get('ip_address') ?: '—'],
                 ['label' => __('User agent'), 'value' => $details->get('user_agent') ?: '—'],
             ] : [],
+            'requestInput' => filled($details->get('request_input'))
+                ? (json_encode($details->get('request_input'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT) ?: '—')
+                : null,
             'changes' => ($isRequest ? $requestChanges : $changeKeys->map(fn (string $key): array => [
                 'model' => $modelContextLabel,
                 'url' => $modelUrl,

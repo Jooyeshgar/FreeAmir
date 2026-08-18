@@ -18,19 +18,14 @@ class LogUserActivity
     public function handle(Request $request, Closure $next): Response
     {
         $this->activityLogService->beginRequest($request);
+        $response = $next($request);
+        $actor = $this->activityLogService->resolveActor($request->user());
+        $hasValidationErrors = $request->hasSession() && $request->session()->has('errors');
 
-        try {
-            $response = $next($request);
-            $actor = $this->activityLogService->resolveActor($request->user());
-            $hasValidationErrors = $request->hasSession() && $request->session()->has('errors');
-
-            if (in_array($request->method(), ['POST', 'PUT', 'PATCH', 'DELETE'], true) && $response->getStatusCode() < 400 && ! $hasValidationErrors) {
-                $this->activityLogService->recordRequest($request, $actor);
-            }
-
-            return $response;
-        } finally {
-            $this->activityLogService->endRequest();
+        if (in_array($request->method(), ['POST', 'PUT', 'PATCH', 'DELETE'], true) && $response->getStatusCode() < 400 && ! $hasValidationErrors) {
+            $this->activityLogService->recordRequest($request, $actor);
         }
+
+        return $response;
     }
 }

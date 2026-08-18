@@ -128,7 +128,7 @@
 
     <section class="space-y-3 sm:space-y-4" aria-label="{{ __('Activity') }}">
         @forelse ($activities as $activity)
-            <article x-data="{ detailsOpen: false }" class="group rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition duration-200 hover:border-slate-300 hover:shadow-md sm:p-4 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700">
+            <article x-data="{ detailsOpen: false, requestInputOpen: false }" class="group rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition duration-200 hover:border-slate-300 hover:shadow-md sm:p-4 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                     <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                         @if ($activity['contextUrl'])
@@ -189,6 +189,13 @@
                                     </div>
                                 @endforeach
                             </dl>
+                            @if ($activity['requestInput'])
+                                <button type="button" class="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700" @click="requestInputOpen = ! requestInputOpen" :aria-expanded="requestInputOpen" aria-controls="request-input-{{ $activity['id'] }}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-3.5 w-3.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3.75h9m-9 3.75h5.25M5.25 3.75h13.5a1.5 1.5 0 0 1 1.5 1.5v13.5a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5V5.25a1.5 1.5 0 0 1 1.5-1.5Z" /></svg>
+                                    {{ __('Request details') }}
+                                </button>
+                                <pre id="request-input-{{ $activity['id'] }}" x-cloak x-show="requestInputOpen" class="mt-2 max-h-72 max-w-full overflow-auto rounded-xl bg-slate-950 p-3 text-[11px] leading-5 text-slate-100 sm:p-4 sm:text-xs sm:leading-6" dir="ltr">{{ $activity['requestInput'] }}</pre>
+                            @endif
                         @endif
                         @if ($activity['changes']->isNotEmpty())
                             <div @class(['space-y-3', 'mt-3' => $activity['requestContext']])>
