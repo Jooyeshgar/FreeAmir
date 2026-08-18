@@ -3,7 +3,8 @@
 
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <form method="GET" action="{{ route('invoices.inactive.approve') }}">
+            <form method="POST" action="{{ route('invoices.inactive.approve') }}">
+                @csrf
                 <table class="table w-full mt-2 overflow-auto">
                     <thead>
                         <tr>
@@ -55,9 +56,9 @@
                 </table>
 
                 <div class="flex justify-end mt-4 gap-3">
-                    <a href="{{ route('invoices.inactive.approve') }}" class="btn btn-primary btn-sm gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm gap-2">
                         <span id="toggle-text">{{ __('Approve All') }}</span>
-                    </a>
+                    </button>
 
                 </div>
 

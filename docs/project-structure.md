@@ -183,6 +183,8 @@ views/
 مسیرهای وب اپلیکیشن:
 
 ```php
+<?php
+
 use App\Http\Controllers;
 use Illuminate\Support\Facades\Route;
 
@@ -202,6 +204,7 @@ Route::middleware('ensure-feature-enabled:registration')->group(function () {
     Route::post('/register/email', [Controllers\Auth\RegisterController::class, 'registerWithEmail'])->name('register.email');
 });
 Route::get('/verify', [Controllers\Auth\RegisterController::class, 'showVerificationNotice'])->middleware('auth')->name('verification.notice');
+Route::post('/verify-otp', [Controllers\Auth\RegisterController::class, 'verifyOtp'])->middleware(['auth', 'throttle:6,1'])->name('verification.otp');
 Route::post('/verification-notification', [Controllers\Auth\RegisterController::class, 'resendVerificationNotification'])->middleware(['auth', 'throttle:6,1'])->name('verification.send');
 Route::get('/verify/{id}/{hash}', [Controllers\Auth\RegisterController::class, 'verify'])->middleware(['auth', 'signed', 'throttle:6,1'])->name('verification.verify');
 
@@ -260,6 +263,7 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     });
     Route::get('/', [Controllers\HomeController::class, 'index'])->name('home');
     Route::get('/home/summary/{metric}', [Controllers\HomeController::class, 'summaryMetric'])->name('home.summary');
+    Route::post('/send-to-email', [Controllers\ReportEmailController::class, 'store'])->name('send-to-email');
     Route::get('subjects/search', [Controllers\SubjectController::class, 'search'])->name('subjects.search');
     Route::get('subjects/search-code', [Controllers\SubjectController::class, 'searchCode'])->name('subjects.search-code');
     Route::post('subjects/transfer', [Controllers\SubjectController::class, 'transferSubject'])->name('subjects.transfer');
@@ -314,7 +318,7 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::get('invoices/search-product-service', [Controllers\InvoiceController::class, 'searchProductService'])->name('invoices.search-product-service');
 
     Route::get('invoices/inactive', [Controllers\InvoiceController::class, 'inactiveInvoices'])->name('invoices.inactive');
-    Route::get('invoices/inactive/approve', [Controllers\InvoiceController::class, 'approveInactiveInvoices'])->name('invoices.inactive.approve');
+    Route::post('invoices/inactive/approve', [Controllers\InvoiceController::class, 'approveInactiveInvoices'])->name('invoices.inactive.approve');
     Route::get('invoices/export', [Controllers\InvoiceController::class, 'export'])->name('invoices.export');
     Route::prefix('invoices')->group(function () {
         Route::get('ancillary-costs/search-customer', [Controllers\AncillaryCostController::class, 'searchCustomer'])->name('ancillary-costs.search-customer');
@@ -336,7 +340,7 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::post('invoices/{invoice}/moadian-check-status', [Controllers\MoadianHistoryController::class, 'checkStatus'])->name('invoices.moadian-check-status');
     Route::get('invoices/{invoice}/conflicts', [Controllers\InvoiceController::class, 'conflicts'])->name('invoices.conflicts');
     Route::get('invoices/{invoice}/conflicts/{type}', [Controllers\InvoiceController::class, 'showMoreConflictsByType'])->name('invoices.conflicts.more');
-    Route::get('invoices/{invoice}/group-action', [Controllers\InvoiceController::class, 'groupAction'])->name('invoices.group-action');
+    Route::post('invoices/{invoice}/group-action', [Controllers\InvoiceController::class, 'groupAction'])->name('invoices.group-action');
     Route::get('invoices/{invoice}/print', [Controllers\InvoiceController::class, 'print'])->name('invoices.print');
     Route::get('invoices/{invoice}/void', [Controllers\InvoiceController::class, 'showVoidForm'])->name('invoices.void-form');
     Route::post('invoices/{invoice}/void', [Controllers\InvoiceController::class, 'voidInvoice'])->name('invoices.void');
