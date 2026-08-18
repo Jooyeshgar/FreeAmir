@@ -12,8 +12,8 @@ use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Lab404\Impersonate\Services\ImpersonateManager;
 
@@ -66,9 +66,25 @@ class ActivityLogService
     /** Start a fresh request buffer before route/controller execution. */
     public function beginRequest(Request $request): void
     {
+        if ($this->requestBeingProcessed !== null) {
+            $this->endRequest();
+        }
+
         $this->requestBeingProcessed = $request;
         $this->requestAuthenticatedUser = $request->user();
         $this->pendingModelEvents = [];
+    }
+
+    /** Explicitly release all per-request state so the service is safe to reuse. */
+    public function endRequest(): void
+    {
+        $this->pendingModelEvents = [];
+        $this->requestBeingProcessed = null;
+        $this->requestAuthenticatedUser = null;
+        $this->cachedActor = null;
+        $this->actorCached = false;
+        $this->actorRequest = null;
+        $this->actorAuthenticatedUserId = null;
     }
 
     /** Record a successful HTTP request and its collected model events. */
@@ -220,19 +236,23 @@ class ActivityLogService
             ->when($filters['date_to'] ?? null, fn ($query, string $date) => $query->whereDate('created_at', '<=', $date));
 
         $activities = $this->paginateGroupedActivities($query);
-        $impersonatedUserIds = $activities->getCollection()
-            ->map(fn (Activity $activity) => $activity->details?->get('impersonated_user_id'))->filter()->unique();
+
+        $impersonatedUserIds = [];
+        foreach ($activities->getCollection() as $activity) {
+            $id = $activity->details?->get('impersonated_user_id');
+            if ($id !== null) {
+                $impersonatedUserIds[] = $id;
+            }
+        }
+        $impersonatedUserIds = array_values(array_unique($impersonatedUserIds));
 
         return [
             'activities' => $activities,
             'metrics' => $this->metrics(),
-            'users' => User::query()->whereIn('id', Activity::query()->whereNotNull('user_id')->select('user_id'))->orderBy('name')->get(['id', 'name', 'email']),
-            'impersonatedUsers' => User::query()->whereIn('id', $impersonatedUserIds)->get(['id', 'name', 'email'])->keyBy('id'),
-            'companies' => Company::query()->orderByDesc('fiscal_year')->orderBy('name')->get(['id', 'name', 'fiscal_year']),
-            'modelTypes' => Activity::query()
-                ->get(['model_type', 'details'])
-                ->flatMap(fn (Activity $activity): Collection => collect([$activity->model_type])->merge($activity->details?->get('model_types', [])))
-                ->filter()->unique()->sort()->values(),
+            'users' => DB::table('users')->whereIn('id', Activity::query()->whereNotNull('user_id')->select('user_id'))->orderBy('name')->get(['id', 'name', 'email']),
+            'impersonatedUsers' => DB::table('users')->whereIn('id', $impersonatedUserIds)->get(['id', 'name', 'email'])->keyBy('id'),
+            'companies' => DB::table('companies')->orderByDesc('fiscal_year')->orderBy('name')->get(['id', 'name', 'fiscal_year']),
+            'modelTypes' => $this->availableModelTypes(),
             'filters' => $filters,
         ];
     }
@@ -244,7 +264,7 @@ class ActivityLogService
      */
     private function paginateGroupedActivities(Builder $query): LengthAwarePaginator
     {
-        $perPage = 25;
+        $perPage = 10;
         $page = Paginator::resolveCurrentPage();
         $firstItem = ($page - 1) * $perPage;
         $lastItem = $firstItem + $perPage;
@@ -373,12 +393,36 @@ class ActivityLogService
 
     private function metrics(): array
     {
+        $counts = Activity::query()
+            ->selectRaw('COUNT(*) as total')
+            ->selectRaw('SUM(CASE WHEN DATE(created_at) = CURDATE() THEN 1 ELSE 0 END) as today')
+            ->selectRaw("SUM(CASE WHEN source = 'model' THEN 1 ELSE 0 END) as model_count")
+            ->selectRaw("SUM(CASE WHEN source = 'request' THEN 1 ELSE 0 END) as request_count")
+            ->first();
+
+        $requestWithModels = Activity::query()->where('source', 'request')->whereJsonLength('details->models', '>', 0)->count();
+
         return [
-            'total' => Activity::query()->count(),
-            'today' => Activity::query()->whereDate('created_at', Carbon::today())->count(),
-            'model' => Activity::query()->where('source', 'model')->count() + Activity::query()->where('source', 'request')->whereJsonLength('details->models', '>', 0)->count(),
-            'request' => Activity::query()->where('source', 'request')->count(),
+            'total' => $counts->total,
+            'today' => $counts->today,
+            'model' => $counts->model_count + $requestWithModels,
+            'request' => $counts->request_count,
         ];
+    }
+
+    /**
+     * Derive available model types at the database level instead of hydrating every activity row.
+     *
+     * Combines distinct values from the model_type column with model types stored inside the details->model_types JSON arrays of request-source activities.
+     */
+    private function availableModelTypes(): Collection
+    {
+        $directTypes = Activity::query()->whereNotNull('model_type')->distinct()->pluck('model_type');
+
+        $jsonTypes = DB::table('activity_log')->whereJsonLength('details->model_types', '>', 0)->pluck('details')
+            ->map(fn (string $raw) => (json_decode($raw, true)['model_types'] ?? []))->flatten()->filter()->unique();
+
+        return $directTypes->merge($jsonTypes)->sort()->values();
     }
 
     /** Build complete, sanitized before/after snapshots for one model event. */

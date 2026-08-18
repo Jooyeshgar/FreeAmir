@@ -671,4 +671,56 @@ class ActivityLogTest extends TestCase
         $this->actingAs($firstUser)->get('/test/activity-log/resolved-actor')->assertOk()->assertJsonPath('actor_id', $firstUser->id);
         $this->actingAs($secondUser)->get('/test/activity-log/resolved-actor')->assertOk()->assertJsonPath('actor_id', $secondUser->id);
     }
+
+    public function test_model_types_are_derived_from_database_not_full_table_load(): void
+    {
+        $superAdmin = User::factory()->create();
+        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+        $company = Company::factory()->create();
+
+        activity('model')->causedBy($superAdmin)->performedOn($company)->event('created')
+            ->withProperties(['model_label' => $company->name, 'attributes' => ['name' => $company->name]])->log('created');
+
+        activity('request')->causedBy($superAdmin)->event('post')->withProperties([
+            'route' => 'companies.store',
+            'model_types' => [User::class],
+        ])->log('POST companies.store');
+
+        $this->actingAs($superAdmin)->get(route('management.activity-logs.index'))->assertOk()->assertViewHas('modelTypes', function ($modelTypes): bool {
+            return $modelTypes->contains(Company::class)
+                && $modelTypes->contains(User::class)
+                && $modelTypes->values()->all() === $modelTypes->sort()->values()->all();
+        });
+    }
+
+    public function test_request_lifecycle_state_is_cleaned_up_after_exception(): void
+    {
+        $actor = User::factory()->create();
+
+        Route::post('/test/activity-log/exception-route', function () {
+            throw new \RuntimeException('boom');
+        })->middleware('web');
+
+        try {
+            $this->actingAs($actor)->post('/test/activity-log/exception-route');
+        } catch (\RuntimeException) {
+            // Expected
+        }
+
+        $service = app(ActivityLogService::class);
+
+        $reflection = new \ReflectionClass($service);
+        $getProperty = function (string $name) use ($reflection, $service): mixed {
+            $property = $reflection->getProperty($name);
+            $property->setAccessible(true);
+
+            return $property->getValue($service);
+        };
+
+        $this->assertSame([], $getProperty('pendingModelEvents'));
+        $this->assertNull($getProperty('requestBeingProcessed'));
+        $this->assertNull($getProperty('requestAuthenticatedUser'));
+        $this->assertNull($getProperty('cachedActor'));
+        $this->assertFalse($getProperty('actorCached'));
+    }
 }
