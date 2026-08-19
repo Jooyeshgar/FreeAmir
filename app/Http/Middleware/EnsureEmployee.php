@@ -16,7 +16,7 @@ class EnsureEmployee
         $user = $request->user();
 
         if (! $user || ! $user->hasPermissionTo('employee-portal.dashboard') || ! $user->employee) {
-            abort(403, __('Access denied. You must be a registered employee to access this area. From menu bar, go to Management → System → Users, locate your user, and click "Create Employee" to associate an employee record with your account.'));
+            abort(403, __('Access denied. You must be registered as an employee to access this view. From menu bar, go to Management → System → Users, locate your user, and click "Create Employee" to create an employee for your account.'));
         }
 
         return $next($request);

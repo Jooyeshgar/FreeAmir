@@ -62,7 +62,7 @@
     "Absent": "غیبت",
     "Absent Days": "روزهای غیبت",
     "Access control": "مدیریت دسترسی",
-    "Access denied. You must be a registered employee to access this area. From menu bar, go to Management → System → Users, locate your user, and click \"Create Employee\" to associate an employee record with your account.": "دسترسی رد شد. برای دسترسی به این منطقه باید یک کارمند ثبت نام شده باشید. از نوار منو به مدیریت ← سیستم ← کاربران بروید، کاربر خود را پیدا کنید و روی «ایجاد کارمند» کلیک کنید تا یک رکورد کارمند با حساب کاربری شما مرتبط شود.",
+    "Access denied. You must be registered as an employee to access this view. From menu bar, go to Management → System → Users, locate your user, and click \"Create Employee\" to create an employee for your account.": "دسترسی رد شد. برای دسترسی به این صفحه باید به عنوان یک کارمند‌، ثبت نام شده باشید. از نوار منو به مدیریت ← سیستم ← کاربران بروید، کاربر خود را پیدا کنید و روی «ایجاد کارمند» کلیک کنید تا یک کارمند برای حساب کاربری شما ساخته شود.",
     "Access policy": "سیاست دسترسی",
     "Account": "حساب",
     "Account 1": "حساب 1",
