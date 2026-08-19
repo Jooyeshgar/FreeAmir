@@ -309,7 +309,7 @@ class ReportExportService
 
     private function invoicePdf(array $filters): array
     {
-        $invoice = Invoice::with('customer', 'items')->findOrFail($filters['invoice_id'] ?? null);
+        $invoice = Invoice::with('company', 'customer', 'items')->findOrFail($filters['invoice_id'] ?? null);
         if (! $invoice->status->isApprovedOrSettled()) {
             throw ValidationException::withMessages(['invoice_id' => __('Only approved and paid invoices can be emailed as PDF.')]);
         }

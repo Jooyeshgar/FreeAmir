@@ -1074,7 +1074,7 @@ class InvoiceService
             $decision->addMessage('error', __('Invoice has voided already.'));
         }
 
-        if (! $invoice->status->isApproved()) {
+        if (! $invoice->status->isApprovedOrSettled()) {
             $decision->addMessage('error', __('Invoice must be approved before voiding.'));
         }
 

@@ -7,6 +7,24 @@
 </head>
 
 <body>
+    @php
+        $company = $invoice->company;
+        $companyLogo = null;
+
+        if ($company?->logo && Illuminate\Support\Facades\Storage::disk('public')->exists($company->logo)) {
+            $logoExtension = strtolower(pathinfo($company->logo, PATHINFO_EXTENSION));
+            $logoMimeType = match ($logoExtension) {
+                'jpg', 'jpeg' => 'image/jpeg',
+                'png' => 'image/png',
+                'svg' => 'image/svg+xml',
+                default => 'application/octet-stream',
+            };
+            $companyLogo = 'data:'.$logoMimeType.';base64,'.base64_encode(
+                Illuminate\Support\Facades\Storage::disk('public')->get($company->logo)
+            );
+        }
+    @endphp
+
     <table width="100%">
         <tbody>
             <tr>
@@ -47,20 +65,21 @@
             </tr>
             <tr>
                 <td class="contractSection" width="33%">
-                    شماره ملی: {{ localizeNumber('10840096498') }}<br />
-                    شماره تلفن: {{ localizeNumber('031') }}<bdo dir="ltr">-</bdo>{{ localizeNumber('32121091') }}
+                    شماره ملی: {{ localizeNumber($company?->national_code ?? '') }}<br />
+                    شماره تلفن: <bdo dir="ltr">{{ localizeNumber($company?->phone_number ?? '') }}</bdo>
                 </td>
                 <td class="contractSection" width="30%">
-                    شماره اقتصادی: {{ localizeNumber('411337894159') }}<br />
-                    کد پستی ۱۰ رقمی: {{ localizeNumber('8136613699') }}
+                    شماره اقتصادی: {{ localizeNumber($company?->economical_code ?? '') }}<br />
+                    کد پستی ۱۰ رقمی: {{ localizeNumber($company?->postal_code ?? '') }}
                 </td>
                 <td class="contractSection" width="30%">
-                    شرکت مهندسی جویشگر پردیس ارم<br />
-                    دفتر مرکزی: اصفهان میدان امام حسین ارگ جهان نما فاز ۴ طبقه ۴ واحد ۱۶
+                    {{ $company?->name }}<br />
+                    {{ $company?->address }}
                 </td>
                 <td class="logo">
-                    @php $logo = base64_encode(file_get_contents(public_path('images/logo.svg'))); @endphp
-                    <img src="data:image/png;base64,{{ $logo }}" width="70" height="70" align="left">
+                    @if ($companyLogo)
+                        <img src="{{ $companyLogo }}" width="70" height="70" align="left">
+                    @endif
                 </td>
             </tr>
 

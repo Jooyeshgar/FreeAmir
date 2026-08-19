@@ -57,7 +57,7 @@
                         @endif
                     </td>
                     <td class="px-4 py-2">
-                        @if ($conflict->status->isApproved() && $conflict->document)
+                        @if ($conflict->status->isApprovedOrSettled() && $conflict->document)
                             <a href="{{ route('documents.show', $conflict->document) }}"
                                 class="text-primary link link-hover">
                                 {{ formatDocumentNumber($conflict->document->number) }}

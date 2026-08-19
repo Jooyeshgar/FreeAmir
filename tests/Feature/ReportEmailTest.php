@@ -76,6 +76,17 @@ class ReportEmailTest extends TestCase
         $this->assertStringContainsString('دریافت گزارش', $html);
     }
 
+    public function test_delivery_dialog_can_use_print_as_its_trigger_label(): void
+    {
+        $this->actingAs($this->user);
+
+        $html = Blade::render('<x-export-delivery-choice id="invoice-delivery" export="invoice_pdf" :label="__(\'Print\')" />');
+
+        $this->assertStringContainsString('>Print</button>', $html);
+        $this->assertSame(1, substr_count($html, 'Receive Report'));
+        $this->assertStringContainsString('Send to email', $html);
+    }
+
     public function test_delivery_component_reuses_get_form_without_nesting_a_form_or_leaking_csrf_tokens(): void
     {
         $this->actingAs($this->user);

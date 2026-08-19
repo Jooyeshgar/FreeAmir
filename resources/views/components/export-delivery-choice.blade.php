@@ -4,6 +4,8 @@
     'filters' => [],
     'form' => null,
     'label' => null,
+    'title' => null,
+    'desc' => null,
     'class' => 'btn btn-sm btn-outline',
 ])
 
@@ -11,7 +13,7 @@
 
 <dialog id="{{ $id }}" class="modal">
     <div class="modal-box max-w-md">
-        <h3 class="text-lg font-bold">{{ __('Receive Report') }}</h3>
+        <h3 class="text-lg font-bold">{{ $title ?? __('Receive Report') }}</h3>
 
         @if ($form)
             <div class="mt-4">
@@ -25,7 +27,7 @@
                     class="input input-bordered w-full" dir="ltr" autocomplete="email" @if ($form) form="{{ $form }}" @endif>
             </label>
             <p class="mt-2 text-sm text-base-content/70">
-                {{ __('You can replace your email address to send this report to someone else. The email will identify you as the requester.') }}
+                {{ $desc ?? __('You can replace your email address to send this report to someone else. The email will identify you as the requester.') }}
             </p>
 
             <input type="hidden" name="export" value="{{ $export }}" @if ($form) form="{{ $form }}" @endif>

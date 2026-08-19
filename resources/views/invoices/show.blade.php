@@ -317,16 +317,16 @@
                             </table>
                         </div>
                         @if (!in_array($invoice->invoice_type, [App\Enums\InvoiceType::RETURN_BUY, App\Enums\InvoiceType::RETURN_SELL]))
-                            <div class="mt-2 text-right {{ $invoice->status->isApproved() ? '' : 'tooltip' }}"
-                                data-tip="{{ $invoice->status->isApproved() ? '' : __('Only approved invoices can be returned.') }}">
+                            <div class="mt-2 text-right {{ $invoice->status->isApprovedOrSettled() ? '' : 'tooltip' }}"
+                                data-tip="{{ $invoice->status->isApprovedOrSettled() ? '' : __('Only approved invoices can be returned.') }}">
                                 @if ($invoice->invoice_type === App\Enums\InvoiceType::BUY)
                                     <a href="{{ route('invoices.create', ['invoice_type' => 'return_buy', 'returned_invoice_id' => $invoice->id, 'service_buy' => $isServiceBuy ? '1' : null]) }}"
-                                        class="btn btn-primary {{ $invoice->status->isApproved() ? '' : 'btn-disabled' }}">
+                                        class="btn btn-primary {{ $invoice->status->isApprovedOrSettled() ? '' : 'btn-disabled' }}">
                                         {{ __('Create return buy invoice') }}
                                     </a>
                                 @elseif ($invoice->invoice_type === App\Enums\InvoiceType::SELL)
                                     <a href="{{ route('invoices.create', ['invoice_type' => 'return_sell', 'returned_invoice_id' => $invoice->id]) }}"
-                                        class="btn btn-primary {{ $invoice->status->isApproved() ? '' : 'btn-disabled' }}">
+                                        class="btn btn-primary {{ $invoice->status->isApprovedOrSettled() ? '' : 'btn-disabled' }}">
                                         {{ __('Create return sell invoice') }}
                                     </a>
                                 @endif
@@ -1100,7 +1100,7 @@
                             $invoice->status->isReadyToApprove() ||
                             $invoice->status->isUnapproved() ||
                             $invoice->status->isApprovedInactive();
-                        $canUnapprove = $invoice->status->isApproved();
+                        $canUnapprove = $invoice->status->isApprovedOrSettled();
                         $isSettled = $invoice->status->isPartiallyPaid() || $invoice->status->isPaid();
 
                         $hasMoadianSuccess = $invoice->moadianHistories->contains(function ($history) {
@@ -1127,7 +1127,7 @@
                                     <button class="btn btn-success btn-disabled cursor-not-allowed"
                                         title="{{ __('This invoice has already been sent successfully to Moadian and cannot be sent again.') }}">{{ __('Send Moadian') }}</button>
                                 </span>
-                            @elseif (!$invoice->status->isApproved())
+                            @elseif (!$invoice->status->isApprovedOrSettled())
                                 <span class="tooltip"
                                     data-tip="{{ __('Approve the invoice first to send to moadian') }}">
                                     <button class="btn btn-error btn-disabled cursor-not-allowed"
@@ -1151,7 +1151,7 @@
                     @can('invoices.void')
                         @if ($invoice->invoice_type === App\Enums\InvoiceType::SELL)
                             @if (
-                                $invoice->status->isApproved() &&
+                                $invoice->status->isApprovedOrSettled() &&
                                     !$invoice->voidInvoice &&
                                     $invoice->getReturnInvoice()->isEmpty())
                                 <a href="{{ route('invoices.void-form', $invoice) }}" class="btn btn-warning">
@@ -1184,8 +1184,9 @@
                         @endif
                     @endcan
 
-                    @if ($invoice->status->isApproved())
-                        <x-export-delivery-choice :id="'invoice-pdf-delivery-'.$invoice->id" export="invoice_pdf" :filters="['invoice_id' => $invoice->id]" class="btn btn-outline gap-2" />
+                    @if ($invoice->status->isApprovedOrSettled())
+                        <x-export-delivery-choice :id="'invoice-pdf-delivery-'.$invoice->id" export="invoice_pdf" :filters="['invoice_id' => $invoice->id]" :label="__('Print')" :title="__('Receive PDF')" class="btn btn-outline gap-2" 
+                            :desc="__('You can replace your email address to send this pdf to someone else. The email will identify you as the requester.')"/>
                     @else
                         <a href="{{ route('invoices.print', $invoice) }}" class="btn btn-outline gap-2" target="_blank" rel="noopener">
                             {{ __('Print') }}
