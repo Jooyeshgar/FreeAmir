@@ -453,8 +453,8 @@ class InvoiceController extends Controller
 
     public function destroy(Invoice $invoice)
     {
-        if ($invoice->status->isApproved()) {
-            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->valueName()])->with('error', __('Only unapproved invoices can be deleted.'));
+        if ($invoice->status->isApprovedOrSettled()) {
+            return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->valueName()])->with('error', __('Only unapproved and unpaided invoices can be deleted.'));
         }
 
         if ($invoice->ancillaryCosts()->exists() && $invoice->ancillaryCosts->every(fn ($ac) => $ac->status->isApproved())) {

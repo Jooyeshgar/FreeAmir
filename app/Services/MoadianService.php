@@ -60,7 +60,7 @@ class MoadianService
     {
         $decision = new InvoiceStatusDecision;
 
-        if (! $invoice->status->isApproved()) {
+        if (! $invoice->status->isApprovedOrSettled()) {
             $decision->addMessage('error', __('Cannot send an unapproved invoice to moadian.'));
         }
 

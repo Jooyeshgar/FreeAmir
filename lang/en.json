@@ -1679,7 +1679,7 @@
     "Only pending requests can be edited.": "Only pending requests can be edited.",
     "Only sales invoices that have not been returned are eligible for voiding.": "Only sales invoices that have not been returned are eligible for voiding.",
     "Only sell invoices are eligible for voiding.": "Only sell invoices are eligible for voiding.",
-    "Only unapproved invoices can be deleted.": "Only unapproved invoices can be deleted.",
+    "Only unapproved and unpaided invoices can be deleted.": "Only unapproved and unpaided invoices can be deleted.",
     "Open": "Open",
     "Open CRM": "Open CRM",
     "Open Dashboard": "Open Dashboard",

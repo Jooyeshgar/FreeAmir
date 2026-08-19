@@ -1679,7 +1679,7 @@
     "Only pending requests can be edited.": "فقط درخواست های در حال انتظار میتوانند ویرایش شوند.",
     "Only sales invoices that have not been returned are eligible for voiding.": "فقط فاکتورهای فروشی که برگشت نخورده‌اند قابلیت ابطال دارند.",
     "Only sell invoices are eligible for voiding.": "فقط فاکتورهای فروش واجد شرایط ابطال هستند.",
-    "Only unapproved invoices can be deleted.": "فقط فاکتورهای تاییدنشده قابل حذف هستند.",
+    "Only unapproved and unpaided invoices can be deleted.": "فقط فاکتورهای تاییدنشده و بدون پرداخت قابل حذف هستند.",
     "Open": "باز",
     "Open CRM": "باز کردن ارتباط با مشتری",
     "Open Dashboard": "باز کردن میز کار",
