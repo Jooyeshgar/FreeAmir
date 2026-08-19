@@ -134,7 +134,7 @@ enum InvoiceStatus: int
 
     public function isApproved(): bool
     {
-        return $this === self::APPROVED;
+        return in_array($this, self::approvedOrSettled(), true);
     }
 
     public function isUnapproved(): bool
