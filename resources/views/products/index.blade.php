@@ -61,8 +61,8 @@
 
                 <div class="modal-action">
                     <button type="button" class="btn btn-ghost" onclick="document.getElementById('product-csv-modal').close()">{{ __('Cancel') }}</button>
-                    <button type="submit" name="delivery" value="download" formaction="{{ route('send-to-email') }}" formmethod="POST" formnovalidate class="btn btn-primary">{{ __('Download') }}</button>
-                    <button type="submit" name="delivery" value="email" formaction="{{ route('send-to-email') }}" formmethod="POST" class="btn btn-secondary">{{ __('Send to email') }}</button>
+                    <button type="submit" name="delivery" value="download" formaction="{{ route('report') }}" formmethod="POST" formnovalidate class="btn btn-primary">{{ __('Download') }}</button>
+                    <button type="submit" name="delivery" value="email" formaction="{{ route('report') }}" formmethod="POST" class="btn btn-secondary">{{ __('Send to email') }}</button>
                 </div>
             </form>
         </div>
@@ -127,8 +127,8 @@
                 <p class="mt-2 text-sm text-base-content/70">{{ __('You can replace your email address to send this report to someone else. The email will identify you as the requester.') }}</p>
                 <div class="modal-action">
                     <button type="button" class="btn btn-ghost" onclick="document.getElementById('warehouse-pdf-delivery-modal').close()">{{ __('Cancel') }}</button>
-                    <button type="submit" form="warehouse-pdf-export-form" name="delivery" value="download" formaction="{{ route('send-to-email') }}" formmethod="POST" formtarget="_self" formnovalidate class="btn btn-primary">{{ __('Download') }}</button>
-                    <button type="submit" form="warehouse-pdf-export-form" name="delivery" value="email" formaction="{{ route('send-to-email') }}" formmethod="POST" formtarget="_self" class="btn btn-secondary">{{ __('Send to email') }}</button>
+                    <button type="submit" form="warehouse-pdf-export-form" name="delivery" value="download" formaction="{{ route('report') }}" formmethod="POST" formtarget="_self" formnovalidate class="btn btn-primary">{{ __('Download') }}</button>
+                    <button type="submit" form="warehouse-pdf-export-form" name="delivery" value="email" formaction="{{ route('report') }}" formmethod="POST" formtarget="_self" class="btn btn-secondary">{{ __('Send to email') }}</button>
                 </div>
             </div>
             <form method="dialog" class="modal-backdrop"><button aria-label="{{ __('Close') }}"></button></form>

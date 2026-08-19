@@ -102,8 +102,8 @@
                 <p class="mt-2 text-sm text-base-content/70">{{ __('You can replace your email address to send this report to someone else. The email will identify you as the requester.') }}</p>
                 <div class="modal-action">
                     <button type="button" class="btn btn-ghost" onclick="document.getElementById('document-csv-delivery-modal').close()">{{ __('Cancel') }}</button>
-                    <button type="submit" form="document-csv-export-form" name="delivery" value="download" formaction="{{ route('send-to-email') }}" formnovalidate class="btn btn-primary">{{ __('Download') }}</button>
-                    <button type="submit" form="document-csv-export-form" name="delivery" value="email" formaction="{{ route('send-to-email') }}" class="btn btn-secondary">{{ __('Send to email') }}</button>
+                    <button type="submit" form="document-csv-export-form" name="delivery" value="download" formaction="{{ route('report') }}" formnovalidate class="btn btn-primary">{{ __('Download') }}</button>
+                    <button type="submit" form="document-csv-export-form" name="delivery" value="email" formaction="{{ route('report') }}" class="btn btn-secondary">{{ __('Send to email') }}</button>
                 </div>
             </div>
             <form method="dialog" class="modal-backdrop"><button aria-label="{{ __('Close') }}"></button></form>

@@ -54,8 +54,8 @@
 
                 <div class="modal-action">
                     <button type="button" class="btn btn-ghost" onclick="document.getElementById('service-csv-modal').close()">{{ __('Cancel') }}</button>
-                    <button type="submit" name="delivery" value="download" formaction="{{ route('send-to-email') }}" formmethod="POST" formnovalidate class="btn btn-primary">{{ __('Download') }}</button>
-                    <button type="submit" name="delivery" value="email" formaction="{{ route('send-to-email') }}" formmethod="POST" class="btn btn-secondary">{{ __('Send to email') }}</button>
+                    <button type="submit" name="delivery" value="download" formaction="{{ route('report') }}" formmethod="POST" formnovalidate class="btn btn-primary">{{ __('Download') }}</button>
+                    <button type="submit" name="delivery" value="email" formaction="{{ route('report') }}" formmethod="POST" class="btn btn-secondary">{{ __('Send to email') }}</button>
                 </div>
             </form>
         </div>

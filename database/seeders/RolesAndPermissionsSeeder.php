@@ -180,7 +180,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'api.access',
             'change-company',
             'update-global-configs',
-            'send-to-email',
+            'report',
         ];
 
         $permissions = $extras;

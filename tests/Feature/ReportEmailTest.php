@@ -37,12 +37,12 @@ class ReportEmailTest extends TestCase
     {
         Notification::fake();
         $this->user->givePermissionTo([
-            Permission::firstOrCreate(['name' => 'send-to-email']),
+            Permission::firstOrCreate(['name' => 'report']),
             Permission::firstOrCreate(['name' => 'products.export']),
         ]);
         Product::factory()->create(['company_id' => $this->company->id, 'name' => 'Emailed Widget', 'code' => 'EMAIL-1']);
 
-        $response = $this->actingAs($this->user)->post(route('send-to-email'), [
+        $response = $this->actingAs($this->user)->post(route('report'), [
             'export' => 'products_csv',
             'filters' => ['cols_submitted' => 1, 'columns' => ['code']],
             'email' => $this->user->email,
@@ -124,18 +124,18 @@ class ReportEmailTest extends TestCase
         $this->assertNotFalse($filterFormEnd);
         $this->assertNotFalse($deliveryDialogStart);
         $this->assertLessThan($deliveryDialogStart, $filterFormEnd);
-        $this->assertStringContainsString('action="'.route('send-to-email').'" method="POST"', $html);
+        $this->assertStringContainsString('action="'.route('report').'" method="POST"', $html);
     }
 
     public function test_user_can_send_a_report_to_another_valid_email_address(): void
     {
         Notification::fake();
         $this->user->givePermissionTo([
-            Permission::firstOrCreate(['name' => 'send-to-email']),
+            Permission::firstOrCreate(['name' => 'report']),
             Permission::firstOrCreate(['name' => 'products.export']),
         ]);
 
-        $response = $this->actingAs($this->user)->post(route('send-to-email'), [
+        $response = $this->actingAs($this->user)->post(route('report'), [
             'export' => 'products_csv',
             'delivery' => 'email',
             'email' => 'recipient@example.com',
@@ -158,11 +158,11 @@ class ReportEmailTest extends TestCase
     {
         Notification::fake();
         $this->user->givePermissionTo([
-            Permission::firstOrCreate(['name' => 'send-to-email']),
+            Permission::firstOrCreate(['name' => 'report']),
             Permission::firstOrCreate(['name' => 'products.export']),
         ]);
 
-        $this->actingAs($this->user)->post(route('send-to-email'), [
+        $this->actingAs($this->user)->post(route('report'), [
             'export' => 'products_csv',
             'delivery' => 'email',
             'email' => 'not-an-email',
@@ -174,9 +174,9 @@ class ReportEmailTest extends TestCase
     public function test_user_cannot_email_an_export_without_its_source_permission(): void
     {
         Notification::fake();
-        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'send-to-email']));
+        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'report']));
 
-        $this->actingAs($this->user)->post(route('send-to-email'), [
+        $this->actingAs($this->user)->post(route('report'), [
             'export' => 'products_csv',
             'email' => $this->user->email,
         ])->assertForbidden();
@@ -189,7 +189,7 @@ class ReportEmailTest extends TestCase
         Notification::fake();
         $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'products.export']));
 
-        $this->actingAs($this->user)->post(route('send-to-email'), ['export' => 'products_csv', 'delivery' => 'email'])->assertForbidden();
+        $this->actingAs($this->user)->post(route('report'), ['export' => 'products_csv', 'delivery' => 'email'])->assertForbidden();
 
         Notification::assertNothingSent();
     }
@@ -198,12 +198,12 @@ class ReportEmailTest extends TestCase
     {
         Notification::fake();
         $this->user->givePermissionTo([
-            Permission::firstOrCreate(['name' => 'send-to-email']),
+            Permission::firstOrCreate(['name' => 'report']),
             Permission::firstOrCreate(['name' => 'products.export']),
         ]);
         Product::factory()->create(['company_id' => $this->company->id, 'name' => 'Private Filter Widget', 'code' => 'POST-1']);
 
-        $response = $this->actingAs($this->user)->post(route('send-to-email', ['delivery' => 'download']), [
+        $response = $this->actingAs($this->user)->post(route('report', ['delivery' => 'download']), [
             'export' => 'products_csv',
             'email' => 'not-an-email',
             'filters' => ['cols_submitted' => 1, 'columns' => ['code']],
@@ -236,9 +236,9 @@ class ReportEmailTest extends TestCase
     public function test_unknown_export_type_is_rejected(): void
     {
         Notification::fake();
-        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'send-to-email']));
+        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'report']));
 
-        $this->actingAs($this->user)->post(route('send-to-email'), ['export' => 'arbitrary_file'])->assertSessionHasErrors('export');
+        $this->actingAs($this->user)->post(route('report'), ['export' => 'arbitrary_file'])->assertSessionHasErrors('export');
 
         Notification::assertNothingSent();
     }
@@ -276,11 +276,11 @@ class ReportEmailTest extends TestCase
     public function test_accounting_report_can_be_downloaded_through_the_shared_delivery_flow(): void
     {
         $this->user->givePermissionTo([
-            Permission::firstOrCreate(['name' => 'send-to-email']),
+            Permission::firstOrCreate(['name' => 'report']),
             Permission::firstOrCreate(['name' => 'reports.result']),
         ]);
 
-        $response = $this->actingAs($this->user)->post(route('send-to-email'), [
+        $response = $this->actingAs($this->user)->post(route('report'), [
             'export' => 'accounting_report_csv',
             'delivery' => 'download',
             'report_for' => 'Document',
@@ -293,11 +293,11 @@ class ReportEmailTest extends TestCase
     public function test_accounting_document_export_rejects_a_reversed_date_range(): void
     {
         $this->user->givePermissionTo([
-            Permission::firstOrCreate(['name' => 'send-to-email']),
+            Permission::firstOrCreate(['name' => 'report']),
             Permission::firstOrCreate(['name' => 'reports.result']),
         ]);
 
-        $this->actingAs($this->user)->post(route('send-to-email'), [
+        $this->actingAs($this->user)->post(route('report'), [
             'export' => 'accounting_report_csv',
             'delivery' => 'download',
             'report_for' => 'Document',

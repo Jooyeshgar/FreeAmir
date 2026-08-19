@@ -1668,7 +1668,7 @@
     "On Invoice": "روی فاکتور",
     "One attendance log is created per worked day for each selected employee using their shift times. Fridays and public holidays are always skipped. Thursdays follow the shift setting: Just skipped if Holiday.": "به ازای هر روز کاری برای هر کارمند انتخاب‌شده، یک لاگ حضور بر اساس زمان شیفت ایجاد می‌شود. جمعه‌ها و تعطیلات رسمی همیشه نادیده گرفته می‌شوند. پنجشنبه‌ها بر اساس تنظیم شیفت تعیین می‌شوند: فقط در صورت تعطیلی نادیده گرفته می‌شود.",
     "Only CSV files are accepted.": "فقط فایل های CSV پذیرفته می شوند.",
-    "Only approved invoices can be emailed as PDF.": "فقط فاکتورهای تایید شده را می توان به صورت PDF ایمیل کرد.",
+    "Only approved and paid invoices can be emailed as PDF.": "فقط فاکتورهای تایید شده و پرداخت شده را می توان به صورت PDF ایمیل کرد.",
     "Only approved invoices can be returned.": "فقط فاکتورهای تایید شده قابل برگشت هستند.",
     "Only approved sell invoices are eligible for voiding.": "فقط فاکتورهای فروش تایید شده قابل ابطال هستند.",
     "Only approved sell invoices without return invoices can be voided.": "فقط فاکتورهای فروش تایید شده بدون فاکتورهای برگشتی را می توان باطل کرد.",

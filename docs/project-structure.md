@@ -263,7 +263,7 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     });
     Route::get('/', [Controllers\HomeController::class, 'index'])->name('home');
     Route::get('/home/summary/{metric}', [Controllers\HomeController::class, 'summaryMetric'])->name('home.summary');
-    Route::post('/send-to-email', [Controllers\ReportEmailController::class, 'store'])->name('send-to-email');
+    Route::post('/report', [Controllers\ReportEmailController::class, 'store'])->name('report');
     Route::get('subjects/search', [Controllers\SubjectController::class, 'search'])->name('subjects.search');
     Route::get('subjects/search-code', [Controllers\SubjectController::class, 'searchCode'])->name('subjects.search-code');
     Route::post('subjects/transfer', [Controllers\SubjectController::class, 'transferSubject'])->name('subjects.transfer');

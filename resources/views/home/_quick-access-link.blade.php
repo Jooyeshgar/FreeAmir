@@ -2,7 +2,7 @@
     $classes = 'group flex min-h-20 items-center gap-2 rounded-2xl border p-2 text-sm font-semibold shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md '.$link['style'];
 @endphp
 
-@if($link['area'] === 'export-products-link' && (auth()->user()->can('send-to-email') || auth()->user()->can('send-to-email.*')))
+@if($link['area'] === 'export-products-link' && (auth()->user()->can('report') || auth()->user()->can('report.*')))
     <x-export-delivery-choice id="home-products-export-delivery" export="products_csv" :label="$link['label']" :class="$classes" data-home-area="{{ $link['area'] }}" />
 @else
     <a href="{{ $link['href'] }}" data-home-area="{{ $link['area'] }}" class="{{ $classes }}">

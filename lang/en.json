@@ -1668,7 +1668,7 @@
     "On Invoice": "On Invoice",
     "One attendance log is created per worked day for each selected employee using their shift times. Fridays and public holidays are always skipped. Thursdays follow the shift setting: Just skipped if Holiday.": "One attendance log is created per worked day for each selected employee using their shift times. Fridays and public holidays are always skipped. Thursdays follow the shift setting: Just skipped if Holiday.",
     "Only CSV files are accepted.": "Only CSV files are accepted.",
-    "Only approved invoices can be emailed as PDF.": "Only approved invoices can be emailed as PDF.",
+    "Only approved and paid invoices can be emailed as PDF.": "Only approved and paid invoices can be emailed as PDF.",
     "Only approved invoices can be returned.": "Only approved invoices can be returned.",
     "Only approved sell invoices are eligible for voiding.": "Only approved sell invoices are eligible for voiding.",
     "Only approved sell invoices without return invoices can be voided.": "Only approved sell invoices without return invoices can be voided.",

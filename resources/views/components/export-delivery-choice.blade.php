@@ -16,7 +16,7 @@
         @if ($form)
             <div class="mt-4">
         @else
-            <form action="{{ route('send-to-email') }}" method="POST" class="mt-4">
+            <form action="{{ route('report') }}" method="POST" class="mt-4">
                 @csrf
         @endif
             <label class="fieldset w-full">
@@ -45,7 +45,7 @@
                 <button type="submit"
                     @if ($form)
                         form="{{ $form }}" name="_token" value="{{ csrf_token() }}"
-                        formaction="{{ route('send-to-email', ['delivery' => 'download']) }}" formmethod="POST" formtarget="_self"
+                        formaction="{{ route('report', ['delivery' => 'download']) }}" formmethod="POST" formtarget="_self"
                     @else
                         name="delivery" value="download"
                     @endif
@@ -55,7 +55,7 @@
                 <button type="submit"
                     @if ($form)
                         form="{{ $form }}" name="_token" value="{{ csrf_token() }}"
-                        formaction="{{ route('send-to-email', ['delivery' => 'email']) }}" formmethod="POST" formtarget="_self"
+                        formaction="{{ route('report', ['delivery' => 'email']) }}" formmethod="POST" formtarget="_self"
                     @else
                         name="delivery" value="email"
                     @endif
