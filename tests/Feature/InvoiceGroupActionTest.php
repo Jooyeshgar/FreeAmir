@@ -10,9 +10,11 @@ use App\Models\CustomerGroup;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\ProductGroup;
+use App\Models\Subject;
 use App\Models\User;
 use App\Services\GroupActionService;
 use App\Services\InvoiceService;
+use App\Services\PaymentService;
 use Cookie;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -187,6 +189,16 @@ class InvoiceGroupActionTest extends TestCase
         $returnBuyInv = $this->returnBuy([$this->productItem($product, 10, 100)], $buyInv2->id, true, 2104, $baseDate->copy()->addDays(3)->toDateString())['invoice'];
         $returnSellInv = $this->returnSell([$this->productItem($product, 5, 120)], $sellInv->id, true, 2105, $baseDate->copy()->addDays(4)->toDateString())['invoice'];
 
+        $cashBook = Subject::withoutGlobalScopes()->findOrFail((int) config('amir.cash_book'));
+        $cashSubjectId = (int) Subject::factory()->withParent($cashBook)->create(['name' => 'صندوق', 'company_id' => $this->companyId])->id;
+        $paymentDecision = app(PaymentService::class)->createPayment($this->user, $sellInv, [
+            'amount' => (float) $sellInv->amount,
+            'subject_id' => $cashSubjectId,
+        ]);
+
+        $this->assertFalse($paymentDecision->hasErrors());
+        $this->assertInvoiceStatus($sellInv->id, InvoiceStatus::PAID);
+
         $groupActionService = app(GroupActionService::class);
         $groupActionService->inactivateDependentInvoices($this->findInvoice($buyInv2->id));
 
@@ -200,7 +212,7 @@ class InvoiceGroupActionTest extends TestCase
 
         $this->assertInvoiceStatus($buyInv1->id, InvoiceStatus::APPROVED);
         $this->assertInvoiceStatus($buyInv2->id, InvoiceStatus::APPROVED);
-        $this->assertInvoiceStatus($sellInv->id, InvoiceStatus::APPROVED);
+        $this->assertInvoiceStatus($sellInv->id, InvoiceStatus::PAID);
         $this->assertInvoiceStatus($returnBuyInv->id, InvoiceStatus::APPROVED);
         $this->assertInvoiceStatus($returnSellInv->id, InvoiceStatus::APPROVED);
     }

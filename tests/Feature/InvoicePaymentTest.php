@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Enums\FiscalYearSection;
+use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Models\AncillaryCost;
 use App\Models\Bank;
 use App\Models\BankAccount;
 use App\Models\Company;
@@ -15,6 +17,7 @@ use App\Models\Payment;
 use App\Models\ProductGroup;
 use App\Models\Subject;
 use App\Models\User;
+use App\Services\AncillaryCostService;
 use App\Services\FiscalYearService;
 use App\Services\PaymentService;
 use App\Services\ProductService;
@@ -155,6 +158,72 @@ class InvoicePaymentTest extends TestCase
         $sell = $this->findInvoice($sell->id);
         $this->assertTrue($sell->status->isPaid());
         $this->assertEqualsWithDelta(0, $this->paymentService->remainingAmount($sell), 0.01);
+    }
+
+    public function test_buy_invoice_payable_amount_includes_approved_ancillary_costs(): void
+    {
+        $product = $this->createProduct();
+        $buy = $this->findInvoice($this->buy([$this->productItem($product, 2, 1000)], true, ++$this->nextInvoiceNumber)['invoice']->id);
+
+        AncillaryCost::create([
+            'number' => 1,
+            'invoice_id' => $buy->id,
+            'customer_id' => $this->customer->id,
+            'company_id' => $this->companyId,
+            'date' => $buy->date,
+            'type' => 1,
+            'amount' => 300,
+            'vat' => 0,
+            'status' => InvoiceStatus::APPROVED,
+        ]);
+
+        AncillaryCost::create([
+            'number' => 2,
+            'invoice_id' => $buy->id,
+            'customer_id' => $this->customer->id,
+            'company_id' => $this->companyId,
+            'date' => $buy->date,
+            'type' => 2,
+            'amount' => 500,
+            'vat' => 0,
+            'status' => InvoiceStatus::UNAPPROVED,
+        ]);
+
+        $this->assertEqualsWithDelta(2300, $this->paymentService->payableAmount($buy), 0.01);
+        $this->assertEqualsWithDelta(2300, $this->paymentService->remainingAmount($buy), 0.01);
+
+        $this->recordPayment($buy, ['amount' => 2000, 'subject_id' => $this->cashSubjectId()]);
+        $this->assertTrue($this->findInvoice($buy->id)->status->isPartiallyPaid());
+        $this->assertEqualsWithDelta(300, $this->paymentService->remainingAmount($buy), 0.01);
+
+        $this->recordPayment($this->findInvoice($buy->id), ['amount' => 300, 'subject_id' => $this->cashSubjectId()]);
+        $this->assertTrue($this->findInvoice($buy->id)->status->isPaid());
+    }
+
+    public function test_approving_new_ancillary_cost_resyncs_paid_buy_invoice_status(): void
+    {
+        $product = $this->createProduct();
+        $buy = $this->findInvoice($this->buy([$this->productItem($product, 2, 1000)], true, ++$this->nextInvoiceNumber)['invoice']->id);
+
+        $this->recordPayment($buy, ['amount' => 2000, 'subject_id' => $this->cashSubjectId()]);
+        $this->assertTrue($this->findInvoice($buy->id)->status->isPaid());
+
+        AncillaryCostService::createAncillaryCost($this->user, [
+            'invoice_id' => $buy->id,
+            'customer_id' => $this->customer->id,
+            'company_id' => $this->companyId,
+            'date' => $buy->date->toDateString(),
+            'type' => 'Shipping',
+            'amount' => 300,
+            'vatPrice' => 0,
+            'ancillaryCosts' => [
+                ['product_id' => $product->id, 'amount' => 300],
+            ],
+        ], true);
+
+        $buy = $this->findInvoice($buy->id);
+        $this->assertTrue($buy->status->isPartiallyPaid());
+        $this->assertEqualsWithDelta(300, $this->paymentService->remainingAmount($buy), 0.01);
     }
 
     public function test_payment_cannot_exceed_remaining(): void

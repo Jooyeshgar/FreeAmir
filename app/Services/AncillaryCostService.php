@@ -76,6 +76,7 @@ class AncillaryCostService
 
                 CostOfGoodsService::updateProductsAverageCost($invoice);
                 self::syncCOGAfterAncillarityCost($invoice);
+                self::syncInvoicePaymentStatus($invoice);
             });
         }
 
@@ -161,6 +162,7 @@ class AncillaryCostService
 
                 CostOfGoodsService::updateProductsAverageCost($ancillaryCost->invoice);
                 self::syncCOGAfterAncillarityCost($ancillaryCost->invoice);
+                self::syncInvoicePaymentStatus($ancillaryCost->invoice);
             });
         }
 
@@ -212,6 +214,7 @@ class AncillaryCostService
             CostOfGoodsService::updateProductsAverageCost($invoice);
 
             self::syncCOGAfterAncillarityCost($invoice);
+            self::syncInvoicePaymentStatus($invoice);
         });
     }
 
@@ -312,6 +315,15 @@ class AncillaryCostService
             $ancillaryCost->update();
             CostOfGoodsService::updateProductsAverageCost($ancillaryCost->invoice);
             self::syncCOGAfterAncillarityCost($ancillaryCost->invoice);
+        }
+
+        self::syncInvoicePaymentStatus($ancillaryCost->invoice);
+    }
+
+    private static function syncInvoicePaymentStatus(Invoice $invoice): void
+    {
+        if ($invoice->payments()->whereNotNull('document_id')->exists()) {
+            app(PaymentService::class)->syncInvoiceStatus($invoice->fresh());
         }
     }
 
