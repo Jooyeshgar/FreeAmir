@@ -12,6 +12,10 @@ use Illuminate\Validation\Rule;
 
 class StoreInvoiceRequest extends FormRequest
 {
+    private const DECIMAL_18_2_MAX = '9999999999999999.99';
+
+    private const DECIMAL_10_2_MAX = '99999999.99';
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -91,6 +95,27 @@ class StoreInvoiceRequest extends FormRequest
             $inputDate = $this->input('date');
             $invoice = $this->route('invoice');
             $isApproved = $this->input('approve');
+
+            foreach ($transactions as $index => $transaction) {
+                $quantity = (float) ($transaction['quantity'] ?? 0);
+                $unitPrice = (float) ($transaction['unit'] ?? 0);
+                $unitDiscount = (float) ($transaction['unit_discount'] ?? 0);
+                $lineAmount = $quantity * $unitPrice;
+
+                if ($lineAmount > (float) self::DECIMAL_18_2_MAX) {
+                    $validator->errors()->add(
+                        "transactions.{$index}.total",
+                        __('The calculated line total may not be greater than :max.', ['max' => self::DECIMAL_18_2_MAX])
+                    );
+                }
+
+                if ($unitDiscount > $lineAmount) {
+                    $validator->errors()->add(
+                        "transactions.{$index}.unit_discount",
+                        __('The unit discount may not be greater than the calculated line amount.')
+                    );
+                }
+            }
 
             if (in_array($invoiceType, ['return_sell', 'return_buy']) && ! $this->boolean('include_last_years_invoices')) {
                 $returnedInvoiceId = $this->input('returned_invoice_id');
@@ -317,7 +342,7 @@ class StoreInvoiceRequest extends FormRequest
                     ->ignore($isEditing ? $invoice->id : null),
             ],
 
-            'subtractions' => 'nullable|numeric|min:0',
+            'subtractions' => 'nullable|numeric|min:0|max:'.self::DECIMAL_10_2_MAX,
 
             'transactions' => 'required|array|min:1',
 
@@ -338,12 +363,14 @@ class StoreInvoiceRequest extends FormRequest
             ],
 
             'transactions.*.item_type' => 'required|string|in:product,service',
-            'transactions.*.vat' => $isReturnInvoice || $isEditing ? 'required|numeric|min:0' : 'required|numeric|min:0|max:100',
+            'transactions.*.vat' => $isReturnInvoice || $isEditing
+                ? 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX
+                : 'required|numeric|min:0|max:100',
             'transactions.*.desc' => 'nullable|string|max:500',
-            'transactions.*.quantity' => $isReturnInvoice ? 'required|numeric|min:0' : 'required|numeric|min:1',
-            'transactions.*.unit_discount' => 'required|numeric|min:0',
-            'transactions.*.unit' => 'required|numeric|min:0',
-            'transactions.*.total' => 'required|numeric|min:0',
+            'transactions.*.quantity' => ($isReturnInvoice ? 'required|numeric|min:0|max:' : 'required|numeric|min:1|max:').self::DECIMAL_18_2_MAX,
+            'transactions.*.unit_discount' => 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX,
+            'transactions.*.unit' => 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX,
+            'transactions.*.total' => 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX,
         ];
 
         return $rules;

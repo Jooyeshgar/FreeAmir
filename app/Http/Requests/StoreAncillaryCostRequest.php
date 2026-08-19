@@ -9,6 +9,8 @@ use Illuminate\Validation\Rule;
 
 class StoreAncillaryCostRequest extends FormRequest
 {
+    private const DECIMAL_18_2_MAX = '9999999999999999.99';
+
     public function authorize(): bool
     {
         return auth()->check();
@@ -53,16 +55,16 @@ class StoreAncillaryCostRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'amount' => 'required|numeric|min:0',
+            'amount' => 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX,
             'invoice_id' => 'required|integer|exists:invoices,id',
             'customer_id' => 'required|integer|exists:customers,id',
-            'vatPrice' => 'nullable|numeric|min:0',
+            'vatPrice' => 'nullable|numeric|min:0|max:'.self::DECIMAL_18_2_MAX,
             'vatPercentage' => 'nullable|numeric|min:0|max:100',
             'date' => ['required', 'date', 'after_or_equal:invoice_date'],
             'type' => ['required', Rule::in(AncillaryCostType::valueNames())],
             'ancillaryCosts' => 'required|array',
             'ancillaryCosts.*.product_id' => 'required|integer|exists:products,id',
-            'ancillaryCosts.*.amount' => 'required|numeric|min:0',
+            'ancillaryCosts.*.amount' => 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX,
         ];
     }
 }
