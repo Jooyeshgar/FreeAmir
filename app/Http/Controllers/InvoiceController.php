@@ -334,7 +334,7 @@ class InvoiceController extends Controller
     {
         $invoice->load('customer', 'items');
 
-        if (! $invoice->status->isApproved()) {
+        if (! $invoice->status->isApprovedOrSettled()) {
             return view('invoices.draft', compact('invoice'));
         }
 

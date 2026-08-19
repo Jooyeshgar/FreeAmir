@@ -28,6 +28,9 @@
                     @elseif ($invoice->customer->phone)
                         <span>{{ __('Phone') }}:</span>
                         <span>{{ localizeNumber($invoice->customer->postal_code) }}</span>
+                    @else
+                        <span>{{ __('Phone') }}:</span>
+                        <span>-</span>
                     @endif
                 </div>
                 <div>

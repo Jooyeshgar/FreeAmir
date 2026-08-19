@@ -109,7 +109,7 @@
                     </thead>
                     <tbody>
                         @forelse ($historyItems as $item)
-                            <tr class="hover:bg-base-300 {{ !$item->invoice->status->isApproved() ? 'opacity-50' : '' }}">
+                            <tr class="hover:bg-base-300 {{ !$item->invoice->status->isApprovedOrSettled() ? 'opacity-50' : '' }}">
                                 <td class="px-4 py-3">{{ formatDate($item->invoice->date) }}</td>
                                 <td class="px-4 py-3">
                                     <a href="{{ route('invoices.show', $item->invoice_id) }}" class="link">{{ formatDocumentNumber($item->invoice->number) }}</a>
