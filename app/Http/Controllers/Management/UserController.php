@@ -14,13 +14,15 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Lab404\Impersonate\Services\ImpersonateManager;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class UserController extends Controller
 {
-    public function __construct() {}
+    public function __construct(private readonly PermissionRegistrar $permissionRegistrar) {}
 
     /**
      * Display a listing of the resource.
@@ -77,30 +79,30 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
+        $this->normalizeLegacyAssignments($request);
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
             'password_confirmation' => 'required|string|min:8',
-            'role' => 'required|array|min:1',
-            'role.*' => 'required|string|exists:roles,name',
-            'company' => 'required|array|min:1',
-            'company.*' => 'required|integer|exists:companies,id',
+            'company_roles' => 'required|array|min:1',
+            'company_roles.*' => 'array|min:1',
+            'company_roles.*.*' => ['required', 'string', Rule::exists('roles', 'name')],
         ]);
 
         $this->validateAssignments($request);
 
         DB::transaction(function () use ($request, &$user) {
-            $role = $this->rolesWithInheritance(array_values($request->role));
-            $company = array_values($request->company);
+            $assignments = $this->companyRoleAssignments($request);
             $user = new User;
             $user->name = $request->input('name');
             $user->email = $request->input('email');
             $user->password = bcrypt($request->input('password'));
             $user->save();
 
-            $user->syncRoles($role);
-            $user->companies()->sync($company);
+            $user->companies()->sync(array_keys($assignments));
+            $this->syncCompanyRoles($user, $assignments);
         });
 
         try {
@@ -122,12 +124,10 @@ class UserController extends Controller
         abort_unless(auth()->user()->can('access-super-admin-panel'), 403);
 
         $this->ensureUserAccess($user);
-        $user->load([
-            'roles:id,name',
-            'companies' => fn ($query) => $query->orderByDesc('fiscal_year')->orderBy('name'),
-        ]);
+        $user->load(['companies' => fn ($query) => $query->orderByDesc('fiscal_year')->orderBy('name')]);
+        $companyRoles = $this->rolesByCompany($user, $user->companies);
 
-        return view('users.show', compact('user'));
+        return view('users.show', compact('user', 'companyRoles'));
     }
 
     /**
@@ -140,9 +140,10 @@ class UserController extends Controller
 
         $roles = $this->assignableRoles();
         $companies = $this->assignableCompanies();
+        $companyRoles = $this->rolesByCompany($user, $companies)->map(fn ($companyRoles) => $companyRoles->pluck('name')->all());
         $employees = $user->employee ? collect([$user->employee]) : Employee::all();
 
-        return view('users.edit', compact('user', 'roles', 'companies', 'employees'));
+        return view('users.edit', compact('user', 'roles', 'companies', 'employees', 'companyRoles'));
     }
 
     /**
@@ -153,16 +154,17 @@ class UserController extends Controller
         $this->ensureUserRoleManagementAccess($user);
         $this->ensureUserAccess($user);
 
+        $this->normalizeLegacyAssignments($request);
+
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users,email,'.$user->id,
             'password' => 'nullable|string|min:8|confirmed',
             'password_confirmation' => 'nullable|string|min:8',
             'employee_id' => 'nullable|exists:employees,id',
-            'role' => 'required|array|min:1',
-            'role.*' => 'required|string|exists:roles,name',
-            'company' => 'required|array|min:1',
-            'company.*' => 'required|integer|exists:companies,id',
+            'company_roles' => 'required|array|min:1',
+            'company_roles.*' => 'array|min:1',
+            'company_roles.*.*' => ['required', 'string', Rule::exists('roles', 'name')],
         ]);
 
         $this->validateAssignments($request);
@@ -182,8 +184,7 @@ class UserController extends Controller
         DB::transaction(function () use ($request, $user, $employee) {
             $user->name = $request->input('name');
             $user->email = $request->input('email');
-            $role = $this->rolesWithInheritance(array_values($request->role));
-            $company = array_values($request->company);
+            $assignments = $this->companyRoleAssignments($request);
 
             if ($request->input('password')) {
                 $user->password = bcrypt($request->input('password'));
@@ -195,8 +196,14 @@ class UserController extends Controller
                 $employee->update(['user_id' => $user->id]);
             }
 
-            $user->syncRoles($role);
-            $user->companies()->sync($company);
+            $removedCompanyIds = $user->companies()->pluck('companies.id')->diff(array_keys($assignments));
+            DB::table(config('permission.table_names.model_has_roles'))
+                ->where('model_type', User::class)
+                ->where('model_id', $user->id)
+                ->whereIn('company_id', $removedCompanyIds)
+                ->delete();
+            $user->companies()->sync(array_keys($assignments));
+            $this->syncCompanyRoles($user, $assignments);
         });
 
         return redirect()->route('users.index')->with('success', __('User updated successfully!'));
@@ -324,22 +331,61 @@ class UserController extends Controller
         $allowedRoles = $this->assignableRoles()->pluck('name');
         $allowedCompanies = $this->assignableCompanies()->pluck('id')->map(fn ($id) => (string) $id);
 
-        $invalidRoles = collect($request->input('role', []))->diff($allowedRoles);
-        $invalidCompanies = collect($request->input('company', []))->map(fn ($id) => (string) $id)->diff($allowedCompanies);
+        $assignments = collect($request->input('company_roles', []));
+        $invalidRoles = $assignments->flatten()->diff($allowedRoles);
+        $invalidCompanies = $assignments->keys()->map(fn ($id) => (string) $id)->diff($allowedCompanies);
 
         if ($invalidRoles->isNotEmpty() || $invalidCompanies->isNotEmpty()) {
             $errors = [];
 
             if ($invalidRoles->isNotEmpty()) {
-                $errors['role'] = __('You may only assign roles and companies available to you.');
+                $errors['company_roles'] = __('You may only assign roles and companies available to you.');
             }
 
             if ($invalidCompanies->isNotEmpty()) {
-                $errors['company'] = __('You may only assign roles and companies available to you.');
+                $errors['company_roles'] = __('You may only assign roles and companies available to you.');
             }
 
             throw ValidationException::withMessages($errors);
         }
+    }
+
+    private function companyRoleAssignments(Request $request): array
+    {
+        return collect($request->input('company_roles', []))->map(fn (array $roles) => $this->rolesWithInheritance(array_values($roles)))->filter()->all();
+    }
+
+    private function syncCompanyRoles(User $user, array $assignments): void
+    {
+        $registrar = app(PermissionRegistrar::class);
+        $originalCompanyId = $registrar->getPermissionsTeamId();
+
+        try {
+            foreach ($assignments as $companyId => $roles) {
+                $registrar->setPermissionsTeamId((int) $companyId);
+                $user->unsetRelation('roles');
+                $user->syncRoles(Role::query()->whereIn('name', $roles)->get());
+            }
+        } finally {
+            $registrar->setPermissionsTeamId($originalCompanyId);
+            $user->unsetRelation('roles');
+        }
+    }
+
+    /**
+     * Accept the previous flat payload during upgrades and apply it to every selected company.
+     */
+    private function normalizeLegacyAssignments(Request $request): void
+    {
+        if ($request->has('company_roles')) {
+            return;
+        }
+
+        $roles = array_values($request->input('role', []));
+        $request->merge(['company_roles' => collect($request->input('company', []))
+            ->mapWithKeys(fn ($companyId) => [(string) $companyId => $roles])
+            ->all(),
+        ]);
     }
 
     private function ensureUserAccess(User $user): void
@@ -360,6 +406,24 @@ class UserController extends Controller
     private function ensureUserRoleManagementAccess(User $user): void
     {
         abort_if($user->hasRole('Super-Admin') && ! auth()->user()->hasRole('Super-Admin'), 403);
+    }
+
+    private function rolesByCompany(User $user, $companies)
+    {
+        $registrar = app(PermissionRegistrar::class);
+        $originalCompanyId = $registrar->getPermissionsTeamId();
+
+        try {
+            return $companies->mapWithKeys(function (Company $company) use ($registrar, $user) {
+                $registrar->setPermissionsTeamId($company->id);
+                $user->unsetRelation('roles');
+
+                return [$company->id => $user->roles()->get()];
+            });
+        } finally {
+            $registrar->setPermissionsTeamId($originalCompanyId);
+            $user->unsetRelation('roles');
+        }
     }
 
     private function splitName(string $name): array

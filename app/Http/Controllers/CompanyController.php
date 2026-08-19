@@ -26,6 +26,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class CompanyController extends Controller
 {
@@ -43,7 +44,7 @@ class CompanyController extends Controller
         'tax_id' => 'nullable|string|max:20',
     ];
 
-    public function __construct() {}
+    public function __construct(private readonly PermissionRegistrar $permissionRegistrar) {}
 
     /**
      * Display a listing of the resource.
@@ -412,9 +413,12 @@ class CompanyController extends Controller
         Cookie::queue('active-company-id', $company->id, 365 * 24 * 60);
 
         config([
+            'active-company-id' => $company->id,
             'active-company-name' => $company->name,
             'active-company-fiscal-year' => $company->fiscal_year,
         ]);
+        $this->permissionRegistrar->setPermissionsTeamId($company->id);
+        $this->permissionRegistrar->forgetWildcardPermissionIndex(auth()->user());
 
         return redirect()->route('home');
     }

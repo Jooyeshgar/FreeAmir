@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Spatie\Permission\PermissionRegistrar;
 
 class DatabaseSeeder extends Seeder
 {
@@ -14,7 +15,10 @@ class DatabaseSeeder extends Seeder
     {
         $companyId ??= (int) getActiveCompany();
         $previousActiveCompanyId = config('active-company-id');
+        $permissionRegistrar = app(PermissionRegistrar::class);
+        $previousPermissionTeamId = $permissionRegistrar->getPermissionsTeamId();
         config(['active-company-id' => $companyId]);
+        $permissionRegistrar->setPermissionsTeamId($companyId);
 
         try {
             $this->call([
@@ -31,6 +35,7 @@ class DatabaseSeeder extends Seeder
             ]);
         } finally {
             config(['active-company-id' => $previousActiveCompanyId]);
+            $permissionRegistrar->setPermissionsTeamId($previousPermissionTeamId);
         }
     }
 }

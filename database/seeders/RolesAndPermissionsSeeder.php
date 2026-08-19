@@ -27,14 +27,19 @@ class RolesAndPermissionsSeeder extends Seeder
 
     public function run(): void
     {
-        app()[PermissionRegistrar::class]->forgetCachedPermissions();
+        $permissionRegistrar = app(PermissionRegistrar::class);
+        $companyId = (int) getActiveCompany();
+        $permissionRegistrar->forgetCachedPermissions();
 
         foreach ($this->definePermissions() as $permission) {
             Permission::firstOrCreate(['name' => $permission]);
         }
 
         $this->seedRoles();
-        $this->seedDemoUsersAndEmployees();
+        $this->seedDemoUsersAndEmployees($companyId);
+
+        $permissionRegistrar->setPermissionsTeamId($companyId);
+        $permissionRegistrar->forgetCachedPermissions();
     }
 
     /**
@@ -195,10 +200,10 @@ class RolesAndPermissionsSeeder extends Seeder
 
     private function seedRoles(): void
     {
-        $superAdmin = Role::firstOrCreate(['name' => 'Super-Admin']);
+        $superAdmin = $this->sharedRole('Super-Admin');
         $superAdmin->syncPermissions(Permission::all());
 
-        $admin = Role::firstOrCreate(['name' => __('Admin')]);
+        $admin = $this->sharedRole(__('Admin'));
         $admin->syncPermissions(
             Permission::query()
                 ->where('name', 'NOT LIKE', 'roles.%')
@@ -209,9 +214,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 ->toArray()
         );
 
-        $superAdmin->users()->each(fn (User $user) => $user->assignRole($admin));
-
-        $accountant = Role::firstOrCreate(['name' => __('Accountant')]);
+        $accountant = $this->sharedRole(__('Accountant'));
         $accountant->syncPermissions(
             Permission::query()
                 ->where(fn ($query) => $query
@@ -229,7 +232,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 ->toArray()
         );
 
-        $warehouse = Role::firstOrCreate(['name' => __('Warehousekeeper')]);
+        $warehouse = $this->sharedRole(__('Warehousekeeper'));
         $warehouse->syncPermissions(
             Permission::query()
                 ->where(fn ($q) => $q
@@ -241,7 +244,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 ->toArray()
         );
 
-        $seller = Role::firstOrCreate(['name' => __('Seller')]);
+        $seller = $this->sharedRole(__('Seller'));
         $seller->syncPermissions(
             Permission::query()
                 ->where(fn ($q) => $q
@@ -272,7 +275,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 ->toArray()
         );
 
-        $employeeRole = Role::firstOrCreate(['name' => __('Employee')]);
+        $employeeRole = $this->sharedRole(__('Employee'));
         $employeeRole->syncPermissions(
             Permission::query()
                 ->where('name', 'LIKE', 'employee-portal.%')
@@ -284,9 +287,9 @@ class RolesAndPermissionsSeeder extends Seeder
         );
     }
 
-    private function seedDemoUsersAndEmployees(): void
+    private function seedDemoUsersAndEmployees(int $companyId): void
     {
-        $companyId = (int) getActiveCompany();
+        $permissionRegistrar = app(PermissionRegistrar::class);
         $users = [
             'super-admin' => [
                 'roles' => ['Super-Admin', __('Admin'), __('Employee')],
@@ -367,7 +370,20 @@ class RolesAndPermissionsSeeder extends Seeder
             }
 
             $user->companies()->syncWithoutDetaching([$companyId]);
-            $user->assignRole($config['roles']);
+
+            $companyRoles = collect($config['roles'])
+                ->reject(fn (string $role) => $role === 'Super-Admin')
+                ->map(fn (string $role) => $this->sharedRole($role));
+
+            $permissionRegistrar->setPermissionsTeamId($companyId);
+            $user->unsetRelation('roles');
+            $user->syncRoles($companyRoles);
+
+            if (in_array('Super-Admin', $config['roles'], true)) {
+                $permissionRegistrar->setPermissionsTeamId(0);
+                $user->unsetRelation('roles');
+                $user->syncRoles([$this->sharedRole('Super-Admin')]);
+            }
 
             $baseCode = 'EMP-'.$user->id;
             $employeeCode = $baseCode;
@@ -398,5 +414,10 @@ class RolesAndPermissionsSeeder extends Seeder
                 ]
             );
         }
+    }
+
+    private function sharedRole(string $name): Role
+    {
+        return Role::firstOrCreate(['name' => $name, 'guard_name' => 'web', 'company_id' => null]);
     }
 }

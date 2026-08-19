@@ -1,6 +1,5 @@
 @php
-    $oldRoles = old('role', $user?->roles->pluck('name')->toArray() ?? []);
-    $oldCompanies = old('company', $user?->companies->pluck('id')->map(fn($id) => (string) $id)->toArray() ?? []);
+    $oldCompanyRoles = old('company_roles', $companyRoles ?? []);
 @endphp
 
 <div class="grid grid-cols-2 gap-6">
@@ -32,23 +31,24 @@
     @endif
 </div>
 
-@canany(['users.create', 'users.update'])
-    <div class="divider"></div>
-    <h3 class="label">{{ __('Roles') }}</h3>
-    <div class="grid gap-3 grid-cols-5">
-        @foreach ($roles as $role)
-            @continue($role->name === 'Super-Admin' && ! auth()->user()->hasRole('Super-Admin'))
-            <x-checkbox :title="$role->name" name="role[]" :value="$role->name" id="role-{{ $role->id }}"
-                :checked="in_array($role->name, $oldRoles)" />
-        @endforeach
-    </div>
-@endcanany
-
 <div class="divider"></div>
-<h3 class="label">{{ __('Companies') }}</h3>
-<div class="grid gap-3 grid-cols-5">
+<h3 class="label">{{ __('Company and fiscal-year roles') }}</h3>
+<p class="mb-4 text-sm text-slate-500">{{ __('Select at least one role in each company the user may access. Clear all roles to remove access to that company.') }}</p>
+<div class="space-y-4">
     @foreach ($companies as $company)
-        <x-checkbox :title="$company->name" name="company[]" :value="$company->id" id="company-{{ $company->id }}"
-            :checked="in_array((string) $company->id, $oldCompanies)" />
+        @php($selectedRoles = $oldCompanyRoles[$company->id] ?? $oldCompanyRoles[(string) $company->id] ?? [])
+        <section class="rounded-xl border border-base-300 p-4">
+            <h4 class="mb-3 font-semibold">
+                {{ $company->name }} - {{ localizeNumber($company->fiscal_year) }}
+            </h4>
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                @foreach ($roles as $role)
+                    @continue($role->name === 'Super-Admin' && ! auth()->user()->hasRole('Super-Admin'))
+                    <x-checkbox :title="$role->name" name="company_roles[{{ $company->id }}][]" :value="$role->name"
+                        id="company-{{ $company->id }}-role-{{ $role->id }}"
+                        :checked="in_array($role->name, $selectedRoles, true)" />
+                @endforeach
+            </div>
+        </section>
     @endforeach
 </div>

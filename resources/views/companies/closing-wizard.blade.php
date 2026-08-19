@@ -229,6 +229,10 @@
                         <li>{{ __('Creates the new Fiscal Year entity for year :year.', ['year' => $company->fiscal_year + 1]) }}</li>
                         <li>{{ __('Generates the Opening Document in the new fiscal year.') }}</li>
                     </ol>
+                    <div role="alert" class="alert alert-warning border border-warning/30 bg-warning/10">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v4m0 4h.01M10.3 3.8 2.6 17.1A2 2 0 0 0 4.3 20h15.4a2 2 0 0 0 1.7-2.9L13.7 3.8a2 2 0 0 0-3.4 0Z" /></svg>
+                        <span>{{ __('User roles will be copied to the new fiscal year. You can change them there later without affecting roles in this fiscal year.') }}</span>
+                    </div>
 
                     @if ($company->closed_at)
                         <div class="flex items-center gap-3 bg-success/10 border border-success/30 rounded-lg px-4 py-3">

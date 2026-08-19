@@ -76,6 +76,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\LazyCollection;
+use Spatie\Permission\PermissionRegistrar;
 
 class FiscalYearService
 {
@@ -2706,8 +2707,33 @@ class FiscalYearService
 
         $userIds = $company->users()->pluck('users.id')->toArray();
         $newFiscalYear->users()->attach($userIds);
+        self::copyUserRoles($company, $newFiscalYear, $userIds);
 
         return $newFiscalYear;
+    }
+
+    protected static function copyUserRoles(Company $source, Company $target, array $userIds): void
+    {
+        $table = config('permission.table_names.model_has_roles');
+        $roleKey = config('permission.column_names.role_pivot_key') ?? 'role_id';
+        $modelKey = config('permission.column_names.model_morph_key');
+
+        $assignments = DB::table($table)
+            ->where('company_id', $source->id)
+            ->where('model_type', User::class)
+            ->whereIn($modelKey, $userIds)
+            ->get([$roleKey, 'model_type', $modelKey]);
+
+        foreach ($assignments as $assignment) {
+            DB::table($table)->insertOrIgnore([
+                'company_id' => $target->id,
+                $roleKey => $assignment->{$roleKey},
+                'model_type' => $assignment->model_type,
+                $modelKey => $assignment->{$modelKey},
+            ]);
+        }
+
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     /**

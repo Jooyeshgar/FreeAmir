@@ -98,7 +98,7 @@
             <p class="text-xs font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">{{ __('Assigned roles') }}</p>
             <div class="mt-3 flex items-start justify-between gap-3">
                 <div class="flex flex-wrap gap-2">
-                    @forelse ($user->roles as $role)
+                    @forelse ($companyRoles->flatten(1)->unique('id') as $role)
                         <span class="badge border-indigo-200 bg-indigo-100 font-semibold text-indigo-800 dark:border-indigo-800 dark:bg-indigo-950 dark:text-indigo-200">{{ $role->name }}</span>
                     @empty
                         <p class="text-sm text-slate-500 dark:text-slate-400">{{ __('No roles assigned') }}</p>
@@ -124,6 +124,7 @@
                         <tr class="border-slate-200 dark:border-slate-800">
                             <th scope="col">{{ __('Company name') }}</th>
                             <th scope="col">{{ __('Fiscal year') }}</th>
+                            <th scope="col">{{ __('Roles') }}</th>
                             <th scope="col">{{ __('Currency') }}</th>
                             <th scope="col">{{ __('National Code') }}</th>
                             <th scope="col">{{ __('Contact') }}</th>
@@ -139,6 +140,15 @@
                                     <p class="mt-1 max-w-56 truncate text-xs text-slate-500">{{ $company->address ? localizeNumber($company->address) : __('No address') }}</p>
                                 </td>
                                 <td class="whitespace-nowrap font-medium">{{ localizeNumber($company->fiscal_year) }}</td>
+                                <td class="min-w-44">
+                                    <div class="flex flex-wrap gap-1">
+                                        @forelse ($companyRoles->get($company->id, collect()) as $role)
+                                            <span class="badge badge-ghost badge-sm">{{ $role->name }}</span>
+                                        @empty
+                                            <span class="text-xs text-slate-400">{{ __('No role') }}</span>
+                                        @endforelse
+                                    </div>
+                                </td>
                                 <td class="whitespace-nowrap">{{ __($company->currency) }}</td>
                                 <td class="min-w-40">
                                     <p class="font-medium text-slate-800 dark:text-slate-100">{{ $company->national_code ?: '—' }}</p>
@@ -169,7 +179,7 @@
                             </tr>
                         @empty
                             <tr class="bg-slate-50/60 dark:bg-slate-950/30">
-                                <td colspan="7" class="px-6 py-14 text-center">
+                                <td colspan="8" class="px-6 py-14 text-center">
                                     <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 21h18M5 21V7l7-4 7 4v14" /></svg>
                                     </div>

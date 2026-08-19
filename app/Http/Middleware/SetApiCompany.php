@@ -4,10 +4,13 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Spatie\Permission\PermissionRegistrar;
 use Symfony\Component\HttpFoundation\Response;
 
 class SetApiCompany
 {
+    public function __construct(private readonly PermissionRegistrar $permissionRegistrar) {}
+
     public function handle(Request $request, Closure $next): Response
     {
         $companyId = $request->route('company');
@@ -31,6 +34,9 @@ class SetApiCompany
         }
 
         config(['active-company-id' => (int) $companyId]);
+
+        $this->permissionRegistrar->setPermissionsTeamId((int) $companyId);
+        $this->permissionRegistrar->forgetWildcardPermissionIndex($request->user());
 
         return $next($request);
     }

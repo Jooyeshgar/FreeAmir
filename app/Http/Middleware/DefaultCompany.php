@@ -7,10 +7,13 @@ use Closure;
 use Cookie;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Spatie\Permission\PermissionRegistrar;
 use Symfony\Component\HttpFoundation\Response;
 
 class DefaultCompany
 {
+    public function __construct(private readonly PermissionRegistrar $permissionRegistrar) {}
+
     /**
      * Handle an incoming request.
      *
@@ -41,6 +44,9 @@ class DefaultCompany
         } else {
             $this->setDefaultCompany();
         }
+
+        $this->permissionRegistrar->setPermissionsTeamId((int) config('active-company-id'));
+        $this->permissionRegistrar->forgetWildcardPermissionIndex($request->user());
 
         return $next($request);
     }
