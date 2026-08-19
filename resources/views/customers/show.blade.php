@@ -417,7 +417,7 @@
                                     <span class="badge badge-outline">{{ $order->invoice_type?->label() ?? '-' }}</span>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <span class="badge {{ $order->status?->isApproved() ? 'badge-success' : 'badge-ghost' }}">
+                                    <span class="badge {{ $order->status?->isApprovedOrSettled() ? 'badge-success' : 'badge-ghost' }}">
                                         {{ $order->status?->label() ?? '-' }}
                                     </span>
                                 </td>

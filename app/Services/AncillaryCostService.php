@@ -465,7 +465,7 @@ class AncillaryCostService
 
     private static function validateAncillaryCostInvoiceApproval(AncillaryCost $ancillaryCost): void
     {
-        if (! $ancillaryCost->invoice->status->isApproved()) {
+        if (! $ancillaryCost->invoice->status->isApprovedOrSettled()) {
             throw new Exception(__('Cannot change status of Ancillary Cost linked to unapproved Invoice'), 400);
         }
     }
