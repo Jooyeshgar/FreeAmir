@@ -49,9 +49,18 @@ class PaymentService
         return (float) $invoice->payments()->whereNotNull('document_id')->when($except, fn ($query) => $query->where('id', '!=', $except->id))->sum('amount');
     }
 
+    public function payableAmount(Invoice $invoice): float
+    {
+        $ancillaryCostsAmount = $invoice->invoice_type === InvoiceType::BUY
+            ? (float) $invoice->ancillaryCosts()->where('status', InvoiceStatus::APPROVED)->sum('amount')
+            : 0.0;
+
+        return (float) $invoice->amount + $ancillaryCostsAmount;
+    }
+
     public function remainingAmount(Invoice $invoice, ?Payment $except = null): float
     {
-        return max((float) $invoice->amount - $this->paidAmount($invoice, $except), 0.0);
+        return max($this->payableAmount($invoice) - $this->paidAmount($invoice, $except), 0.0);
     }
 
     public function validateInvoicePayment(Invoice $invoice, array $data = [], ?Payment $except = null): InvoiceStatusDecision
@@ -163,7 +172,7 @@ class PaymentService
         }
 
         $paid = $this->paidAmount($invoice);
-        $amount = (float) $invoice->amount;
+        $amount = $this->payableAmount($invoice);
 
         $status = match (true) {
             $paid <= 0.0 => InvoiceStatus::APPROVED,

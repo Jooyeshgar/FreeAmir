@@ -19,7 +19,8 @@ class GroupActionService
 {
     public function __construct(
         private readonly InvoiceService $invoiceService,
-        private readonly AncillaryCostService $ancillaryCostService
+        private readonly AncillaryCostService $ancillaryCostService,
+        private readonly PaymentService $paymentService
     ) {}
 
     public function approveInactiveInvoices(): void
@@ -56,6 +57,8 @@ class GroupActionService
 
                     $this->ancillaryCostService->changeAncillaryCostStatus($ancillaryCost, 'approve');
                 }
+
+                $this->paymentService->syncInvoiceStatus($invoice->fresh());
             }
         });
     }
