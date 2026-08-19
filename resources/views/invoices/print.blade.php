@@ -76,7 +76,7 @@
                     {{ $company?->name }}<br />
                     {{ $company?->address }}
                 </td>
-                <td class="logo">
+                <td class="logo" width="7%">
                     @if ($companyLogo)
                         <img src="{{ $companyLogo }}" width="70" height="70" align="left">
                     @endif
