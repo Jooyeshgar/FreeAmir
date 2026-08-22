@@ -3209,5 +3209,18 @@
     "— Select Format —": "- انتخاب فرمت -",
     "— Select —": "— انتخاب کنید —",
     "… and :n more.": "… و :n مورد دیگر.",
-    "… and :remaining more records.": "… و :remaining رکوردهای بیشتر."
+    "… and :remaining more records.": "… و :remaining رکوردهای بیشتر.",
+    "Managerial trends": "روندهای مدیریتی",
+    "User growth": "رشد کاربران",
+    "New accounts during the last six months": "حساب‌های جدید در شش ماه گذشته",
+    "compared with the previous period": "نسبت به دوره قبل",
+    "Monthly new-user trend": "روند ماهانه کاربران جدید",
+    "Activity trend": "روند فعالیت‌ها",
+    "Recorded platform events during the last seven days": "رویدادهای ثبت‌شده پلتفرم در هفت روز گذشته",
+    "Daily activity trend": "روند روزانه فعالیت‌ها",
+    "Operational status": "وضعیت عملیاتی",
+    "Active businesses": "کسب‌وکارهای فعال",
+    "Businesses with at least one open fiscal year": "کسب‌وکارهای دارای حداقل یک سال مالی باز",
+    "Fiscal year status": "وضعیت سال مالی",
+    ":open open, :closed closed": ":open باز، :closed بسته"
 }

@@ -3209,5 +3209,18 @@
     "— Select Format —": "— Select Format —",
     "— Select —": "— Select —",
     "… and :n more.": "… and :n more.",
-    "… and :remaining more records.": "… and :remaining more records."
+    "… and :remaining more records.": "… and :remaining more records.",
+    "Managerial trends": "Managerial trends",
+    "User growth": "User growth",
+    "New accounts during the last six months": "New accounts during the last six months",
+    "compared with the previous period": "compared with the previous period",
+    "Monthly new-user trend": "Monthly new-user trend",
+    "Activity trend": "Activity trend",
+    "Recorded platform events during the last seven days": "Recorded platform events during the last seven days",
+    "Daily activity trend": "Daily activity trend",
+    "Operational status": "Operational status",
+    "Active businesses": "Active businesses",
+    "Businesses with at least one open fiscal year": "Businesses with at least one open fiscal year",
+    "Fiscal year status": "Fiscal year status",
+    ":open open, :closed closed": ":open open, :closed closed"
 }

@@ -285,6 +285,30 @@ class AuthLifecycleTest extends TestCase
             ->assertDontSee(route('users.impersonate', $companylessTarget), false);
     }
 
+    public function test_super_admin_dashboard_exposes_managerial_statistics_and_trends(): void
+    {
+        $actor = User::factory()->create(['created_at' => now()->subDays(45)]);
+        $actor->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+        User::factory()->count(2)->create(['created_at' => now()->subDays(5)]);
+        $openCompany = $this->company('Open Business');
+        $closedCompany = $this->company('Closed Business');
+        $closedCompany->update(['closed_at' => now()]);
+
+        $response = $this->actingAs($actor)->get(route('management.dashboard'));
+
+        $response->assertOk()
+            ->assertSee(__('User growth'))
+            ->assertSee(__('Activity trend'))
+            ->assertSee(__('Active businesses'))
+            ->assertViewHas('metrics', fn (array $metrics): bool => $metrics['newUsers'] === 2
+                && $metrics['activeBusinesses'] === 1
+                && $metrics['closedFiscalYears'] === 1)
+            ->assertViewHas('userGrowth', fn ($trend): bool => $trend->count() === 6 && $trend->sum('count') === 3)
+            ->assertViewHas('activityTrend', fn ($trend): bool => $trend->count() === 7);
+
+        $this->assertTrue($openCompany->exists);
+    }
+
     public function test_user_show_displays_profile_roles_company_and_account_timestamps(): void
     {
         $actor = User::factory()->create();
