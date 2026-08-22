@@ -2081,7 +2081,7 @@
     "Reason": "دلیل",
     "Recalculate": "محاسبه مجدد",
     "Recalculate stock": "محاسبه مجدد موجودی",
-    "Products stock will Recalculate from all fiscal years. are you sure?": "موجودی این کالا از فاکتورهای تمام سال‌های مالی محاسبه می‌شود. آیا مطمئن هستید؟",
+    "The product stock will be recalculated from all fiscal years. Are you sure?": "موجودی این کالا از فاکتورهای تمام سال‌های مالی محاسبه می‌شود. آیا مطمئن هستید؟",
     "Product stock recalculated successfully: :quantity.": "موجودی کالا با موفقیت محاسبه شد: :quantity.",
     "Recalculate All": "محاسبه مجدد همه",
     "Recalculate all attendance logs? Stored values will be overwritten with the computed values.": "تمام گزارش‌های حضور و غیاب دوباره محاسبه شوند؟ مقادیر ذخیره شده با مقادیر محاسبه شده بازنویسی می‌شوند.",
