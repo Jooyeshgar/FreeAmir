@@ -83,6 +83,74 @@
         </article>
     </section>
 
+    @php($maxUserGrowth = max(1, $userGrowth->max('count')))
+    @php($maxActivity = max(1, $activityTrend->max('count')))
+    <section class="mt-6 grid gap-6 xl:grid-cols-2" aria-label="{{ __('Managerial trends') }}">
+        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <header class="flex items-start justify-between gap-4">
+                <div>
+                    <h3 class="font-bold">{{ __('User growth') }}</h3>
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('New accounts during the last six months') }}</p>
+                </div>
+                <div class="text-end">
+                    <strong class="block text-2xl text-violet-700 dark:text-violet-300">{{ localizeNumber(number_format($metrics['newUsers'])) }}</strong>
+                    <span class="text-xs text-slate-500">{{ __('Last 30 days') }}</span>
+                </div>
+            </header>
+            <div class="mt-2 text-xs font-semibold {{ $metrics['userGrowthRate'] >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-error' }}">
+                {{ $metrics['userGrowthRate'] >= 0 ? '+' : '' }}{{ localizeNumber($metrics['userGrowthRate']) }}% {{ __('compared with the previous period') }}
+            </div>
+            <div class="mt-6 flex h-44 items-end gap-3" role="img" aria-label="{{ __('Monthly new-user trend') }}">
+                @foreach ($userGrowth as $month)
+                    <div class="flex h-full min-w-0 flex-1 flex-col justify-end gap-2 text-center">
+                        <span class="text-xs font-semibold">{{ localizeNumber($month['count']) }}</span>
+                        <div class="mx-auto w-full max-w-12 rounded-t-lg bg-violet-500 dark:bg-violet-400" style="height: {{ max(4, round(($month['count'] / $maxUserGrowth) * 116)) }}px"></div>
+                        <span class="truncate text-xs text-slate-500">{{ __($month['label']) }}</span>
+                    </div>
+                @endforeach
+            </div>
+        </article>
+
+        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <header class="flex items-start justify-between gap-4">
+                <div>
+                    <h3 class="font-bold">{{ __('Activity trend') }}</h3>
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('Recorded platform events during the last seven days') }}</p>
+                </div>
+                <div class="text-end">
+                    <strong class="block text-2xl text-emerald-700 dark:text-emerald-300">{{ localizeNumber(number_format($activityMetrics['today'])) }}</strong>
+                    <span class="text-xs text-slate-500">{{ __('Today') }}</span>
+                </div>
+            </header>
+            <div class="mt-6 flex h-48 items-end gap-2" role="img" aria-label="{{ __('Daily activity trend') }}">
+                @foreach ($activityTrend as $day)
+                    <div class="flex h-full min-w-0 flex-1 flex-col justify-end gap-2 text-center">
+                        <span class="text-xs font-semibold">{{ localizeNumber($day['count']) }}</span>
+                        <div class="mx-auto w-full max-w-10 rounded-t-lg bg-emerald-500 dark:bg-emerald-400" style="height: {{ max(4, round(($day['count'] / $maxActivity) * 132)) }}px"></div>
+                        <span class="truncate text-xs text-slate-500">{{ __($day['label']) }}</span>
+                    </div>
+                @endforeach
+            </div>
+        </article>
+    </section>
+
+    <section class="mt-6 grid gap-4 sm:grid-cols-2" aria-label="{{ __('Operational status') }}">
+        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div class="flex items-center justify-between gap-3"><h3 class="font-bold">{{ __('Active businesses') }}</h3><strong class="text-2xl text-emerald-700 dark:text-emerald-300">{{ localizeNumber(number_format($metrics['activeBusinesses'])) }}</strong></div>
+            @php($activeBusinessRate = $metrics['businesses'] > 0 ? round(($metrics['activeBusinesses'] / $metrics['businesses']) * 100) : 0)
+            <progress class="progress progress-success mt-4 h-2" value="{{ $activeBusinessRate }}" max="100"></progress>
+            <p class="mt-2 text-xs text-slate-500">{{ __('Businesses with at least one open fiscal year') }}</p>
+        </article>
+        <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div class="flex items-center justify-between gap-3"><h3 class="font-bold">{{ __('Fiscal year status') }}</h3><strong class="text-2xl text-sky-700 dark:text-sky-300">{{ localizeNumber(number_format($metrics['openFiscalYears'])) }}</strong></div>
+            <div class="mt-4 flex h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+                @php($openFiscalRate = $metrics['fiscalYears'] > 0 ? round(($metrics['openFiscalYears'] / $metrics['fiscalYears']) * 100) : 0)
+                <span class="bg-sky-500" style="width: {{ $openFiscalRate }}%"></span>
+            </div>
+            <p class="mt-2 text-xs text-slate-500">{{ __(':open open, :closed closed', ['open' => localizeNumber($metrics['openFiscalYears']), 'closed' => localizeNumber($metrics['closedFiscalYears'])]) }}</p>
+        </article>
+    </section>
+
     <section class="mt-6 grid gap-6 xl:grid-cols-3">
         <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900 xl:col-span-2">
             <header class="flex items-center justify-between gap-3 border-b border-slate-200 px-5 py-4 dark:border-slate-800">

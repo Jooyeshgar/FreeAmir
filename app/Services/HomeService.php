@@ -18,6 +18,7 @@ use App\Models\Product;
 use App\Models\Subject;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Spatie\Permission\Models\Role;
 
 class HomeService
@@ -29,15 +30,80 @@ class HomeService
      */
     public function superAdminOverview(): array
     {
-        return [
-            'metrics' => [
-                'businesses' => Company::query()->distinct()->count('name'),
-                'fiscalYears' => Company::query()->count(),
-                'openFiscalYears' => Company::query()->whereNull('closed_at')->count(),
-                'users' => User::query()->count(),
-                'verifiedUsers' => User::query()->whereNotNull('email_verified_at')->count(),
-                'unassignedUsers' => User::query()->doesntHave('companies')->count(),
-            ],
+        $statistics = function (): array {
+            $now = Carbon::now();
+            $currentPeriodStart = $now->copy()->subDays(29)->startOfDay();
+            $previousPeriodStart = $currentPeriodStart->copy()->subDays(30);
+            $newUsers = User::query()->where('created_at', '>=', $currentPeriodStart)->count();
+            $previousNewUsers = User::query()
+                ->whereBetween('created_at', [$previousPeriodStart, $currentPeriodStart->copy()->subSecond()])
+                ->count();
+
+            $userGrowthRate = match (true) {
+                $previousNewUsers > 0 => round((($newUsers - $previousNewUsers) / $previousNewUsers) * 100, 1),
+                $newUsers > 0 => 100.0,
+                default => 0.0,
+            };
+
+            $userGrowthStart = $now->copy()->startOfMonth()->subMonths(5);
+            $usersByMonth = User::query()
+                ->where('created_at', '>=', $userGrowthStart)
+                ->get(['created_at'])
+                ->countBy(fn (User $user): string => $user->created_at->format('Y-m'));
+            $userGrowth = collect(range(0, 5))->map(function (int $offset) use ($userGrowthStart, $usersByMonth): array {
+                $month = $userGrowthStart->copy()->addMonths($offset);
+
+                return [
+                    'key' => $month->format('Y-m'),
+                    'label' => $month->translatedFormat('M'),
+                    'count' => $usersByMonth->get($month->format('Y-m'), 0),
+                ];
+            });
+
+            $activityStart = $now->copy()->subDays(6)->startOfDay();
+            $activitiesByDay = Activity::query()
+                ->where('created_at', '>=', $activityStart)
+                ->get(['created_at'])
+                ->countBy(fn (Activity $activity): string => $activity->created_at->toDateString());
+            $activityTrend = collect(range(0, 6))->map(function (int $offset) use ($activityStart, $activitiesByDay): array {
+                $day = $activityStart->copy()->addDays($offset);
+
+                return [
+                    'date' => $day->toDateString(),
+                    'label' => $day->translatedFormat('D'),
+                    'count' => $activitiesByDay->get($day->toDateString(), 0),
+                ];
+            });
+
+            return [
+                'metrics' => [
+                    'businesses' => Company::query()->distinct()->count('name'),
+                    'activeBusinesses' => Company::query()->whereNull('closed_at')->distinct()->count('name'),
+                    'fiscalYears' => Company::query()->count(),
+                    'openFiscalYears' => Company::query()->whereNull('closed_at')->count(),
+                    'closedFiscalYears' => Company::query()->whereNotNull('closed_at')->count(),
+                    'users' => User::query()->count(),
+                    'verifiedUsers' => User::query()->whereNotNull('email_verified_at')->count(),
+                    'unassignedUsers' => User::query()->doesntHave('companies')->count(),
+                    'newUsers' => $newUsers,
+                    'userGrowthRate' => $userGrowthRate,
+                ],
+                'userGrowth' => $userGrowth,
+                'activityTrend' => $activityTrend,
+                'activityMetrics' => [
+                    'total' => Activity::query()->count(),
+                    'today' => Activity::query()->whereDate('created_at', Carbon::today())->count(),
+                    'model' => Activity::query()->where('source', 'model')->count(),
+                    'request' => Activity::query()->where('source', 'request')->count(),
+                ],
+            ];
+        };
+
+        $statistics = app()->environment('testing')
+            ? $statistics()
+            : Cache::remember('dashboard.super-admin-overview.v1', now()->addMinutes(5), $statistics);
+
+        return $statistics + [
             'recentCompanies' => Company::query()
                 ->withCount('users')
                 ->orderByDesc('id')
@@ -54,12 +120,6 @@ class HomeService
                 ->orderByDesc('users_count')
                 ->orderBy('name')
                 ->get(),
-            'activityMetrics' => [
-                'total' => Activity::query()->count(),
-                'today' => Activity::query()->whereDate('created_at', Carbon::today())->count(),
-                'model' => Activity::query()->where('source', 'model')->count(),
-                'request' => Activity::query()->where('source', 'request')->count(),
-            ],
             'recentActivities' => Activity::query()
                 ->with('user:id,name,email')
                 ->latest('id')
