@@ -10,9 +10,10 @@ This index is for users who want to understand Amir's accounting concepts and pr
 1. [Accounting basics](../accounting-basics.md)
 2. [What a fiscal year is and how to create one](../fiscal-year.en.md)
 3. [Inventory costing and COGS in Amir](inventory-costing.en.md)
-4. [Attendance guide](attendance/README.en.md)
-5. [Salary and payroll guide](salary/README.en.md)
-6. [Sales returns and purchase returns](../return-sell-return-buy.md)
+4. [Monthly income and expense forecasting](monthly-income-expense-forecasting.en.md)
+5. [Attendance guide](attendance/README.en.md)
+6. [Salary and payroll guide](salary/README.en.md)
+7. [Sales returns and purchase returns](../return-sell-return-buy.md)
 
 ## Product Operations
 
@@ -28,6 +29,7 @@ This index is for users who want to understand Amir's accounting concepts and pr
 | [accounting-basics.md](../accounting-basics.md) | Basic accounting concepts, debit, credit, and accounting documents |
 | [inventory-costing.en.md](inventory-costing.en.md) | COGS, FIFO/LIFO/average methods, and Amir's moving weighted average method |
 | [return-sell-return-buy.md](../return-sell-return-buy.md) | Accounting records for sales returns and purchase returns |
+| [monthly-income-expense-forecasting.en.md](monthly-income-expense-forecasting.en.md) | Forecasts and actual income and expense, variances, and performance ratios |
 
 ## Practical Operations
 

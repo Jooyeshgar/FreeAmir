@@ -28,6 +28,8 @@ class BarChart extends Component
 
     public string $datalabelColor;
 
+    public array $links;
+
     public array $labels = [];
 
     public array $normalizedDatasets = [];
@@ -46,7 +48,8 @@ class BarChart extends Component
         string $borderColor = '#4bb946',
         string $negativeColor = 'red',
         ?bool $showLegend = null,
-        string $datalabelColor = '#166534'
+        string $datalabelColor = '#166534',
+        array $links = []
     ) {
         $this->datas = $datas;
         $this->datasets = $datasets;
@@ -58,6 +61,7 @@ class BarChart extends Component
         $this->negativeColor = $negativeColor;
         $this->showLegend = $showLegend;
         $this->datalabelColor = $datalabelColor;
+        $this->links = $links;
 
         $this->prepareDatasets();
     }
@@ -75,6 +79,7 @@ class BarChart extends Component
             'backgroundColor' => $this->backgroundColor,
             'negativeColor' => $this->negativeColor,
             'datalabelColor' => $this->datalabelColor,
+            'links' => $this->links,
         ]);
     }
 
@@ -115,6 +120,14 @@ class BarChart extends Component
                 'borderWidth' => $set['borderWidth'] ?? 2,
                 'borderRadius' => $set['borderRadius'] ?? 0,
                 'borderSkipped' => $set['borderSkipped'] ?? false,
+                'type' => $set['type'] ?? 'bar',
+                'tension' => $set['tension'] ?? 0,
+                'fill' => $set['fill'] ?? false,
+                'pointRadius' => $set['pointRadius'] ?? 0,
+                'pointHoverRadius' => $set['pointHoverRadius'] ?? 0,
+                'spanGaps' => $set['spanGaps'] ?? false,
+                'order' => $set['order'] ?? $index,
+                'datalabels' => $set['datalabels'] ?? [],
             ];
         }
 

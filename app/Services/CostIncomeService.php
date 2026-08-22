@@ -41,19 +41,19 @@ class CostIncomeService
         $costBreakdown = [];
 
         foreach ($roots as $root) {
-            $rootBalance = (int) $this->subjectService->sumSubject($root);
+            $rootBalance = (int) $this->subjectService->sumSubject($root, true, false, true);
 
             if ($rootBalance > 0) {
                 $totalIncome += $rootBalance;
             } elseif ($rootBalance < 0) {
-                $totalCost += abs($rootBalance);
+                $totalCost += -1 * $rootBalance;
             }
 
             $children = $root->children;
 
             if ($children->isNotEmpty()) {
                 foreach ($children as $child) {
-                    $balance = (int) $this->subjectService->sumSubject($child);
+                    $balance = (int) $this->subjectService->sumSubject($child, true, false, true);
                     $this->placeBreakdown($balance, $child->name, $incomeBreakdown, $costBreakdown);
                 }
             } else {
@@ -78,7 +78,7 @@ class CostIncomeService
         if ($balance > 0) {
             $income[$name] = ($income[$name] ?? 0) + $balance;
         } elseif ($balance < 0) {
-            $cost[$name] = ($cost[$name] ?? 0) + abs($balance);
+            $cost[$name] = ($cost[$name] ?? 0) + (-1 * $balance);
         }
     }
 
@@ -87,21 +87,47 @@ class CostIncomeService
      */
     public function monthlyIncomeAndCost(): array
     {
-        $income = array_fill_keys(self::MONTHS, 0);
-        $cost = array_fill_keys(self::MONTHS, 0);
+        $monthly = $this->monthlyIncomeAndCostByMonth();
+        $income = [];
+        $cost = [];
 
+        foreach (self::MONTHS as $number => $name) {
+            $income[$name] = $monthly['income'][$number];
+            $cost[$name] = -1 * $monthly['cost'][$number];
+        }
+
+        return compact('income', 'cost');
+    }
+
+    /**
+     * Monthly income and cost keyed by Jalali month number.
+     *
+     * Like totalIncome and totalCost, each temporary root is netted with all descendants across approved transactions to determine its direction.
+     * Every monthly movement is assigned to that resolved bucket while retaining its accounting sign.
+     *
+     * Expense totals retain their negative accounting sign.
+     * Presentation boundaries convert them to positive chart values with -1 * value.
+     *
+     * @return array{income: array<int, int>, cost: array<int, int>}
+     */
+    public function monthlyIncomeAndCostByMonth(): array
+    {
+        $income = array_fill(1, 12, 0);
+        $cost = array_fill(1, 12, 0);
         $nonPermanentSubjects = Subject::where('is_permanent', false)->whereIsRoot()->get();
 
         foreach ($nonPermanentSubjects as $subject) {
-            $monthly = $this->subjectService->sumSubjectWithDateRange($subject);
+            $monthly = $this->subjectService->sumApprovedSubjectWithDateRange($subject);
+            $classificationBalance = (float) $this->subjectService->sumSubject($subject, true, false, true);
 
             foreach (self::MONTHS as $number => $name) {
                 $amount = (int) ($monthly[$number] ?? 0);
+                $type = $classificationBalance != 0 ? ($classificationBalance < 0 ? 'expense' : 'income') : ($amount < 0 ? 'expense' : 'income');
 
-                if ($amount > 0) {
-                    $income[$name] += $amount;
-                } elseif ($amount < 0) {
-                    $cost[$name] += abs($amount);
+                if ($type === 'expense') {
+                    $cost[$number] += $amount;
+                } else {
+                    $income[$number] += $amount;
                 }
             }
         }

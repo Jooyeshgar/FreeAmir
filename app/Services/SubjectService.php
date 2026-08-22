@@ -79,6 +79,16 @@ class SubjectService
 
     public function sumSubjectWithDateRange(?Subject $subject)
     {
+        return $this->sumSubjectWithDateRangeQuery($subject, false);
+    }
+
+    public function sumApprovedSubjectWithDateRange(?Subject $subject)
+    {
+        return $this->sumSubjectWithDateRangeQuery($subject, true);
+    }
+
+    private function sumSubjectWithDateRangeQuery(?Subject $subject, bool $approvedOnly)
+    {
         if (is_null($subject)) {
             return [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0, 6 => 0, 7 => 0, 8 => 0, 9 => 0, 10 => 0, 11 => 0, 12 => 0];
         }
@@ -100,7 +110,7 @@ class SubjectService
             12 => [1, jcheckdate(12, 30, $year) ? 30 : 29],
         ];
 
-        $subjectIds = $subject->getAllDescendantIds();
+        $subjectIds = self::subjectAndDescendantIds($subject);
         $transactionQuery = Transaction::query()->whereIn('subject_id', $subjectIds);
         $monthlySum = [];
 
@@ -110,6 +120,7 @@ class SubjectService
 
             $transactions = (clone $transactionQuery)
                 ->join('documents', 'documents.id', '=', 'transactions.document_id')
+                ->when($approvedOnly, fn ($query) => $query->whereNotNull('documents.approved_at'))
                 ->whereBetween('documents.date', [$startDate, $endDate])
                 ->selectRaw('DATE(documents.date) as date, SUM(transactions.value) as total')
                 ->groupBy('date')
@@ -128,25 +139,43 @@ class SubjectService
     /**
      * Calculate the total sum of transactions for a subject with all its descendants recursively.
      */
-    public static function sumSubject(string|int|Subject|null $code, bool $both = true, bool $debit = false): float
+    public static function sumSubject(string|int|Subject|null $code, bool $both = true, bool $debit = false, bool $approvedOnly = false): float
     {
         if (is_null($code)) {
             return 0;
         } elseif ($code instanceof Subject) {
-            $subject = $code->loadMissing(['transactions']);
+            $subject = $approvedOnly ? $code : $code->loadMissing(['transactions']);
         } elseif (is_int($code)) {
-            $subject = Subject::with(['transactions'])->find($code);
+            $subject = $approvedOnly ? Subject::find($code) : Subject::with(['transactions'])->find($code);
         } else {
-            $subject = Subject::with(['transactions'])->where('code', $code)->first();
+            $subject = $approvedOnly ? Subject::where('code', $code)->first() : Subject::with(['transactions'])->where('code', $code)->first();
         }
 
         if (! $subject) {
             return 0;
         }
 
+        if ($approvedOnly) {
+            return (float) Transaction::query()
+                ->join('documents', 'documents.id', '=', 'transactions.document_id')
+                ->whereNotNull('documents.approved_at')
+                ->whereIn('transactions.subject_id', self::subjectAndDescendantIds($subject))
+                ->when(! $both, fn ($query) => $query->where('transactions.value', $debit ? '<' : '>', 0))
+                ->sum('transactions.value');
+        }
+
         self::eagerLoadDescendants($subject);
 
         return self::sumSubjectRecursively($subject, $both, $debit);
+    }
+
+    /** Include the selected subject explicitly, regardless of descendant-helper semantics. */
+    private static function subjectAndDescendantIds(Subject $subject): array
+    {
+        return array_values(array_unique([
+            (int) $subject->getKey(),
+            ...$subject->getAllDescendantIds(),
+        ]));
     }
 
     /**

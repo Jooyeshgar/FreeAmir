@@ -688,6 +688,42 @@ class SubjectTransferTest extends TestCase
         $this->assertFalse($result['destination']->is_permanent);
     }
 
+    public function test_every_new_descendant_of_a_temporary_root_is_temporary(): void
+    {
+        $root = $this->makeSubject(['code' => '050', 'is_permanent' => false]);
+
+        $child = $this->subjectService->createSubject([
+            'name' => 'Temporary child',
+            'parent_id' => $root->id,
+            'company_id' => $this->company->id,
+            'type' => SubjectType::BOTH,
+            'is_permanent' => true,
+        ]);
+        $grandchild = $this->subjectService->createSubject([
+            'name' => 'Temporary grandchild',
+            'parent_id' => $child->id,
+            'company_id' => $this->company->id,
+            'type' => SubjectType::BOTH,
+            'is_permanent' => true,
+        ]);
+
+        $this->assertFalse((bool) $child->is_permanent);
+        $this->assertFalse((bool) $grandchild->is_permanent);
+    }
+
+    public function test_changing_a_root_to_temporary_makes_every_existing_descendant_temporary(): void
+    {
+        $root = $this->makeSubject(['code' => '060', 'is_permanent' => true]);
+        $child = $this->makeSubject(['code' => '060001', 'parent_id' => $root->id, 'is_permanent' => true]);
+        $grandchild = $this->makeSubject(['code' => '060001001', 'parent_id' => $child->id, 'is_permanent' => true]);
+
+        $this->subjectService->editSubject($root, ['is_permanent' => false]);
+
+        $this->assertFalse((bool) $root->fresh()->is_permanent);
+        $this->assertFalse((bool) $child->fresh()->is_permanent);
+        $this->assertFalse((bool) $grandchild->fresh()->is_permanent);
+    }
+
     public function test_source_not_removed_when_remove_checkbox_is_unchecked()
     {
         $source = $this->makeSubject(['code' => '001']);

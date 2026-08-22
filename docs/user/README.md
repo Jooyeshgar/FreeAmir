@@ -12,9 +12,10 @@
 1. [مبانی حسابداری](../accounting-basics.md)
 2. [سال مالی چیست و چگونه ساخته می‌شود](../fiscal-year.md)
 3. [بهای تمام‌شده کالا و روش محاسبه در امیر](inventory-costing.md)
-4. [راهنمای حضور و غیاب](attendance/README.md)
-5. [راهنمای حقوق و دستمزد](salary/README.md)
-6. [برگشت از فروش و برگشت از خرید](../return-sell-return-buy.md)
+4. [پیش‌بینی ماهانه درآمد و هزینه](monthly-income-expense-forecasting.md)
+5. [راهنمای حضور و غیاب](attendance/README.md)
+6. [راهنمای حقوق و دستمزد](salary/README.md)
+7. [برگشت از فروش و برگشت از خرید](../return-sell-return-buy.md)
 
 ## عملیات برنامه
 
@@ -30,6 +31,7 @@
 | [accounting-basics.md](../accounting-basics.md) | مفاهیم پایه حسابداری، بدهکار، بستانکار و سند حسابداری |
 | [inventory-costing.md](inventory-costing.md) | بهای تمام‌شده، روش‌های FIFO/LIFO/میانگین و روش میانگین موزون متحرک در امیر |
 | [return-sell-return-buy.md](../return-sell-return-buy.md) | ثبت حسابداری برگشت از فروش و برگشت از خرید |
+| [monthly-income-expense-forecasting.md](monthly-income-expense-forecasting.md) | پیش‌بینی، درآمد و هزینه واقعی، انحراف و نسبت‌های عملکرد |
 
 ## عملیات کاربردی
 

@@ -228,6 +228,12 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     });
     Route::get('warehouse/dashboard', [Controllers\WarehouseDashboardController::class, 'index'])->name('warehouse.dashboard');
 
+    Route::get('monthly-budgets', [Controllers\MonthlyBudgetController::class, 'index'])->name('budgets.index');
+    Route::get('monthly-budgets/subjects/search/{month}/{scope?}', [Controllers\MonthlyBudgetController::class, 'searchSubjects'])->name('budgets.search-subjects');
+    Route::put('monthly-budgets', [Controllers\MonthlyBudgetController::class, 'store'])->name('budgets.store');
+    Route::post('monthly-budgets/rollover', [Controllers\MonthlyBudgetController::class, 'rollover'])->name('budgets.rollover');
+    Route::delete('monthly-budgets/{monthlyBudget}', [Controllers\MonthlyBudgetController::class, 'destroy'])->name('budgets.destroy');
+
     Route::group(['prefix' => 'reports', 'as' => 'reports.'], function () {
         Route::get('ledger', [Controllers\ReportsController::class, 'ledger'])->name('ledger');
         Route::get('journal', [Controllers\ReportsController::class, 'journal'])->name('journal');

@@ -105,7 +105,7 @@
     </li>
 @endcanany
 @canany(['reports.documents', 'reports.journal', 'reports.ledger', 'reports.sub-ledger', 'reports.trial-balance',
-    'reports.cost-income', 'reports.company-overview'])
+    'reports.cost-income', 'budgets.index', 'reports.company-overview'])
     <li>
         <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('Reports') }}</summary>
@@ -115,6 +115,9 @@
                 @endcan
                 @can('reports.cost-income')
                     <li><a href="{{ route('reports.cost-income') }}">{{ __('Cost and Income Dashboard') }}</a></li>
+                @endcan
+                @can('budgets.index')
+                    <li><a href="{{ route('budgets.index') }}">{{ __('Monthly Income and Expense Workbench') }}</a></li>
                 @endcan
                 @canany(['reports.documents', 'reports.journal', 'reports.ledger', 'reports.sub-ledger',
                     'reports.trial-balance'])
@@ -225,9 +228,10 @@
         <ul class="{{ $scrollingTopDropdownContentClass }}">
 
             {{-- HR, Attendance & Salary --}}
-            @canany(['hr.org-charts.index', 'hr.organization-units.index', 'attendance.work-shifts.index', 'salary.payrolls.index',
-                'salary.tax-slabs.index', 'salary.work-sites.index', 'salary.work-site-contracts.index',
-                'salary.public-holidays.index', 'salary.payroll-elements.index', 'salary.salary-decrees.index'])
+            @canany(['hr.org-charts.index', 'hr.organization-units.index', 'attendance.work-shifts.index',
+                'salary.payrolls.index', 'salary.tax-slabs.index', 'salary.work-sites.index',
+                'salary.work-site-contracts.index', 'salary.public-holidays.index', 'salary.payroll-elements.index',
+                'salary.salary-decrees.index'])
                 <li>
                     <details>
                         <summary>{{ __('HR & Organization') }}</summary>
@@ -236,7 +240,8 @@
                                 <li><a href="{{ route('hr.org-charts.index') }}">{{ __('Organization Chart') }}</a></li>
                             @endcan
                             @can('hr.organization-units.index')
-                                <li><a href="{{ route('hr.organization-units.index') }}">{{ __('Organization Units') }}</a></li>
+                                <li><a href="{{ route('hr.organization-units.index') }}">{{ __('Organization Units') }}</a>
+                                </li>
                             @endcan
                             @can('attendance.work-shifts.index')
                                 <li><a href="{{ route('attendance.work-shifts.index') }}">{{ __('Work Shifts') }}</a></li>
@@ -272,7 +277,8 @@
             @endcanany
 
             {{-- Finance --}}
-            @canany(['bank-accounts.index', 'banks.index', 'chequebooks.index', 'subjects.index', 'documents.sort-numbers'])
+            @canany(['bank-accounts.index', 'banks.index', 'chequebooks.index', 'subjects.index',
+                'documents.sort-numbers'])
                 <li>
                     <details>
                         <summary>{{ __('Finance') }}</summary>

@@ -27,6 +27,7 @@
 | [راهنمای نصب](INSTALLATION.md) | مدیر سیستم و توسعه‌دهنده | نصب با Docker Compose، Docker تک‌دستوری یا نصب استاندارد |
 | [سال مالی](fiscal-year.md) | همه کاربران | تعریف سال مالی و راهنمای ایجاد آن در امیر |
 | [خروجی/ورودی سال مالی](FiscalYearExportImport.md) | مدیر سیستم و توسعه‌دهنده | دستورهای `fiscal-year:export` و `fiscal-year:import` |
+| [پیش‌بینی ماهانه درآمد و هزینه](user/monthly-income-expense-forecasting.md) | کاربران و حسابداران | پیش‌بینی درآمد و هزینه، مقادیر واقعی، انحراف‌ها و نسبت‌های عملکرد |
 
 ## همه فایل‌های مستندات
 
@@ -39,6 +40,7 @@
 | [user/attendance/README.md](user/attendance/README.md) / [user/attendance/README.en.md](user/attendance/README.en.md) | حضور و غیاب | راهنمای کار با شیفت، لاگ و کارکرد ماهانه |
 | [user/salary/README.md](user/salary/README.md) / [user/salary/README.en.md](user/salary/README.en.md) | حقوق و دستمزد | راهنمای عوامل حقوقی، احکام و فیش حقوقی |
 | [user/inventory-costing.md](user/inventory-costing.md) / [user/inventory-costing.en.md](user/inventory-costing.en.md) | حسابداری کالا | بهای تمام‌شده، روش‌های محاسبه و روش مورد استفاده امیر |
+| [user/monthly-income-expense-forecasting.md](user/monthly-income-expense-forecasting.md) / [user/monthly-income-expense-forecasting.en.md](user/monthly-income-expense-forecasting.en.md) | بودجه‌بندی | پیش‌بینی ماهانه و مقادیر واقعی درآمد و هزینه |
 | [fiscal-year.md](fiscal-year.md) / [fiscal-year.en.md](fiscal-year.en.md) | سال مالی | مفهوم سال مالی و ایجاد آن |
 | [FiscalYearExportImport.md](FiscalYearExportImport.md) | سال مالی | خروجی گرفتن و وارد کردن داده سال مالی |
 | [accounting-basics.md](accounting-basics.md) | حسابداری | مبانی حسابداری، بدهکار، بستانکار و سند |
