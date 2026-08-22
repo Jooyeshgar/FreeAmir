@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\AncillaryCostItem;
+use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Models\Product;
 
 class ProductService
@@ -102,6 +104,29 @@ class ProductService
 
             $product->save();
         }
+    }
+
+    public static function recalculateQuantity(Product $product): float
+    {
+        $invoiceTypes = Invoice::withoutGlobalScopes()->whereIn('status', InvoiceStatus::approvedOrSettled())
+            ->whereHas('items', function ($query) use ($product) {
+                $query->where('itemable_type', Product::class)->where('itemable_id', $product->id);
+            })->pluck('invoice_type', 'id');
+
+        $quantity = InvoiceItem::query()->whereIn('invoice_id', $invoiceTypes->keys())->where('itemable_type', Product::class)->where('itemable_id', $product->id)
+            ->get()->sum(function (InvoiceItem $item) use ($invoiceTypes): float {
+                $sign = match ($invoiceTypes[$item->invoice_id]) {
+                    InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID => 1,
+                    InvoiceType::SELL, InvoiceType::RETURN_BUY => -1,
+                };
+
+                return $sign * (float) $item->quantity;
+            });
+
+        $product->quantity = $quantity;
+        $product->save();
+
+        return $quantity;
     }
 
     protected function syncSubjects(Product $product): void
