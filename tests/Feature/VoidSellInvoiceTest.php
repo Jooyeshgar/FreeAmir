@@ -53,6 +53,8 @@ class VoidSellInvoiceTest extends TestCase
             Permission::firstOrCreate(['name' => 'invoices.void-form']),
             Permission::firstOrCreate(['name' => 'invoices.show']),
             Permission::firstOrCreate(['name' => 'products.show']),
+            Permission::firstOrCreate(['name' => 'products.update']),
+            Permission::firstOrCreate(['name' => 'products.recalculate-quantity']),
         ]);
 
         $this->actingAs($this->user);
@@ -179,6 +181,22 @@ class VoidSellInvoiceTest extends TestCase
 
         $this->assertNotNull($remainingCell);
         $this->assertSame(formatNumber(10), trim($remainingCell->textContent));
+    }
+
+    public function test_product_stock_can_be_recalculated_from_invoices_in_all_companies(): void
+    {
+        $product = $this->createProduct();
+        $otherCompany = Company::create(['name' => 'Other Company', 'fiscal_year' => 1404]);
+
+        $invoice = $this->buy([$this->productItem($product, 10, 100)], true, 7024, '2026-07-01')['invoice'];
+        $invoice->updateQuietly(['company_id' => $otherCompany->id]);
+
+        $product->update(['quantity' => 999]);
+
+        $response = $this->post(route('products.recalculate-quantity', $product));
+
+        $response->assertRedirect(route('products.show', $product));
+        $this->assertSame(10.0, (float) $this->findProduct($product->id)->quantity);
     }
 
     public function test_unapproving_void_invoice_reapplies_the_original_sell_inventory_effect(): void

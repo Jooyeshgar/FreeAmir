@@ -64,7 +64,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'transactions' => ['index', 'show'],
 
             // Products / services and their groups
-            'products' => [...self::CRUD, 'search-product-group', 'report', 'export'],
+            'products' => [...self::CRUD, 'search-product-group', 'report', 'export', 'recalculate-quantity'],
             'product-groups' => self::CRUD,
             'services' => [...self::CRUD, 'search-service-group'],
             'service-groups' => self::CRUD,
