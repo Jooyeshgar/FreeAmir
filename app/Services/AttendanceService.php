@@ -210,6 +210,7 @@ class AttendanceService
         $explicitDelayCoverage = 0;
         $explicitEarlyLeaveCoverage = 0;
         $entryCoverageEnd = null;
+        $entryCoverageStart = null;
         $shiftStartCoverageOverlap = 0;
 
         if ($hourlyCoverageRequests !== null) {
@@ -235,6 +236,15 @@ class AttendanceService
                     }
                 }
 
+                // A leave window may begin inside the float period and end at check-in.
+                // In that case, the gap before the leave consumes float; the leave itself must not be converted into automatic overtime.
+                if ($shiftStartTime && $entryTime && $reqStart > $shiftStartTime && $reqStart < $entryTime && $reqEnd >= $entryTime) {
+                    $uncoveredBeforeCoverage = Carbon::parse($shiftStartTime)->diffInMinutes(Carbon::parse($reqStart));
+                    if ($uncoveredBeforeCoverage <= (int) ($workShift?->float ?? 0)) {
+                        $entryCoverageStart = $entryCoverageStart === null ? $reqStart : min($entryCoverageStart, $reqStart);
+                    }
+                }
+
                 // Leave occurring prior to physical check-in covers morning delays
                 if ($entryTime) {
                     $start = $reqStart;
@@ -255,7 +265,7 @@ class AttendanceService
             }
         }
 
-        $bounds = $this->shiftDelayEarlyLeave($log, $workShift, $entryCoverageEnd);
+        $bounds = $this->shiftDelayEarlyLeave($log, $workShift, $entryCoverageEnd, $entryCoverageStart);
 
         // Mid-shift coverage is removed from worked and cannot absorb edge penalties. Restore only the overlap
         // belonging to start-edge coverage because arriving before that coverage ends counts as automatic overtime.
@@ -274,6 +284,10 @@ class AttendanceService
 
         $netDelay = max(0, $bounds['delay'] - $explicitDelayCoverage);
         $unusedExplicitDelay = max(0, $explicitDelayCoverage - $bounds['delay']);
+
+        if ($entryCoverageStart !== null) {
+            $unusedExplicitDelay = 0;
+        }
 
         $usedBlindForDelay = min($netDelay, $blindCoverage);
         $netDelay -= $usedBlindForDelay;
@@ -817,7 +831,7 @@ class AttendanceService
      *
      * @return array{delay: int, early_leave: int, overtime: int}
      */
-    private function shiftDelayEarlyLeave(AttendanceLog $log, ?WorkShift $workShift, ?string $entryCoverageEnd = null): array
+    private function shiftDelayEarlyLeave(AttendanceLog $log, ?WorkShift $workShift, ?string $entryCoverageEnd = null, ?string $entryCoverageStart = null): array
     {
         $empty = ['delay' => 0, 'early_leave' => 0, 'overtime' => 0];
 
@@ -843,9 +857,14 @@ class AttendanceService
         $earlyArrivalMinutes = 0;
 
         $coverageEnd = $entryCoverageEnd !== null ? $this->parseTime($entryCoverageEnd) : null;
+        $coverageStart = $entryCoverageStart !== null ? $this->parseTime($entryCoverageStart) : null;
         $uncoveredEntryGap = $coverageEnd !== null ? max(0, (int) $coverageEnd->diffInMinutes($entry, false)) : null;
 
-        if ($coverageEnd !== null && $coverageEnd->greaterThanOrEqualTo($entry)) {
+        if ($coverageStart !== null) {
+            $uncoveredBeforeCoverage = max(0, (int) $shiftStart->diffInMinutes($coverageStart, false));
+            $arrivalDelay = max(0, $lateMinutes);
+            $adjustedEnd = $shiftEnd->copy()->addMinutes($uncoveredBeforeCoverage);
+        } elseif ($coverageEnd !== null && $coverageEnd->greaterThanOrEqualTo($entry)) {
             // Coverage fills the complete entry gap. Keep the scheduled shift end so any late exit,
             // plus attendance that overlaps the end of coverage, remains automatic overtime.
             $arrivalDelay = max(0, (int) $shiftStart->diffInMinutes($entry, false));

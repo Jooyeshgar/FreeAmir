@@ -1322,4 +1322,154 @@ class AttendanceLogTest extends TestCase
         $this->assertEquals(0, $log->delay);
         $this->assertEquals(0, $log->early_leave);
     }
+
+    public function test_hourly_leave_within_shift_with_float_calculates_paid_leave_and_no_delay(): void
+    {
+        $workShift = WorkShift::factory()->create([
+            'company_id' => $this->companyId,
+            'start_time' => '07:30:00',
+            'end_time' => '15:30:00',
+            'break' => 30,
+            'float' => 60,
+            'max_auto_overtime' => 60,
+        ]);
+
+        $deviceId = 'DEVICE-002';
+        $this->employee->update(['device_id' => $deviceId, 'work_shift_id' => $workShift->id]);
+        $attendanceService = app(AttendanceService::class);
+
+        $logDate = '2026-08-19'; // 1405/05/28
+        $personnelRequest_1 = PersonnelRequest::create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'status' => PersonnelRequestStatus::APPROVED,
+            'request_type' => PersonnelRequestType::LEAVE_HOURLY,
+            'start_date' => $logDate.' 08:15:00',
+            'end_date' => $logDate.' 08:47:00',
+            'approved_by' => auth()->user()->id,
+        ]);
+        $attendanceService->syncPersonnelRequestLogs($personnelRequest_1);
+
+        $personnelRequest_2 = PersonnelRequest::create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'status' => PersonnelRequestStatus::APPROVED,
+            'request_type' => PersonnelRequestType::LEAVE_HOURLY,
+            'start_date' => $logDate.' 10:20:00',
+            'end_date' => $logDate.' 11:00:00',
+            'approved_by' => auth()->user()->id,
+        ]);
+
+        $attendanceService->syncPersonnelRequestLogs($personnelRequest_2);
+
+        $tsv = $this->makeTsvContent($deviceId, $logDate, '08:47', '16:15');
+        $tmpPath = tempnam(sys_get_temp_dir(), 'tsv_');
+        file_put_contents($tmpPath, $tsv);
+        $uploadedFile = new UploadedFile($tmpPath, 'attendance.tsv', 'text/plain', null, true);
+
+        $attendanceLogImport = app(AttendanceLogImportService::class);
+        $result = $attendanceLogImport->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->companyId, null, null, 'ignore');
+
+        $this->assertEquals(1, $result['imported']);
+        $this->assertEquals(0, $result['skipped']);
+
+        $log = AttendanceLog::query()->where('employee_id', $this->employee->id)->where('log_date', $logDate)->firstOrFail();
+
+        $this->assertEquals(72, $log->paid_leave);
+        $this->assertEquals(0, $log->auto_overtime + $log->overtime);
+        $this->assertEquals(0, $log->delay);
+        $this->assertEquals(0, $log->early_leave);
+    }
+
+    public function test_hourly_leave_at_shift_start_with_overtime_calculation(): void
+    {
+        $workShift = WorkShift::factory()->create([
+            'company_id' => $this->companyId,
+            'start_time' => '07:30:00',
+            'end_time' => '15:30:00',
+            'break' => 30,
+            'float' => 60,
+            'max_auto_overtime' => 120,
+        ]);
+
+        $deviceId = 'DEVICE-002';
+        $this->employee->update(['device_id' => $deviceId, 'work_shift_id' => $workShift->id]);
+
+        $logDate = '2026-07-25'; // 1405/05/03
+        $personnelRequest = PersonnelRequest::create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'status' => PersonnelRequestStatus::APPROVED,
+            'request_type' => PersonnelRequestType::LEAVE_HOURLY,
+            'start_date' => $logDate.' 07:30:00',
+            'end_date' => $logDate.' 10:35:00',
+            'approved_by' => auth()->user()->id,
+        ]);
+
+        $attendanceService = app(AttendanceService::class);
+        $attendanceService->syncPersonnelRequestLogs($personnelRequest);
+
+        $tsv = $this->makeTsvContent($deviceId, $logDate, '10:35', '16:38');
+        $tmpPath = tempnam(sys_get_temp_dir(), 'tsv_');
+        file_put_contents($tmpPath, $tsv);
+        $uploadedFile = new UploadedFile($tmpPath, 'attendance.tsv', 'text/plain', null, true);
+
+        $attendanceLogImport = app(AttendanceLogImportService::class);
+        $result = $attendanceLogImport->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->companyId, null, null, 'ignore');
+        $this->assertEquals(1, $result['imported']);
+        $this->assertEquals(0, $result['skipped']);
+
+        $log = AttendanceLog::query()->where('employee_id', $this->employee->id)->where('log_date', $logDate)->firstOrFail();
+
+        $this->assertEquals(185, $log->paid_leave);
+        $this->assertEquals(68, $log->auto_overtime + $log->overtime);
+        $this->assertEquals(0, $log->delay);
+        $this->assertEquals(0, $log->early_leave);
+    }
+
+    public function test_hourly_leave_with_float_covers_delay_without_overtime(): void
+    {
+        $workShift = WorkShift::factory()->create([
+            'company_id' => $this->companyId,
+            'start_time' => '07:30:00',
+            'end_time' => '15:30:00',
+            'break' => 30,
+            'float' => 60,
+            'max_auto_overtime' => 120,
+        ]);
+
+        $deviceId = 'DEVICE-002';
+        $this->employee->update(['device_id' => $deviceId, 'work_shift_id' => $workShift->id]);
+
+        $logDate = '2026-08-05'; // 1405/05/14
+        $personnelRequest = PersonnelRequest::create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'status' => PersonnelRequestStatus::APPROVED,
+            'request_type' => PersonnelRequestType::LEAVE_HOURLY,
+            'start_date' => $logDate.' 08:13:00',
+            'end_date' => $logDate.' 09:00:00',
+            'approved_by' => auth()->user()->id,
+        ]);
+
+        $attendanceService = app(AttendanceService::class);
+        $attendanceService->syncPersonnelRequestLogs($personnelRequest);
+
+        $tsv = $this->makeTsvContent($deviceId, $logDate, '09:00', '16:13');
+        $tmpPath = tempnam(sys_get_temp_dir(), 'tsv_');
+        file_put_contents($tmpPath, $tsv);
+        $uploadedFile = new UploadedFile($tmpPath, 'attendance.tsv', 'text/plain', null, true);
+
+        $attendanceLogImport = app(AttendanceLogImportService::class);
+        $result = $attendanceLogImport->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->companyId, null, null, 'ignore');
+        $this->assertEquals(1, $result['imported']);
+        $this->assertEquals(0, $result['skipped']);
+
+        $log = AttendanceLog::query()->where('employee_id', $this->employee->id)->where('log_date', $logDate)->firstOrFail();
+
+        $this->assertEquals(47, $log->paid_leave);
+        $this->assertEquals(0, $log->auto_overtime + $log->overtime);
+        $this->assertEquals(0, $log->delay);
+        $this->assertEquals(0, $log->early_leave);
+    }
 }

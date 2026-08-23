@@ -30,11 +30,11 @@
                     <div>{{-- spacer --}}</div>
 
                     <div>
-                        <x-input name="entry_time" id="entry_time" placeholder="08:00" type="text" title="{{ __('Entry Time') }}" :value="old('entry_time', $attendanceLog->entry_time ?? '')" />
+                        <x-input name="entry_time" id="entry_time" placeholder="08:00" type="text" title="{{ __('Entry Time') }}" :value="old('entry_time', \Carbon\Carbon::parse($attendanceLog->entry_time)->format('H:i') ?? '')" />
                     </div>
 
                     <div>
-                        <x-input name="exit_time" id="exit_time" placeholder="16:00" type="text" title="{{ __('Exit Time') }}" :value="old('exit_time', $attendanceLog->exit_time ?? '')" />
+                        <x-input name="exit_time" id="exit_time" placeholder="16:00" type="text" title="{{ __('Exit Time') }}" :value="old('exit_time', \Carbon\Carbon::parse($attendanceLog->exit_time)->format('H:i') ?? '')" />
                     </div>
 
                     <div>
