@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\Warehouse;
+use App\Models\WarehouseTransfer;
 use App\Services\WarehouseService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -91,6 +92,39 @@ class WarehouseController extends Controller
         return view('warehouses.transfer', [
             'warehouses' => Warehouse::get(),
             'products' => Product::limit(30)->get(),
+        ]);
+    }
+
+    public function transferHistory(Request $request): View
+    {
+        $query = WarehouseTransfer::query()->with(['product', 'fromWarehouse', 'toWarehouse', 'transferor'])->latest('transferred_at')->latest('id');
+
+        if ($request->filled('product_id')) {
+            $query->where('product_id', $request->input('product_id'));
+        }
+
+        if ($request->filled('from_warehouse_id')) {
+            $query->where('from_warehouse_id', $request->input('from_warehouse_id'));
+        }
+
+        if ($request->filled('to_warehouse_id')) {
+            $query->where('to_warehouse_id', $request->input('to_warehouse_id'));
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('transferred_at', '>=', jalaliInputToGregorian($request->input('date_from'), 'date_from'));
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('transferred_at', '<=', jalaliInputToGregorian($request->input('date_to'), 'date_to'));
+        }
+
+        $transfers = $query->paginate(20)->withQueryString();
+
+        return view('warehouses.transfer-history', [
+            'transfers' => $transfers,
+            'warehouses' => Warehouse::orderBy('name')->get(),
+            'products' => Product::orderBy('name')->get(),
         ]);
     }
 

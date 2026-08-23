@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Warehouse;
 use App\Models\WarehouseProductStock;
 use App\Models\WarehouseTransfer;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -32,6 +33,9 @@ class WarehouseTest extends TestCase
         $this->user->givePermissionTo([
             Permission::firstOrCreate(['name' => 'warehouses.index']),
             Permission::firstOrCreate(['name' => 'warehouses.destroy']),
+            Permission::firstOrCreate(['name' => 'warehouses.transfer']),
+            Permission::firstOrCreate(['name' => 'warehouses.transfer.store']),
+            Permission::firstOrCreate(['name' => 'warehouses.transfer-history']),
         ]);
 
         $this->actingAs($this->user);
@@ -121,5 +125,77 @@ class WarehouseTest extends TestCase
 
         $this->delete(route('warehouses.destroy', $source))->assertSessionHas('error', __('A warehouse with transfer history cannot be deleted.'));
         $this->assertDatabaseHas('warehouses', ['id' => $source->id]);
+    }
+
+    public function test_transfer_history_lists_transfers_and_filters_by_product_and_date(): void
+    {
+        $source = $this->makeWarehouse(['name' => 'History Source']);
+        $destination = $this->makeWarehouse(['name' => 'History Destination']);
+        $otherSource = $this->makeWarehouse(['name' => 'Other Source']);
+        $otherDestination = $this->makeWarehouse(['name' => 'Other Destination']);
+        $product = Product::factory()->create(['company_id' => $this->companyId, 'name' => 'History Product']);
+        $otherProduct = Product::factory()->create(['company_id' => $this->companyId, 'name' => 'Other Product']);
+
+        WarehouseTransfer::create([
+            'company_id' => $this->companyId,
+            'product_id' => $product->id,
+            'from_warehouse_id' => $source->id,
+            'to_warehouse_id' => $destination->id,
+            'quantity' => 2,
+            'unit_cost' => 100,
+            'transferred_by' => $this->user->id,
+            'transferred_at' => Carbon::yesterday()->toDateString(),
+        ]);
+        WarehouseTransfer::create([
+            'company_id' => $this->companyId,
+            'product_id' => $otherProduct->id,
+            'from_warehouse_id' => $otherSource->id,
+            'to_warehouse_id' => $otherDestination->id,
+            'quantity' => 3,
+            'unit_cost' => 200,
+            'transferred_by' => $this->user->id,
+            'transferred_at' => now()->toDateString(),
+        ]);
+
+        $this->get(route('warehouses.transfer-history', [
+            'product_id' => $product->id,
+            'date_from' => formatDate(Carbon::yesterday()),
+            'date_to' => formatDate(Carbon::yesterday()),
+        ]))->assertOk()->assertViewHas('transfers', fn ($transfers) => $transfers->total() === 1)
+            ->assertSee('History Product')->assertSee('History Source');
+    }
+
+    public function test_transfer_records_the_transferring_user_and_appears_in_history(): void
+    {
+        $source = $this->makeWarehouse();
+        $destination = $this->makeWarehouse();
+        $product = Product::factory()->create([
+            'company_id' => $this->companyId,
+            'name' => 'Transferred Product',
+            'average_cost' => 125,
+        ]);
+
+        WarehouseProductStock::create([
+            'warehouse_id' => $source->id,
+            'product_id' => $product->id,
+            'quantity' => 10,
+            'average_cost' => 125,
+        ]);
+
+        $this->post(route('warehouses.transfer.store'), [
+            'product_id' => $product->id,
+            'from_warehouse_id' => $source->id,
+            'to_warehouse_id' => $destination->id,
+            'quantity' => 4,
+        ])->assertRedirect(route('warehouses.transfer'));
+
+        $this->assertDatabaseHas('warehouse_transfers', [
+            'product_id' => $product->id,
+            'from_warehouse_id' => $source->id,
+            'to_warehouse_id' => $destination->id,
+            'transferred_by' => $this->user->id,
+        ]);
+
+        $this->get(route('warehouses.transfer-history'))->assertOk()->assertSee('Transferred Product')->assertSee($this->user->name);
     }
 }

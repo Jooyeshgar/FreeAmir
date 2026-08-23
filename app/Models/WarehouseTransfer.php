@@ -50,7 +50,7 @@ class WarehouseTransfer extends Model
         return $this->belongsTo(Warehouse::class, 'to_warehouse_id');
     }
 
-    public function Transferor(): BelongsTo
+    public function transferor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'transferred_by');
     }

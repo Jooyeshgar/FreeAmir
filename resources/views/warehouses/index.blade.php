@@ -10,6 +10,9 @@
         <div class="flex flex-wrap items-center justify-start gap-2">
             <a class="btn btn-sm btn-primary shadow-sm" href="{{ route('warehouses.create') }}">{{ __('Create warehouse') }}</a>
             <a class="btn btn-sm btn-outline" href="{{ route('warehouses.transfer') }}">{{ __('Transfer Product') }}</a>
+            @can('warehouses.transfer-history')
+                <a class="btn btn-sm btn-info" href="{{ route('warehouses.transfer-history') }}">{{ __('Transfer History') }}</a>
+            @endcan
         </div>
     </div>
 

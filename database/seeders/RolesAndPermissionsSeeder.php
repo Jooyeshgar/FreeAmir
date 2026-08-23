@@ -154,7 +154,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // Warehouse
             'warehouse' => ['dashboard'],
-            'warehouses' => [...self::CRUD_NO_SHOW, 'transfer'],
+            'warehouses' => [...self::CRUD_NO_SHOW, 'transfer', 'transfer.store', 'transfer-history'],
 
             // Budgeting
             'budgets' => ['index', 'store', 'rollover', 'calculate-expenses', 'destroy', 'search-subjects'],

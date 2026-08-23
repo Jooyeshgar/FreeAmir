@@ -55,7 +55,7 @@ class WarehouseService
                 'quantity' => $quantity,
                 'unit_cost' => $unitCost,
                 'description' => $description,
-                'creator_id' => auth()->id(),
+                'transferred_by' => auth()->id(),
                 'transferred_at' => now()->toDateString(),
             ]);
         });

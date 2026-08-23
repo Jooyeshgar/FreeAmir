@@ -83,6 +83,7 @@
     <div class="col-span-2 md:col-span-1">
         <label class="label" for="warehouse_id">{{ __('Warehouse') }}</label>
         <select name="warehouse_id" id="warehouse_id" class="select select-bordered w-full">
+            <option value="">{{ __('Select Warehouse') }}</option>
             @foreach ($warehouses as $warehouse)
                 <option value="{{ $warehouse->id }}" @selected(old('warehouse_id', $product->warehouse_id ?? null) == $warehouse->id)>{{ $warehouse->name }}</option>
             @endforeach
