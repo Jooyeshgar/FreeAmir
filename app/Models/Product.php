@@ -34,6 +34,7 @@ class Product extends Model
         'inventory_subject_id',
         'vat',
         'average_cost',
+        'warehouse_id',
     ];
 
     protected $casts = [
@@ -86,5 +87,15 @@ class Product extends Model
     public function inventorySubject(): BelongsTo
     {
         return $this->belongsTo(Subject::class, 'inventory_subject_id');
+    }
+
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class);
+    }
+
+    public function warehouseStocks(): HasMany
+    {
+        return $this->hasMany(WarehouseProductStock::class);
     }
 }

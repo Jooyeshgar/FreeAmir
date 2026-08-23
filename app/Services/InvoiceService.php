@@ -322,6 +322,7 @@ class InvoiceService
 
             $invoiceItemData = [
                 'invoice_id' => $invoice->id,
+                'warehouse_id' => $product ? ($item['warehouse_id'] ?? $product->warehouse_id) : null,
                 'quantity' => $quantity,
                 'cog_after' => $product?->average_cost ?? $unitPrice,                                            // must be updated after creating invoice
                 'quantity_at' => $quantityAt,                                                                    // stock level before this invoice was applied
@@ -976,6 +977,7 @@ class InvoiceService
             'vat_is_value' => $vatIsValue,
             'unit' => $t['unit'] ?? 0,
             'total' => $t['total'] ?? 0,
+            'warehouse_id' => $t['warehouse_id'] ?? null,
         ])->toArray();
     }
 
@@ -1041,6 +1043,7 @@ class InvoiceService
                 'subject' => $item->itemable->name ?? null,
                 'product_id' => $isProduct ? $item->itemable->id : null,
                 'service_id' => $isProduct ? null : $item->itemable->id,
+                'warehouse_id' => $item->warehouse_id,
             ];
         });
     }

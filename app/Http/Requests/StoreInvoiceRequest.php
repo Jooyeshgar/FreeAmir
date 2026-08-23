@@ -72,6 +72,7 @@ class StoreInvoiceRequest extends FormRequest
                         'unit_discount' => isset($t['off']) ? convertToFloat($t['off']) : 0,
                         'unit' => isset($t['unit']) ? convertToFloat($t['unit']) : null,
                         'total' => isset($t['total']) ? convertToFloat($t['total']) : null,
+                        'warehouse_id' => isset($t['warehouse_id']) ? convertToInt($t['warehouse_id']) : null,
                     ];
                 });
 
@@ -371,6 +372,7 @@ class StoreInvoiceRequest extends FormRequest
             'transactions.*.unit_discount' => 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX,
             'transactions.*.unit' => 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX,
             'transactions.*.total' => 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX,
+            'transactions.*.warehouse_id' => ['nullable', 'integer', 'exists:warehouses,id'],
         ];
 
         return $rules;

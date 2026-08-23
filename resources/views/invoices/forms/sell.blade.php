@@ -168,6 +168,7 @@
                         <x-input name="" x-bind:name="'transactions[' + index + '][product_id]'" x-bind:value="transaction.product_id || ''" hidden />
                         <x-input name="" x-bind:name="'transactions[' + index + '][service_id]'" x-bind:value="transaction.service_id || ''" hidden />
                         <x-input name="" x-bind:name="'transactions[' + index + '][item_id]'" x-bind:value="transaction.item_id || ''" hidden />
+                        <select class="select select-bordered select-sm w-full mt-1" x-bind:name="'transactions[' + index + '][warehouse_id]'" x-model="transaction.warehouse_id" x-bind:disabled="!transaction.product_id"><option value="">{{ __('Select Warehouse') }}</option>@foreach ($warehouses as $warehouse)<option value="{{ $warehouse->id }}">{{ $warehouse->name }}</option>@endforeach</select>
                     </div>
                     <div class="flex-1 w-[200px]">
                         <x-text-input x-bind:value="transaction.desc" placeholder="{{ __('description') }}"
@@ -304,6 +305,7 @@
                         name: '',
                         subject: '',
                         inventory_subject_id: '',
+                        warehouse_id: '',
                         service_id: null,
                         product_id: null,
                         quantity: 1,
@@ -376,6 +378,7 @@
                     transaction.item_id = `${type}-${id}`;
                     transaction.inventory_subject_id = isProduct ? this.getProductInventorySubjectId(
                         id) : null;
+                    transaction.warehouse_id = isProduct ? (transaction.warehouse_id || (this.products.find(p => p.id == id)?.warehouse_id || '')) : '';
 
                     const isEditable = !this.isEditing || transaction.unit == null || transaction.vat ==
                         null;

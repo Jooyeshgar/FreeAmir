@@ -25,6 +25,16 @@
                     </span>
                 @endif
 
+                @if ($product->warehouse)
+                    <a href="{{ route('warehouses.show', $product->warehouse) }}"
+                        class="badge badge-lg badge-success gap-2 transition hover:brightness-110">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M3 7.5 12 3l9 4.5M4.5 8.25v8.25L12 21l7.5-4.5V8.25M12 12l7.5-3.75M12 12 4.5 8.25M12 12v9" />
+                        </svg>
+                        {{ $product->warehouse->name }}
+                    </a>
+                @endif
+
                 @if ($product->code)
                     <span class="badge badge-lg badge-accent gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

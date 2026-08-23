@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Subject;
+use App\Models\Warehouse;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Lang;
@@ -35,6 +36,7 @@ class ProductImportService
         'discount_formula',
         'description',
         'vat',
+        'warehouse',
     ];
 
     /** Translation keys used by the product CSV export for importable columns. */
@@ -55,6 +57,7 @@ class ProductImportService
         'discount_formula' => 'Discount formula',
         'description' => 'Description',
         'vat' => 'VAT',
+        'warehouse' => 'Warehouse',
     ];
 
     private const SUBJECT_COLUMNS = [
@@ -182,6 +185,20 @@ class ProductImportService
                     : null;
 
                 $data = array_merge($data, $this->resolveSubjects($row, $group, $name, $companyId, $existing, $line));
+
+                $warehouseName = trim((string) ($row['warehouse'] ?? ''));
+                $warehouse = $warehouseName !== ''
+                    ? Warehouse::where('company_id', $companyId)->where('name', $warehouseName)->first()
+                    : Warehouse::where('company_id', $companyId)->orderBy('id')->first();
+
+                if (! $warehouse) {
+                    $warehouse = Warehouse::create([
+                        'name' => $warehouseName !== '' ? $warehouseName : __('Main warehouse'),
+                        'company_id' => $companyId,
+                    ]);
+                }
+
+                $data['warehouse_id'] = $warehouse->id;
 
                 try {
                     if ($existing) {
