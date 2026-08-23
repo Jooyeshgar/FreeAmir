@@ -65,6 +65,9 @@ use App\Models\Subject;
 use App\Models\TaxSlab;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\Warehouse;
+use App\Models\WarehouseProductStock;
+use App\Models\WarehouseTransfer;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
 use App\Models\WorkSiteContract;
@@ -357,6 +360,11 @@ class FiscalYearService
                         }
                     }
                 }
+                if (in_array('warehouses', $sectionsToImport) || (in_array('products', $sectionsToImport) && isset($importData['warehouses']))) {
+                    if (isset($importData['warehouses'])) {
+                        $idMappings['warehouses'] = self::_importWarehouses($importData['warehouses'], $targetYearId);
+                    }
+                }
                 if (in_array('products', $sectionsToImport)) {
                     if (isset($importData['product_groups'])) {
                         $subjectMapping = $idMappings['subjects'] ?? [];
@@ -379,7 +387,7 @@ class FiscalYearService
                                 'has_subject_mapping' => ! empty($subjectMapping),
                             ]);
                         } else {
-                            $idMappings['products'] = self::_importProducts($importData['products'], $targetYearId, $groupMapping, $subjectMapping);
+                            $idMappings['products'] = self::_importProducts($importData['products'], $targetYearId, $groupMapping, $subjectMapping, $idMappings['warehouses'] ?? []);
                         }
                     }
 
@@ -391,6 +399,24 @@ class FiscalYearService
                         } else {
                             self::_importProductWebsites($importData['product_websites'], $productMapping);
                         }
+                    }
+                }
+                if (in_array('warehouses', $sectionsToImport) || (in_array('products', $sectionsToImport) && isset($importData['warehouses']))) {
+                    if (isset($importData['warehouse_product_stocks'])) {
+                        self::_importWarehouseProductStocks(
+                            $importData['warehouse_product_stocks'],
+                            $idMappings['warehouses'] ?? [],
+                            $idMappings['products'] ?? []
+                        );
+                    }
+
+                    if (isset($importData['warehouse_transfers'])) {
+                        self::_importWarehouseTransfers(
+                            $importData['warehouse_transfers'],
+                            $idMappings['warehouses'] ?? [],
+                            $idMappings['products'] ?? [],
+                            $targetYearId
+                        );
                     }
                 }
                 if (in_array('services', $sectionsToImport)) {
@@ -757,6 +783,10 @@ class FiscalYearService
             $sourceData['comments'] = ! empty($customerIds) ? Comment::whereIn('customer_id', $customerIds)->get()->toArray() : [];
         }
         if (in_array('products', $sections)) {
+            $sourceData['warehouses'] = Warehouse::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $sourceYearId)
+                ->get()->toArray();
+
             $sourceData['product_groups'] = ProductGroup::withoutGlobalScope(FiscalYearScope::class)
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
@@ -767,6 +797,27 @@ class FiscalYearService
 
             $productIds = collect($sourceData['products'])->pluck('id')->toArray();
             $sourceData['product_websites'] = ProductWebsite::whereIn('product_id', $productIds)->get()->toArray();
+
+            $warehouseIds = collect($sourceData['warehouses'])->pluck('id')->toArray();
+            $sourceData['warehouse_product_stocks'] = ! empty($warehouseIds)
+                ? WarehouseProductStock::whereIn('warehouse_id', $warehouseIds)->whereIn('product_id', $productIds)->get()->toArray()
+                : [];
+            $sourceData['warehouse_transfers'] = ! empty($warehouseIds)
+                ? WarehouseTransfer::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $sourceYearId)->whereIn('product_id', $productIds)->get()->toArray()
+                : [];
+        }
+        if (in_array('warehouses', $sections) && ! in_array('products', $sections)) {
+            $sourceData['warehouses'] = Warehouse::withoutGlobalScope(FiscalYearScope::class)
+                ->where('company_id', $sourceYearId)
+                ->get()->toArray();
+
+            $warehouseIds = collect($sourceData['warehouses'])->pluck('id')->toArray();
+            $sourceData['warehouse_product_stocks'] = ! empty($warehouseIds)
+                ? WarehouseProductStock::whereIn('warehouse_id', $warehouseIds)->get()->toArray()
+                : [];
+            $sourceData['warehouse_transfers'] = ! empty($warehouseIds)
+                ? WarehouseTransfer::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $sourceYearId)->get()->toArray()
+                : [];
         }
         if (in_array('services', $sections)) {
             $sourceData['service_groups'] = ServiceGroup::withoutGlobalScope(FiscalYearScope::class)
@@ -1976,7 +2027,7 @@ class FiscalYearService
      * @param  array  $subjectMapping  Mapping of old subject ID to new subject ID.
      * @return array<int, int> Mapping of old product ID to new product ID.
      */
-    protected static function _importProducts(array $productsData, int $targetYearId, array $groupMapping, array $subjectMapping): array
+    protected static function _importProducts(array $productsData, int $targetYearId, array $groupMapping, array $subjectMapping, array $warehouseMapping = []): array
     {
         $mapping = [];
         foreach ($productsData as $productData) {
@@ -2017,8 +2068,12 @@ class FiscalYearService
             }
 
             $newProduct = new Product;
-            $newProduct->fill(collect($productData)->except(['id', 'group', 'sales_returns_subject_id', 'income_subject_id', 'cogs_subject_id', 'inventory_subject_id'])->toArray());
+            $newProduct->fill(collect($productData)->except(['id', 'group', 'warehouse_id', 'sales_returns_subject_id', 'income_subject_id', 'cogs_subject_id', 'inventory_subject_id'])->toArray());
             $newProduct->group = $groupMapping[$oldGroupId];
+            $oldWarehouseId = $productData['warehouse_id'] ?? null;
+            if ($oldWarehouseId !== null && isset($warehouseMapping[$oldWarehouseId])) {
+                $newProduct->warehouse_id = $warehouseMapping[$oldWarehouseId];
+            }
             $newProduct->sales_returns_subject_id = $subjectMapping[$oldSalesReturnsSubjectId];
             $newProduct->income_subject_id = $subjectMapping[$oldIncomeSubjectId];
             $newProduct->cogs_subject_id = $subjectMapping[$oldCogsSubjectId];
@@ -2039,6 +2094,59 @@ class FiscalYearService
         }
 
         return $mapping;
+    }
+
+    protected static function _importWarehouses(array $warehousesData, int $targetYearId): array
+    {
+        $mapping = [];
+
+        foreach ($warehousesData as $warehouseData) {
+            $warehouse = new Warehouse;
+            $warehouse->fill(collect($warehouseData)->except(['id', 'company_id'])->toArray());
+            $warehouse->company_id = $targetYearId;
+            $warehouse->save();
+            $mapping[$warehouseData['id']] = $warehouse->id;
+        }
+
+        return $mapping;
+    }
+
+    protected static function _importWarehouseProductStocks(array $stocksData, array $warehouseMapping, array $productMapping): void
+    {
+        foreach ($stocksData as $stockData) {
+            $oldWarehouseId = $stockData['warehouse_id'] ?? null;
+            $oldProductId = $stockData['product_id'] ?? null;
+            if (! isset($warehouseMapping[$oldWarehouseId], $productMapping[$oldProductId])) {
+                continue;
+            }
+
+            $stock = new WarehouseProductStock;
+            $stock->fill(collect($stockData)->except(['id', 'warehouse_id', 'product_id'])->toArray());
+            $stock->warehouse_id = $warehouseMapping[$oldWarehouseId];
+            $stock->product_id = $productMapping[$oldProductId];
+            $stock->save();
+        }
+    }
+
+    protected static function _importWarehouseTransfers(array $transfersData, array $warehouseMapping, array $productMapping, int $targetYearId): void
+    {
+        foreach ($transfersData as $transferData) {
+            $oldProductId = $transferData['product_id'] ?? null;
+            $oldFromWarehouseId = $transferData['from_warehouse_id'] ?? null;
+            $oldToWarehouseId = $transferData['to_warehouse_id'] ?? null;
+            if (! isset($productMapping[$oldProductId], $warehouseMapping[$oldFromWarehouseId], $warehouseMapping[$oldToWarehouseId])) {
+                continue;
+            }
+
+            $transfer = new WarehouseTransfer;
+            $transfer->fill(collect($transferData)->except(['id', 'company_id', 'product_id', 'from_warehouse_id', 'to_warehouse_id', 'transferred_by'])->toArray());
+            $transfer->company_id = $targetYearId;
+            $transfer->product_id = $productMapping[$oldProductId];
+            $transfer->from_warehouse_id = $warehouseMapping[$oldFromWarehouseId];
+            $transfer->to_warehouse_id = $warehouseMapping[$oldToWarehouseId];
+            $transfer->transferred_by = Auth::id();
+            $transfer->save();
+        }
     }
 
     /**
@@ -2736,7 +2844,7 @@ class FiscalYearService
         $newFiscalYearData = collect($company->getAttributes())->except(['id', 'closed_at', 'closed_by', 'fiscal_year'])
             ->merge(['fiscal_year' => $company->fiscal_year + 1])->toArray();
 
-        $sectionsToCopy = ['subjects', 'configs', 'banks', 'customers', 'products', 'services', 'employees']; // Sections to copy to the new fiscal year
+        $sectionsToCopy = ['subjects', 'configs', 'banks', 'customers', 'products', 'warehouses', 'services', 'employees']; // Sections to copy to the new fiscal year
         $newFiscalYear = self::createWithCopiedData($newFiscalYearData, $company->id, $sectionsToCopy);
 
         self::copyMoadianKeys($company, $newFiscalYear);

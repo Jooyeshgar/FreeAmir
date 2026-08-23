@@ -101,7 +101,7 @@ class ReportExportService
             ->keyBy(fn (array $row) => (string) $row['code']);
 
         return $this->csv('products_'.now()->format('YmdHis').'.csv', array_values($columns), function ($file) use ($columns, $reportRows): void {
-            Product::with('productGroup', 'incomeSubject', 'cogsSubject', 'inventorySubject', 'salesReturnsSubject')->orderBy('code')->chunk(200,
+            Product::with('productGroup', 'warehouse', 'incomeSubject', 'cogsSubject', 'inventorySubject', 'salesReturnsSubject')->orderBy('code')->chunk(200,
                 function ($products) use ($file, $columns, $reportRows): void {
                     foreach ($products as $product) {
                         $row = array_merge($reportRows->get((string) $product->code, []), [
@@ -112,6 +112,7 @@ class ReportExportService
                             'sstid' => $product->sstid, 'location' => $product->location, 'quantity_warning' => $product->quantity_warning,
                             'oversell' => $product->oversell, 'discount_formula' => $product->discount_formula,
                             'description' => $product->description, 'vat' => $product->vat,
+                            'warehouse' => $product->warehouse?->name,
                         ]);
                         fputcsv($file, array_map(fn (string $column) => $row[$column] ?? null, array_keys($columns)));
                     }
@@ -363,7 +364,7 @@ class ReportExportService
             'cogs_subject_code' => __('COGS subject code'), 'inventory_subject_code' => __('Inventory subject code'),
             'sales_returns_subject_code' => __('Sales returns subject code'), 'sstid' => __('Product SSTID'), 'location' => __('Location in warehouse'),
             'quantity_warning' => __('Quantity warning'), 'oversell' => __('Oversell'), 'discount_formula' => __('Discount formula'),
-            'description' => __('Description'), 'vat' => __('VAT')];
+            'description' => __('Description'), 'vat' => __('VAT'), 'warehouse' => __('Warehouse')];
     }
 
     private function productReportColumns(): array

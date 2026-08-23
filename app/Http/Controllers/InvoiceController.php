@@ -18,6 +18,7 @@ use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Service;
 use App\Models\ServiceGroup;
+use App\Models\Warehouse;
 use App\Services\AncillaryCostService;
 use App\Services\ChequeService;
 use App\Services\FiscalYearTransferService;
@@ -254,7 +255,9 @@ class InvoiceController extends Controller
 
         $previousInvoiceNumber = floor(Invoice::where('invoice_type', InvoiceType::fromName($invoice_type))->max('number') ?? 0);
 
-        return view('invoices.create', compact('returnInvoices', 'products', 'services', 'customers', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type', 'isServiceBuy', 'isReturnServiceBuy', 'isReturnInvoice', 'prefilledReturnedInvoiceId', 'lockReturnedInvoiceSelection'));
+        $warehouses = Warehouse::get();
+
+        return view('invoices.create', compact('returnInvoices', 'products', 'services', 'customers', 'warehouses', 'transactions', 'total', 'previousInvoiceNumber', 'previousDocumentNumber', 'invoice_type', 'isServiceBuy', 'isReturnServiceBuy', 'isReturnInvoice', 'prefilledReturnedInvoiceId', 'lockReturnedInvoiceSelection'));
     }
 
     /**
@@ -387,6 +390,7 @@ class InvoiceController extends Controller
 
         $customers = Customer::with('group')->whereIn('id', $customerIdsForSelect->push($invoice->customer_id)->unique())
             ->orderBy('name')->get();
+        $warehouses = Warehouse::get();
 
         // Prepare transactions from invoice items
         $transactions = InvoiceService::prepareTransactions($invoice, 'edit');
@@ -411,7 +415,8 @@ class InvoiceController extends Controller
             'previousDocumentNumber',
             'isServiceBuy',
             'isReturnServiceBuy',
-            'isReturnInvoice'
+            'isReturnInvoice',
+            'warehouses'
         ));
     }
 
@@ -553,6 +558,7 @@ class InvoiceController extends Controller
                 'off' => $item->unit_discount,
                 'total' => $item->amount,
                 'desc' => $item->description,
+                'warehouse_id' => $item->warehouse_id,
             ];
         });
 

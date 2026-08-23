@@ -6,6 +6,8 @@ use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\AncillaryCostItem;
 use App\Models\Product;
+use App\Models\Warehouse;
+use App\Models\WarehouseProductStock;
 
 class ProductService
 {
@@ -20,6 +22,13 @@ class ProductService
 
         $product = Product::create($data);
 
+        WarehouseProductStock::create([
+            'warehouse_id' => $product->warehouse_id,
+            'product_id' => $product->id,
+            'quantity' => $product->quantity ?? 0,
+            'average_cost' => $product->average_cost ?? 0,
+        ]);
+
         $this->syncSubjects($product);
         $this->syncWebsites($product, $websites);
 
@@ -33,6 +42,11 @@ class ProductService
 
         $product->fill($data);
         $product->save();
+
+        WarehouseProductStock::updateOrCreate(
+            ['warehouse_id' => $product->warehouse_id, 'product_id' => $product->id],
+            ['quantity' => $product->quantity ?? 0, 'average_cost' => $product->average_cost ?? 0]
+        );
 
         $this->syncSubjects($product);
 
@@ -77,6 +91,13 @@ class ProductService
                 $product->quantity -= $invoiceItem['quantity'];
             }
             $product->save();
+
+            self::adjustForInvoice(
+                $product,
+                $invoiceItem['warehouse_id'] ?? $product->warehouse_id,
+                (float) $invoiceItem['quantity'],
+                in_array($invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL], true) || $invoice_type->isVoid()
+            );
         }
     }
 
@@ -101,7 +122,38 @@ class ProductService
             }
 
             $product->save();
+
+            self::adjustForInvoice(
+                $product,
+                $invoiceItem['warehouse_id'] ?? $product->warehouse_id,
+                (float) $invoiceItem['quantity'],
+                in_array($invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL], true) || $invoice_type->isVoid(),
+                true
+            );
         }
+    }
+
+    private static function adjustForInvoice(Product $product, ?int $warehouseId, float $quantity, bool $incoming, bool $reverse = false): void
+    {
+        $warehouse = $warehouseId ? Warehouse::findOrFail($warehouseId) : $product->warehouse;
+        if (! $warehouse) {
+            return;
+        }
+
+        $stock = WarehouseProductStock::firstOrCreate(
+            ['product_id' => $product->id, 'warehouse_id' => $warehouse->id],
+            ['quantity' => 0, 'average_cost' => $product->average_cost ?? 0]
+        );
+
+        $delta = $incoming ? $quantity : -$quantity;
+
+        if ($reverse) {
+            $delta *= -1;
+        }
+
+        $stock->quantity = (float) $stock->quantity + $delta;
+        $stock->average_cost = $product->average_cost ?? $stock->average_cost;
+        $stock->save();
     }
 
     protected function syncSubjects(Product $product): void

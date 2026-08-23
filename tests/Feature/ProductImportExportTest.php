@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Subject;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Spatie\Permission\Models\Permission;
@@ -156,6 +157,34 @@ class ProductImportExportTest extends TestCase
         $this->assertSame($product->cogsSubject->code, $row['COGS subject code']);
         $this->assertSame($product->inventorySubject->code, $row['Inventory subject code']);
         $this->assertSame($product->salesReturnsSubject->code, $row['Sales returns subject code']);
+    }
+
+    public function test_product_export_includes_warehouse_and_import_restores_it(): void
+    {
+        $warehouse = Warehouse::create([
+            'company_id' => $this->companyId,
+            'name' => 'Central Warehouse',
+            'code' => 'CENTRAL',
+        ]);
+        $product = Product::factory()->withGroup($this->productGroup)->withSubjects()->create([
+            'company_id' => $this->companyId,
+            'warehouse_id' => $warehouse->id,
+            'name' => 'Warehouse Widget',
+            'code' => '5010',
+        ]);
+
+        [$headers, $values] = $this->parseCsv($this->actingAs($this->user)->get(route('products.export'))->streamedContent());
+        $row = array_combine($headers, $values);
+
+        $this->assertSame('Central Warehouse', $row['Warehouse']);
+
+        $this->actingAs($this->user)->post(route('products.import.store'), [
+            'file' => $this->upload("code,name,group_name,Warehouse\n5011,Imported Warehouse Widget,{$this->productGroup->name},Central Warehouse\n"),
+        ])->assertSessionHas('success');
+
+        $imported = Product::where('code', '5011')->firstOrFail();
+        $this->assertSame($warehouse->id, $imported->warehouse_id);
+        $this->assertSame($product->warehouse_id, $warehouse->id);
     }
 
     public function test_import_creates_new_group_and_product_with_auto_code(): void

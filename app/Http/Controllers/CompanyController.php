@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Document;
 use App\Models\DocumentFile;
 use App\Models\User;
+use App\Models\Warehouse;
 use App\Services\FiscalYearService;
 use Cookie;
 use Database\Seeders\BankSeeder;
@@ -392,6 +393,7 @@ class CompanyController extends Controller
                 ] as $seeder) {
                     app($seeder)->run($company->id);
                 }
+                Warehouse::create(['company_id' => $company->id, 'name' => 'انبار اصلی', 'code' => 'MAIN']);
             }
 
             $creator->assignRole(Role::firstOrCreate(['name' => __('Admin')]));

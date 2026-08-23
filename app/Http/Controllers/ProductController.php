@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateProductRequest;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\ProductGroup;
+use App\Models\Warehouse;
 use App\Services\ProductImportService;
 use App\Services\ProductService;
 use App\Services\ReportExportService;
@@ -28,7 +29,7 @@ class ProductController extends Controller
 
     public function index()
     {
-        $query = Product::orderBy('code');
+        $query = Product::with('warehouse')->orderBy('code');
 
         if (request()->has('name') && request('name')) {
             $query->where('name', 'like', '%'.request('name').'%');
@@ -77,8 +78,9 @@ class ProductController extends Controller
     public function create()
     {
         $groups = ProductGroup::select('id', 'name')->limit(20)->get();
+        $warehouses = Warehouse::get();
 
-        return view('products.create', compact('groups'));
+        return view('products.create', compact('groups', 'warehouses'));
     }
 
     public function store(StoreProductRequest $request)
@@ -95,8 +97,9 @@ class ProductController extends Controller
         $productGroupIdsForSelect = ProductGroup::select('id', 'name')->limit(20)->pluck('id');
         $oldGroup = $product->productGroup;
         $groups = ProductGroup::whereIn('id', $productGroupIdsForSelect->push($oldGroup->id)->unique())->get();
+        $warehouses = Warehouse::get();
 
-        return view('products.edit', compact('product', 'groups'));
+        return view('products.edit', compact('product', 'groups', 'warehouses'));
     }
 
     public function update(UpdateProductRequest $request, Product $product)
@@ -110,7 +113,7 @@ class ProductController extends Controller
 
     public function show(Product $product)
     {
-        $product->load('productGroup', 'productWebsites');
+        $product->load('productGroup', 'productWebsites', 'warehouse', 'warehouseStocks.warehouse');
 
         $product->lastCOG = $this->productService->lastApprovedBuyInvoiceItemCOG($product) ?? 0;
         $product->salesProfit = $this->productService->totalSell($product) + $this->productService->totalCOGS($product);

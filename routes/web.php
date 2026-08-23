@@ -105,6 +105,9 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::get('products/import', [Controllers\ProductController::class, 'importForm'])->name('products.import');
     Route::post('products/import', [Controllers\ProductController::class, 'import'])->name('products.import.store');
     Route::resource('products', Controllers\ProductController::class);
+    Route::get('warehouses/transfer', [Controllers\WarehouseController::class, 'transferForm'])->name('warehouses.transfer');
+    Route::post('warehouses/transfer', [Controllers\WarehouseController::class, 'transfer'])->name('warehouses.transfer.store');
+    Route::resource('warehouses', Controllers\WarehouseController::class);
     Route::resource('product-groups', Controllers\ProductGroupController::class);
     Route::get('services/search-service-group', [Controllers\ServiceController::class, 'searchServiceGroup'])->name('services.search-service-group');
     Route::get('services/export', [Controllers\ServiceController::class, 'export'])->name('services.export');
