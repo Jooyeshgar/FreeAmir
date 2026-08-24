@@ -25,6 +25,10 @@ class WarehouseService
 
     public function transfer(Product $product, Warehouse $from, Warehouse $to, float $quantity, ?string $description = null): WarehouseTransfer
     {
+        if ((int) $product->company_id !== (int) $from->company_id || (int) $from->company_id !== (int) $to->company_id) {
+            throw ValidationException::withMessages(['from_warehouse_id' => __('The product and warehouses must belong to the same company.')]);
+        }
+
         if ($from->is($to)) {
             throw ValidationException::withMessages(['to_warehouse_id' => __('The source and destination warehouses must be different.')]);
         }
@@ -34,7 +38,7 @@ class WarehouseService
         }
 
         return DB::transaction(function () use ($product, $from, $to, $quantity, $description) {
-            $source = $this->stock($product, $from, true);
+            $source = $this->lockedStock($product, $from);
             if ((float) $source->quantity < $quantity) {
                 throw ValidationException::withMessages(['quantity' => __('The source warehouse does not have enough stock.')]);
             }
@@ -59,6 +63,20 @@ class WarehouseService
                 'transferred_at' => now()->toDateString(),
             ]);
         });
+    }
+
+    private function lockedStock(Product $product, Warehouse $warehouse): WarehouseProductStock
+    {
+        WarehouseProductStock::firstOrCreate(
+            ['product_id' => $product->id, 'warehouse_id' => $warehouse->id],
+            ['quantity' => 0, 'average_cost' => $product->average_cost ?? 0]
+        );
+
+        return WarehouseProductStock::query()
+            ->where('product_id', $product->id)
+            ->where('warehouse_id', $warehouse->id)
+            ->lockForUpdate()
+            ->firstOrFail();
     }
 
     private function stock(Product $product, Warehouse $warehouse, bool $create = false): WarehouseProductStock

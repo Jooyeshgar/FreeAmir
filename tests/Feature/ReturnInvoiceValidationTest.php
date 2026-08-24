@@ -246,6 +246,7 @@ class ReturnInvoiceValidationTest extends TestCase
                     'invoice_number' => $number,
                     'transactions' => [[
                         'item_id' => 'product-'.$product->id,
+                        'warehouse_id' => $product->warehouse_id,
                         'quantity' => 1,
                         'unit' => 100,
                         'total' => 100,
@@ -280,6 +281,7 @@ class ReturnInvoiceValidationTest extends TestCase
                 'invoice_number' => 6060,
                 'transactions' => [[
                     'item_id' => 'product-'.$product->id,
+                    'warehouse_id' => $product->warehouse_id,
                     'quantity' => 1,
                     'unit' => 100,
                     'total' => 100,

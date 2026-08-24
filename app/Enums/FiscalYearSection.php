@@ -10,7 +10,7 @@ enum FiscalYearSection: string
     case BANKS = 'banks'; // Represents banks + bank_accounts
     case CUSTOMERS = 'customers'; // Represents customer_groups + customers + comments
     case PRODUCTS = 'products'; // Represents product_groups + products + product_websites
-    case WAREHOUSES = 'warehouses'; // Represents warehouses + warehouse stocks + transfers
+    case WAREHOUSES = 'warehouses'; // Warehouse-only exports omit product-dependent stocks and transfers
     case SERVICES = 'services'; // Represents service_groups + services
     case SUBJECTS = 'subjects';
     case DOCUMENTS = 'documents'; // Represents documents + transactions

@@ -90,8 +90,8 @@ return new class extends Migration
         Schema::table('products', function (Blueprint $table) {
             $table->dropConstrainedForeignId('warehouse_id');
         });
+        Schema::dropIfExists('warehouse_transfers');
         Schema::dropIfExists('warehouse_product_stocks');
         Schema::dropIfExists('warehouses');
-        Schema::dropIfExists('warehouse_transfers');
     }
 };

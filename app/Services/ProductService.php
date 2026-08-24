@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\Warehouse;
 use App\Models\WarehouseProductStock;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class ProductService
 {
@@ -44,11 +45,6 @@ class ProductService
 
         $product->fill($data);
         $product->save();
-
-        WarehouseProductStock::updateOrCreate(
-            ['warehouse_id' => $product->warehouse_id, 'product_id' => $product->id],
-            ['quantity' => $product->quantity ?? 0, 'average_cost' => $product->average_cost ?? 0]
-        );
 
         $this->syncSubjects($product);
 
@@ -87,19 +83,19 @@ class ProductService
                 continue;
             }
 
-            if ($invoice_type === InvoiceType::BUY || $invoice_type === InvoiceType::RETURN_SELL || $invoice_type->isVoid()) {
-                $product->quantity += $invoiceItem['quantity'];
-            } elseif ($invoice_type === InvoiceType::SELL || $invoice_type === InvoiceType::RETURN_BUY) {
-                $product->quantity -= $invoiceItem['quantity'];
-            }
-            $product->save();
-
             self::adjustForInvoice(
                 $product,
                 $invoiceItem['warehouse_id'] ?? $product->warehouse_id,
                 (float) $invoiceItem['quantity'],
                 in_array($invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL], true) || $invoice_type->isVoid()
             );
+
+            if ($invoice_type === InvoiceType::BUY || $invoice_type === InvoiceType::RETURN_SELL || $invoice_type->isVoid()) {
+                $product->quantity += $invoiceItem['quantity'];
+            } elseif ($invoice_type === InvoiceType::SELL || $invoice_type === InvoiceType::RETURN_BUY) {
+                $product->quantity -= $invoiceItem['quantity'];
+            }
+            $product->save();
         }
     }
 
@@ -117,14 +113,6 @@ class ProductService
                 continue;
             }
 
-            if ($invoice_type === InvoiceType::BUY || $invoice_type === InvoiceType::RETURN_SELL || $invoice_type->isVoid()) {
-                $product->quantity -= $invoiceItem['quantity'];
-            } elseif ($invoice_type === InvoiceType::SELL || $invoice_type === InvoiceType::RETURN_BUY) {
-                $product->quantity += $invoiceItem['quantity'];
-            }
-
-            $product->save();
-
             self::adjustForInvoice(
                 $product,
                 $invoiceItem['warehouse_id'] ?? $product->warehouse_id,
@@ -132,6 +120,14 @@ class ProductService
                 in_array($invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL], true) || $invoice_type->isVoid(),
                 true
             );
+
+            if ($invoice_type === InvoiceType::BUY || $invoice_type === InvoiceType::RETURN_SELL || $invoice_type->isVoid()) {
+                $product->quantity -= $invoiceItem['quantity'];
+            } elseif ($invoice_type === InvoiceType::SELL || $invoice_type === InvoiceType::RETURN_BUY) {
+                $product->quantity += $invoiceItem['quantity'];
+            }
+
+            $product->save();
         }
     }
 
@@ -142,15 +138,33 @@ class ProductService
             return;
         }
 
-        $stock = WarehouseProductStock::firstOrCreate(
+        if ((int) $warehouse->company_id !== (int) $product->company_id) {
+            throw ValidationException::withMessages([
+                'warehouse_id' => __('The selected warehouse is invalid.'),
+            ]);
+        }
+
+        WarehouseProductStock::firstOrCreate(
             ['product_id' => $product->id, 'warehouse_id' => $warehouse->id],
             ['quantity' => 0, 'average_cost' => $product->average_cost ?? 0]
         );
+
+        $stock = WarehouseProductStock::query()
+            ->where('product_id', $product->id)
+            ->where('warehouse_id', $warehouse->id)
+            ->lockForUpdate()
+            ->firstOrFail();
 
         $delta = $incoming ? $quantity : -$quantity;
 
         if ($reverse) {
             $delta *= -1;
+        }
+
+        if (! $product->oversell && (float) $stock->quantity + $delta < 0) {
+            throw ValidationException::withMessages([
+                'quantity' => __('The selected warehouse does not have enough stock.'),
+            ]);
         }
 
         $stock->quantity = (float) $stock->quantity + $delta;

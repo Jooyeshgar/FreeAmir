@@ -6,6 +6,9 @@ use App\Enums\InvoiceType;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
+use App\Models\ProductGroup;
+use App\Models\Warehouse;
+use App\Models\WarehouseProductStock;
 use App\Services\InvoiceService;
 use Exception;
 
@@ -13,14 +16,28 @@ trait InvoiceTestHelper
 {
     private function createProduct(array $overrides = []): Product
     {
-        $group = \App\Models\ProductGroup::withoutGlobalScopes()
+        $group = ProductGroup::withoutGlobalScopes()
             ->where('company_id', $this->companyId)
             ->firstOrFail();
 
-        return Product::factory()
+        $product = Product::factory()
             ->withGroup($group)
             ->withSubjects()
             ->create(array_merge(['company_id' => $this->companyId], $overrides));
+
+        if (! $product->warehouse_id) {
+            $warehouse = Warehouse::withoutGlobalScopes()->firstOrCreate(
+                ['company_id' => $this->companyId, 'code' => 'MAIN'],
+                ['name' => 'انبار اصلی']
+            );
+            $product->updateQuietly(['warehouse_id' => $warehouse->id]);
+            WarehouseProductStock::firstOrCreate(
+                ['warehouse_id' => $warehouse->id, 'product_id' => $product->id],
+                ['quantity' => (float) $product->quantity, 'average_cost' => (float) $product->average_cost]
+            );
+        }
+
+        return $product;
     }
 
     private function productItem(Product $product, int $qty, float $unit): array
@@ -28,6 +45,7 @@ trait InvoiceTestHelper
         return [
             'itemable_type' => 'product',
             'itemable_id' => $product->id,
+            'warehouse_id' => $product->warehouse_id,
             'quantity' => $qty,
             'unit' => $unit,
             'unit_discount' => 0,

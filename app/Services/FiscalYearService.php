@@ -360,10 +360,8 @@ class FiscalYearService
                         }
                     }
                 }
-                if (in_array('warehouses', $sectionsToImport) || (in_array('products', $sectionsToImport) && isset($importData['warehouses']))) {
-                    if (isset($importData['warehouses'])) {
-                        $idMappings['warehouses'] = self::_importWarehouses($importData['warehouses'], $targetYearId);
-                    }
+                if ((in_array('warehouses', $sectionsToImport) || in_array('products', $sectionsToImport)) && isset($importData['warehouses'])) {
+                    $idMappings['warehouses'] = self::_importWarehouses($importData['warehouses'], $targetYearId);
                 }
                 if (in_array('products', $sectionsToImport)) {
                     if (isset($importData['product_groups'])) {
@@ -401,7 +399,7 @@ class FiscalYearService
                         }
                     }
                 }
-                if (in_array('warehouses', $sectionsToImport) || (in_array('products', $sectionsToImport) && isset($importData['warehouses']))) {
+                if (in_array('products', $sectionsToImport)) {
                     if (isset($importData['warehouse_product_stocks'])) {
                         self::_importWarehouseProductStocks(
                             $importData['warehouse_product_stocks'],
@@ -810,14 +808,6 @@ class FiscalYearService
             $sourceData['warehouses'] = Warehouse::withoutGlobalScope(FiscalYearScope::class)
                 ->where('company_id', $sourceYearId)
                 ->get()->toArray();
-
-            $warehouseIds = collect($sourceData['warehouses'])->pluck('id')->toArray();
-            $sourceData['warehouse_product_stocks'] = ! empty($warehouseIds)
-                ? WarehouseProductStock::whereIn('warehouse_id', $warehouseIds)->get()->toArray()
-                : [];
-            $sourceData['warehouse_transfers'] = ! empty($warehouseIds)
-                ? WarehouseTransfer::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $sourceYearId)->get()->toArray()
-                : [];
         }
         if (in_array('services', $sections)) {
             $sourceData['service_groups'] = ServiceGroup::withoutGlobalScope(FiscalYearScope::class)

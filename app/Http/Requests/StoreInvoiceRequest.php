@@ -5,7 +5,7 @@ namespace App\Http\Requests;
 use App\Enums\InvoiceType;
 use App\Models\Invoice;
 use App\Models\Product;
-use App\Models\Service;
+use App\Models\WarehouseProductStock;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -95,7 +95,7 @@ class StoreInvoiceRequest extends FormRequest
             $invoiceType = $this->input('invoice_type');
             $inputDate = $this->input('date');
             $invoice = $this->route('invoice');
-            $isApproved = $this->input('approve');
+            $isApproved = $this->has('approve');
 
             foreach ($transactions as $index => $transaction) {
                 $quantity = (float) ($transaction['quantity'] ?? 0);
@@ -224,7 +224,7 @@ class StoreInvoiceRequest extends FormRequest
                 }
             }
 
-            if (! in_array($invoiceType, ['sell', 'buy'])) {
+            if (! in_array($invoiceType, ['sell', 'buy', 'return_sell', 'return_buy'])) {
                 return;
             }
 
@@ -260,42 +260,42 @@ class StoreInvoiceRequest extends FormRequest
                 }
 
                 // Product quantity Check in warehouse
-                if ($transaction['item_type'] === 'product' && isset($transaction['item_id']) && $transaction['quantity'] && $isApproved) {
+                if ($transaction['item_type'] === 'product'
+                    && isset($transaction['item_id'], $transaction['warehouse_id'])
+                    && $transaction['quantity']
+                    && $isApproved
+                    && in_array($invoiceType, ['sell', 'return_buy'], true)) {
                     $product = Product::find($transaction['item_id']);
 
                     if (! $product) {
                         continue;
                     }
 
-                    $availableQuantity = $product->quantity;
+                    $availableQuantity = (float) WarehouseProductStock::query()
+                        ->where('product_id', $product->id)
+                        ->where('warehouse_id', $transaction['warehouse_id'])
+                        ->value('quantity');
 
-                    if ($invoice) {
+                    if ($invoice && $invoice->status->isApprovedOrSettled()) {
                         $oldItem = $invoice->items()
                             ->where('itemable_type', Product::class)
                             ->where('itemable_id', $transaction['item_id'])
                             ->first();
 
-                        if ($oldItem) {
-                            if ($invoice->invoice_type === InvoiceType::SELL) {
-                                $availableQuantity += $oldItem->quantity;
-                            } elseif ($invoice->invoice_type === InvoiceType::BUY) {
-                                $availableQuantity -= $oldItem->quantity;
-                            }
+                        if ($oldItem
+                            && (int) $oldItem->warehouse_id === (int) $transaction['warehouse_id']
+                            && in_array($invoice->invoice_type, [InvoiceType::SELL, InvoiceType::RETURN_BUY], true)) {
+                            $availableQuantity += (float) $oldItem->quantity;
                         }
                     }
 
-                    if ($transaction['quantity'] > $availableQuantity && $invoiceType === 'sell' && ! $product->oversell) {
+                    if ($transaction['quantity'] > $availableQuantity && ! $product->oversell) {
                         $validator->errors()->add(
                             "transactions.{$index}.quantity",
                             "{$availableQuantity} ".__('item(s) of')." '{$product->name}' ".__('are available.')
                         );
                     }
 
-                    $morphType = $transaction['item_type'] === 'product' ? Product::class : Service::class;
-
-                    if ($morphType !== Product::class) {
-                        continue;
-                    }
                 }
             }
         });
@@ -372,7 +372,12 @@ class StoreInvoiceRequest extends FormRequest
             'transactions.*.unit_discount' => 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX,
             'transactions.*.unit' => 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX,
             'transactions.*.total' => 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX,
-            'transactions.*.warehouse_id' => ['nullable', 'integer', 'exists:warehouses,id'],
+            'transactions.*.warehouse_id' => [
+                'required_if:transactions.*.item_type,product',
+                'nullable',
+                'integer',
+                Rule::exists('warehouses', 'id')->where('company_id', getActiveCompany()),
+            ],
         ];
 
         return $rules;

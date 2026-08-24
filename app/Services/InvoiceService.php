@@ -12,6 +12,7 @@ use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\Service;
 use App\Models\User;
+use App\Models\WarehouseProductStock;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -478,6 +479,7 @@ class InvoiceService
                 'vat_is_value' => true,
                 'unit' => $t->unit_price,
                 'total' => $t->amount,
+                'warehouse_id' => $t->warehouse_id,
             ])
             ->values()
             ->all();
@@ -824,7 +826,12 @@ class InvoiceService
             }
 
             $requiredQuantity = $invoiceItem->quantity;
-            if ($product->quantity < $requiredQuantity) {
+            $availableQuantity = (float) WarehouseProductStock::query()
+                ->where('product_id', $product->id)
+                ->where('warehouse_id', $invoiceItem->warehouse_id)
+                ->value('quantity');
+
+            if ($availableQuantity < $requiredQuantity) {
                 if ($product->oversell) {
                     $errors->push([
                         'rule' => 'oversell_allowed',
@@ -1126,6 +1133,7 @@ class InvoiceService
                     'vat' => $item->vat,
                     'amount' => $item->amount,
                     'description' => $item->description,
+                    'warehouse_id' => $item->warehouse_id,
                 ])->toArray()
             );
 

@@ -12,6 +12,8 @@ use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Subject;
 use App\Models\User;
+use App\Models\Warehouse;
+use App\Models\WarehouseProductStock;
 use App\Services\GroupActionService;
 use App\Services\InvoiceService;
 use App\Services\PaymentService;
@@ -60,7 +62,20 @@ class InvoiceGroupActionTest extends TestCase
     {
         $group = ProductGroup::withoutGlobalScopes()->where('company_id', $this->companyId)->firstOrFail();
 
-        return Product::factory()->withGroup($group)->withSubjects()->create(array_merge(['company_id' => $this->companyId], $overrides));
+        $warehouse = Warehouse::withoutGlobalScopes()->firstOrCreate(
+            ['company_id' => $this->companyId, 'code' => 'MAIN'],
+            ['name' => 'انبار اصلی']
+        );
+        $product = Product::factory()->withGroup($group)->withSubjects()->create(array_merge([
+            'company_id' => $this->companyId,
+            'warehouse_id' => $warehouse->id,
+        ], $overrides));
+        WarehouseProductStock::firstOrCreate(
+            ['warehouse_id' => $warehouse->id, 'product_id' => $product->id],
+            ['quantity' => (float) $product->quantity, 'average_cost' => (float) $product->average_cost]
+        );
+
+        return $product;
     }
 
     private function createInvoice(
@@ -126,6 +141,7 @@ class InvoiceGroupActionTest extends TestCase
         return [
             'itemable_type' => 'product',
             'itemable_id' => $product->id,
+            'warehouse_id' => $product->warehouse_id,
             'quantity' => $qty,
             'unit' => $unit,
             'unit_discount' => 0,
