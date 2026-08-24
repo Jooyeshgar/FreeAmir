@@ -210,8 +210,8 @@
                                                 <div class="rounded-lg border border-slate-200 p-3 text-xs dark:border-slate-800">
                                                     <p class="mb-2 font-mono font-bold text-slate-700 dark:text-slate-200" dir="ltr">{{ $change['field'] }}</p>
                                                     <dl class="grid gap-2">
-                                                        <div><dt class="text-[11px] font-semibold text-slate-400">{{ __('Previous value') }}</dt><dd><pre class="mt-1 whitespace-pre-wrap break-all" dir="ltr">{{ $change['old'] }}</pre></dd></div>
-                                                        <div><dt class="text-[11px] font-semibold text-slate-400">{{ __('New value') }}</dt><dd><pre class="mt-1 whitespace-pre-wrap break-all" dir="ltr">{{ $change['new'] }}</pre></dd></div>
+                                                        <div class="rounded-lg bg-rose-50 p-2 dark:bg-rose-950/40"><dt class="text-[11px] font-bold text-rose-700 dark:text-rose-300">{{ __('Previous value') }}</dt><dd><pre class="mt-1 whitespace-pre-wrap break-all font-semibold text-rose-900 dark:text-rose-100" dir="ltr">{{ $change['old'] }}</pre></dd></div>
+                                                        <div class="rounded-lg bg-emerald-50 p-2 dark:bg-emerald-950/40"><dt class="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">{{ __('New value') }}</dt><dd><pre class="mt-1 whitespace-pre-wrap break-all font-semibold text-emerald-900 dark:text-emerald-100" dir="ltr">{{ $change['new'] }}</pre></dd></div>
                                                     </dl>
                                                 </div>
                                             @endforeach
@@ -219,13 +219,13 @@
 
                                         <div class="hidden overflow-x-auto sm:block">
                                             <table class="table table-sm min-w-[32rem]">
-                                                <thead><tr><th>{{ __('Field') }}</th><th>{{ __('Previous value') }}</th><th>{{ __('New value') }}</th></tr></thead>
+                                                <thead><tr><th>{{ __('Field') }}</th><th class="bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">{{ __('Previous value') }}</th><th class="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">{{ __('New value') }}</th></tr></thead>
                                                 <tbody>
                                                     @foreach ($modelChanges as $change)
                                                         <tr>
                                                             <td class="font-mono text-xs" dir="ltr">{{ $change['field'] }}</td>
-                                                            <td><pre class="whitespace-pre-wrap break-all text-xs" dir="ltr">{{ $change['old'] }}</pre></td>
-                                                            <td><pre class="whitespace-pre-wrap break-all text-xs" dir="ltr">{{ $change['new'] }}</pre></td>
+                                                            <td class="bg-rose-50/70 dark:bg-rose-950/30"><pre class="whitespace-pre-wrap break-all text-xs font-semibold text-rose-900 dark:text-rose-100" dir="ltr">{{ $change['old'] }}</pre></td>
+                                                            <td class="bg-emerald-50/70 dark:bg-emerald-950/30"><pre class="whitespace-pre-wrap break-all text-xs font-semibold text-emerald-900 dark:text-emerald-100" dir="ltr">{{ $change['new'] }}</pre></td>
                                                         </tr>
                                                     @endforeach
                                                 </tbody>

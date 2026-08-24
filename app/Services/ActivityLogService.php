@@ -31,6 +31,13 @@ class ActivityLogService
 
     private int|string|null $actorAuthenticatedUserId = null;
 
+    /** @var array<string, array<string, mixed>> */
+    private array $pendingModelEvents = [];
+
+    private ?Request $activeRequest = null;
+
+    private ?User $requestAuthenticatedUser = null;
+
     public function __construct(private readonly ImpersonateManager $impersonateManager) {}
 
     public function resolveActor(?User $authenticatedUser = null): ?User
@@ -51,12 +58,26 @@ class ActivityLogService
         return $this->cachedActor;
     }
 
+    public function beginRequest(Request $request): void
+    {
+        $this->endRequest();
+        $this->activeRequest = $request;
+        $this->requestAuthenticatedUser = $request->user();
+    }
+
+    public function endRequest(): void
+    {
+        $this->pendingModelEvents = [];
+        $this->activeRequest = null;
+        $this->requestAuthenticatedUser = null;
+    }
+
     /**
      * Record a successful state-changing HTTP request.
      */
     public function recordRequest(Request $request, ?User $actor = null, ?User $authenticatedUser = null): void
     {
-        $authenticatedUser ??= $request->user();
+        $authenticatedUser ??= $this->requestAuthenticatedUser ?? $request->user();
         $actor ??= $this->resolveActor($authenticatedUser);
 
         if (! $actor || ! config('activitylog.enabled')) {
@@ -65,6 +86,11 @@ class ActivityLogService
 
         $routeName = $request->route()?->getName();
         $method = strtoupper($request->method());
+        $models = array_values($this->pendingModelEvents);
+        $modelTypes = collect($models)->pluck('model_type')->filter()->unique()->values()->all();
+        $modelIds = collect($models)->pluck('model_id')->filter(fn (mixed $id): bool => $id !== null)->unique()->values()->all();
+        $modelNumbers = collect($models)->pluck('model_number')->filter(fn (mixed $number): bool => $number !== null && $number !== '')->unique()->values()->all();
+        $companyIds = collect($models)->pluck('company_id')->filter()->unique()->values()->all();
 
         activity('request')->causedBy($actor)->event(strtolower($method))->withProperties([
             'route' => $routeName,
@@ -74,6 +100,12 @@ class ActivityLogService
             'ip_address' => $request->ip(),
             'user_agent' => Str::limit((string) $request->userAgent(), 500, '…'),
             'request_input' => $this->sanitize($request->all()),
+            'models' => $models,
+            'model_types' => $modelTypes,
+            'model_ids' => $modelIds,
+            'model_numbers' => $modelNumbers,
+            'company_ids' => $companyIds,
+            'request_time' => now()->toAtomString(),
             ...$this->impersonationProperties($actor, $authenticatedUser),
         ])->log(trim($method.' '.($routeName ?: '/'.ltrim($request->path(), '/'))));
     }
@@ -83,10 +115,9 @@ class ActivityLogService
      */
     public function recordModelEvent(string $event, Model $model, ?Request $request = null): void
     {
-        $authenticatedUser = auth()->user();
-        $actor = $this->resolveActor($authenticatedUser);
+        $authenticatedUser = $this->requestAuthenticatedUser ?? auth()->user();
 
-        if (! config('activitylog.enabled') || ! $actor || $model instanceof Activity || ! str_starts_with($model::class, 'App\\Models\\')) {
+        if (! config('activitylog.enabled') || ! $authenticatedUser || $model instanceof Activity || ! str_starts_with($model::class, 'App\\Models\\')) {
             return;
         }
 
@@ -97,6 +128,18 @@ class ActivityLogService
         }
 
         $request ??= request();
+
+        if ($request === $this->activeRequest) {
+            $this->bufferModelEvent($event, $model, $changes, $request);
+
+            return;
+        }
+
+        $actor = $this->resolveActor($authenticatedUser);
+
+        if (! $actor) {
+            return;
+        }
 
         activity('model')->causedBy($actor)->performedOn($model)->event($event)->withProperties(array_filter([
             ...$changes,
@@ -140,8 +183,12 @@ class ActivityLogService
                 $query->whereIn('action', $actions);
             })
             ->when($filters['user_id'] ?? null, fn ($query, int|string $userId) => $query->where('user_id', $userId))
-            ->when($filters['model_type'] ?? null, fn ($query, string $modelType) => $query->where('model_type', $modelType))
-            ->when($filters['company_id'] ?? null, fn ($query, int|string $companyId) => $query->where('details->company_id', (int) $companyId))
+            ->when($filters['model_type'] ?? null, fn ($query, string $modelType) => $query->where(function ($query) use ($modelType) {
+                $query->where('model_type', $modelType)->orWhereJsonContains('details->model_types', $modelType);
+            }))
+            ->when($filters['company_id'] ?? null, fn ($query, int|string $companyId) => $query->where(function ($query) use ($companyId) {
+                $query->where('details->company_id', (int) $companyId)->orWhereJsonContains('details->company_ids', (int) $companyId);
+            }))
             ->when($filters['date_from'] ?? null, fn ($query, string $date) => $query->whereDate('created_at', '>=', $date))
             ->when($filters['date_to'] ?? null, fn ($query, string $date) => $query->whereDate('created_at', '<=', $date));
 
@@ -155,7 +202,7 @@ class ActivityLogService
             'users' => User::query()->whereIn('id', Activity::query()->whereNotNull('user_id')->select('user_id'))->orderBy('name')->get(['id', 'name', 'email']),
             'impersonatedUsers' => User::query()->whereIn('id', $impersonatedUserIds)->get(['id', 'name', 'email'])->keyBy('id'),
             'companies' => Company::query()->orderByDesc('fiscal_year')->orderBy('name')->get(['id', 'name', 'fiscal_year']),
-            'modelTypes' => Activity::query()->whereNotNull('model_type')->distinct()->orderBy('model_type')->pluck('model_type'),
+            'modelTypes' => $this->availableModelTypes(),
             'filters' => $filters,
         ];
     }
@@ -257,9 +304,24 @@ class ActivityLogService
         return [
             'total' => Activity::query()->count(),
             'today' => Activity::query()->whereDate('created_at', Carbon::today())->count(),
-            'model' => Activity::query()->where('source', 'model')->count(),
+            'model' => Activity::query()->where('source', 'model')->count()
+                + Activity::query()->where('source', 'request')->whereJsonLength('details->models', '>', 0)->count(),
             'request' => Activity::query()->where('source', 'request')->count(),
         ];
+    }
+
+    private function availableModelTypes(): Collection
+    {
+        $directTypes = Activity::query()->whereNotNull('model_type')->distinct()->pluck('model_type');
+        $aggregatedTypes = Activity::query()->where('source', 'request')->whereNotNull('details')
+            ->pluck('details')
+            ->flatMap(fn (mixed $details): array => (array) data_get(
+                is_string($details) ? json_decode($details, true) : $details,
+                'model_types',
+                [],
+            ));
+
+        return $directTypes->merge($aggregatedTypes)->filter()->unique()->sort()->values();
     }
 
     /**
@@ -284,6 +346,76 @@ class ActivityLogService
         }
 
         return ['attributes' => $attributes, 'old' => $old];
+    }
+
+    /**
+     * @param  array{attributes: array<string, mixed>, old?: array<string, mixed>}  $changes
+     */
+    private function bufferModelEvent(string $event, Model $model, array $changes, Request $request): void
+    {
+        $key = $model::class.'#'.$model->getKey();
+        $incoming = [
+            'model_type' => $model::class,
+            'model_id' => $model->getKey(),
+            'event' => $event,
+            'model_label' => $this->modelLabel($model),
+            'model_number' => $this->modelNumber($model),
+            'company_id' => $this->modelCompanyId($model, $request),
+            'old' => $changes['old'] ?? [],
+            'attributes' => $changes['attributes'] ?? [],
+        ];
+
+        if (! isset($this->pendingModelEvents[$key])) {
+            $this->pendingModelEvents[$key] = $incoming;
+
+            return;
+        }
+
+        $existing = $this->pendingModelEvents[$key];
+
+        if ($existing['event'] === 'created' && $event === 'deleted') {
+            unset($this->pendingModelEvents[$key]);
+
+            return;
+        }
+
+        $old = $existing['old'];
+        if ($existing['event'] !== 'created') {
+            foreach ($incoming['old'] as $attribute => $value) {
+                if (! array_key_exists($attribute, $old)) {
+                    $old[$attribute] = $value;
+                }
+            }
+        }
+
+        $attributes = $existing['attributes'];
+        foreach ($incoming['attributes'] as $attribute => $value) {
+            $attributes[$attribute] = $value;
+        }
+
+        if ($existing['event'] === 'created') {
+            $old = [];
+        } elseif ($event === 'deleted') {
+            $old = $existing['event'] === 'created' ? [] : [...$incoming['old'], ...$old];
+            $attributes = [];
+        } elseif ($existing['event'] !== 'created') {
+            foreach (array_keys($attributes) as $attribute) {
+                if (array_key_exists($attribute, $old) && $old[$attribute] === $attributes[$attribute]) {
+                    unset($old[$attribute], $attributes[$attribute]);
+                }
+            }
+        }
+
+        $this->pendingModelEvents[$key] = [
+            ...$incoming,
+            'event' => $existing['event'] === 'created' ? 'created' : $event,
+            'old' => $old,
+            'attributes' => $attributes,
+        ];
+
+        if ($this->pendingModelEvents[$key]['event'] === 'updated' && $attributes === []) {
+            unset($this->pendingModelEvents[$key]);
+        }
     }
 
     /**

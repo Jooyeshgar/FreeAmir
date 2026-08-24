@@ -15,13 +15,25 @@ class LogUserActivity
     {
         $authenticatedUser = $request->user();
         $actor = $this->activityLogService->resolveActor($authenticatedUser);
-        $response = $next($request);
-        $hasValidationErrors = $request->hasSession() && $request->session()->has('errors');
+        $shouldLog = ! $request->isMethodSafe();
 
-        if (! $request->isMethodSafe() && $response->getStatusCode() < 400 && ! $hasValidationErrors) {
-            $this->activityLogService->recordRequest($request, $actor, $authenticatedUser);
+        if ($shouldLog) {
+            $this->activityLogService->beginRequest($request);
         }
 
-        return $response;
+        try {
+            $response = $next($request);
+            $hasValidationErrors = $request->hasSession() && $request->session()->has('errors');
+
+            if ($shouldLog && $response->getStatusCode() < 400 && ! $hasValidationErrors) {
+                $this->activityLogService->recordRequest($request, $actor, $authenticatedUser);
+            }
+
+            return $response;
+        } finally {
+            if ($shouldLog) {
+                $this->activityLogService->endRequest();
+            }
+        }
     }
 }
