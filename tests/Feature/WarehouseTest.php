@@ -317,7 +317,7 @@ class WarehouseTest extends TestCase
         ]);
     }
 
-    public function test_transfer_locks_source_row_and_never_persists_negative_stock(): void
+    public function test_transfer_locks_source_and_destination_rows_and_never_persists_negative_stock(): void
     {
         $source = $this->makeWarehouse();
         $destination = $this->makeWarehouse();
@@ -337,7 +337,10 @@ class WarehouseTest extends TestCase
 
         app(WarehouseService::class)->transfer($product, $source, $destination, 4);
 
-        $this->assertTrue(collect($queries)->contains(fn ($sql) => str_contains($sql, 'warehouse_product_stocks') && str_contains($sql, 'for update')));
+        $lockingQuery = collect($queries)->first(fn ($sql) => str_contains($sql, 'warehouse_product_stocks') && str_contains($sql, 'for update'));
+        $this->assertNotNull($lockingQuery);
+        $this->assertStringContainsString('warehouse_id', $lockingQuery);
+        $this->assertStringContainsString('order by', $lockingQuery);
 
         try {
             app(WarehouseService::class)->transfer($product, $source, $destination, 2);

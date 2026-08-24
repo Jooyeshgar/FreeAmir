@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Enums\InvoiceType;
 use App\Models\Invoice;
 use App\Models\Product;
+use App\Models\Service;
 use App\Models\WarehouseProductStock;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;

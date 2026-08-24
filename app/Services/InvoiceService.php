@@ -82,6 +82,7 @@ class InvoiceService
 
                 $createdInvoice->refresh();
                 CostOfGoodsService::updateProductsAverageCost($createdInvoice);
+                ProductService::updateWarehouseAverageCosts($createdInvoice);
 
                 self::syncCOGAfterForInvoiceItems($createdInvoice);
             });
@@ -168,6 +169,7 @@ class InvoiceService
                 $invoice->refresh();
 
                 CostOfGoodsService::updateProductsAverageCost($invoice);
+                ProductService::updateWarehouseAverageCosts($invoice);
                 self::syncCOGAfterForInvoiceItems($invoice);
             });
         }
@@ -385,6 +387,7 @@ class InvoiceService
         ProductService::addProductsQuantities($invoice->items->toArray(), $invoice->invoice_type);
         self::syncInvoiceItems($invoice, self::itemsFormatterForSyncingInvoiceItems($invoice));
         CostOfGoodsService::updateProductsAverageCost($invoice);
+        ProductService::updateWarehouseAverageCosts($invoice);
         self::syncCOGAfterForInvoiceItems($invoice);
     }
 
@@ -403,6 +406,7 @@ class InvoiceService
         self::unapproveAncillaryCostsOfInvoice($invoice);
         ProductService::subProductsQuantities($invoice->items->toArray(), $invoice->invoice_type);
         CostOfGoodsService::updateProductsAverageCost($invoice);
+        ProductService::updateWarehouseAverageCosts($invoice);
     }
 
     private function unapproveAncillaryCostsOfInvoice(Invoice $invoice): void

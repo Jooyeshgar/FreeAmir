@@ -1,7 +1,7 @@
 <x-app-layout :title="__('Edit warehouse')">
     <div class="card bg-base-100 shadow">
         <form method="POST" action="{{ route('warehouses.update', $warehouse) }}">
-            @csrf 
+            @csrf
             @method('PUT')
             <div class="card-body">
                 <h1 class="card-title">{{ __('Edit warehouse') }}</h1>

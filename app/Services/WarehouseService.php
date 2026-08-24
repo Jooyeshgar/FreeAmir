@@ -38,12 +38,14 @@ class WarehouseService
         }
 
         return DB::transaction(function () use ($product, $from, $to, $quantity, $description) {
-            $source = $this->lockedStock($product, $from);
+            $stocks = $this->lockedStocks($product, $from, $to);
+            $source = $stocks->get($from->id);
+            $destination = $stocks->get($to->id);
+
             if ((float) $source->quantity < $quantity) {
                 throw ValidationException::withMessages(['quantity' => __('The source warehouse does not have enough stock.')]);
             }
 
-            $destination = $this->stock($product, $to, true);
             $unitCost = (float) $source->average_cost;
             $source->decrement('quantity', $quantity);
             $destination->quantity = (float) $destination->quantity + $quantity;
@@ -65,31 +67,23 @@ class WarehouseService
         });
     }
 
-    private function lockedStock(Product $product, Warehouse $warehouse): WarehouseProductStock
+    private function lockedStocks(Product $product, Warehouse ...$warehouses)
     {
-        WarehouseProductStock::firstOrCreate(
-            ['product_id' => $product->id, 'warehouse_id' => $warehouse->id],
-            ['quantity' => 0, 'average_cost' => $product->average_cost ?? 0]
-        );
+        $warehouseIds = collect($warehouses)->pluck('id')->sort()->values();
+
+        foreach ($warehouseIds as $warehouseId) {
+            WarehouseProductStock::firstOrCreate(
+                ['product_id' => $product->id, 'warehouse_id' => $warehouseId],
+                ['quantity' => 0, 'average_cost' => $product->average_cost ?? 0]
+            );
+        }
 
         return WarehouseProductStock::query()
             ->where('product_id', $product->id)
-            ->where('warehouse_id', $warehouse->id)
+            ->whereIn('warehouse_id', $warehouseIds)
+            ->orderBy('warehouse_id')
             ->lockForUpdate()
-            ->firstOrFail();
-    }
-
-    private function stock(Product $product, Warehouse $warehouse, bool $create = false): WarehouseProductStock
-    {
-        $stock = WarehouseProductStock::firstOrCreate(
-            ['product_id' => $product->id, 'warehouse_id' => $warehouse->id],
-            ['quantity' => 0, 'average_cost' => $product->average_cost ?? 0]
-        );
-
-        if (! $create && ! $stock) {
-            abort(404);
-        }
-
-        return $stock;
+            ->get()
+            ->keyBy('warehouse_id');
     }
 }

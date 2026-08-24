@@ -11,10 +11,13 @@ use App\Models\CustomerGroup;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\ProductGroup;
+use App\Models\Service;
+use App\Models\ServiceGroup;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Models\WarehouseProductStock;
 use App\Services\InvoiceService;
+use App\Services\WarehouseService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Tests\Helpers\SeederHelper;
@@ -219,12 +222,66 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->assertStock($this->mainWarehouse, 6);
     }
 
-    private function createInvoice(InvoiceType $type, float $quantity, Warehouse $warehouse, bool $approved, ?Invoice $returnedInvoice = null): Invoice
+    public function test_return_service_buy_request_validates_the_service_model(): void
+    {
+        $serviceGroup = ServiceGroup::factory()->withSubject()->create(['company_id' => $this->company->id]);
+        $service = Service::factory()->withGroup($serviceGroup)->withSubject()->create(['company_id' => $this->company->id]);
+        $buy = InvoiceService::createInvoice(
+            $this->user,
+            $this->invoiceData(InvoiceType::BUY),
+            [[
+                'itemable_type' => 'service',
+                'itemable_id' => $service->id,
+                'quantity' => 2,
+                'unit' => 100,
+                'unit_discount' => 0,
+                'vat' => 0,
+            ]]
+        )['invoice'];
+
+        $payload = $this->formPayload(InvoiceType::RETURN_BUY, 1, $this->mainWarehouse, false, $buy);
+        $payload['transactions'][0]['item_id'] = 'service-'.$service->id;
+        unset($payload['transactions'][0]['warehouse_id']);
+
+        $errors = $this->validateForm($payload);
+
+        $this->assertArrayNotHasKey('transactions.0.item_id', $errors);
+    }
+
+    public function test_buy_updates_selected_warehouse_cost_before_a_transfer(): void
+    {
+        $this->product->update(['quantity' => 10, 'average_cost' => 100]);
+        $this->setStock($this->mainWarehouse, 10);
+
+        $this->createInvoice(InvoiceType::BUY, 10, $this->mainWarehouse, true, null, 200);
+
+        $mainStock = WarehouseProductStock::query()
+            ->where('warehouse_id', $this->mainWarehouse->id)
+            ->where('product_id', $this->product->id)
+            ->firstOrFail();
+        $this->assertEqualsWithDelta(150, (float) $mainStock->average_cost, 0.01);
+
+        $transfer = app(WarehouseService::class)->transfer(
+            $this->product->fresh(),
+            $this->mainWarehouse,
+            $this->emptyWarehouse,
+            5
+        );
+
+        $destinationStock = WarehouseProductStock::query()
+            ->where('warehouse_id', $this->emptyWarehouse->id)
+            ->where('product_id', $this->product->id)
+            ->firstOrFail();
+        $this->assertEqualsWithDelta(150, (float) $transfer->unit_cost, 0.01);
+        $this->assertEqualsWithDelta(150, (float) $destinationStock->average_cost, 0.01);
+    }
+
+    private function createInvoice(InvoiceType $type, float $quantity, Warehouse $warehouse, bool $approved, ?Invoice $returnedInvoice = null, float $unit = 100): Invoice
     {
         $result = InvoiceService::createInvoice(
             $this->user,
             $this->invoiceData($type, $returnedInvoice),
-            [$this->item($quantity, $warehouse)],
+            [$this->item($quantity, $warehouse, $unit)],
             $approved
         );
 
@@ -246,14 +303,14 @@ class WarehouseInvoiceStockTest extends TestCase
         ];
     }
 
-    private function item(float $quantity, Warehouse $warehouse): array
+    private function item(float $quantity, Warehouse $warehouse, float $unit = 100): array
     {
         return [
             'itemable_type' => 'product',
             'itemable_id' => $this->product->id,
             'warehouse_id' => $warehouse->id,
             'quantity' => $quantity,
-            'unit' => 100,
+            'unit' => $unit,
             'unit_discount' => 0,
             'vat' => 0,
         ];

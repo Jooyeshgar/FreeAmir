@@ -13,7 +13,7 @@
             @php
                 $deleteDisabledReason = match (true) {
                     $warehouseCount <= 1 => __('At least one warehouse must remain.'),
-                    $warehouse->stocks->count() > 0 => __('A warehouse with stock cannot be deleted.'),
+                    $warehouse->stocks->where('quantity', '>', 0)->isNotEmpty() => __('A warehouse with stock cannot be deleted.'),
                     ($warehouse->transfersFrom->count() + $warehouse->transfersTo->count()) > 0 => __('A warehouse with transfer history cannot be deleted.'),
                     default => null,
                 };

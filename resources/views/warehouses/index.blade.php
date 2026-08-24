@@ -39,7 +39,7 @@
                         <x-input type="number" min="0" name="Warehouse_inventory" value="{{ request('Warehouse_inventory', request('warehouse_inventory')) }}" placeholder="{{ __('Warehouse inventory') }}" />
                     </div>
 
-                    <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>   
+                    <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
                 </form>
             </div>
             <table class="table">
