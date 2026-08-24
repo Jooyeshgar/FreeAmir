@@ -3226,5 +3226,16 @@
     "Active businesses": "Active businesses",
     "Businesses with at least one open fiscal year": "Businesses with at least one open fiscal year",
     "Fiscal year status": "Fiscal year status",
-    ":open open, :closed closed": ":open open, :closed closed"
+    ":open open, :closed closed": ":open open, :closed closed",
+    "Search users, companies, and records...": "Search users, companies, and records...",
+    "Service health": "Service health",
+    "Stable": "Stable",
+    "Growth and usage": "Growth and usage",
+    "Activation funnel": "Activation funnel",
+    "Time to first value": "Time to first value",
+    "Engagement and retention": "Engagement and retention",
+    "Retention cohort": "Retention cohort",
+    "Usage depth": "Usage depth",
+    "System health": "System health",
+    "Quick access": "Quick access"
 }

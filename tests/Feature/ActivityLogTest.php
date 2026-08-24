@@ -766,7 +766,7 @@ class ActivityLogTest extends TestCase
         $this->assertTrue(config('activitylog.enabled'));
     }
 
-    public function test_management_dashboard_shows_activity_summary_and_recent_events(): void
+    public function test_management_dashboard_exposes_activity_kpis_without_recent_activity_panel(): void
     {
         $superAdmin = User::factory()->create(['name' => 'Audit Administrator']);
         $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
@@ -786,9 +786,8 @@ class ActivityLogTest extends TestCase
 
         $this->actingAs($superAdmin)->get(route('management.dashboard'))
             ->assertOk()
-            ->assertSee(__('Recent activity'))
-            ->assertSee('Dashboard Audit Company')
-            ->assertSee('management.settings')
+            ->assertSee(__('Activity records'))
+            ->assertDontSee(__('Recent activity'))
             ->assertSee(route('management.activity-logs.index'), false)
             ->assertViewHas('activityMetrics', fn (array $metrics): bool => $metrics === [
                 'total' => 2,
