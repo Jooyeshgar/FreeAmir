@@ -1,46 +1,6 @@
 <x-super-admin-layout :title="__('Dashboard')">
     <x-show-message-bags />
 
-    @php
-$verifiedNewUsers = $metrics['verifiedNewUsers'];
-$assignedNewUsers = $metrics['companyCreatedNewUsers'];
-$firstDocumentNewUsers = $metrics['firstDocumentNewUsers'];
-$maxActivity = max(1, $activityTrend->max('count'));
-$growthLabels = $userGrowth->pluck('label')->map(fn($label) => __($label))->values()->all();
-
-$growthTabs = [
-    'registrations' => ['datasets' => [['label' => __('Registration'), 'data' => $userGrowth->pluck('count')->values()->all()]]],
-    'companies' => ['datasets' => [['label' => __('New companies'), 'data' => $userGrowth->pluck('companies')->values()->all()]]],
-    'documents' => ['datasets' => [['label' => __('Documents'), 'data' => $userGrowth->pluck('documents')->values()->all()]]],
-];
-
-$activationSteps = [
-    [__('Registration'), $metrics['newUsers'], 100],
-    [__('Email verification'), $verifiedNewUsers, $metrics['newUsers'] > 0 ? round(($verifiedNewUsers / $metrics['newUsers']) * 100) : 0],
-    [__('Company creation'), $assignedNewUsers, $metrics['newUsers'] > 0 ? round(($assignedNewUsers / $metrics['newUsers']) * 100) : 0],
-    [__('First document'), $firstDocumentNewUsers, $metrics['newUsers'] > 0 ? round(($firstDocumentNewUsers / $metrics['newUsers']) * 100) : 0],
-];
-
-$firstDocumentActivationRate = $activationSteps[3][2];
-
-$activeUserSegments = [
-    $metrics['dailyActiveUsers'],
-    max(0, $metrics['weeklyActiveUsers'] - $metrics['dailyActiveUsers']),
-    max(0, $metrics['monthlyActiveUsers'] - $metrics['weeklyActiveUsers']),
-    max(0, $metrics['users'] - $metrics['monthlyActiveUsers']),
-];
-
-$roleChartData = $roles->mapWithKeys(fn($role) => [$role->name => $role->users_count])->all();
-
-$kpis = [
-    [__('New registrations'), $metrics['newUsers'], __('Last 30 days'), $metrics['userGrowthRate'], 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7-3h6m-3-3v6', 'bg-[#16a394]/10 text-[#16a394]'],
-    [__('Businesses'), $metrics['businesses'], __('Active: :count', ['count' => localizeNumber($metrics['activeBusinesses'])]), null, 'M3 21h18M6 21V7l6-4 6 4v14M9 10h1m4 0h1', 'bg-indigo-50 text-indigo-500'],
-    [__('Activation rate'), $metrics['activationRate'] . '%', __('Company assigned'), null, 'M4 19V9m5 10V5m5 14v-7m5 7V3', 'bg-amber-50 text-amber-500'],
-    [__('Monthly active users'), $metrics['monthlyActiveUsers'], __('MAU'), null, 'M3 12h4l3-9 4 18 3-9h4', 'bg-sky-50 text-sky-500'],
-    [__('Churn rate'), $metrics['churnRate'] . '%', __('Compared with prior period'), null, 'M4 6l6 6 4-4 6 6M4 18h16', 'bg-rose-50 text-[#f07662]'],
-];
-    @endphp
-
     <section class="admin-rise mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-center" aria-labelledby="management-welcome">
         <div>
             <h2 id="management-welcome"
@@ -78,15 +38,24 @@ $kpis = [
     @endif
 
     <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5" aria-label="{{ __('Platform metrics') }}">
-        @foreach ($kpis as [$label, $value, $note, $change, $icon, $color])
-            <x-kpi-card class="admin-rise" :title="$label" :value="$value" :unit="$note" :change="$change" :icon="$icon"
-                :icon-class="$color" />
-        @endforeach
+        <x-kpi-card class="admin-rise" :title="__('New registrations')" :value="$metrics['newUsers']"
+            :unit="__('Last 30 days')" :change="$metrics['userGrowthRate']"
+            icon="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7-3h6m-3-3v6" />
+        <x-kpi-card class="admin-rise" :title="__('Businesses')" :value="$metrics['businesses']"
+            :unit="__('Active: :count', ['count' => localizeNumber($metrics['activeBusinesses'])])"
+            icon="M3 21h18M6 21V7l6-4 6 4v14M9 10h1m4 0h1" icon-class="bg-indigo-50 text-indigo-500" />
+        <x-kpi-card class="admin-rise" :title="__('Activation rate')" :value="$metrics['activationRate'].'%'"
+            :unit="__('Company assigned')" icon="M4 19V9m5 10V5m5 14v-7m5 7V3"
+            icon-class="bg-amber-50 text-amber-500" />
+        <x-kpi-card class="admin-rise" :title="__('Monthly active users')" :value="$metrics['monthlyActiveUsers']"
+            unit="MAU" icon="M3 12h4l3-9 4 18 3-9h4" icon-class="bg-sky-50 text-sky-500" />
+        <x-kpi-card class="admin-rise" :title="__('Churn rate')" :value="$metrics['churnRate'].'%'"
+            :unit="__('Compared with prior period')" icon="M4 6l6 6 4-4 6 6M4 18h16"
+            icon-class="bg-rose-50 text-[#f07662]" />
     </section>
 
     <section class="mt-5 grid gap-5 xl:grid-cols-[1.65fr_1fr]">
-        <article
-            class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
+        <x-management.card>
             <header class="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <div class="flex items-center gap-2">
@@ -95,6 +64,7 @@ $kpis = [
                             @class(['rounded-full px-2 py-1 text-[10px] font-bold', 'bg-emerald-50 text-emerald-600' => $metrics['userGrowthRate'] >= 0, 'bg-rose-50 text-rose-600' => $metrics['userGrowthRate'] < 0])>MoM {{ localizeNumber(abs($metrics['userGrowthRate'])) }}٪
                             {{ $metrics['userGrowthRate'] >= 0 ? '↑' : '↓' }}</span>
                     </div>
+                    <span class="sr-only">{{ __('User growth') }}</span>
                     <p class="mt-1 text-xs text-slate-400">
                         {{ __('Compare registration, new companies, and documents') }}
                     </p>
@@ -109,9 +79,9 @@ $kpis = [
                 </div>
             </header>
             <x-charts.line-chart chart-id="management-growth-chart" class="mt-7" height-class="h-64"
-                :labels="$growthLabels" :tabs="$growthTabs" active-tab="registrations" />
-        </article>
-        <article class="grid-paper rounded-2xl bg-[#15263b] p-5 text-white shadow-lg sm:p-6">
+                :labels="$viewModel['growthLabels']" :tabs="$viewModel['growthTabs']" active-tab="registrations" />
+        </x-management.card>
+        <x-management.card variant="dark">
             <header class="flex items-center justify-between">
                 <div>
                     <h2 class="font-bold">{{ __('Active users') }}</h2>
@@ -120,37 +90,36 @@ $kpis = [
                 <span class="rounded-lg bg-[#16a394]/15 px-2 py-1 text-[10px] font-bold text-emerald-300">DAU /
                     WAU / MAU</span>
             </header>
-            <x-charts.pie-chart chart-id="management-active-users-chart" height-class="mt-5 h-64" :labels="[__('Today'), __('Earlier this week'), __('Earlier this month'), __('Inactive')]" :data="$activeUserSegments"
+            <x-charts.pie-chart chart-id="management-active-users-chart" height-class="mt-5 h-64" :labels="[__('Today'), __('Earlier this week'), __('Earlier this month'), __('Inactive')]" :data="$viewModel['activeUserSegments']"
                 :colors="['#16a394', '#f5b94c', '#f07662', '#33455b']" cutout="67%"
                 :center-value="$metrics['monthlyActiveUsers']" :center-label="__('Active users')" :label="__('Users')"
                 dark />
-        </article>
+        </x-management.card>
     </section>
 
     <section class="mt-5 grid gap-5 xl:grid-cols-[1.4fr_1fr]">
-        <article
-            class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
+        <x-management.card class="overflow-hidden">
             <header class="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h2 class="font-bold text-[#15263b] dark:text-white">{{ __('Activation funnel') }}</h2>
                     <p class="mt-1 text-xs text-slate-400">{{ __('From registration to first real value') }}</p>
                 </div>
                 <div class="text-end">
-                    <b class="block text-2xl text-[#15263b] dark:text-white">{{ localizeNumber($firstDocumentActivationRate) }}٪</b>
+                    <b class="block text-2xl text-[#15263b] dark:text-white">{{ localizeNumber($viewModel['activationSteps'][3]['percentage']) }}٪</b>
                     <span class="text-[10px] font-medium text-amber-600">{{ __('Activation rate') }}</span>
                 </div>
             </header>
             <div class="mt-7 grid gap-3 sm:grid-cols-4">
-                @foreach ($activationSteps as $step)
+                @foreach ($viewModel['activationSteps'] as $step)
                     <div class="relative">
                         <div @class(['rounded-xl border p-4', 'border-[#16a394] bg-[#16a394] text-white' => $loop->last, 'border-slate-100 bg-slate-50 text-[#15263b] dark:border-slate-800 dark:bg-slate-950/40 dark:text-white' => !$loop->last])>
-                            <div class="flex items-center justify-between"><span class="text-[10px] font-medium">{{ $step[0] }}</span>
-                                <span class="text-[10px] opacity-60">{{ localizeNumber($step[2]) }}٪</span>
+                            <div class="flex items-center justify-between"><span class="text-[10px] font-medium">{{ $step['label'] }}</span>
+                                <span class="text-[10px] opacity-60">{{ localizeNumber($step['percentage']) }}٪</span>
                             </div>
-                            <b class="mt-2 block text-xl">{{ localizeNumber(number_format($step[1])) }}</b>
+                            <b class="mt-2 block text-xl">{{ localizeNumber(number_format($step['count'])) }}</b>
                             <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-200/60 dark:bg-slate-700">
                                 <div @class(['h-full rounded-full', 'bg-white' => $loop->last, 'bg-[#16a394]' => !$loop->last])
-                                    style="width: {{ min(100, $step[2]) }}%"></div>
+                                    style="width: {{ min(100, $step['percentage']) }}%"></div>
                             </div>
                         </div>
                         @unless ($loop->last)
@@ -171,9 +140,8 @@ $kpis = [
                         class="whitespace-nowrap rounded-lg bg-white px-3 py-2 text-[10px] font-bold text-amber-700 shadow-sm sm:ms-auto">{{ __('View users') }}</a>
                 </div>
             @endif
-        </article>
-        <article
-            class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
+        </x-management.card>
+        <x-management.card>
             <header>
                 <h2 class="font-bold">{{ __('Time to first value') }}</h2>
                 <p class="mt-1 text-xs text-slate-400">{{ __('Operational readiness indicators') }}</p>
@@ -192,12 +160,11 @@ $kpis = [
                     <span class="text-[10px] text-slate-400">{{ __('Verified users') }}</span>
                 </div>
             </div>
-        </article>
+        </x-management.card>
     </section>
 
     <section class="mt-5 grid gap-5 xl:grid-cols-[1.2fr_1fr]">
-        <article
-            class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
+        <x-management.card>
             <header>
                 <h2 class="font-bold">{{ __('Engagement and retention') }}</h2>
                 <p class="mt-1 text-xs text-slate-400">{{ __('Activity across key time windows') }}</p>
@@ -224,9 +191,8 @@ $kpis = [
                     <b class="mt-1 block text-lg text-rose-600">{{ localizeNumber($metrics['churnRate']) }}٪</b>
                 </div>
             </div>
-        </article>
-        <article
-            class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6 dark:border-slate-800 dark:bg-slate-900">
+        </x-management.card>
+        <x-management.card>
             <header>
                 <h2 class="font-bold">{{ __('Retention cohort') }}</h2>
                 <p class="mt-1 text-xs text-slate-400">
@@ -237,7 +203,7 @@ $kpis = [
             @foreach($activityTrend as $day)
                 <div class="text-center">
                     <div class="grid h-16 place-items-center rounded-lg bg-[#16a394] text-[10px] font-bold text-white"
-                        style="opacity: {{ max(.18, $day['count'] / $maxActivity) }}">
+                        style="opacity: {{ max(.18, $day['count'] / $viewModel['maximumActivity']) }}">
                         {{ localizeNumber($day['count']) }}
                     </div>
                     <span class="mt-2 block text-[9px] text-slate-400">
@@ -246,12 +212,11 @@ $kpis = [
                 </div>
             @endforeach
             </div>
-        </article>
+        </x-management.card>
     </section>
 
     <section class="mt-5 grid gap-5 lg:grid-cols-3">
-        <article
-            class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm lg:col-span-2 dark:border-slate-800 dark:bg-slate-900">
+        <x-management.card class="lg:col-span-2">
             <header class="flex items-center justify-between">
                 <div>
                     <h2 class="font-bold">{{ __('Usage depth') }}</h2>
@@ -310,8 +275,8 @@ $kpis = [
                     @endforelse
                 </div>
             </div>
-        </article>
-        <article class="grid-paper rounded-2xl bg-[#15263b] p-5 text-white shadow-lg">
+        </x-management.card>
+        <x-management.card variant="dark">
             <header class="flex items-center justify-between">
                 <div>
                     <h2 class="font-bold">{{ __('System health') }}</h2>
@@ -330,31 +295,34 @@ $kpis = [
                             <b class="text-sm">{{ $health[1] }}</b>
                 </div>@endforeach
             </div>
-        </article>
+        </x-management.card>
     </section>
 
     <section class="mt-5 grid gap-5 xl:grid-cols-[1.65fr_1fr]">
-        <article
-            class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            < header
+        <x-management.card class="overflow-hidden" :padded="false">
+            <header
                 class="flex items-center justify-between border-b border-slate-100 p-5 sm:px-6 dark:border-slate-800">
                 <div>
                     <h2 class="font-bold">{{ __('Latest fiscal years') }}</h2>
                     <p class="mt-1 text-xs text-slate-400">{{ __('Recently added company records') }}</p>
-                </div><a href="{{ route('companies.index') }}"
-                    class="text-xs font-bold text-[#16a394]">{{ __('View all') }} ←</a></header>
-                <div class="scrollbar overflow-x-auto">
-                    <table class="table min-w-[620px]">
-                        <thead>
-                            <tr>
-                                <th>{{ __('Company') }}</th>
-                                <th>{{ __('Fiscal year') }}</th>
-                                <th>{{ __('Users') }}</th>
-                                <th>{{ __('Status') }}</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>@forelse($recentCompanies as $company)
+                </div>
+                <a href="{{ route('companies.index') }}" class="text-xs font-bold text-[#16a394]">
+                    {{ __('View all') }} ←
+                </a>
+            </header>
+            <div class="scrollbar overflow-x-auto">
+                <table class="table min-w-[620px]">
+                    <thead>
+                        <tr>
+                            <th>{{ __('Company') }}</th>
+                            <th>{{ __('Fiscal year') }}</th>
+                            <th>{{ __('Users') }}</th>
+                            <th>{{ __('Status') }}</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($recentCompanies as $company)
                             <tr>
                                 <td class="font-bold">{{ $company->name }}</td>
                                 <td>{{ localizeNumber($company->fiscal_year) }}</td>
@@ -363,41 +331,49 @@ $kpis = [
                                 </td>
                                 <td><a href="{{ route('companies.edit', $company) }}"
                                         class="text-xs text-[#16a394]">{{ __('Edit') }}</a></td>
-                        </tr>@empty<tr>
+                            </tr>
+                        @empty
+                            <tr>
                                 <td colspan="5" class="py-10 text-center">
-                                    {{ __('No companies have been created yet.') }}</td>
-                            </tr>@endforelse
-                        </tbody>
-                    </table>
-                </div>
-        </article>
-        <article
-            class="rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                                    {{ __('No companies have been created yet.') }}
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </x-management.card>
+        <x-management.card :padded="false">
             <header class="border-b border-slate-100 p-5 dark:border-slate-800">
-                <h2 class="font-bold">{{ __('Users by role') }}</h2 <p class="mt-1 text-xs text-slate-400">
-                {{ __('Current access distribution') }}</p>
+                <h2 class="font-bold">{{ __('Users by role') }}</h2>
+                <p class="mt-1 text-xs text-slate-400">{{ __('Current access distribution') }}</p>
             </header>
             <div class="p-5">
-                @if($roles->isNotEmpty())<x-charts.bar-chart chart-id="management-users-by-role-chart"
-                    height-class="h-64" :datas="$roleChartData" :label="__('Users')" background-color="#16a394"
-                border-color="#118579" datalabel-color="#16a394" />@else<p
-                    class="py-8 text-center text-xs text-slate-400">{{ __('No roles are configured.') }}</p>@endif<a
-                    href="{{ route('roles.index') }}"
-                    class="mt-4 block rounded-xl border border-slate-200 px-3 py-2 text-center text-xs font-bold dark:border-slate-700">{{ __('Manage roles') }}</a>
+                @if ($roles->isNotEmpty())
+                    <x-charts.bar-chart chart-id="management-users-by-role-chart" height-class="h-64"
+                        :datas="$viewModel['roleChartData']" :label="__('Users')" background-color="#16a394"
+                        border-color="#118579" datalabel-color="#16a394" />
+                @else
+                    <p class="py-8 text-center text-xs text-slate-400">{{ __('No roles are configured.') }}</p>
+                @endif
+                <a href="{{ route('roles.index') }}"
+                    class="mt-4 block rounded-xl border border-slate-200 px-3 py-2 text-center text-xs font-bold dark:border-slate-700">
+                    {{ __('Manage roles') }}
+                </a>
             </div>
-        </article>
+        </x-management.card>
     </section>
 
     <section class="mt-5 grid gap-5 xl:grid-cols-[1.65fr_1fr]">
-        <article
-            class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <x-management.card class="overflow-hidden" :padded="false">
             <header
                 class="flex items-center justify-between border-b border-slate-100 p-5 sm:px-6 dark:border-slate-800">
                 <div>
                     <h2 class="font-bold">{{ __('New users') }}</h2>
                     <p class="mt-1 text-xs text-slate-400">{{ __('Newest platform accounts') }}</p>
-                    < /div><a href="{{ route('users.index') }}"
-                            class="text-xs font-bold text-[#16a394]">{{ __('View all') }} ←</a>
+                </div>
+                <a href="{{ route('users.index') }}"
+                    class="text-xs font-bold text-[#16a394]">{{ __('View all') }} ←</a>
             </header>
             <div class="scrollbar overflow-x-auto">
                 <table class="table min-w-[760px]">
@@ -410,8 +386,9 @@ $kpis = [
                             <th></th>
                         </tr>
                     </thead>
-                    <tbody>@forelse($recentUsers as $recentUser)
-                        <tr>
+                    <tbody>
+                        @forelse ($recentUsers as $recentUser)
+                            <tr>
                             <td><a href="{{ route('users.show', $recentUser) }}"
                                     class="font-bold">{{ $recentUser->name }}</a>
                                 <span class="block text-[10px] text-slate-400">{{ $recentUser->email }}</span>
@@ -422,29 +399,39 @@ $kpis = [
                             </td>
                             <td>
                                 <div class="flex items-center justify-end gap-2">
-                                    @unless($recentUser->hasVerifiedEmail())
-                                        <form action="{{ route('users.verify', $recentUser) }}" method="post">@csrf<button
-                                                class="text-[10px] text-emerald-600">{{ __('Verify') }}</button></form>
-                                    @endunless @if(auth()->user()->canImpersonateUser($recentUser))
+                                    @unless ($recentUser->hasVerifiedEmail())
+                                        <form action="{{ route('users.verify', $recentUser) }}" method="post">
+                                            @csrf
+                                            <button class="text-[10px] text-emerald-600">{{ __('Verify') }}</button>
+                                        </form>
+                                    @endunless
+                                    @if (auth()->user()->canImpersonateUser($recentUser))
                                         <form action="{{ route('users.impersonate', $recentUser) }}" method="post">
-                                            @csrf<button
-                                                class="text-[10px] text-violet-600">{{ __('Impersonate') }}</button></form>
-                                    @else<span class="text-[10px] text-slate-300"
-                                    title="{{ (int) $recentUser->companies_count === 0 ? __('User has no company') : __('Impersonation is not available for this user.') }}">{{ (int) $recentUser->companies_count === 0 ? __('User has no company') : __('Impersonate') }}</span>@endif<a
-                                        href="{{ route('users.edit', $recentUser) }}"
+                                            @csrf
+                                            <button class="text-[10px] text-violet-600">{{ __('Impersonate') }}</button>
+                                        </form>
+                                    @else
+                                        <span class="text-[10px] text-slate-300"
+                                            title="{{ (int) $recentUser->companies_count === 0 ? __('User has no company') : __('Impersonation is not available for this user.') }}">
+                                            {{ (int) $recentUser->companies_count === 0 ? __('User has no company') : __('Impersonate') }}
+                                        </span>
+                                    @endif
+                                    <a href="{{ route('users.edit', $recentUser) }}"
                                         class="text-[10px] text-[#16a394]">{{ __('Edit') }}</a>
                                 </div>
                             </td>
-                    </tr>@empty<tr>
+                            </tr>
+                        @empty
+                            <tr>
                             <td colspan="5" class="py-10 text-center">{{ __('No users have been created yet.') }}</td>
-                        </tr>@endforelse
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
-        </article>
+        </x-management.card>
         <div class="space-y-5">
-            <article
-                class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <x-management.card>
                 <h2 class="font-bold">{{ __('Quick access') }}</h2>
                 <div class="mt-4 grid grid-cols-2 gap-3">
                     @foreach([[__('Add user'), route('users.create'), 'M12 5v14M5 12h14'], [__('Companies'), route('companies.index'), 'M3 21h18M6 21V7l6-4 6 4v14'], [__('Access control'), route('roles.index'), 'M12 3 4 7v5c0 5 3.4 8 8 9'], [__('Settings'), route('management.settings'), 'M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z']] as $action)
@@ -456,9 +443,8 @@ $kpis = [
                                 </svg>
                     </span><b class="mt-3 block text-xs">{{ $action[0] }}</b></a>@endforeach
                 </div>
-            </article>
-            <article
-                class="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            </x-management.card>
+            <x-management.card>
                 <div class="flex justify-between">
                     <div>
                         <h2 class="font-bold">{{ __('Fiscal year status') }}</h2>
@@ -475,7 +461,7 @@ $kpis = [
                             class="text-[10px] text-slate-400">{{ __('Closed') }}</span>
                     </div>
                 </div>
-            </article>
+            </x-management.card>
         </div>
     </section>
 </x-super-admin-layout>

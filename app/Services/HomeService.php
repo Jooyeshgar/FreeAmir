@@ -147,7 +147,6 @@ class HomeService
                 'metrics' => [
                     'businesses' => Company::query()->distinct()->count('name'),
                     'activeBusinesses' => Company::query()->whereNull('closed_at')->distinct()->count('name'),
-                    'fiscalYears' => Company::query()->count(),
                     'openFiscalYears' => Company::query()->whereNull('closed_at')->count(),
                     'closedFiscalYears' => Company::query()->whereNotNull('closed_at')->count(),
                     'users' => User::query()->count(),
@@ -173,9 +172,6 @@ class HomeService
                 'fallingUsageCompanies' => $fallingUsageCompanies,
                 'activityMetrics' => [
                     'total' => Activity::query()->count(),
-                    'today' => Activity::query()->whereDate('created_at', Carbon::today())->count(),
-                    'model' => Activity::query()->where('source', 'model')->count(),
-                    'request' => Activity::query()->where('source', 'request')->count(),
                 ],
             ];
         };
@@ -184,7 +180,7 @@ class HomeService
             ? $statistics()
             : Cache::remember('dashboard.super-admin-overview.v2', now()->addMinutes(5), $statistics);
 
-        return $statistics + [
+        $dashboard = $statistics + [
             'recentCompanies' => Company::query()
                 ->withCount('users')
                 ->orderByDesc('id')
@@ -201,12 +197,40 @@ class HomeService
                 ->orderByDesc('users_count')
                 ->orderBy('name')
                 ->get(),
-            'recentActivities' => Activity::query()
-                ->with('user:id,name,email')
-                ->latest('id')
-                ->limit(4)
-                ->get(),
         ];
+
+        $metrics = $dashboard['metrics'];
+        $newUsers = $metrics['newUsers'];
+
+        $dashboard['viewModel'] = [
+            'growthLabels' => $dashboard['userGrowth']->pluck('label')->map(fn (string $label): string => __($label))->all(),
+            'growthTabs' => [
+                'registrations' => ['datasets' => [['label' => __('Registration'), 'data' => $dashboard['userGrowth']->pluck('count')->all()]]],
+                'companies' => ['datasets' => [['label' => __('New companies'), 'data' => $dashboard['userGrowth']->pluck('companies')->all()]]],
+                'documents' => ['datasets' => [['label' => __('Documents'), 'data' => $dashboard['userGrowth']->pluck('documents')->all()]]],
+            ],
+            'activationSteps' => [
+                ['label' => __('Registration'), 'count' => $newUsers, 'percentage' => 100],
+                ['label' => __('Email verification'), 'count' => $metrics['verifiedNewUsers'], 'percentage' => $this->percentage($metrics['verifiedNewUsers'], $newUsers)],
+                ['label' => __('Company creation'), 'count' => $metrics['companyCreatedNewUsers'], 'percentage' => $this->percentage($metrics['companyCreatedNewUsers'], $newUsers)],
+                ['label' => __('First document'), 'count' => $metrics['firstDocumentNewUsers'], 'percentage' => $this->percentage($metrics['firstDocumentNewUsers'], $newUsers)],
+            ],
+            'activeUserSegments' => [
+                $metrics['dailyActiveUsers'],
+                max(0, $metrics['weeklyActiveUsers'] - $metrics['dailyActiveUsers']),
+                max(0, $metrics['monthlyActiveUsers'] - $metrics['weeklyActiveUsers']),
+                max(0, $metrics['users'] - $metrics['monthlyActiveUsers']),
+            ],
+            'roleChartData' => $dashboard['roles']->mapWithKeys(fn (Role $role): array => [$role->name => $role->users_count])->all(),
+            'maximumActivity' => max(1, $dashboard['activityTrend']->max('count')),
+        ];
+
+        return $dashboard;
+    }
+
+    private function percentage(int $value, int $total): int
+    {
+        return $total > 0 ? (int) round(($value / $total) * 100) : 0;
     }
 
     /**
