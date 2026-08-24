@@ -170,6 +170,10 @@ body {
     font-family: Vazirmatn, sans-serif !important;
 }
 
+[x-cloak] { display: none !important; }
+
+.admin-shell main { z-index: auto; padding: 0; }
+
 .printable {
     background-color: lightgray;
     background-image: none;
