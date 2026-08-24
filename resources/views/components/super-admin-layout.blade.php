@@ -69,7 +69,22 @@
                     </label>
                 </form>
                 <label class="swap swap-rotate grid h-10 w-10 cursor-pointer place-items-center rounded-xl border border-slate-200 text-slate-500 dark:border-slate-700" aria-label="{{ __('Dark mode') }}"><input type="checkbox" value="dark" class="theme-controller"><svg class="swap-off h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0-16v2m0 16v2M2 12h2m16 0h2" /></svg><svg class="swap-on h-5 w-5 fill-current" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" /></svg></label>
-                <details class="dropdown dropdown-end"><summary class="flex h-10 cursor-pointer list-none items-center rounded-xl border border-slate-200 px-3 text-xs dark:border-slate-700">{{ app()->isLocale('fa') ? 'FA' : 'EN' }}</summary><div class="dropdown-content z-50 mt-2 w-40 rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">@foreach(['fa'=>__('Farsi'),'en'=>__('English')] as $locale=>$label)<form method="POST" action="{{ route('locale') }}">@csrf<input type="hidden" name="locale" value="{{ $locale }}"><button class="w-full rounded-lg px-3 py-2 text-start text-xs hover:bg-slate-100 dark:hover:bg-slate-800">{{ $label }}</button></form>@endforeach</div></details>
+                <details class="dropdown dropdown-end">
+                    <summary class="flex h-10 cursor-pointer list-none items-center rounded-xl border border-slate-200 px-3 text-xs dark:border-slate-700">
+                        {{ app()->isLocale('fa') ? 'FA' : 'EN' }}
+                    </summary>
+                    <div class="dropdown-content z-50 mt-2 w-40 rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                        @foreach (['fa' => __('Farsi'), 'en' => __('English')] as $locale => $label)
+                            <form id="management-locale-{{ $locale }}-form" method="POST" action="{{ route('locale') }}">
+                                @csrf
+                                <input type="hidden" name="locale" value="{{ $locale }}">
+                                <button class="w-full rounded-lg px-3 py-2 text-start text-xs hover:bg-slate-100 dark:hover:bg-slate-800">
+                                    {{ $label }}
+                                </button>
+                            </form>
+                        @endforeach
+                    </div>
+                </details>
                 <details class="dropdown dropdown-end"><summary class="flex cursor-pointer list-none items-center gap-2 rounded-xl p-1.5 hover:bg-slate-50 dark:hover:bg-slate-800"><span class="grid h-9 w-9 place-items-center rounded-xl bg-[#19a394] text-sm font-bold text-white">{{ mb_strtoupper(mb_substr($user->name, 0, 1)) }}</span><span class="hidden max-w-28 truncate text-xs font-bold sm:block">{{ $user->name }}</span></summary><ul class="dropdown-content menu z-50 mt-2 w-60 rounded-xl border border-slate-200 bg-white p-2 text-xs shadow-xl dark:border-slate-700 dark:bg-slate-900"><li class="menu-title"><span class="truncate font-normal text-slate-400">{{ $user->email }}</span></li><li><a href="{{ route('management.settings') }}">{{ __('Settings') }}</a></li><li><a href="{{ route('logout') }}" class="text-error">{{ __('Logout') }}</a></li></ul></details>
             </div>
             <x-impersonation-banner within-sticky-header />

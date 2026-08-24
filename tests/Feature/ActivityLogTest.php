@@ -791,11 +791,8 @@ class ActivityLogTest extends TestCase
             ->assertSee(route('management.activity-logs.index'), false)
             ->assertViewHas('activityMetrics', fn (array $metrics): bool => $metrics === [
                 'total' => 2,
-                'today' => 2,
-                'model' => 1,
-                'request' => 1,
             ])
-            ->assertViewHas('recentActivities', fn ($activities): bool => $activities->count() === 2);
+            ->assertViewMissing('recentActivities');
     }
 
     public function test_initial_migration_creates_the_final_schema_and_renames_the_config_key(): void
