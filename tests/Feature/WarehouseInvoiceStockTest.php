@@ -16,6 +16,7 @@ use App\Models\ServiceGroup;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Models\WarehouseProductStock;
+use App\Services\AncillaryCostService;
 use App\Services\InvoiceService;
 use App\Services\WarehouseService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -276,6 +277,90 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->assertEqualsWithDelta(150, (float) $destinationStock->average_cost, 0.01);
     }
 
+    public function test_buy_preserves_the_selected_warehouse_cost_when_it_differs_from_the_product_cost(): void
+    {
+        $this->product->update(['quantity' => 10, 'average_cost' => 150]);
+        $this->setStock($this->emptyWarehouse, 10, 200);
+
+        $this->createInvoice(InvoiceType::BUY, 10, $this->emptyWarehouse, true, null, 300);
+
+        $stock = WarehouseProductStock::query()
+            ->where('warehouse_id', $this->emptyWarehouse->id)
+            ->where('product_id', $this->product->id)
+            ->firstOrFail();
+
+        $this->assertEqualsWithDelta(250, (float) $stock->average_cost, 0.01);
+    }
+
+    public function test_approving_ancillary_cost_updates_the_next_transfer_cost(): void
+    {
+        $buy = $this->createInvoice(InvoiceType::BUY, 10, $this->mainWarehouse, true);
+
+        $this->createAncillaryCost($buy, true);
+
+        $transfer = app(WarehouseService::class)->transfer(
+            $this->product->fresh(),
+            $this->mainWarehouse,
+            $this->emptyWarehouse,
+            1
+        );
+
+        $this->assertEqualsWithDelta(110, (float) $transfer->unit_cost, 0.01);
+    }
+
+    public function test_unapproving_ancillary_cost_reverses_the_next_transfer_cost(): void
+    {
+        $buy = $this->createInvoice(InvoiceType::BUY, 10, $this->mainWarehouse, true);
+        $ancillaryCost = $this->createAncillaryCost($buy, true);
+
+        (new AncillaryCostService)->changeAncillaryCostStatus($ancillaryCost->fresh(), 'unapprove');
+
+        $transfer = app(WarehouseService::class)->transfer(
+            $this->product->fresh(),
+            $this->mainWarehouse,
+            $this->emptyWarehouse,
+            1
+        );
+
+        $this->assertEqualsWithDelta(100, (float) $transfer->unit_cost, 0.01);
+    }
+
+    public function test_reapproving_ancillary_cost_restores_the_next_transfer_cost(): void
+    {
+        $buy = $this->createInvoice(InvoiceType::BUY, 10, $this->mainWarehouse, true);
+        $ancillaryCost = $this->createAncillaryCost($buy, true);
+        $service = new AncillaryCostService;
+
+        $service->changeAncillaryCostStatus($ancillaryCost->fresh(), 'unapprove');
+        $service->changeAncillaryCostStatus($ancillaryCost->fresh(), 'approve');
+
+        $transfer = app(WarehouseService::class)->transfer(
+            $this->product->fresh(),
+            $this->mainWarehouse,
+            $this->emptyWarehouse,
+            1
+        );
+
+        $this->assertEqualsWithDelta(110, (float) $transfer->unit_cost, 0.01);
+    }
+
+    public function test_deleting_approved_ancillary_cost_reverses_the_next_transfer_cost(): void
+    {
+        $buy = $this->createInvoice(InvoiceType::BUY, 10, $this->mainWarehouse, true);
+        $ancillaryCost = $this->createAncillaryCost($buy, true);
+
+        AncillaryCostService::deleteAncillaryCost($ancillaryCost->fresh());
+
+        $transfer = app(WarehouseService::class)->transfer(
+            $this->product->fresh(),
+            $this->mainWarehouse,
+            $this->emptyWarehouse,
+            1
+        );
+
+        $this->assertEqualsWithDelta(100, (float) $transfer->unit_cost, 0.01);
+    }
+
     private function createInvoice(InvoiceType $type, float $quantity, Warehouse $warehouse, bool $approved, ?Invoice $returnedInvoice = null, float $unit = 100): Invoice
     {
         $result = InvoiceService::createInvoice(
@@ -393,12 +478,28 @@ class WarehouseInvoiceStockTest extends TestCase
         ]);
     }
 
-    private function setStock(Warehouse $warehouse, float $quantity): void
+    private function setStock(Warehouse $warehouse, float $quantity, float $averageCost = 100): void
     {
         WarehouseProductStock::updateOrCreate(
             ['warehouse_id' => $warehouse->id, 'product_id' => $this->product->id],
-            ['quantity' => $quantity, 'average_cost' => 100]
+            ['quantity' => $quantity, 'average_cost' => $averageCost]
         );
+    }
+
+    private function createAncillaryCost(Invoice $invoice, bool $approved)
+    {
+        return AncillaryCostService::createAncillaryCost($this->user, [
+            'invoice_id' => $invoice->id,
+            'customer_id' => $this->customer->id,
+            'company_id' => $this->company->id,
+            'date' => now()->toDateString(),
+            'type' => 'Shipping',
+            'amount' => 100,
+            'vatPrice' => 0,
+            'ancillaryCosts' => [
+                ['product_id' => $this->product->id, 'amount' => 100],
+            ],
+        ], $approved)['ancillaryCost'];
     }
 
     private function assertStock(Warehouse $warehouse, float $quantity): void

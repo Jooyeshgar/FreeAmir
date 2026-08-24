@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Models\AncillaryCost;
 use App\Models\AncillaryCostItem;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
@@ -169,8 +170,37 @@ class ProductService
         }
 
         $stock->quantity = (float) $stock->quantity + $delta;
-        $stock->average_cost = $product->average_cost ?? $stock->average_cost;
         $stock->save();
+    }
+
+    public static function adjustWarehouseAverageCostForAncillaryCost(AncillaryCost $ancillaryCost, bool $reverse = false): void
+    {
+        $ancillaryCost->loadMissing('items', 'invoice.items');
+
+        foreach ($ancillaryCost->items as $ancillaryCostItem) {
+            $invoiceItem = $ancillaryCost->invoice->items
+                ->first(fn (InvoiceItem $item) => $item->itemable_type === Product::class
+                    && (int) $item->itemable_id === (int) $ancillaryCostItem->product_id);
+
+            if (! $invoiceItem?->warehouse_id) {
+                continue;
+            }
+
+            $stock = WarehouseProductStock::query()
+                ->where('product_id', $ancillaryCostItem->product_id)
+                ->where('warehouse_id', $invoiceItem->warehouse_id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $stock || (float) $stock->quantity <= 0) {
+                continue;
+            }
+
+            $costDelta = (float) $ancillaryCostItem->amount * ($reverse ? -1 : 1);
+            $stockValue = ((float) $stock->quantity * (float) $stock->average_cost) + $costDelta;
+            $stock->average_cost = max(0.0, $stockValue / (float) $stock->quantity);
+            $stock->save();
+        }
     }
 
     public static function updateWarehouseAverageCosts(Invoice $invoice): void
