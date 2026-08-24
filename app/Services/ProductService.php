@@ -122,6 +122,7 @@ class ProductService
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->get();
+            $invoiceTypes = $invoices->pluck('invoice_type', 'id');
 
             $quantity = 0.0;
 
@@ -132,7 +133,7 @@ class ProductService
                     if ($invoice->invoice_type === InvoiceType::VOID && $invoice->returned_invoice_id) {
                         // A void item's history row represents the reversal of its original invoice.
                         // Keep its snapshot at the stock level that existed before that original entry.
-                        $voidedInvoiceType = Invoice::withoutGlobalScopes()->find($invoice->returned_invoice_id)?->invoice_type;
+                        $voidedInvoiceType = $invoiceTypes->get($invoice->returned_invoice_id);
                         $quantityAt = match ($voidedInvoiceType) {
                             InvoiceType::BUY, InvoiceType::RETURN_SELL => $quantity - (float) $item->quantity,
                             InvoiceType::SELL, InvoiceType::RETURN_BUY => $quantity + (float) $item->quantity,
