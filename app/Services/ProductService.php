@@ -6,8 +6,8 @@ use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\AncillaryCostItem;
 use App\Models\Invoice;
-use App\Models\InvoiceItem;
 use App\Models\Product;
+use Illuminate\Support\Facades\DB;
 
 class ProductService
 {
@@ -108,25 +108,55 @@ class ProductService
 
     public static function recalculateQuantity(Product $product): float
     {
-        $invoiceTypes = Invoice::withoutGlobalScopes()->whereIn('status', InvoiceStatus::approvedOrSettled())
-            ->whereHas('items', function ($query) use ($product) {
-                $query->where('itemable_type', Product::class)->where('itemable_id', $product->id);
-            })->pluck('invoice_type', 'id');
+        return DB::transaction(function () use ($product): float {
+            $invoices = Invoice::withoutGlobalScopes()
+                ->whereIn('status', InvoiceStatus::approvedOrSettled())
+                ->whereHas('items', function ($query) use ($product) {
+                    $query->where('itemable_type', Product::class)->where('itemable_id', $product->id);
+                })
+                ->with(['items' => function ($query) use ($product) {
+                    $query->where('itemable_type', Product::class)->where('itemable_id', $product->id);
+                }])
+                ->orderBy('date')
+                ->orderBy('number')
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
 
-        $quantity = InvoiceItem::query()->whereIn('invoice_id', $invoiceTypes->keys())->where('itemable_type', Product::class)->where('itemable_id', $product->id)
-            ->get()->sum(function (InvoiceItem $item) use ($invoiceTypes): float {
-                $sign = match ($invoiceTypes[$item->invoice_id]) {
-                    InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID => 1,
-                    InvoiceType::SELL, InvoiceType::RETURN_BUY => -1,
-                };
+            $quantity = 0.0;
 
-                return $sign * (float) $item->quantity;
-            });
+            foreach ($invoices as $invoice) {
+                foreach ($invoice->items as $item) {
+                    $quantityAt = $quantity;
 
-        $product->quantity = $quantity;
-        $product->save();
+                    if ($invoice->invoice_type === InvoiceType::VOID && $invoice->returned_invoice_id) {
+                        // A void item's history row represents the reversal of its original invoice.
+                        // Keep its snapshot at the stock level that existed before that original entry.
+                        $voidedInvoiceType = Invoice::withoutGlobalScopes()->find($invoice->returned_invoice_id)?->invoice_type;
+                        $quantityAt = match ($voidedInvoiceType) {
+                            InvoiceType::BUY, InvoiceType::RETURN_SELL => $quantity - (float) $item->quantity,
+                            InvoiceType::SELL, InvoiceType::RETURN_BUY => $quantity + (float) $item->quantity,
+                            default => $quantity,
+                        };
+                    }
 
-        return $quantity;
+                    $item->quantity_at = $quantityAt;
+                    $item->save();
+
+                    $sign = match ($invoice->invoice_type) {
+                        InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID => 1,
+                        InvoiceType::SELL, InvoiceType::RETURN_BUY => -1,
+                    };
+
+                    $quantity += $sign * (float) $item->quantity;
+                }
+            }
+
+            $product->quantity = $quantity;
+            $product->save();
+
+            return $quantity;
+        });
     }
 
     protected function syncSubjects(Product $product): void
