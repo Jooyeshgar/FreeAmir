@@ -122,26 +122,12 @@ class ProductService
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->get();
-            $invoiceTypes = $invoices->pluck('invoice_type', 'id');
 
             $quantity = 0.0;
 
             foreach ($invoices as $invoice) {
                 foreach ($invoice->items as $item) {
-                    $quantityAt = $quantity;
-
-                    if ($invoice->invoice_type === InvoiceType::VOID && $invoice->returned_invoice_id) {
-                        // A void item's history row represents the reversal of its original invoice.
-                        // Keep its snapshot at the stock level that existed before that original entry.
-                        $voidedInvoiceType = $invoiceTypes->get($invoice->returned_invoice_id);
-                        $quantityAt = match ($voidedInvoiceType) {
-                            InvoiceType::BUY, InvoiceType::RETURN_SELL => $quantity - (float) $item->quantity,
-                            InvoiceType::SELL, InvoiceType::RETURN_BUY => $quantity + (float) $item->quantity,
-                            default => $quantity,
-                        };
-                    }
-
-                    $item->quantity_at = $quantityAt;
+                    $item->quantity_at = $quantity;
                     $item->save();
 
                     $sign = match ($invoice->invoice_type) {

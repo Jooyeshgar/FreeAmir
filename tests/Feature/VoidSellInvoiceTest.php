@@ -221,23 +221,6 @@ class VoidSellInvoiceTest extends TestCase
         $this->assertSame(8.0, (float) $this->findProduct($product->id)->quantity);
     }
 
-    public function test_recalculating_product_stock_keeps_void_item_snapshot_at_pre_original_invoice_stock(): void
-    {
-        $product = $this->createProduct();
-
-        $this->buy([$this->productItem($product, 10, 100)], true, 7030, '2026-07-01');
-        $sell = $this->sell([$this->productItem($product, 4, 180)], true, 7031, '2026-07-02')['invoice'];
-        $this->post(route('invoices.void', $sell), ['date' => '1405/04/12', 'invoice_number' => 7032]);
-
-        $voidInvoice = $sell->voidInvoice()->firstOrFail();
-        $this->findInvoiceItem($voidInvoice, $product)->update(['quantity_at' => 999]);
-
-        $this->post(route('products.recalculate-quantity', $product));
-
-        $this->assertSame(6.0, (float) $this->findInvoiceItem($voidInvoice, $product)->quantity_at);
-        $this->assertSame(10.0, (float) $this->findProduct($product->id)->quantity);
-    }
-
     public function test_unapproving_void_invoice_reapplies_the_original_sell_inventory_effect(): void
     {
         $product = $this->createProduct();
