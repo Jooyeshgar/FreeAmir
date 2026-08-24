@@ -50,13 +50,27 @@ class HomeService
                 ->where('created_at', '>=', $userGrowthStart)
                 ->get(['created_at'])
                 ->countBy(fn (User $user): string => $user->created_at->format('Y-m'));
-            $userGrowth = collect(range(0, 5))->map(function (int $offset) use ($userGrowthStart, $usersByMonth): array {
+            $companiesByMonth = User::query()
+                ->where('created_at', '>=', $userGrowthStart)
+                ->whereHas('companies')
+                ->with('companies:id')
+                ->get(['id', 'created_at'])
+                ->groupBy(fn (User $user): string => $user->created_at->format('Y-m'))
+                ->map(fn ($users): int => $users->flatMap->companies->pluck('id')->unique()->count());
+            $documentsByMonth = Document::withoutGlobalScopes()
+                ->where('created_at', '>=', $userGrowthStart)
+                ->get(['created_at'])
+                ->countBy(fn (Document $document): string => $document->created_at->format('Y-m'));
+            $userGrowth = collect(range(0, 5))->map(function (int $offset) use ($userGrowthStart, $usersByMonth, $companiesByMonth, $documentsByMonth): array {
                 $month = $userGrowthStart->copy()->addMonths($offset);
+                $key = $month->format('Y-m');
 
                 return [
-                    'key' => $month->format('Y-m'),
+                    'key' => $key,
                     'label' => $month->translatedFormat('M'),
-                    'count' => $usersByMonth->get($month->format('Y-m'), 0),
+                    'count' => $usersByMonth->get($key, 0),
+                    'companies' => $companiesByMonth->get($key, 0),
+                    'documents' => $documentsByMonth->get($key, 0),
                 ];
             });
 
@@ -88,9 +102,46 @@ class HomeService
             $activationRate = $newUsers > 0
                 ? round((User::query()->where('created_at', '>=', $currentPeriodStart)->has('companies')->count() / $newUsers) * 100, 1)
                 : 0.0;
+            $newUsersQuery = User::query()->where('created_at', '>=', $currentPeriodStart);
+            $verifiedNewUsers = (clone $newUsersQuery)->whereNotNull('email_verified_at')->count();
+            $companyCreatedNewUsers = (clone $newUsersQuery)->has('companies')->count();
+            $firstDocumentNewUsers = (clone $newUsersQuery)
+                ->whereHas('companies', fn ($companyQuery) => $companyQuery->whereHas('documents'))
+                ->count();
             $monthlyDocuments = Document::withoutGlobalScopes()->where('created_at', '>=', $currentPeriodStart)->count();
             $monthlyInvoices = Invoice::withoutGlobalScopes()->where('created_at', '>=', $currentPeriodStart)->count();
             $activeBusinesses = Company::query()->whereNull('closed_at')->distinct()->count('name');
+            $usageByCompany = Document::withoutGlobalScopes()
+                ->join('companies', 'documents.company_id', '=', 'companies.id')
+                ->where('documents.created_at', '>=', $previousPeriodStart)
+                ->select('companies.name')
+                ->selectRaw('SUM(CASE WHEN documents.created_at >= ? THEN 1 ELSE 0 END) as current_count', [$currentPeriodStart])
+                ->selectRaw('SUM(CASE WHEN documents.created_at < ? THEN 1 ELSE 0 END) as previous_count', [$currentPeriodStart])
+                ->groupBy('companies.name')
+                ->get();
+            $topUsageCompanies = $usageByCompany
+                ->filter(fn ($company): bool => (int) $company->current_count > 0)
+                ->sortByDesc(fn ($company): int => (int) $company->current_count)
+                ->take(5)
+                ->values();
+            $highestCompanyUsage = max(1, (int) $topUsageCompanies->max('current_count'));
+            $topUsageCompanies = $topUsageCompanies->map(fn ($company): array => [
+                'name' => $company->name,
+                'documents' => (int) $company->current_count,
+                'percentage' => round(((int) $company->current_count / $highestCompanyUsage) * 100, 1),
+            ]);
+            $fallingUsageCompanies = $usageByCompany
+                ->filter(fn ($company): bool => (int) $company->previous_count > 0
+                    && (int) $company->current_count < (int) $company->previous_count)
+                ->map(fn ($company): array => [
+                    'name' => $company->name,
+                    'current' => (int) $company->current_count,
+                    'previous' => (int) $company->previous_count,
+                    'drop' => round((((int) $company->previous_count - (int) $company->current_count) / (int) $company->previous_count) * 100, 1),
+                ])
+                ->sortByDesc('drop')
+                ->take(5)
+                ->values();
 
             return [
                 'metrics' => [
@@ -105,6 +156,9 @@ class HomeService
                     'newUsers' => $newUsers,
                     'userGrowthRate' => $userGrowthRate,
                     'activationRate' => $activationRate,
+                    'verifiedNewUsers' => $verifiedNewUsers,
+                    'companyCreatedNewUsers' => $companyCreatedNewUsers,
+                    'firstDocumentNewUsers' => $firstDocumentNewUsers,
                     'dailyActiveUsers' => $dailyActiveUsers,
                     'weeklyActiveUsers' => $weeklyActiveUsers,
                     'monthlyActiveUsers' => $monthlyActiveUsers,
@@ -115,6 +169,8 @@ class HomeService
                 ],
                 'userGrowth' => $userGrowth,
                 'activityTrend' => $activityTrend,
+                'topUsageCompanies' => $topUsageCompanies,
+                'fallingUsageCompanies' => $fallingUsageCompanies,
                 'activityMetrics' => [
                     'total' => Activity::query()->count(),
                     'today' => Activity::query()->whereDate('created_at', Carbon::today())->count(),
@@ -126,7 +182,7 @@ class HomeService
 
         $statistics = app()->environment('testing')
             ? $statistics()
-            : Cache::remember('dashboard.super-admin-overview.v1', now()->addMinutes(5), $statistics);
+            : Cache::remember('dashboard.super-admin-overview.v2', now()->addMinutes(5), $statistics);
 
         return $statistics + [
             'recentCompanies' => Company::query()

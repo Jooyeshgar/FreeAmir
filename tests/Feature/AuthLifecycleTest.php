@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Company;
 use App\Models\Config;
+use App\Models\Document;
 use App\Models\Scopes\FiscalYearScope;
 use App\Models\User;
 use App\Notifications\UserVerificationNotification;
@@ -300,13 +301,80 @@ class AuthLifecycleTest extends TestCase
             ->assertSee(__('User growth'))
             ->assertSee(__('Activity trend'))
             ->assertSee(__('Active businesses'))
+            ->assertSee(__('Welcome back, :name', ['name' => $actor->name]))
+            ->assertSee(__('A live overview of the platform during the last 30 days.'))
+            ->assertSee('id="management-welcome"', false)
+            ->assertSee('id="management-growth-chart"', false)
+            ->assertSee('data-chart-tab="registrations"', false)
+            ->assertSee('data-chart-tab="companies"', false)
+            ->assertSee('data-chart-tab="documents"', false)
+            ->assertSee('id="management-active-users-chart"', false)
+            ->assertSee("type: 'line'", false)
+            ->assertSee("type: 'doughnut'", false)
+            ->assertSee('group relative overflow-hidden', false)
+            ->assertSee(route('management.dashboard'), false)
             ->assertViewHas('metrics', fn (array $metrics): bool => $metrics['newUsers'] === 2
                 && $metrics['activeBusinesses'] === 1
                 && $metrics['closedFiscalYears'] === 1)
-            ->assertViewHas('userGrowth', fn ($trend): bool => $trend->count() === 6 && $trend->sum('count') === 3)
+            ->assertSee(__('Company creation'))
+            ->assertSee(__('First document'))
+            ->assertViewHas('userGrowth', fn ($trend): bool => $trend->count() === 6 && $trend->sum('count') === 3
+                && $trend->every(fn (array $month): bool => array_key_exists('companies', $month) && array_key_exists('documents', $month)))
             ->assertViewHas('activityTrend', fn ($trend): bool => $trend->count() === 7);
 
         $this->assertTrue($openCompany->exists);
+    }
+
+    public function test_super_admin_dashboard_shows_usage_depth_and_role_chart_data(): void
+    {
+        $actor = User::factory()->create();
+        $actor->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+        $role = Role::create(['name' => 'Dashboard Operator']);
+        $actor->assignRole($role);
+        $growingCompany = $this->company('Growing Usage Company');
+        $fallingCompany = $this->company('Falling Usage Company');
+
+        foreach (range(1, 3) as $number) {
+            Document::withoutGlobalScopes()->create([
+                'number' => $number,
+                'date' => now()->toDateString(),
+                'creator_id' => $actor->id,
+                'company_id' => $growingCompany->id,
+                'created_at' => now()->subDays($number),
+            ]);
+        }
+
+        foreach (range(4, 7) as $number) {
+            $document = Document::withoutGlobalScopes()->create([
+                'number' => $number,
+                'date' => now()->subDays(35)->toDateString(),
+                'creator_id' => $actor->id,
+                'company_id' => $fallingCompany->id,
+            ]);
+            $document->timestamps = false;
+            $document->forceFill(['created_at' => now()->subDays(35)])->save();
+        }
+
+        Document::withoutGlobalScopes()->create([
+            'number' => 8,
+            'date' => now()->toDateString(),
+            'creator_id' => $actor->id,
+            'company_id' => $fallingCompany->id,
+            'created_at' => now()->subDays(2),
+        ]);
+
+        $this->actingAs($actor)->get(route('management.dashboard'))
+            ->assertOk()
+            ->assertSee(__('Highest usage'))
+            ->assertSee(__('Usage decline compared with last month'))
+            ->assertSee('Growing Usage Company')
+            ->assertSee('Falling Usage Company')
+            ->assertSee('id="management-users-by-role-chart"', false)
+            ->assertSee('Dashboard Operator')
+            ->assertViewHas('topUsageCompanies', fn ($companies): bool => $companies->contains(fn (array $company): bool => $company['name'] === 'Growing Usage Company'
+                && $company['documents'] === 3))
+            ->assertViewHas('fallingUsageCompanies', fn ($companies): bool => $companies->contains(fn (array $company): bool => $company['name'] === 'Falling Usage Company'
+                && $company['drop'] === 75.0));
     }
 
     public function test_user_show_displays_profile_roles_company_and_account_timestamps(): void
