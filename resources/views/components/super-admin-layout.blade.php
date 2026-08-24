@@ -30,7 +30,7 @@
 
     <header class="sticky top-0 z-30 w-full border-b border-base-content/8 bg-base-100/90 backdrop-blur-md">
         <div class="h-1 bg-linear-to-r from-emerald-500 via-teal-500 to-cyan-500"></div>
-        <div class="navbar min-h-14 items-center justify-between gap-3 px-3 min-[1430px]:mx-auto min-[1430px]:w-[1430px]">
+        <div class="navbar mx-auto min-h-14 w-full max-w-[1430px] items-center justify-between gap-2 px-3">
             <nav class="flex min-w-0 flex-1 items-center gap-1" aria-label="{{ __('Super-Admin navigation') }}">
                 <a href="{{ $hasCurrentWorkspace ? route('home') : route('management.dashboard') }}"
                     class="flex shrink-0 items-center rounded-lg p-1.5 transition-colors hover:bg-base-200"
@@ -38,7 +38,7 @@
                     <img src="/images/logo.png" alt="{{ __(config('app.name')) }}" class="h-9 w-9 object-contain">
                 </a>
 
-                <ul class="app-main-menu menu menu-horizontal flex-nowrap px-1" data-main-menu>
+                <ul class="app-main-menu menu menu-horizontal hidden flex-nowrap px-1 lg:flex" data-main-menu>
                     <li>
                         <a href="{{ route('management.dashboard') }}" @class([
                             'text-sm',
@@ -84,7 +84,7 @@
                 </ul>
             </nav>
 
-            <nav aria-label="{{ __('User menu') }}">
+            <nav class="hidden lg:block" aria-label="{{ __('User menu') }}">
                 <ul class="app-main-menu menu menu-horizontal flex-nowrap px-1" data-main-menu>
                     <li class="!flex flex-row items-center gap-1">
                         <a href="{{ route('home') }}" class="btn btn-ghost btn-sm">
@@ -126,12 +126,39 @@
                     </li>
                 </ul>
             </nav>
+
+            <nav class="ms-auto flex items-center gap-1 lg:hidden" aria-label="{{ __('Mobile navigation') }}">
+                <label class="swap swap-rotate btn btn-ghost btn-square min-h-11 min-w-11" aria-label="{{ __('Dark mode') }}">
+                    <input type="checkbox" value="dark" class="theme-controller">
+                    <svg class="swap-off h-5 w-5 fill-none stroke-current" viewBox="0 0 24 24" stroke-width="2"><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0-16v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" /></svg>
+                    <svg class="swap-on h-5 w-5 fill-current" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" /></svg>
+                </label>
+                <details class="dropdown dropdown-end" data-mobile-menu>
+                    <summary class="btn btn-ghost btn-square min-h-11 min-w-11" aria-label="{{ __('Super-Admin navigation') }}">
+                        <svg class="h-6 w-6 fill-none stroke-current" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                    </summary>
+                    <ul class="dropdown-content menu z-50 mt-2 max-h-[calc(100dvh-5rem)] w-[min(20rem,calc(100vw-1.5rem))] overflow-y-auto rounded-box border border-base-300 bg-base-100 p-2 shadow-xl">
+                        <li><a href="{{ route('management.dashboard') }}">{{ __('Dashboard') }}</a></li>
+                        <li class="menu-title"><span>{{ __('Organization') }}</span></li>
+                        <li><a href="{{ route('companies.index') }}">{{ __('Companies') }}</a></li>
+                        <li><a href="{{ route('users.index') }}">{{ __('Users') }}</a></li>
+                        <li class="menu-title"><span>{{ __('Access control') }}</span></li>
+                        <li><a href="{{ route('roles.index') }}">{{ __('Roles') }}</a></li>
+                        <li><a href="{{ route('permissions.index') }}">{{ __('Permissions') }}</a></li>
+                        <li class="menu-title"><span>{{ __('System') }}</span></li>
+                        <li><a href="{{ route('management.activity-logs.index') }}">{{ __('Activity log') }}</a></li>
+                        <li><a href="{{ route('management.settings') }}">{{ __('Settings') }}</a></li>
+                        <li><a href="{{ route('home') }}">{{ __('Workspace') }}</a></li>
+                        <li><a href="{{ route('logout') }}" class="text-error">{{ __('Logout') }}</a></li>
+                    </ul>
+                </details>
+            </nav>
         </div>
 
         <x-impersonation-banner within-sticky-header />
     </header>
 
-    <main class="relative mx-auto mt-5 min-[1430px]:w-[1430px]">
+    <main class="relative mx-auto mt-3 w-full max-w-[1430px] px-3 sm:mt-5 sm:px-4 lg:px-5">
         {{ $slot }}
     </main>
 
