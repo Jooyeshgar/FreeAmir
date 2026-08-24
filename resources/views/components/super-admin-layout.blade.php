@@ -24,16 +24,16 @@
     <title>{{ $title }} | {{ __(config('app.name')) }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
-<body class="admin-shell min-h-screen overflow-x-hidden bg-[#f5f7fa] text-[#172033] dark:bg-slate-950 dark:text-slate-100" dir="{{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }}">
+<body class="admin-shell min-h-screen overflow-x-hidden bg-[#f5f7f6] text-[#172033] antialiased dark:bg-slate-950 dark:text-slate-100" dir="{{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }}">
 <div x-data="{ sidebarOpen: false }" @keydown.escape.window="sidebarOpen = false">
     <div x-cloak x-show="sidebarOpen" x-transition.opacity class="fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-sm lg:hidden" @click="sidebarOpen = false"></div>
 
     <aside id="management-sidebar" :class="sidebarOpen ? 'translate-x-0' : 'translate-x-full ltr:-translate-x-full'" class="fixed inset-y-0 start-0 z-50 flex w-72 flex-col overflow-y-auto bg-[#15263b] text-slate-300 shadow-2xl transition-transform duration-300 lg:translate-x-0">
         <div class="grid-paper pointer-events-none absolute inset-0 opacity-70"></div>
-        <div class="relative flex h-20 items-center gap-3 border-b border-white/10 px-5">
+        <div class="relative flex h-24 items-center gap-3 border-b border-white/10 px-6">
             <a href="{{ route('management.dashboard') }}" class="flex min-w-0 flex-1 items-center gap-3">
-                <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#16a394] shadow-lg shadow-emerald-950/30"><img src="/images/logo.png" alt="" class="h-7 w-7 object-contain brightness-0 invert"></span>
-                <span class="min-w-0"><strong class="block truncate text-lg font-extrabold text-white">{{ __(config('app.name')) }}</strong><span class="mt-0.5 block text-[10px] text-slate-400">{{ __('Super-Admin Panel') }}</span></span>
+                <span class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#16a394] shadow-lg shadow-emerald-950/30"><img src="/images/logo.png" alt="" class="h-7 w-7 object-contain brightness-0 invert"></span>
+                <span class="min-w-0"><strong class="block truncate text-xl font-extrabold text-white">{{ __(config('app.name')) }}</strong><span class="mt-0.5 block text-[11px] text-slate-400">{{ __('Super-Admin Panel') }}</span></span>
             </a>
             <button type="button" class="grid h-9 w-9 place-items-center rounded-lg text-slate-400 hover:bg-white/10 lg:hidden" @click="sidebarOpen=false" aria-label="{{ __('Close') }}"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" d="m6 6 12 12M18 6 6 18" /></svg></button>
         </div>
@@ -58,14 +58,14 @@
     </aside>
 
     <div class="min-h-screen lg:ps-72">
-        <header class="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90">
+        <header class="sticky top-0 z-30 border-b border-slate-200/80 bg-[#f5f7f6]/90 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90">
             <div class="flex h-20 items-center gap-3 px-4 sm:px-6 xl:px-8">
                 <button type="button" class="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 text-slate-600 lg:hidden dark:border-slate-700" @click="sidebarOpen=true" aria-controls="management-sidebar" aria-label="{{ __('Menu') }}"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" /></svg></button>
                 <div class="min-w-0 lg:w-48 lg:flex-none"><p class="text-[10px] text-slate-400">{{ __('Management') }} / {{ $title }}</p><h1 class="mt-0.5 truncate text-base font-bold text-slate-800 dark:text-white">{{ $title }}</h1></div>
                 <form method="GET" action="{{ route('users.index') }}" role="search" class="mx-auto hidden w-full max-w-md lg:block">
                     <label class="relative block">
                         <span class="pointer-events-none absolute inset-y-0 start-3 grid place-items-center text-slate-400"><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" stroke-width="1.8"/><path stroke-linecap="round" stroke-width="1.8" d="m20 20-4-4"/></svg></span>
-                        <input type="search" name="search" value="{{ request()->routeIs('users.index') ? request('search') : '' }}" placeholder="{{ __('Search users, companies, and records...') }}" class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 ps-10 pe-4 text-xs outline-none transition placeholder:text-slate-400 focus:border-[#16a394] focus:bg-white dark:border-slate-700 dark:bg-slate-800 dark:focus:border-[#16a394]">
+                        <input type="search" name="search" value="{{ request()->routeIs('users.index') ? request('search') : '' }}" placeholder="{{ __('Search users, companies, and records...') }}" class="h-11 w-full rounded-2xl border border-slate-200 bg-white ps-10 pe-4 text-xs outline-none transition placeholder:text-slate-400 focus:border-[#16a394] focus:ring-4 focus:ring-[#16a394]/10 dark:border-slate-700 dark:bg-slate-800 dark:focus:border-[#16a394]">
                     </label>
                 </form>
                 <label class="swap swap-rotate grid h-10 w-10 cursor-pointer place-items-center rounded-xl border border-slate-200 text-slate-500 dark:border-slate-700" aria-label="{{ __('Dark mode') }}"><input type="checkbox" value="dark" class="theme-controller"><svg class="swap-off h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0-16v2m0 16v2M2 12h2m16 0h2" /></svg><svg class="swap-on h-5 w-5 fill-current" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" /></svg></label>
@@ -74,7 +74,7 @@
             </div>
             <x-impersonation-banner within-sticky-header />
         </header>
-        <main class="relative mx-auto mt-3 w-full max-w-[1600px] px-4 py-7 sm:mt-4 sm:px-6 xl:px-8">{{ $slot }}</main>
+        <main class="relative mx-auto w-full max-w-[1600px] px-4 pb-7 pt-10 sm:px-7 sm:pt-12 xl:px-10 xl:pb-10">{{ $slot }}</main>
         <footer class="mx-auto flex w-full max-w-[1600px] justify-between border-t border-slate-200 px-4 py-5 text-[10px] text-slate-400 sm:px-6 xl:px-8 dark:border-slate-800"><span>{{ __(config('app.name')) }} · {{ __('Version') }} {{ localizeNumber(config('app.version')) }}</span><span>{{ __('Super-Admin Panel') }}</span></footer>
     </div>
 </div>

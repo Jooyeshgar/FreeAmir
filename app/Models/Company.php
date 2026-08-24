@@ -21,6 +21,11 @@ class Company extends Model
         return $this->belongsToMany(User::class);
     }
 
+    public function documents()
+    {
+        return $this->hasMany(Document::class);
+    }
+
     /**
      * Decrypted Moadian SSL certificate contents, or null if not set.
      */
