@@ -28,26 +28,28 @@
 <div x-data="{ sidebarOpen: false }" @keydown.escape.window="sidebarOpen = false">
     <div x-cloak x-show="sidebarOpen" x-transition.opacity class="fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-sm lg:hidden" @click="sidebarOpen = false"></div>
 
-    <aside id="management-sidebar" :class="sidebarOpen ? 'translate-x-0' : 'translate-x-full ltr:-translate-x-full'" class="fixed inset-y-0 start-0 z-50 flex w-[276px] flex-col overflow-y-auto bg-[#162235] text-slate-300 shadow-2xl transition-transform duration-300 lg:translate-x-0">
-        <div class="flex h-[82px] items-center gap-3 border-b border-white/8 px-6">
+    <aside id="management-sidebar" :class="sidebarOpen ? 'translate-x-0' : 'translate-x-full ltr:-translate-x-full'" class="fixed inset-y-0 start-0 z-50 flex w-72 flex-col overflow-y-auto bg-[#15263b] text-slate-300 shadow-2xl transition-transform duration-300 lg:translate-x-0">
+        <div class="grid-paper pointer-events-none absolute inset-0 opacity-70"></div>
+        <div class="relative flex h-20 items-center gap-3 border-b border-white/10 px-5">
             <a href="{{ route('management.dashboard') }}" class="flex min-w-0 flex-1 items-center gap-3">
-                <span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#19a394] shadow-lg shadow-emerald-950/30"><img src="/images/logo.png" alt="" class="h-8 w-8 object-contain brightness-0 invert"></span>
-                <span class="min-w-0"><strong class="block truncate text-base text-white">{{ __(config('app.name')) }}</strong><span class="mt-0.5 block text-[10px] text-slate-400">{{ __('Super-Admin Panel') }}</span></span>
+                <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#16a394] shadow-lg shadow-emerald-950/30"><img src="/images/logo.png" alt="" class="h-7 w-7 object-contain brightness-0 invert"></span>
+                <span class="min-w-0"><strong class="block truncate text-lg font-extrabold text-white">{{ __(config('app.name')) }}</strong><span class="mt-0.5 block text-[10px] text-slate-400">{{ __('Super-Admin Panel') }}</span></span>
             </a>
             <button type="button" class="grid h-9 w-9 place-items-center rounded-lg text-slate-400 hover:bg-white/10 lg:hidden" @click="sidebarOpen=false" aria-label="{{ __('Close') }}"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" d="m6 6 12 12M18 6 6 18" /></svg></button>
         </div>
-        <nav class="flex-1 px-4 py-6" aria-label="{{ __('Super-Admin navigation') }}">
+        <nav class="scrollbar relative flex-1 px-4 py-6" aria-label="{{ __('Super-Admin navigation') }}">
             <p class="mb-3 px-3 text-[10px] font-bold tracking-wider text-slate-500">{{ __('Management') }}</p>
             <ul class="space-y-1.5">
                 @foreach ($navigation as [$label, $url, $active, $icon])
-                    <li><a href="{{ $url }}" @click="sidebarOpen=false" @class(['group flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-medium transition', 'bg-[#19a394] text-white shadow-lg shadow-emerald-950/20' => $active, 'text-slate-400 hover:bg-white/6 hover:text-white' => ! $active]) @if($active) aria-current="page" @endif>
+                    <li><a href="{{ $url }}" @click="sidebarOpen=false" @class(['relative mb-1 flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm font-medium transition before:absolute before:-start-4 before:h-7 before:w-1 before:rounded-e-full', 'bg-white/10 text-white before:bg-[#16a394]' => $active, 'text-slate-400 before:bg-transparent hover:bg-white/5 hover:text-white' => ! $active]) @if($active) aria-current="page" @endif>
                         <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="{{ $icon }}" /></svg><span>{{ $label }}</span>
                     </a></li>
                 @endforeach
             </ul>
         </nav>
-        <div class="border-t border-white/8 p-4">
-            <a href="{{ $hasCurrentWorkspace ? route('home') : route('management.dashboard') }}" class="flex items-center gap-3 rounded-xl bg-white/5 p-3 transition hover:bg-white/10">
+        <div class="relative m-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div class="mb-3 flex items-center justify-between text-xs"><span class="text-slate-400">{{ __('Service health') }}</span><span class="flex items-center gap-1.5 text-emerald-300"><i class="h-2 w-2 rounded-full bg-emerald-400"></i>{{ __('Stable') }}</span></div>
+            <a href="{{ $hasCurrentWorkspace ? route('home') : route('management.dashboard') }}" class="flex items-center gap-3 border-t border-white/10 pt-3 transition">
                 <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/10 text-sm font-bold text-white">{{ mb_strtoupper(mb_substr($user->name, 0, 1)) }}</span>
                 <span class="min-w-0 flex-1"><strong class="block truncate text-xs text-white">{{ $user->name }}</strong><span class="mt-1 block text-[10px] text-slate-500">{{ __('Go to workspace') }}</span></span>
                 <svg class="h-4 w-4 text-slate-500 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" d="m9 18 6-6-6-6" /></svg>
@@ -55,18 +57,24 @@
         </div>
     </aside>
 
-    <div class="min-h-screen lg:ps-[276px]">
+    <div class="min-h-screen lg:ps-72">
         <header class="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90">
-            <div class="flex h-[82px] items-center gap-3 px-4 sm:px-6 xl:px-8">
+            <div class="flex h-20 items-center gap-3 px-4 sm:px-6 xl:px-8">
                 <button type="button" class="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 text-slate-600 lg:hidden dark:border-slate-700" @click="sidebarOpen=true" aria-controls="management-sidebar" aria-label="{{ __('Menu') }}"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" /></svg></button>
-                <div class="min-w-0 flex-1"><p class="text-[10px] text-slate-400">{{ __('Management') }} / {{ $title }}</p><h1 class="mt-1 truncate text-base font-bold text-slate-800 dark:text-white sm:text-lg">{{ $title }}</h1></div>
+                <div class="min-w-0 lg:w-48 lg:flex-none"><p class="text-[10px] text-slate-400">{{ __('Management') }} / {{ $title }}</p><h1 class="mt-0.5 truncate text-base font-bold text-slate-800 dark:text-white">{{ $title }}</h1></div>
+                <form method="GET" action="{{ route('users.index') }}" role="search" class="mx-auto hidden w-full max-w-md lg:block">
+                    <label class="relative block">
+                        <span class="pointer-events-none absolute inset-y-0 start-3 grid place-items-center text-slate-400"><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" stroke-width="1.8"/><path stroke-linecap="round" stroke-width="1.8" d="m20 20-4-4"/></svg></span>
+                        <input type="search" name="search" value="{{ request()->routeIs('users.index') ? request('search') : '' }}" placeholder="{{ __('Search users, companies, and records...') }}" class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 ps-10 pe-4 text-xs outline-none transition placeholder:text-slate-400 focus:border-[#16a394] focus:bg-white dark:border-slate-700 dark:bg-slate-800 dark:focus:border-[#16a394]">
+                    </label>
+                </form>
                 <label class="swap swap-rotate grid h-10 w-10 cursor-pointer place-items-center rounded-xl border border-slate-200 text-slate-500 dark:border-slate-700" aria-label="{{ __('Dark mode') }}"><input type="checkbox" value="dark" class="theme-controller"><svg class="swap-off h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0-16v2m0 16v2M2 12h2m16 0h2" /></svg><svg class="swap-on h-5 w-5 fill-current" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" /></svg></label>
                 <details class="dropdown dropdown-end"><summary class="flex h-10 cursor-pointer list-none items-center rounded-xl border border-slate-200 px-3 text-xs dark:border-slate-700">{{ app()->isLocale('fa') ? 'FA' : 'EN' }}</summary><div class="dropdown-content z-50 mt-2 w-40 rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">@foreach(['fa'=>__('Farsi'),'en'=>__('English')] as $locale=>$label)<form method="POST" action="{{ route('locale') }}">@csrf<input type="hidden" name="locale" value="{{ $locale }}"><button class="w-full rounded-lg px-3 py-2 text-start text-xs hover:bg-slate-100 dark:hover:bg-slate-800">{{ $label }}</button></form>@endforeach</div></details>
                 <details class="dropdown dropdown-end"><summary class="flex cursor-pointer list-none items-center gap-2 rounded-xl p-1.5 hover:bg-slate-50 dark:hover:bg-slate-800"><span class="grid h-9 w-9 place-items-center rounded-xl bg-[#19a394] text-sm font-bold text-white">{{ mb_strtoupper(mb_substr($user->name, 0, 1)) }}</span><span class="hidden max-w-28 truncate text-xs font-bold sm:block">{{ $user->name }}</span></summary><ul class="dropdown-content menu z-50 mt-2 w-60 rounded-xl border border-slate-200 bg-white p-2 text-xs shadow-xl dark:border-slate-700 dark:bg-slate-900"><li class="menu-title"><span class="truncate font-normal text-slate-400">{{ $user->email }}</span></li><li><a href="{{ route('management.settings') }}">{{ __('Settings') }}</a></li><li><a href="{{ route('logout') }}" class="text-error">{{ __('Logout') }}</a></li></ul></details>
             </div>
             <x-impersonation-banner within-sticky-header />
         </header>
-        <main class="relative mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 xl:px-8">{{ $slot }}</main>
+        <main class="relative mx-auto mt-3 w-full max-w-[1600px] px-4 py-7 sm:mt-4 sm:px-6 xl:px-8">{{ $slot }}</main>
         <footer class="mx-auto flex w-full max-w-[1600px] justify-between border-t border-slate-200 px-4 py-5 text-[10px] text-slate-400 sm:px-6 xl:px-8 dark:border-slate-800"><span>{{ __(config('app.name')) }} · {{ __('Version') }} {{ localizeNumber(config('app.version')) }}</span><span>{{ __('Super-Admin Panel') }}</span></footer>
     </div>
 </div>

@@ -75,6 +75,23 @@ class HomeService
                 ];
             });
 
+            $activeUsers = static fn (Carbon $since): int => Activity::query()
+                ->whereNotNull('user_id')
+                ->where('created_at', '>=', $since)
+                ->distinct()
+                ->count('user_id');
+            $dailyActiveUsers = $activeUsers($now->copy()->startOfDay());
+            $weeklyActiveUsers = $activeUsers($now->copy()->subDays(6)->startOfDay());
+            $monthlyActiveUsers = $activeUsers($currentPeriodStart);
+            $previousMonthlyActiveUsers = $activeUsers($previousPeriodStart);
+            $churnedUsers = max(0, $previousMonthlyActiveUsers - $monthlyActiveUsers);
+            $activationRate = $newUsers > 0
+                ? round((User::query()->where('created_at', '>=', $currentPeriodStart)->has('companies')->count() / $newUsers) * 100, 1)
+                : 0.0;
+            $monthlyDocuments = Document::withoutGlobalScopes()->where('created_at', '>=', $currentPeriodStart)->count();
+            $monthlyInvoices = Invoice::withoutGlobalScopes()->where('created_at', '>=', $currentPeriodStart)->count();
+            $activeBusinesses = Company::query()->whereNull('closed_at')->distinct()->count('name');
+
             return [
                 'metrics' => [
                     'businesses' => Company::query()->distinct()->count('name'),
@@ -87,6 +104,14 @@ class HomeService
                     'unassignedUsers' => User::query()->doesntHave('companies')->count(),
                     'newUsers' => $newUsers,
                     'userGrowthRate' => $userGrowthRate,
+                    'activationRate' => $activationRate,
+                    'dailyActiveUsers' => $dailyActiveUsers,
+                    'weeklyActiveUsers' => $weeklyActiveUsers,
+                    'monthlyActiveUsers' => $monthlyActiveUsers,
+                    'churnRate' => $previousMonthlyActiveUsers > 0 ? round(($churnedUsers / $previousMonthlyActiveUsers) * 100, 1) : 0.0,
+                    'monthlyDocuments' => $monthlyDocuments,
+                    'monthlyInvoices' => $monthlyInvoices,
+                    'documentsPerActiveBusiness' => $activeBusinesses > 0 ? round($monthlyDocuments / $activeBusinesses, 1) : 0.0,
                 ],
                 'userGrowth' => $userGrowth,
                 'activityTrend' => $activityTrend,
