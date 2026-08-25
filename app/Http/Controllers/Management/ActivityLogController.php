@@ -7,6 +7,7 @@ use App\Models\Activity;
 use App\Models\Company;
 use App\Services\ActivityLogService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Exceptions\UrlGenerationException;
 use Illuminate\Support\Collection;
@@ -54,6 +55,17 @@ class ActivityLogController extends Controller
             $this->activityLogService->index($filters),
             $request,
         ));
+    }
+
+    public function details(Activity $activity): JsonResponse
+    {
+        abort_unless($activity->source === 'request', 404);
+
+        $row = $this->activityRow($activity->load('user:id,name,email'), Company::query()->get()->keyBy('id'), collect());
+
+        return response()->json([
+            'html' => view('super-admin.activity-logs._details', ['activity' => $row])->render(),
+        ]);
     }
 
     /**

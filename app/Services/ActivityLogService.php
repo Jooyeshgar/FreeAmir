@@ -198,7 +198,9 @@ class ActivityLogService
      */
     public function index(array $filters): array
     {
-        $query = Activity::query();
+        // Request rows can contain thousands of model snapshots. Keep that payload
+        // out of the listing query. The detail endpoint loads it only on demand.
+        $query = Activity::query()->selectRaw("activity_log.*, CASE WHEN source = 'request' THEN JSON_REMOVE(details, '$.models') ELSE details END AS details");
 
         $query->when($filters['search'] ?? null, function ($query, string $search) {
             $query->where(function ($query) use ($search) {

@@ -32,6 +32,7 @@ Route::middleware(['auth', 'ensure-feature-enabled:email_verification'])->group(
 Route::middleware(['auth', 'permission:access-super-admin-panel', 'ensure-feature-enabled:email_verification'])->prefix('management')->group(function () {
     Route::get('/', [Controllers\HomeController::class, 'managementDashboard'])->name('management.dashboard');
     Route::get('/activity-logs', [Controllers\Management\ActivityLogController::class, 'index'])->name('management.activity-logs.index');
+    Route::get('/activity-logs/{activity}/details', [Controllers\Management\ActivityLogController::class, 'details'])->whereNumber('activity')->name('management.activity-logs.details');
     Route::get('/settings', [Controllers\AboutController::class, 'index'])->name('management.settings');
     Route::get('/users/{user}', [Controllers\Management\UserController::class, 'show'])->whereNumber('user')->name('users.show');
     Route::post('/users/{user}/verify', [Controllers\Management\UserController::class, 'verify'])->name('users.verify');

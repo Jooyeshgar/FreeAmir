@@ -123,7 +123,7 @@
 
     <section class="space-y-3 sm:space-y-4" aria-label="{{ __('Activity') }}">
         @forelse ($activities as $activity)
-            <article x-data="{ detailsOpen: false, requestInputOpen: false }" class="group rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition duration-200 hover:border-slate-300 hover:shadow-md sm:p-4 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700">
+            <article x-data="{ detailsOpen: false, requestInputOpen: false, detailsLoaded: false, detailsLoading: false, detailsHtml: '' }" class="group rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition duration-200 hover:border-slate-300 hover:shadow-md sm:p-4 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                     <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
                         @if ($activity['contextUrl'])
@@ -161,7 +161,7 @@
                         <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">{{ __('Impersonated account') }}: {{ $activity['impersonatedUserName'] }}</span>
                     @endif
                     @if ($activity['hasDetails'])
-                        <button type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20 transition hover:bg-emerald-100 sm:h-7 sm:w-7 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-950/70" @click="detailsOpen = ! detailsOpen" :aria-expanded="detailsOpen" aria-controls="activity-details-{{ $activity['id'] }}" aria-label="{{ __('Details') }}" title="{{ __('Details') }}">
+                        <button type="button" class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20 transition hover:bg-emerald-100 sm:h-7 sm:w-7 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-950/70" @click="detailsOpen = ! detailsOpen; if (! detailsLoaded && ! detailsLoading) { detailsLoading = true; fetch('{{ route('management.activity-logs.details', $activity['id']) }}', { headers: { Accept: 'application/json' } }).then(response => response.json()).then(data => { detailsHtml = data.html; detailsLoaded = true; detailsOpen = true; }).finally(() => detailsLoading = false); }" :aria-expanded="detailsOpen" aria-controls="activity-details-{{ $activity['id'] }}" aria-label="{{ __('Details') }}" title="{{ __('Details') }}">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" class="h-4 w-4" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12 18 18.75 12 18.75 2.25 12 2.25 12Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" /></svg>
                         </button>
                     @endif
@@ -169,6 +169,9 @@
 
                 @if ($activity['hasDetails'])
                     <div id="activity-details-{{ $activity['id'] }}" x-cloak x-show="detailsOpen" class="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800">
+                        <template x-if="detailsLoading"><p class="text-sm text-slate-500">{{ __('Loading...') }}</p></template>
+                        <div x-show="detailsLoaded" x-html="detailsHtml"></div>
+                        <div x-show="detailsLoading || detailsLoaded" class="hidden">
                         @if ($activity['requestContext'])
                             <dl class="grid gap-2 text-xs sm:grid-cols-2 sm:gap-3 xl:grid-cols-5">
                                 @foreach ($activity['requestContext'] as $context)
@@ -235,6 +238,7 @@
                                 @endforeach
                             </div>
                         @endif
+                        </div>
                     </div>
                 @endif
             </article>
