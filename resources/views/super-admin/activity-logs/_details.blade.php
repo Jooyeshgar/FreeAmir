@@ -1,12 +1,12 @@
 <div class="space-y-3">
-    @if ($activity['requestContext'])
+    @if (! ($modelOnly ?? false) && $activity['requestContext'])
         <dl class="grid gap-2 text-xs sm:grid-cols-2 sm:gap-3 xl:grid-cols-5">
             @foreach ($activity['requestContext'] as $context)
                 <div class="rounded-xl bg-slate-50 p-3 dark:bg-slate-950/40"><dt class="font-semibold text-slate-500">{{ $context['label'] }}</dt><dd class="mt-1 break-all font-mono text-slate-800 dark:text-slate-200" dir="ltr">@if ($context['url'] ?? null)<a href="{{ $context['url'] }}" class="text-sky-700 hover:underline dark:text-sky-300">{{ $context['value'] }}</a>@else{{ $context['value'] }}@endif</dd></div>
             @endforeach
         </dl>
     @endif
-    @if ($activity['requestInput'])
+    @if (! ($modelOnly ?? false) && $activity['requestInput'])
         <details class="rounded-xl bg-slate-950 p-3 text-xs text-slate-100" dir="ltr"><summary class="cursor-pointer font-semibold">{{ __('Request details') }}</summary><pre class="mt-2 max-h-72 overflow-auto whitespace-pre-wrap">{{ $activity['requestInput'] }}</pre></details>
     @endif
     @foreach ($activity['changes']->groupBy('model') as $model => $changes)

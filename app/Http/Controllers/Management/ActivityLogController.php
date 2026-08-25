@@ -73,7 +73,10 @@ class ActivityLogController extends Controller
         }
 
         return response()->json([
-            'html' => view('super-admin.activity-logs._details', ['activity' => $row])->render(),
+            'html' => view('super-admin.activity-logs._details', [
+                'activity' => $row,
+                'modelOnly' => $activity->source === 'request' && $request->filled('model'),
+            ])->render(),
         ]);
     }
 
