@@ -3251,5 +3251,8 @@
     "Highest usage": "Highest usage",
     "Usage decline compared with last month": "Usage decline compared with last month",
     "No usage data for this month.": "No usage data for this month.",
-    "No usage declines compared with last month.": "No usage declines compared with last month."
+    "No usage declines compared with last month.": "No usage declines compared with last month.",
+    "New users": "New users",
+    "Open and closed periods": "Open and closed periods",
+    "DAU / WAU / MAU": "DAU / WAU / MAU"
 }

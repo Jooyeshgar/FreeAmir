@@ -19,6 +19,7 @@ use App\Models\Subject;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 
 class HomeService
@@ -46,28 +47,31 @@ class HomeService
             };
 
             $userGrowthStart = $now->copy()->startOfMonth()->subMonths(5);
+            $monthExpression = DB::connection()->getDriverName() === 'sqlite'
+                ? "strftime('%Y-%m', created_at)"
+                : "DATE_FORMAT(created_at, '%Y-%m')";
             $usersByMonth = User::query()
                 ->where('created_at', '>=', $userGrowthStart)
-                ->get(['created_at'])
-                ->countBy(fn (User $user): string => $user->created_at->format('Y-m'));
-            $companiesByMonth = User::query()
+                ->selectRaw("{$monthExpression} as period, COUNT(*) as aggregate_count")
+                ->groupBy('period')
+                ->pluck('aggregate_count', 'period');
+            $companiesByMonth = Company::query()
                 ->where('created_at', '>=', $userGrowthStart)
-                ->whereHas('companies')
-                ->with('companies:id')
-                ->get(['id', 'created_at'])
-                ->groupBy(fn (User $user): string => $user->created_at->format('Y-m'))
-                ->map(fn ($users): int => $users->flatMap->companies->pluck('id')->unique()->count());
+                ->selectRaw("{$monthExpression} as period, COUNT(DISTINCT id) as aggregate_count")
+                ->groupBy('period')
+                ->pluck('aggregate_count', 'period');
             $documentsByMonth = Document::withoutGlobalScopes()
                 ->where('created_at', '>=', $userGrowthStart)
-                ->get(['created_at'])
-                ->countBy(fn (Document $document): string => $document->created_at->format('Y-m'));
+                ->selectRaw("{$monthExpression} as period, COUNT(*) as aggregate_count")
+                ->groupBy('period')
+                ->pluck('aggregate_count', 'period');
             $userGrowth = collect(range(0, 5))->map(function (int $offset) use ($userGrowthStart, $usersByMonth, $companiesByMonth, $documentsByMonth): array {
                 $month = $userGrowthStart->copy()->addMonths($offset);
                 $key = $month->format('Y-m');
 
                 return [
                     'key' => $key,
-                    'label' => $month->translatedFormat('M'),
+                    'label' => $key,
                     'count' => $usersByMonth->get($key, 0),
                     'companies' => $companiesByMonth->get($key, 0),
                     'documents' => $documentsByMonth->get($key, 0),
@@ -77,14 +81,15 @@ class HomeService
             $activityStart = $now->copy()->subDays(6)->startOfDay();
             $activitiesByDay = Activity::query()
                 ->where('created_at', '>=', $activityStart)
-                ->get(['created_at'])
-                ->countBy(fn (Activity $activity): string => $activity->created_at->toDateString());
+                ->selectRaw('DATE(created_at) as period, COUNT(*) as aggregate_count')
+                ->groupBy('period')
+                ->pluck('aggregate_count', 'period');
             $activityTrend = collect(range(0, 6))->map(function (int $offset) use ($activityStart, $activitiesByDay): array {
                 $day = $activityStart->copy()->addDays($offset);
 
                 return [
                     'date' => $day->toDateString(),
-                    'label' => $day->translatedFormat('D'),
+                    'label' => $day->toDateString(),
                     'count' => $activitiesByDay->get($day->toDateString(), 0),
                 ];
             });
@@ -178,7 +183,7 @@ class HomeService
 
         $statistics = app()->environment('testing')
             ? $statistics()
-            : Cache::remember('dashboard.super-admin-overview.v2', now()->addMinutes(5), $statistics);
+            : Cache::remember('dashboard.super-admin-overview.v2.'.app()->getLocale(), now()->addMinutes(5), $statistics);
 
         $dashboard = $statistics + [
             'recentCompanies' => Company::query()
@@ -203,7 +208,7 @@ class HomeService
         $newUsers = $metrics['newUsers'];
 
         $dashboard['viewModel'] = [
-            'growthLabels' => $dashboard['userGrowth']->pluck('label')->map(fn (string $label): string => __($label))->all(),
+            'growthLabels' => $dashboard['userGrowth']->pluck('label')->map(fn (string $label): string => Carbon::createFromFormat('Y-m-d', $label.'-01')->locale(app()->getLocale())->translatedFormat('M'))->all(),
             'growthTabs' => [
                 'registrations' => ['datasets' => [['label' => __('Registration'), 'data' => $dashboard['userGrowth']->pluck('count')->all()]]],
                 'companies' => ['datasets' => [['label' => __('New companies'), 'data' => $dashboard['userGrowth']->pluck('companies')->all()]]],
@@ -222,6 +227,7 @@ class HomeService
                 max(0, $metrics['users'] - $metrics['monthlyActiveUsers']),
             ],
             'roleChartData' => $dashboard['roles']->mapWithKeys(fn (Role $role): array => [$role->name => $role->users_count])->all(),
+            'activityLabels' => $dashboard['activityTrend']->pluck('label')->map(fn (string $label): string => Carbon::parse($label)->locale(app()->getLocale())->translatedFormat('D'))->all(),
             'maximumActivity' => max(1, $dashboard['activityTrend']->max('count')),
         ];
 
