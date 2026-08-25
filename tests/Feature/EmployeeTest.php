@@ -7,6 +7,8 @@ use App\Enums\EmployeeGender;
 use App\Enums\EmployeeNationality;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\MonthlyAttendance;
+use App\Models\Payroll;
 use App\Models\SalaryDecree;
 use App\Models\User;
 use App\Models\WorkShift;
@@ -357,6 +359,48 @@ class EmployeeTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee($employee->first_name);
         $response->assertSee($employee->last_name);
+    }
+
+    public function test_show_displays_salary_payroll_and_attendance_details_with_related_links(): void
+    {
+        $this->user->givePermissionTo(
+            Permission::firstOrCreate(['name' => 'salary.salary-decrees.*']),
+            Permission::firstOrCreate(['name' => 'salary.payrolls.*']),
+            Permission::firstOrCreate(['name' => 'attendance.monthly-attendances.*']),
+        );
+
+        $employee = $this->makeEmployee();
+        $decree = SalaryDecree::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $employee->id,
+            'name' => 'Active Decree 1405',
+            'daily_wage' => 2500000,
+            'is_active' => true,
+        ]);
+        $attendance = MonthlyAttendance::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $employee->id,
+            'year' => 1405,
+            'month' => 4,
+        ]);
+        $payroll = Payroll::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $employee->id,
+            'decree_id' => $decree->id,
+            'monthly_attendance_id' => $attendance->id,
+            'year' => 1405,
+            'month' => 4,
+            'net_payment' => 45000000,
+        ]);
+
+        $response = $this->get(route('hr.employees.show', $employee));
+
+        $response->assertOk();
+        $response->assertSee('Active Decree 1405');
+        $response->assertSee(formatNumber(45000000), false);
+        $response->assertSee(route('salary.salary-decrees.index', ['employee_id' => $employee->id]), false);
+        $response->assertSee(route('salary.payrolls.show', $payroll), false);
+        $response->assertSee(route('attendance.monthly-attendances.show', $attendance), false);
     }
 
     // ----------------------------------------------------------------

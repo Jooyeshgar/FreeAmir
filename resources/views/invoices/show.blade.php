@@ -146,7 +146,7 @@
             <div>
                 <div class="divider text-lg font-semibold">{{ __('Customer Details') }}</div>
                 @if ($invoice->customer)
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                         <div class="card bg-base-200 shadow">
                             <div class="card-body p-4">
                                 <h3
@@ -163,6 +163,16 @@
                                     {{ __('Phone') }}</h3>
                                 <p class="text-lg font-semibold text-gray-800 dark:text-slate-100">
                                     {{ $invoice->customer->phone ? localizeNumber($invoice->customer->phone) : '—' }}
+                                </p>
+                            </div>
+                        </div>
+                        <div class="card bg-base-200 shadow">
+                            <div class="card-body p-4">
+                                <h3
+                                    class="card-title text-xs uppercase tracking-wide text-gray-500 dark:text-slate-300">
+                                    {{ __('Mobile') }}</h3>
+                                <p class="text-lg font-semibold text-gray-800 dark:text-slate-100">
+                                    {{ $invoice->customer->mobile ? localizeNumber($invoice->customer->mobile) : '—' }}
                                 </p>
                             </div>
                         </div>

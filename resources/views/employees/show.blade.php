@@ -294,6 +294,200 @@
                 </div>
             </div>
 
+            {{-- Salary and payroll --}}
+            <div class="divider text-lg font-semibold">{{ __('Salary and Payroll') }}</div>
+
+            @php
+                $currentDecree = $employee->salaryDecrees->firstWhere('is_active', true);
+                $latestPayroll = $employee->payrolls->first();
+            @endphp
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="rounded-box border border-base-300 bg-base-200/40 p-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <h3 class="font-semibold">{{ __('Current Salary Decree') }}</h3>
+                        @can('salary.salary-decrees.index')
+                            <a href="{{ route('salary.salary-decrees.index', ['employee_id' => $employee->id]) }}" class="link link-primary text-sm">
+                                {{ __('View All') }}
+                            </a>
+                        @endcan
+                    </div>
+
+                    @if ($currentDecree)
+                        <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <div class="text-xs text-base-content/60">{{ __('Decree Name') }}</div>
+                                <div class="font-semibold">{{ $currentDecree->name ?? '—' }}</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-base-content/60">{{ __('Daily Wage') }}</div>
+                                <div class="font-semibold">{{ $currentDecree->daily_wage !== null ? formatNumber($currentDecree->daily_wage) : '—' }}</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-base-content/60">{{ __('Start Date') }}</div>
+                                <div class="font-semibold">{{ formatDate($currentDecree->start_date) }}</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-base-content/60">{{ __('End Date') }}</div>
+                                <div class="font-semibold">{{ $currentDecree->end_date ? formatDate($currentDecree->end_date) : '—' }}</div>
+                            </div>
+                        </div>
+
+                        @if ($currentDecree->benefits->isNotEmpty())
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                @foreach ($currentDecree->benefits as $benefit)
+                                    <span class="badge badge-outline gap-1">
+                                        {{ $benefit->element?->title ?? __('Payroll Element') }}:
+                                        {{ formatNumber($benefit->element_value) }}
+                                    </span>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        @can('salary.salary-decrees.edit')
+                            <a href="{{ route('salary.salary-decrees.edit', $currentDecree) }}" class="btn btn-sm btn-outline mt-4">
+                                {{ __('View') }}
+                            </a>
+                        @endcan
+                    @else
+                        <p class="mt-3 text-sm text-base-content/60">{{ __('No salary decrees found.') }}</p>
+                    @endif
+                </div>
+
+                <div class="rounded-box border border-base-300 bg-base-200/40 p-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <h3 class="font-semibold">{{ __('Latest Payroll') }}</h3>
+                        @can('salary.payrolls.index')
+                            <a href="{{ route('salary.payrolls.index', ['employee_id' => $employee->id]) }}" class="link link-primary text-sm">
+                                {{ __('View All') }}
+                            </a>
+                        @endcan
+                    </div>
+
+                    @if ($latestPayroll)
+                        <div class="mt-3 grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <div class="text-xs text-base-content/60">{{ __('Period') }}</div>
+                                <div class="font-semibold">
+                                    {{ \App\Models\MonthlyAttendance::MONTH_NAMES[$latestPayroll->month] ?? $latestPayroll->month }}
+                                    {{ localizeNumber($latestPayroll->year) }}
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-base-content/60">{{ __('Status') }}</div>
+                                <span class="badge badge-sm {{ $latestPayroll->statusBadgeClass() }}">{{ $latestPayroll->statusLabel() }}</span>
+                            </div>
+                            <div>
+                                <div class="text-xs text-base-content/60">{{ __('Total Earnings') }}</div>
+                                <div class="font-semibold text-success">{{ formatNumber($latestPayroll->total_earnings) }}</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-base-content/60">{{ __('Total Deductions') }}</div>
+                                <div class="font-semibold text-error">{{ formatNumber($latestPayroll->total_deductions) }}</div>
+                            </div>
+                            <div class="col-span-2">
+                                <div class="text-xs text-base-content/60">{{ __('Net Payment') }}</div>
+                                <div class="font-semibold text-primary">{{ formatNumber($latestPayroll->net_payment) }}</div>
+                            </div>
+                        </div>
+
+                        @can('salary.payrolls.show')
+                            <a href="{{ route('salary.payrolls.show', $latestPayroll) }}" class="btn btn-sm btn-outline mt-4">
+                                {{ __('View Payroll') }}
+                            </a>
+                        @endcan
+                    @else
+                        <p class="mt-3 text-sm text-base-content/60">{{ __('No payrolls found') }}</p>
+                    @endif
+                </div>
+            </div>
+
+            <div class="mt-4 rounded-box border border-base-300 overflow-x-auto">
+                <div class="flex items-center justify-between gap-3 px-4 pt-4">
+                    <h3 class="font-semibold">{{ __('Recent Monthly Attendances') }}</h3>
+                    @can('attendance.monthly-attendances.index')
+                        <a href="{{ route('attendance.monthly-attendances.index', ['employee_id' => $employee->id]) }}" class="link link-primary text-sm">
+                            {{ __('View All') }}
+                        </a>
+                    @endcan
+                </div>
+                <table class="table table-sm mt-2">
+                    <thead>
+                        <tr>
+                            <th>{{ __('Period') }}</th>
+                            <th>{{ __('Present') }}</th>
+                            <th>{{ __('Absent') }}</th>
+                            <th>{{ __('Overtime') }}</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($employee->monthlyAttendances->take(5) as $attendance)
+                            <tr>
+                                <td>{{ $attendance->month_name }} {{ localizeNumber($attendance->year) }}</td>
+                                <td>{{ localizeNumber($attendance->present_days) }}</td>
+                                <td>{{ localizeNumber($attendance->absent_days) }}</td>
+                                <td>{{ formatMinutesAsTime($attendance->overtime + $attendance->auto_overtime) }}</td>
+                                <td class="text-end">
+                                    @can('attendance.monthly-attendances.show')
+                                        <a href="{{ route('attendance.monthly-attendances.show', $attendance) }}" class="btn btn-xs btn-ghost">
+                                            {{ __('View') }}
+                                        </a>
+                                    @endcan
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="py-4 text-center text-base-content/60">{{ __('No monthly attendance records found.') }}</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-4 rounded-box border border-base-300 overflow-x-auto">
+                <div class="flex items-center justify-between gap-3 px-4 pt-4">
+                    <h3 class="font-semibold">{{ __('Payroll History') }}</h3>
+                    @can('salary.payrolls.index')
+                        <a href="{{ route('salary.payrolls.index', ['employee_id' => $employee->id]) }}" class="link link-primary text-sm">
+                            {{ __('View All') }}
+                        </a>
+                    @endcan
+                </div>
+                <table class="table table-sm mt-2">
+                    <thead>
+                        <tr>
+                            <th>{{ __('Period') }}</th>
+                            <th class="text-end">{{ __('Total Earnings') }}</th>
+                            <th class="text-end">{{ __('Total Deductions') }}</th>
+                            <th class="text-end">{{ __('Net Payment') }}</th>
+                            <th>{{ __('Status') }}</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($employee->payrolls->take(5) as $payroll)
+                            <tr>
+                                <td>{{ \App\Models\MonthlyAttendance::MONTH_NAMES[$payroll->month] ?? $payroll->month }} {{ localizeNumber($payroll->year) }}</td>
+                                <td class="text-end text-success">{{ formatNumber($payroll->total_earnings) }}</td>
+                                <td class="text-end text-error">{{ formatNumber($payroll->total_deductions) }}</td>
+                                <td class="text-end font-semibold text-primary">{{ formatNumber($payroll->net_payment) }}</td>
+                                <td><span class="badge badge-sm {{ $payroll->statusBadgeClass() }}">{{ $payroll->statusLabel() }}</span></td>
+                                <td class="text-end">
+                                    @can('salary.payrolls.show')
+                                        <a href="{{ route('salary.payrolls.show', $payroll) }}" class="btn btn-xs btn-ghost">{{ __('View') }}</a>
+                                    @endcan
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="6" class="py-4 text-center text-base-content/60">{{ __('No payrolls found') }}</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
             {{-- Account User --}}
             @if ($employee->user)
                 <div class="divider text-lg font-semibold">{{ __('System Account') }}</div>

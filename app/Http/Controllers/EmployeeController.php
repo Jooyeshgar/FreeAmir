@@ -100,7 +100,16 @@ class EmployeeController extends Controller
 
     public function show(Employee $employee): View
     {
-        $employee->load(['workSite', 'orgChart', 'organizationUnit', 'workSiteContract', 'workShift']);
+        $employee->load([
+            'workSite',
+            'orgChart',
+            'organizationUnit',
+            'workSiteContract',
+            'workShift',
+            'salaryDecrees' => fn ($query) => $query->with('benefits.element')->orderByDesc('is_active')->orderByDesc('start_date'),
+            'monthlyAttendances' => fn ($query) => $query->orderByDesc('year')->orderByDesc('month'),
+            'payrolls' => fn ($query) => $query->with(['decree', 'monthlyAttendance'])->orderByDesc('year')->orderByDesc('month'),
+        ]);
 
         return view('employees.show', compact('employee'));
     }
