@@ -3258,5 +3258,8 @@
     "No usage declines compared with last month.": "No usage declines compared with last month.",
     "New users": "New users",
     "Open and closed periods": "Open and closed periods",
-    "DAU / WAU / MAU": "DAU / WAU / MAU"
+    "DAU / WAU / MAU": "DAU / WAU / MAU",
+    "DAU": "Daily active users (DAU)",
+    "WAU": "Weekly active users (WAU)",
+    "MAU": "Monthly active users (MAU)"
 }

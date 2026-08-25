@@ -48,7 +48,7 @@
             :unit="__('Company assigned')" icon="M4 19V9m5 10V5m5 14v-7m5 7V3"
             icon-class="bg-amber-50 text-amber-500" />
         <x-kpi-card class="admin-rise" :title="__('Monthly active users')" :value="$metrics['monthlyActiveUsers']"
-            unit="MAU" icon="M3 12h4l3-9 4 18 3-9h4" icon-class="bg-sky-50 text-sky-500" />
+            :unit="__('MAU')" icon="M3 12h4l3-9 4 18 3-9h4" icon-class="bg-sky-50 text-sky-500" />
         <x-kpi-card class="admin-rise" :title="__('Churn rate')" :value="$metrics['churnRate'].'%'"
             :unit="__('Compared with prior period')" icon="M4 6l6 6 4-4 6 6M4 18h16"
             icon-class="bg-rose-50 text-[#f07662]" />
@@ -123,7 +123,7 @@
                         </div>
                         @unless ($loop->last)
                             <span
-                                class="absolute-end-2.5 top-1/2 z-10 hidden h-5 w-5 -translate-y-1/2 place-items-center rounded-full border border-slate-200 bg-white text-[10px] text-slate-700 shadow sm:grid rtl:rotate-180 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">→</span>
+                                class="absolute-end-2.5 top-1/2 z-10 hidden h-5 w-5 -translate-y-1/2 place-items-center rounded-full border border-slate-300 bg-white text-[10px] font-bold text-slate-800 shadow sm:grid rtl:rotate-180 dark:border-slate-600 dark:bg-slate-800 dark:text-white">→</span>
                         @endunless
                     </div>
                 @endforeach
@@ -169,7 +169,7 @@
                 <p class="mt-1 text-xs text-slate-400">{{ __('Activity across key time windows') }}</p>
             </header>
             <div class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                @foreach([['DAU', $metrics['dailyActiveUsers']], ['WAU', $metrics['weeklyActiveUsers']], ['MAU', $metrics['monthlyActiveUsers']], [__('Active businesses'), $metrics['activeBusinesses']]] as $item)
+                @foreach([[__('DAU'), $metrics['dailyActiveUsers']], [__('WAU'), $metrics['weeklyActiveUsers']], [__('MAU'), $metrics['monthlyActiveUsers']], [__('Active businesses'), $metrics['activeBusinesses']]] as $item)
                     <div class="rounded-xl bg-slate-50 p-4 dark:bg-slate-950/40">
                         <span class="text-[10px] text-slate-400">{{ $item[0] }}</span>
                         <b class="mt-1 block text-xl">{{ localizeNumber(number_format($item[1])) }}</b>

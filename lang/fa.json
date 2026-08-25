@@ -3289,5 +3289,8 @@
     "No usage declines compared with last month.": "نسبت به ماه قبل افت مصرفی ثبت نشده است.",
     "New users": "کاربران جدید",
     "Open and closed periods": "دوره‌های باز و بسته",
-    "DAU / WAU / MAU": "کاربران فعال روزانه / هفتگی / ماهانه"
+    "DAU / WAU / MAU": "کاربران فعال روزانه / هفتگی / ماهانه",
+    "DAU": "فعال روزانه (DAU)",
+    "WAU": "فعال هفتگی (WAU)",
+    "MAU": "فعال ماهانه (MAU)"
 }

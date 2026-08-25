@@ -28,7 +28,7 @@
 <div x-data="{ sidebarOpen: false }" @keydown.escape.window="sidebarOpen = false">
     <div x-cloak x-show="sidebarOpen" x-transition.opacity class="fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-sm lg:hidden" @click="sidebarOpen = false"></div>
 
-    <aside id="management-sidebar" :class="sidebarOpen ? 'translate-x-0' : 'ltr:-translate-x-full rtl:translate-x-full'" class="fixed inset-y-0 start-0 z-50 flex w-72 flex-col overflow-y-auto bg-[#15263b] text-slate-300 shadow-2xl transition-transform duration-300 lg:translate-x-0">
+    <aside id="management-sidebar" :class="sidebarOpen ? 'translate-x-0' : 'ltr:-translate-x-full rtl:translate-x-full'" class="fixed inset-y-0 start-0 z-50 flex w-72 flex-col overflow-y-auto bg-[#15263b] text-slate-300 shadow-2xl transition-transform duration-300 ltr:left-0 rtl:right-0 lg:translate-x-0">
         <div class="grid-paper pointer-events-none absolute inset-0 opacity-70"></div>
         <div class="relative flex h-24 items-center gap-3 border-b border-white/10 px-6">
             <a href="{{ route('management.dashboard') }}" class="flex min-w-0 flex-1 items-center gap-3">

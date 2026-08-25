@@ -209,7 +209,7 @@ class HomeService
         $newUsers = $metrics['newUsers'];
 
         $dashboard['viewModel'] = [
-            'growthLabels' => $dashboard['userGrowth']->pluck('label')->map(fn (string $label): string => Carbon::createFromFormat('Y-m-d', $label.'-01')->locale(app()->getLocale())->translatedFormat('M'))->all(),
+            'growthLabels' => $dashboard['userGrowth']->pluck('label')->map(fn (string $label): string => $this->localizedMonthLabel($label))->all(),
             'growthTabs' => [
                 'registrations' => ['datasets' => [['label' => __('Registration'), 'data' => $dashboard['userGrowth']->pluck('count')->all()]]],
                 'companies' => ['datasets' => [['label' => __('New companies'), 'data' => $dashboard['userGrowth']->pluck('companies')->all()]]],
@@ -228,7 +228,7 @@ class HomeService
                 max(0, $metrics['users'] - $metrics['monthlyActiveUsers']),
             ],
             'roleChartData' => $dashboard['roles']->mapWithKeys(fn (Role $role): array => [$role->name => $role->users_count])->all(),
-            'activityLabels' => $dashboard['activityTrend']->pluck('label')->map(fn (string $label): string => Carbon::parse($label)->locale(app()->getLocale())->translatedFormat('D'))->all(),
+            'activityLabels' => $dashboard['activityTrend']->pluck('label')->map(fn (string $label): string => $this->localizedDayLabel($label))->all(),
             'maximumActivity' => max(1, $dashboard['activityTrend']->max('count')),
         ];
 
@@ -238,6 +238,24 @@ class HomeService
     private function percentage(int $value, int $total): int
     {
         return $total > 0 ? (int) round(($value / $total) * 100) : 0;
+    }
+
+    private function localizedMonthLabel(string $period): string
+    {
+        $date = Carbon::createFromFormat('Y-m-d', $period.'-01');
+
+        return app()->isLocale('fa')
+            ? jdate('F', $date->timestamp, '', 'Asia/Tehran', 'fa')
+            : $date->locale(app()->getLocale())->translatedFormat('M');
+    }
+
+    private function localizedDayLabel(string $date): string
+    {
+        $carbon = Carbon::parse($date);
+
+        return app()->isLocale('fa')
+            ? jdate('D', $carbon->timestamp, '', 'Asia/Tehran', 'fa')
+            : $carbon->locale(app()->getLocale())->translatedFormat('D');
     }
 
     /**
