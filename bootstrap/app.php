@@ -54,9 +54,7 @@ return Application::configure(basePath: dirname(__DIR__))
             LogUserActivity::class,
         ]);
 
-        $middleware->group('api', [
-            LogUserActivity::class,
-        ]);
+        $middleware->appendToGroup('api', LogUserActivity::class);
 
         // Required middleware aliases used across routes/tests.
         $middleware->alias([
