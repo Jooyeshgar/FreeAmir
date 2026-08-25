@@ -128,7 +128,8 @@ class WarehouseInvoiceStockTest extends TestCase
     {
         $this->createInvoice(InvoiceType::BUY, 10, $this->mainWarehouse, true);
         $this->createInvoice(InvoiceType::BUY, 4, $this->emptyWarehouse, true);
-        $this->createInvoice(InvoiceType::SELL, 3, $this->mainWarehouse, true);
+        $sell = $this->createInvoice(InvoiceType::SELL, 3, $this->mainWarehouse, true);
+        $this->approve($sell);
 
         WarehouseProductStock::query()->update(['quantity' => 0]);
         $this->product->update(['quantity' => 0]);
