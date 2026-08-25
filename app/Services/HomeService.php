@@ -18,6 +18,8 @@ use App\Models\Product;
 use App\Models\Subject;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 
 class HomeService
@@ -29,15 +31,162 @@ class HomeService
      */
     public function superAdminOverview(): array
     {
-        return [
-            'metrics' => [
-                'businesses' => Company::query()->distinct()->count('name'),
-                'fiscalYears' => Company::query()->count(),
-                'openFiscalYears' => Company::query()->whereNull('closed_at')->count(),
-                'users' => User::query()->count(),
-                'verifiedUsers' => User::query()->whereNotNull('email_verified_at')->count(),
-                'unassignedUsers' => User::query()->doesntHave('companies')->count(),
-            ],
+        $statistics = function (): array {
+            $now = Carbon::now();
+            $currentPeriodStart = $now->copy()->subDays(29)->startOfDay();
+            $previousPeriodStart = $currentPeriodStart->copy()->subDays(30);
+            $newUsers = User::query()->where('created_at', '>=', $currentPeriodStart)->count();
+            $previousNewUsers = User::query()
+                ->whereBetween('created_at', [$previousPeriodStart, $currentPeriodStart->copy()->subSecond()])
+                ->count();
+
+            $userGrowthRate = match (true) {
+                $previousNewUsers > 0 => round((($newUsers - $previousNewUsers) / $previousNewUsers) * 100, 1),
+                $newUsers > 0 => 100.0,
+                default => 0.0,
+            };
+
+            $userGrowthStart = $now->copy()->startOfMonth()->subMonths(5);
+            $monthExpression = DB::connection()->getDriverName() === 'sqlite'
+                ? "strftime('%Y-%m', created_at)"
+                : "DATE_FORMAT(created_at, '%Y-%m')";
+            $usersByMonth = User::query()
+                ->where('created_at', '>=', $userGrowthStart)
+                ->selectRaw("{$monthExpression} as period, COUNT(*) as aggregate_count")
+                ->groupBy('period')
+                ->pluck('aggregate_count', 'period');
+            $companiesByMonth = User::query()
+                ->join('company_user', 'users.id', '=', 'company_user.user_id')
+                ->where('users.created_at', '>=', $userGrowthStart)
+                ->selectRaw("{$monthExpression} as period, COUNT(DISTINCT company_user.company_id) as aggregate_count")
+                ->groupBy('period')
+                ->pluck('aggregate_count', 'period');
+            $documentsByMonth = Document::withoutGlobalScopes()
+                ->where('created_at', '>=', $userGrowthStart)
+                ->selectRaw("{$monthExpression} as period, COUNT(*) as aggregate_count")
+                ->groupBy('period')
+                ->pluck('aggregate_count', 'period');
+            $userGrowth = collect(range(0, 5))->map(function (int $offset) use ($userGrowthStart, $usersByMonth, $companiesByMonth, $documentsByMonth): array {
+                $month = $userGrowthStart->copy()->addMonths($offset);
+                $key = $month->format('Y-m');
+
+                return [
+                    'key' => $key,
+                    'label' => $key,
+                    'count' => $usersByMonth->get($key, 0),
+                    'companies' => $companiesByMonth->get($key, 0),
+                    'documents' => $documentsByMonth->get($key, 0),
+                ];
+            });
+
+            $activityStart = $now->copy()->subDays(6)->startOfDay();
+            $activitiesByDay = Activity::query()
+                ->where('created_at', '>=', $activityStart)
+                ->selectRaw('DATE(created_at) as period, COUNT(*) as aggregate_count')
+                ->groupBy('period')
+                ->pluck('aggregate_count', 'period');
+            $activityTrend = collect(range(0, 6))->map(function (int $offset) use ($activityStart, $activitiesByDay): array {
+                $day = $activityStart->copy()->addDays($offset);
+
+                return [
+                    'date' => $day->toDateString(),
+                    'label' => $day->toDateString(),
+                    'count' => $activitiesByDay->get($day->toDateString(), 0),
+                ];
+            });
+
+            $activeUsers = static fn (Carbon $since): int => Activity::query()
+                ->whereNotNull('user_id')
+                ->where('created_at', '>=', $since)
+                ->distinct()
+                ->count('user_id');
+            $dailyActiveUsers = $activeUsers($now->copy()->startOfDay());
+            $weeklyActiveUsers = $activeUsers($now->copy()->subDays(6)->startOfDay());
+            $monthlyActiveUsers = $activeUsers($currentPeriodStart);
+            $previousMonthlyActiveUsers = $activeUsers($previousPeriodStart);
+            $churnedUsers = max(0, $previousMonthlyActiveUsers - $monthlyActiveUsers);
+            $activationRate = $newUsers > 0
+                ? round((User::query()->where('created_at', '>=', $currentPeriodStart)->has('companies')->count() / $newUsers) * 100, 1)
+                : 0.0;
+            $newUsersQuery = User::query()->where('created_at', '>=', $currentPeriodStart);
+            $verifiedNewUsers = (clone $newUsersQuery)->whereNotNull('email_verified_at')->count();
+            $companyCreatedNewUsers = (clone $newUsersQuery)->has('companies')->count();
+            $firstDocumentNewUsers = (clone $newUsersQuery)
+                ->whereHas('companies', fn ($companyQuery) => $companyQuery->whereHas('documents'))
+                ->count();
+            $monthlyDocuments = Document::withoutGlobalScopes()->where('created_at', '>=', $currentPeriodStart)->count();
+            $monthlyInvoices = Invoice::withoutGlobalScopes()->where('created_at', '>=', $currentPeriodStart)->count();
+            $activeBusinesses = Company::query()->whereNull('closed_at')->distinct()->count('name');
+            $usageByCompany = Document::withoutGlobalScopes()
+                ->join('companies', 'documents.company_id', '=', 'companies.id')
+                ->where('documents.created_at', '>=', $previousPeriodStart)
+                ->select('companies.name')
+                ->selectRaw('SUM(CASE WHEN documents.created_at >= ? THEN 1 ELSE 0 END) as current_count', [$currentPeriodStart])
+                ->selectRaw('SUM(CASE WHEN documents.created_at < ? THEN 1 ELSE 0 END) as previous_count', [$currentPeriodStart])
+                ->groupBy('companies.name')
+                ->get();
+            $topUsageCompanies = $usageByCompany
+                ->filter(fn ($company): bool => (int) $company->current_count > 0)
+                ->sortByDesc(fn ($company): int => (int) $company->current_count)
+                ->take(5)
+                ->values();
+            $highestCompanyUsage = max(1, (int) $topUsageCompanies->max('current_count'));
+            $topUsageCompanies = $topUsageCompanies->map(fn ($company): array => [
+                'name' => $company->name,
+                'documents' => (int) $company->current_count,
+                'percentage' => round(((int) $company->current_count / $highestCompanyUsage) * 100, 1),
+            ]);
+            $fallingUsageCompanies = $usageByCompany
+                ->filter(fn ($company): bool => (int) $company->previous_count > 0
+                    && (int) $company->current_count < (int) $company->previous_count)
+                ->map(fn ($company): array => [
+                    'name' => $company->name,
+                    'current' => (int) $company->current_count,
+                    'previous' => (int) $company->previous_count,
+                    'drop' => round((((int) $company->previous_count - (int) $company->current_count) / (int) $company->previous_count) * 100, 1),
+                ])
+                ->sortByDesc('drop')
+                ->take(5)
+                ->values();
+
+            return [
+                'metrics' => [
+                    'businesses' => Company::query()->distinct()->count('name'),
+                    'activeBusinesses' => Company::query()->whereNull('closed_at')->distinct()->count('name'),
+                    'openFiscalYears' => Company::query()->whereNull('closed_at')->count(),
+                    'closedFiscalYears' => Company::query()->whereNotNull('closed_at')->count(),
+                    'users' => User::query()->count(),
+                    'verifiedUsers' => User::query()->whereNotNull('email_verified_at')->count(),
+                    'unassignedUsers' => User::query()->doesntHave('companies')->count(),
+                    'newUsers' => $newUsers,
+                    'userGrowthRate' => $userGrowthRate,
+                    'activationRate' => $activationRate,
+                    'verifiedNewUsers' => $verifiedNewUsers,
+                    'companyCreatedNewUsers' => $companyCreatedNewUsers,
+                    'firstDocumentNewUsers' => $firstDocumentNewUsers,
+                    'dailyActiveUsers' => $dailyActiveUsers,
+                    'weeklyActiveUsers' => $weeklyActiveUsers,
+                    'monthlyActiveUsers' => $monthlyActiveUsers,
+                    'churnRate' => $previousMonthlyActiveUsers > 0 ? round(($churnedUsers / $previousMonthlyActiveUsers) * 100, 1) : 0.0,
+                    'monthlyDocuments' => $monthlyDocuments,
+                    'monthlyInvoices' => $monthlyInvoices,
+                    'documentsPerActiveBusiness' => $activeBusinesses > 0 ? round($monthlyDocuments / $activeBusinesses, 1) : 0.0,
+                ],
+                'userGrowth' => $userGrowth,
+                'activityTrend' => $activityTrend,
+                'topUsageCompanies' => $topUsageCompanies,
+                'fallingUsageCompanies' => $fallingUsageCompanies,
+                'activityMetrics' => [
+                    'total' => Activity::query()->count(),
+                ],
+            ];
+        };
+
+        $statistics = app()->environment('testing')
+            ? $statistics()
+            : Cache::remember('dashboard.super-admin-overview.v2.'.app()->getLocale(), now()->addMinutes(5), $statistics);
+
+        $dashboard = $statistics + [
             'recentCompanies' => Company::query()
                 ->withCount('users')
                 ->orderByDesc('id')
@@ -54,18 +203,59 @@ class HomeService
                 ->orderByDesc('users_count')
                 ->orderBy('name')
                 ->get(),
-            'activityMetrics' => [
-                'total' => Activity::query()->count(),
-                'today' => Activity::query()->whereDate('created_at', Carbon::today())->count(),
-                'model' => Activity::query()->where('source', 'model')->count(),
-                'request' => Activity::query()->where('source', 'request')->count(),
-            ],
-            'recentActivities' => Activity::query()
-                ->with('user:id,name,email')
-                ->latest('id')
-                ->limit(4)
-                ->get(),
         ];
+
+        $metrics = $dashboard['metrics'];
+        $newUsers = $metrics['newUsers'];
+
+        $dashboard['viewModel'] = [
+            'growthLabels' => $dashboard['userGrowth']->pluck('label')->map(fn (string $label): string => $this->localizedMonthLabel($label))->all(),
+            'growthTabs' => [
+                'registrations' => ['datasets' => [['label' => __('Registration'), 'data' => $dashboard['userGrowth']->pluck('count')->all()]]],
+                'companies' => ['datasets' => [['label' => __('New companies'), 'data' => $dashboard['userGrowth']->pluck('companies')->all()]]],
+                'documents' => ['datasets' => [['label' => __('Documents'), 'data' => $dashboard['userGrowth']->pluck('documents')->all()]]],
+            ],
+            'activationSteps' => [
+                ['label' => __('Registration'), 'count' => $newUsers, 'percentage' => 100],
+                ['label' => __('Email verification'), 'count' => $metrics['verifiedNewUsers'], 'percentage' => $this->percentage($metrics['verifiedNewUsers'], $newUsers)],
+                ['label' => __('Company creation'), 'count' => $metrics['companyCreatedNewUsers'], 'percentage' => $this->percentage($metrics['companyCreatedNewUsers'], $newUsers)],
+                ['label' => __('First document'), 'count' => $metrics['firstDocumentNewUsers'], 'percentage' => $this->percentage($metrics['firstDocumentNewUsers'], $newUsers)],
+            ],
+            'activeUserSegments' => [
+                $metrics['dailyActiveUsers'],
+                max(0, $metrics['weeklyActiveUsers'] - $metrics['dailyActiveUsers']),
+                max(0, $metrics['monthlyActiveUsers'] - $metrics['weeklyActiveUsers']),
+                max(0, $metrics['users'] - $metrics['monthlyActiveUsers']),
+            ],
+            'roleChartData' => $dashboard['roles']->mapWithKeys(fn (Role $role): array => [$role->name => $role->users_count])->all(),
+            'activityLabels' => $dashboard['activityTrend']->pluck('label')->map(fn (string $label): string => $this->localizedDayLabel($label))->all(),
+            'maximumActivity' => max(1, $dashboard['activityTrend']->max('count')),
+        ];
+
+        return $dashboard;
+    }
+
+    private function percentage(int $value, int $total): int
+    {
+        return $total > 0 ? (int) round(($value / $total) * 100) : 0;
+    }
+
+    private function localizedMonthLabel(string $period): string
+    {
+        $date = Carbon::createFromFormat('Y-m-d', $period.'-01');
+
+        return app()->isLocale('fa')
+            ? jdate('F', $date->timestamp, '', 'Asia/Tehran', 'fa')
+            : $date->locale(app()->getLocale())->translatedFormat('M');
+    }
+
+    private function localizedDayLabel(string $date): string
+    {
+        $carbon = Carbon::parse($date);
+
+        return app()->isLocale('fa')
+            ? jdate('D', $carbon->timestamp, '', 'Asia/Tehran', 'fa')
+            : $carbon->locale(app()->getLocale())->translatedFormat('D');
     }
 
     /**

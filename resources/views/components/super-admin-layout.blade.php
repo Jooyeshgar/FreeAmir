@@ -1,7 +1,57 @@
 @props(['title' => __('Super-Admin Panel')])
 
 @php
-    $hasCurrentWorkspace = auth()->user()->companies()->whereKey(getActiveCompany())->where('fiscal_year', toEnglish(jdate('Y')))->exists();
+    $user = auth()->user();
+    $isRtl = app()->getLocale() === 'fa';
+    $hasCurrentWorkspace = $user
+        ->companies()
+        ->whereKey(getActiveCompany())
+        ->where('fiscal_year', toEnglish(jdate('Y')))
+        ->exists();
+    $navigation = [
+        [
+            __('Dashboard'),
+            route('management.dashboard'),
+            request()->routeIs('management.dashboard'),
+            'M4 13h6V4H4v9Zm0 7h6v-4H4v4Zm10 0h6v-9h-6v9Zm0-16v4h6V4h-6Z',
+        ],
+        [
+            __('Companies'),
+            route('companies.index'),
+            request()->routeIs('companies.*'),
+            'M3 21h18M6 21V7l6-4 6 4v14M9 10h1m4 0h1M9 14h1m4 0h1',
+        ],
+        [
+            __('Users'),
+            route('users.index'),
+            request()->routeIs('users.*'),
+            'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm13 10v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
+        ],
+        [
+            __('Roles'),
+            route('roles.index'),
+            request()->routeIs('roles.*'),
+            'M12 3 4 7v5c0 5 3.4 8 8 9 4.6-1 8-4 8-9V7l-8-4Zm-3 9 2 2 4-4',
+        ],
+        [
+            __('Permissions'),
+            route('permissions.index'),
+            request()->routeIs('permissions.*'),
+            'M15 7a4 4 0 1 0-7.9 1H3v4h3v3h3v-3h2.1A4 4 0 0 0 15 7Z',
+        ],
+        [
+            __('Activity log'),
+            route('management.activity-logs.index'),
+            request()->routeIs('management.activity-logs.*'),
+            'M4 19V9m5 10V5m5 14v-7m5 7V3',
+        ],
+        [
+            __('Settings'),
+            route('management.settings'),
+            request()->routeIs('management.settings'),
+            'M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM19 12h2M3 12h2m7-9v2m0 14v2m6.36-2.64-1.42-1.42M7.05 7.05 5.64 5.64m12.72 0-1.42 1.42M7.05 16.95l-1.41 1.41',
+        ],
+    ];
 @endphp
 
 <!DOCTYPE html>
@@ -13,132 +63,167 @@
     <meta name="csrf_token" content="{{ csrf_token() }}">
     <script>
         try {
-            document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') === 'dark' ? 'dark' : 'light');
-        } catch (error) {
-            document.documentElement.setAttribute('data-theme', 'light');
-        }
+            document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') === 'dark' ? 'dark' : 'light')
+        } catch (e) {}
     </script>
     <title>{{ $title }} | {{ __(config('app.name')) }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
-<body class="relative min-h-screen overflow-x-hidden bg-base-200 text-base-content"
+<body
+    class="admin-shell min-h-screen overflow-x-hidden bg-[#f5f7f6] text-[#172033] antialiased dark:bg-slate-950 dark:text-slate-100"
     dir="{{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }}">
-    <div class="pointer-events-none fixed inset-x-0 top-0 h-96 overflow-hidden" aria-hidden="true">
-        <div class="absolute -top-32 end-8 h-80 w-80 rounded-full bg-emerald-200/25 blur-3xl dark:bg-emerald-900/10"></div>
-    </div>
+    <div x-data="{ sidebarOpen: false }" @keydown.escape.window="sidebarOpen = false">
+        <div x-cloak x-show="sidebarOpen" x-transition.opacity
+            class="fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-sm lg:hidden" @click="sidebarOpen = false"></div>
 
-    <header class="sticky top-0 z-30 w-full border-b border-base-content/8 bg-base-100/90 backdrop-blur-md">
-        <div class="h-1 bg-linear-to-r from-emerald-500 via-teal-500 to-cyan-500"></div>
-        <div class="navbar min-h-14 items-center justify-between gap-3 px-3 min-[1430px]:mx-auto min-[1430px]:w-[1430px]">
-            <nav class="flex min-w-0 flex-1 items-center gap-1" aria-label="{{ __('Super-Admin navigation') }}">
-                <a href="{{ $hasCurrentWorkspace ? route('home') : route('management.dashboard') }}"
-                    class="flex shrink-0 items-center rounded-lg p-1.5 transition-colors hover:bg-base-200"
-                    aria-label="{{ __(config('app.name')) }}">
-                    <img src="/images/logo.png" alt="{{ __(config('app.name')) }}" class="h-9 w-9 object-contain">
+        <aside id="management-sidebar"
+            :class="sidebarOpen ? 'translate-x-0' : '{{ $isRtl ? 'translate-x-full' : '-translate-x-full' }}'"
+            class="fixed inset-y-0 {{ $isRtl ? 'right-0' : 'left-0' }} z-50 flex w-72 flex-col overflow-y-auto bg-[#15263b] text-slate-300 shadow-2xl transition-transform duration-300 lg:translate-x-0">
+            <div class="grid-paper pointer-events-none absolute inset-0 opacity-70"></div>
+            <div class="relative flex h-20 items-center gap-3 border-b border-white/10 px-6">
+                <a href="{{ route('management.dashboard') }}" class="flex min-w-0 flex-1 items-center gap-3">
+                    <span
+                        class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#16a394] shadow-lg shadow-emerald-950/30">
+                        <img src="/images/logo.png" alt="" class="h-7 w-7 object-contain brightness-0 invert">
+                    </span>
+                    <span class="min-w-0">
+                        <strong
+                            class="block truncate text-xl font-extrabold text-white">{{ __(config('app.name')) }}</strong>
+                        <span class="mt-0.5 block text-[11px] text-slate-400">{{ __('Super-Admin Panel') }}</span>
+                    </span>
                 </a>
-
-                <ul class="app-main-menu menu menu-horizontal flex-nowrap px-1" data-main-menu>
-                    <li>
-                        <a href="{{ route('management.dashboard') }}" @class([
-                            'text-sm',
-                            'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' => request()->routeIs('management.dashboard'),
-                        ])>{{ __('Dashboard') }}</a>
-                    </li>
-                    <li>
-                        <details class="app-main-menu-dropdown" data-main-menu-dropdown>
-                            <summary @class([
-                                'text-sm',
-                                'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' => request()->routeIs('companies.*', 'users.*'),
-                            ])>{{ __('Organization') }}</summary>
-                            <ul class="app-main-menu-panel z-50 mt-2 w-52">
-                                <li><a href="{{ route('companies.index') }}" @class(['active' => request()->routeIs('companies.*')])>{{ __('Companies') }}</a></li>
-                                <li><a href="{{ route('users.index') }}" @class(['active' => request()->routeIs('users.*')])>{{ __('Users') }}</a></li>
-                            </ul>
-                        </details>
-                    </li>
-                    <li>
-                        <details class="app-main-menu-dropdown" data-main-menu-dropdown>
-                            <summary @class([
-                                'text-sm',
-                                'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' => request()->routeIs('roles.*', 'permissions.*'),
-                            ])>{{ __('Access control') }}</summary>
-                            <ul class="app-main-menu-panel z-50 mt-2 w-52">
-                                <li><a href="{{ route('roles.index') }}" @class(['active' => request()->routeIs('roles.*')])>{{ __('Roles') }}</a></li>
-                                <li><a href="{{ route('permissions.index') }}" @class(['active' => request()->routeIs('permissions.*')])>{{ __('Permissions') }}</a></li>
-                            </ul>
-                        </details>
-                    </li>
-                    <li>
-                        <details class="app-main-menu-dropdown" data-main-menu-dropdown>
-                            <summary @class([
-                                'text-sm',
-                                'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300' => request()->routeIs('management.settings', 'management.activity-logs.*'),
-                            ])>{{ __('System') }}</summary>
-                            <ul class="app-main-menu-panel z-50 mt-2 w-52">
-                                <li><a href="{{ route('management.activity-logs.index') }}" @class(['active' => request()->routeIs('management.activity-logs.*')])>{{ __('Activity log') }}</a></li>
-                                <li><a href="{{ route('management.settings') }}" @class(['active' => request()->routeIs('management.settings')])>{{ __('Settings') }}</a></li>
-                            </ul>
-                        </details>
-                    </li>
+                <button type="button"
+                    class="grid h-9 w-9 place-items-center rounded-lg text-slate-400 hover:bg-white/10 lg:hidden"
+                    @click="sidebarOpen=false" aria-label="{{ __('Close') }}"><svg class="h-5 w-5" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" d="m6 6 12 12M18 6 6 18" />
+                    </svg></button>
+            </div>
+            <nav class="scrollbar relative flex-1 px-4" aria-label="{{ __('Super-Admin navigation') }}">
+                <ul class="space-y-1.5 mt-2">
+                    @foreach ($navigation as [$label, $url, $active, $icon])
+                        <li><a href="{{ $url }}" @click="sidebarOpen=false" @class([
+                            'relative mb-1 flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm font-medium transition before:absolute before:-start-4 before:h-7 before:w-1 before:rounded-e-full',
+                            'bg-white/10 text-white before:bg-[#16a394]' => $active,
+                            'text-slate-400 before:bg-transparent hover:bg-white/5 hover:text-white' => !$active,
+                        ])
+                                @if ($active) aria-current="page" @endif>
+                                <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"
+                                        d="{{ $icon }}" />
+                                </svg><span>{{ $label }}</span>
+                            </a></li>
+                    @endforeach
                 </ul>
             </nav>
+            <div class="relative m-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div class="mb-3 flex items-center justify-between text-xs"><span
+                        class="text-slate-400">{{ __('Service health') }}</span><span
+                        class="flex items-center gap-1.5 text-emerald-300"><i
+                            class="h-2 w-2 rounded-full bg-emerald-400"></i>{{ __('Stable') }}</span></div>
+                <a href="{{ $hasCurrentWorkspace ? route('home') : route('management.dashboard') }}"
+                    class="flex items-center gap-3 border-t border-white/10 pt-3 transition">
+                    <span
+                        class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/10 text-sm font-bold text-white">{{ mb_strtoupper(mb_substr($user->name, 0, 1)) }}</span>
+                    <span class="min-w-0 flex-1"><strong
+                            class="block truncate text-xs text-white">{{ $user->name }}</strong><span
+                            class="mt-1 block text-[10px] text-slate-500">{{ __('Go to workspace') }}</span></span>
+                    <svg class="h-4 w-4 text-slate-500 rtl:rotate-180" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" d="m9 18 6-6-6-6" />
+                    </svg>
+                </a>
+            </div>
+        </aside>
 
-            <nav aria-label="{{ __('User menu') }}">
-                <ul class="app-main-menu menu menu-horizontal flex-nowrap px-1" data-main-menu>
-                    <li class="!flex flex-row items-center gap-1">
-                        <a href="{{ route('home') }}" class="btn btn-ghost btn-sm">
-                            {{ __('Workspace') }}
-                        </a>
-                        <label class="swap swap-rotate btn btn-ghost btn-square btn-sm" aria-label="{{ __('Dark mode') }}">
-                            <input type="checkbox" value="dark" class="theme-controller">
-                            <svg class="swap-off h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0-16v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" /></svg>
-                            <svg class="swap-on h-5 w-5 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" /></svg>
+        <div class="min-h-screen {{ $isRtl ? 'lg:pr-72' : 'lg:pl-72' }}">
+            <header
+                class="sticky top-0 z-30 border-b border-slate-200/80 bg-[#f5f7f6]/90 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90">
+                <div class="flex h-20 items-center gap-3 px-4 sm:px-6 xl:px-8">
+                    <button type="button"
+                        class="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 text-slate-600 lg:hidden dark:border-slate-700"
+                        @click="sidebarOpen=true" aria-controls="management-sidebar"
+                        aria-label="{{ __('Menu') }}"><svg class="h-5 w-5" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24">
+                            <path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" />
+                        </svg></button>
+                    <div class="min-w-0 lg:w-48 lg:flex-none">
+                        <p class="text-[10px] text-slate-400">{{ __('Management') }} / {{ $title }}</p>
+                        <h1 class="mt-0.5 truncate text-base font-bold text-slate-800 dark:text-white">
+                            {{ $title }}</h1>
+                    </div>
+                    <form method="GET" action="{{ route('users.index') }}" role="search"
+                        class="mx-auto hidden w-full max-w-md lg:block">
+                        <label class="relative block">
+                            <span
+                                class="pointer-events-none absolute inset-y-0 start-3 grid place-items-center text-slate-400"><svg
+                                    class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <circle cx="11" cy="11" r="7" stroke-width="1.8" />
+                                    <path stroke-linecap="round" stroke-width="1.8" d="m20 20-4-4" />
+                                </svg></span>
+                            <input type="search" name="search"
+                                value="{{ request()->routeIs('users.index') ? request('search') : '' }}"
+                                placeholder="{{ __('Search users, companies, and records...') }}"
+                                class="h-11 w-full rounded-2xl border border-slate-200 bg-white ps-10 pe-4 text-xs outline-none transition placeholder:text-slate-400 focus:border-[#16a394] focus:ring-4 focus:ring-[#16a394]/10 dark:border-slate-700 dark:bg-slate-800 dark:focus:border-[#16a394]">
                         </label>
-                        <details class="app-main-menu-dropdown" data-main-menu-dropdown>
-                            <summary class="text-sm">
-                                {{ app()->isLocale('fa') ? __('Farsi') : __('English') }}
-                            </summary>
-                            <form id="management-locale-fa-form" method="POST" action="{{ route('locale') }}" class="hidden">
-                                @csrf
-                                <input type="hidden" name="locale" value="fa">
-                            </form>
-                            <form id="management-locale-en-form" method="POST" action="{{ route('locale') }}" class="hidden">
-                                @csrf
-                                <input type="hidden" name="locale" value="en">
-                            </form>
-                            <ul class="app-main-menu-panel z-50 mt-2 w-40">
-                                <li><button type="submit" form="management-locale-fa-form" lang="fa">{{ __('Farsi') }}</button></li>
-                                <li><button type="submit" form="management-locale-en-form" lang="en">{{ __('English') }}</button></li>
-                            </ul>
-                        </details>
-                        <details class="app-main-menu-dropdown" data-main-menu-dropdown>
-                            <summary class="gap-2 text-sm">
-                                <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-linear-to-br from-emerald-500 to-teal-600 font-bold text-white shadow-sm">{{ mb_strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}</span>
-                                <span class="hidden max-w-32 truncate sm:block">{{ auth()->user()->name }}</span>
-                            </summary>
-                            <ul class="app-main-menu-panel z-50 mt-2 w-60">
-                                <li class="menu-title"><span class="truncate">{{ auth()->user()->email }}</span></li>
-                                <li><a href="{{ route('management.settings') }}">{{ __('Settings') }}</a></li>
-                                <li><a href="{{ route('logout') }}" class="text-error">{{ __('Logout') }}</a></li>
-                            </ul>
-                        </details>
-                    </li>
-                </ul>
-            </nav>
+                    </form>
+                    <label
+                        class="swap swap-rotate grid h-10 w-10 cursor-pointer place-items-center rounded-xl border border-slate-200 text-slate-500 dark:border-slate-700"
+                        aria-label="{{ __('Dark mode') }}"><input type="checkbox" value="dark"
+                            class="theme-controller"><svg class="swap-off h-5 w-5" fill="none"
+                            stroke="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0-16v2m0 16v2M2 12h2m16 0h2" />
+                        </svg><svg class="swap-on h-5 w-5 fill-current" viewBox="0 0 24 24">
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />
+                        </svg></label>
+                    <details class="dropdown dropdown-end">
+                        <summary
+                            class="flex h-10 cursor-pointer list-none items-center rounded-xl border border-slate-200 px-3 text-xs dark:border-slate-700">
+                            {{ app()->isLocale('fa') ? 'FA' : 'EN' }}
+                        </summary>
+                        <div
+                            class="dropdown-content z-50 mt-2 w-40 rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                            @foreach (['fa' => __('Farsi'), 'en' => __('English')] as $locale => $label)
+                                <form id="management-locale-{{ $locale }}-form" method="POST"
+                                    action="{{ route('locale') }}">
+                                    @csrf
+                                    <input type="hidden" name="locale" value="{{ $locale }}">
+                                    <button
+                                        class="w-full rounded-lg px-3 py-2 text-start text-xs hover:bg-slate-100 dark:hover:bg-slate-800">
+                                        {{ $label }}
+                                    </button>
+                                </form>
+                            @endforeach
+                        </div>
+                    </details>
+                    <details class="dropdown dropdown-end">
+                        <summary
+                            class="flex cursor-pointer list-none items-center gap-2 rounded-xl p-1.5 hover:bg-slate-50 dark:hover:bg-slate-800">
+                            <span
+                                class="grid h-9 w-9 place-items-center rounded-xl bg-[#19a394] text-sm font-bold text-white">{{ mb_strtoupper(mb_substr($user->name, 0, 1)) }}</span><span
+                                class="hidden max-w-28 truncate text-xs font-bold sm:block">{{ $user->name }}</span>
+                        </summary>
+                        <ul
+                            class="dropdown-content menu z-50 mt-2 w-60 rounded-xl border border-slate-200 bg-white p-2 text-xs shadow-xl dark:border-slate-700 dark:bg-slate-900">
+                            <li class="menu-title"><span
+                                    class="truncate font-normal text-slate-400">{{ $user->email }}</span></li>
+                            <li><a href="{{ route('management.settings') }}">{{ __('Settings') }}</a></li>
+                            <li><a href="{{ route('logout') }}" class="text-error">{{ __('Logout') }}</a></li>
+                        </ul>
+                    </details>
+                </div>
+                <x-impersonation-banner within-sticky-header />
+            </header>
+            <main class="relative mx-auto w-full max-w-[1600px] px-4 pb-7 pt-10 sm:px-7 sm:pt-12 xl:px-10 xl:pb-10">
+                {{ $slot }}</main>
+            <footer
+                class="mx-auto flex w-full max-w-[1600px] justify-between border-t border-slate-200 px-4 py-5 text-[10px] text-slate-400 sm:px-6 xl:px-8 dark:border-slate-800">
+                <span>{{ __(config('app.name')) }} · {{ __('Version') }}
+                    {{ localizeNumber(config('app.version')) }}</span><span>{{ __('Super-Admin Panel') }}</span>
+            </footer>
         </div>
-
-        <x-impersonation-banner within-sticky-header />
-    </header>
-
-    <main class="relative mx-auto mt-5 min-[1430px]:w-[1430px]">
-        {{ $slot }}
-    </main>
-
-    <footer class="mt-8 pb-4 text-center text-xs opacity-60">
-        {{ __(config('app.name')) }} - {{ __('Version') }} {{ localizeNumber(config('app.version')) }}
-    </footer>
-
+    </div>
     @stack('scripts')
     @stack('footer')
 </body>

@@ -170,6 +170,27 @@ body {
     font-family: Vazirmatn, sans-serif !important;
 }
 
+[x-cloak] { display: none !important; }
+
+.admin-shell main { z-index: auto; padding: 0; }
+
+.grid-paper {
+    background-image: linear-gradient(rgb(255 255 255 / 0.045) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.045) 1px, transparent 1px);
+    background-size: 24px 24px;
+}
+
+.scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+.scrollbar::-webkit-scrollbar-thumb { border-radius: 10px; background: #d5dddc; }
+
+@media (prefers-reduced-motion: no-preference) {
+    .admin-rise { animation: admin-rise .55s ease both; }
+    .admin-rise:nth-child(2) { animation-delay: .08s; }
+    .admin-rise:nth-child(3) { animation-delay: .16s; }
+    .admin-rise:nth-child(4) { animation-delay: .24s; }
+    .admin-rise:nth-child(5) { animation-delay: .32s; }
+    @keyframes admin-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+}
+
 .printable {
     background-color: lightgray;
     background-image: none;
