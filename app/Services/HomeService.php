@@ -55,9 +55,10 @@ class HomeService
                 ->selectRaw("{$monthExpression} as period, COUNT(*) as aggregate_count")
                 ->groupBy('period')
                 ->pluck('aggregate_count', 'period');
-            $companiesByMonth = Company::query()
-                ->where('created_at', '>=', $userGrowthStart)
-                ->selectRaw("{$monthExpression} as period, COUNT(DISTINCT id) as aggregate_count")
+            $companiesByMonth = User::query()
+                ->join('company_user', 'users.id', '=', 'company_user.user_id')
+                ->where('users.created_at', '>=', $userGrowthStart)
+                ->selectRaw("{$monthExpression} as period, COUNT(DISTINCT company_user.company_id) as aggregate_count")
                 ->groupBy('period')
                 ->pluck('aggregate_count', 'period');
             $documentsByMonth = Document::withoutGlobalScopes()
