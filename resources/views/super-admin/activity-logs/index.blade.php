@@ -232,6 +232,14 @@
                             {{ $activity['impersonatedUserName'] }}</span>
                     @endif
                     @if ($activity['hasDetails'])
+                        @if ($activity['isRequest'] && collect($activity['requestModels'] ?? [])->isNotEmpty())
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                @foreach ($activity['requestModels'] as $modelIndex => $model)
+                                    <a href="{{ $model['url'] }}" class="inline-flex items-center rounded-full bg-sky-50 px-2.5 py-1 text-[11px] font-semibold text-sky-700 ring-1 ring-inset ring-sky-600/20 hover:bg-sky-100 dark:bg-sky-950/40 dark:text-sky-300" dir="ltr">{{ $model['modelContextLabel'] }}</a>
+                                    <button type="button" class="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 ring-1 ring-inset ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700" @click="detailsOpen = true; detailsLoading = true; fetch('{{ route('management.activity-logs.details', $activity['id']) }}?model={{ $modelIndex }}', { headers: { Accept: 'application/json' } }).then(response => response.json()).then(data => { detailsHtml = data.html; detailsLoaded = true; }).finally(() => detailsLoading = false);" aria-label="{{ __('Details') }}">{{ __('Details') }}</button>
+                                @endforeach
+                            </div>
+                        @elseif (! $activity['isRequest'])
                         <button type="button"
                             class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20 transition hover:bg-emerald-100 sm:h-7 sm:w-7 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-950/70"
                             @click="detailsOpen = ! detailsOpen; if (! detailsLoaded && ! detailsLoading) { detailsLoading = true; fetch('{{ route('management.activity-logs.details', $activity['id']) }}', { headers: { Accept: 'application/json' } }).then(response => response.json()).then(data => { detailsHtml = data.html; detailsLoaded = true; detailsOpen = true; }).finally(() => detailsLoading = false); }"
@@ -245,6 +253,7 @@
                                     d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                             </svg>
                         </button>
+                        @endif
                     @endif
                 </div>
 

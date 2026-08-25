@@ -58,11 +58,19 @@ class ActivityLogController extends Controller
         ));
     }
 
-    public function details(Activity $activity): JsonResponse
+    public function details(Activity $activity, Request $request): JsonResponse
     {
         abort_unless($activity->source === 'request' || $activity->source === 'model', 404);
 
         $row = $this->activityRow($activity->load('user:id,name,email'), Company::query()->get()->keyBy('id'), collect());
+
+        if ($activity->source === 'request' && $request->filled('model')) {
+            $model = $row['requestModels'][(int) $request->integer('model')] ?? null;
+            abort_unless($model, 404);
+            $row['requestContext'] = [];
+            $row['requestInput'] = null;
+            $row['changes'] = $model['changes'];
+        }
 
         return response()->json([
             'html' => view('super-admin.activity-logs._details', ['activity' => $row])->render(),
@@ -257,7 +265,10 @@ class ActivityLogController extends Controller
             'url' => $model['url'],
         ])->unique(fn (array $link): string => $link['label'])->values();
         $row['modelId'] = $firstModel['modelId'];
-        $row['changes'] = $modelRows->flatMap(fn (array $model): Collection => $model['changes'])->values();
+        // The request row is rendered in the listing, but its field values are
+        // fetched from the details endpoint after the user opens a model.
+        $row['changes'] = collect();
+        $row['requestModels'] = $modelRows;
         $row['hasDetails'] = true;
 
         return $row;
