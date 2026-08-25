@@ -93,6 +93,17 @@ class AttendanceService
             PersonnelRequestType::MISSION_HOURLY->value,
         ])->approved()->coveringDate($logDate->toDateString())->get() ?? collect();
 
+        // The values stored on an attendance log are a cache of approved personnel requests.
+        // A log may have been imported before a request was approved (or its cached values may otherwise be stale), so manual recalculation must rebuild those request-backed values first.
+        // Keep manually entered values when there are no approved requests of the corresponding type.
+        $approvedRequests = $employee?->personnelRequests()->approved()->coveringDate($logDate->toDateString())->get() ?? collect();
+        $requestMinutes = $this->approvedRequestMinutesForDate($approvedRequests, $logDate, $workShift);
+        foreach (['paid_leave', 'unpaid_leave', 'mission', 'overtime', 'remote_work'] as $field) {
+            if ($requestMinutes[$field]['has_request']) {
+                $log->setAttribute($field, $requestMinutes[$field]['minutes']);
+            }
+        }
+
         $midShiftCoverage = $this->midShiftCoverageMinutes($log, $hourlyCoverageRequests);
 
         $columns = $this->computeLogColumns($log, $workShift, $isFriday, $isHoliday, $isThursday, $remoteRequest, $midShiftCoverage, $hourlyCoverageRequests);
@@ -100,6 +111,31 @@ class AttendanceService
         $log->update($columns);
 
         return $log->fresh();
+    }
+
+    private function approvedRequestMinutesForDate(Collection $requests, Carbon $date, ?WorkShift $workShift): array
+    {
+        $result = array_fill_keys(['paid_leave', 'unpaid_leave', 'mission', 'overtime', 'remote_work'], ['minutes' => 0, 'has_request' => false]);
+        foreach ($requests as $request) {
+            $type = $request->request_type;
+            $field = match ($type) {
+                PersonnelRequestType::LEAVE_HOURLY, PersonnelRequestType::LEAVE_DAILY, PersonnelRequestType::SICK_LEAVE => 'paid_leave',
+                PersonnelRequestType::LEAVE_WITHOUT_PAY, PersonnelRequestType::LEAVE_WITHOUT_PAY_HOURLY => 'unpaid_leave',
+                PersonnelRequestType::MISSION_HOURLY, PersonnelRequestType::MISSION_DAILY => 'mission',
+                PersonnelRequestType::OVERTIME_ORDER => 'overtime',
+                PersonnelRequestType::REMOTE_WORK => 'remote_work',
+                default => null,
+            };
+            if ($field === null) {
+                continue;
+            }
+            $result[$field]['has_request'] = true;
+            $isDaily = in_array($type, [PersonnelRequestType::LEAVE_DAILY, PersonnelRequestType::SICK_LEAVE, PersonnelRequestType::LEAVE_WITHOUT_PAY, PersonnelRequestType::MISSION_DAILY], true);
+            $minutes = $isDaily ? $this->shiftWorkMinutesForDate($workShift, $date) : max(0, (int) $request->start_date->diffInMinutes($request->end_date));
+            $result[$field]['minutes'] += $minutes;
+        }
+
+        return $result;
     }
 
     /**
