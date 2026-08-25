@@ -136,7 +136,9 @@ class ActivityLogTest extends TestCase
         $listed = $result['activities']->getCollection()->first();
 
         $this->assertNotNull($listed);
-        $this->assertFalse($listed->details->has('models'));
+        $this->assertCount(1, $listed->details->get('models'));
+        $this->assertArrayNotHasKey('attributes', $listed->details->get('models')[0]);
+        $this->assertArrayNotHasKey('old', $listed->details->get('models')[0]);
     }
 
     public function test_request_activity_details_are_fetched_on_demand(): void
@@ -161,6 +163,10 @@ class ActivityLogTest extends TestCase
         ]);
 
         $response = $this->actingAs($actor)->getJson(route('management.activity-logs.details', $activity));
+
+        $response->assertOk()->assertJsonPath('html', fn (string $html): bool => str_contains($html, 'Acme'));
+
+        $response = $this->actingAs($actor)->getJson(route('management.activity-logs.details', $activity).'?model=0');
 
         $response->assertOk()->assertJsonPath('html', fn (string $html): bool => str_contains($html, 'Acme'));
     }

@@ -398,6 +398,13 @@ class ActivityLogController extends Controller
             $modelIndex = $modelIndexes->first();
             $modelRows = $modelIndexes->map(fn (int $index): array => $rows[$index]);
             $modelRow = $rows[$modelIndex];
+            // Keep the request as the rendered row. Its ID is the stable detail
+            // endpoint target, and its model list includes unchanged models that
+            // have no standalone model activity row.
+            $modelRow['id'] = $requestRow['id'];
+            $modelRow['isRequest'] = true;
+            $modelRow['route'] = $requestRow['route'];
+            $modelRow['requestModels'] = $requestRow['requestModels'] ?? collect();
             $modelRow['requestMethod'] = $requestRow['requestMethod'];
             $modelRow['requestContext'] = $requestRow['requestContext'];
             $modelRow['requestInput'] = $requestRow['requestInput'];

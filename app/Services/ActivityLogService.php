@@ -198,9 +198,12 @@ class ActivityLogService
      */
     public function index(array $filters): array
     {
-        // Keep the request's model list available for the collapsed summary. The
-        // changed field values are suppressed by the controller until details are requested.
+        // The list needs model identity and event metadata, but not full before/after
+        // snapshots. MySQL strips those values before Eloquent casts the JSON.
         $query = Activity::query();
+        if ($query->getConnection()->getDriverName() !== 'sqlite') {
+            $query->selectRaw($this->activityListSelect());
+        }
 
         $query->when($filters['search'] ?? null, function ($query, string $search) {
             $query->where(function ($query) use ($search) {
@@ -244,6 +247,16 @@ class ActivityLogService
             ->when($filters['date_to'] ?? null, fn ($query, string $date) => $query->whereDate('created_at', '<=', $date));
 
         $activities = $this->paginateGroupedActivities($query);
+        if ($query->getConnection()->getDriverName() === 'sqlite') {
+            $activities->getCollection()->each(function (Activity $activity): void {
+                $details = $activity->details ?? collect();
+                $details->forget(['attributes', 'old', 'request_input']);
+                $details->put('models', collect($details->get('models', []))->map(function (array $model): array {
+                    return collect($model)->except(['attributes', 'old'])->all();
+                })->all());
+                $activity->setAttribute('details', $details);
+            });
+        }
         $impersonatedUserIds = $activities->getCollection()
             ->map(fn (Activity $activity) => $activity->details?->get('impersonated_user_id'))->filter()->unique();
 
@@ -256,6 +269,22 @@ class ActivityLogService
             'modelTypes' => $this->availableModelTypes(),
             'filters' => $filters,
         ];
+    }
+
+    private function activityListSelect(): string
+    {
+        return <<<'SQL'
+activity_log.*,
+CASE
+    WHEN source = 'request' THEN JSON_REMOVE(
+        details,
+        '$.request_input',
+        '$.models[*].attributes',
+        '$.models[*].old'
+    )
+    ELSE JSON_REMOVE(details, '$.attributes', '$.old')
+END AS details
+SQL;
     }
 
     private function paginateGroupedActivities(Builder $query): LengthAwarePaginator
