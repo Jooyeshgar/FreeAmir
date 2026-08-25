@@ -198,8 +198,6 @@ class ActivityLogService
      */
     public function index(array $filters): array
     {
-        // Request rows can contain thousands of model snapshots. Keep that payload
-        // out of the listing query. The detail endpoint loads it only on demand.
         $query = Activity::query()->selectRaw("activity_log.*, CASE WHEN source = 'request' THEN JSON_REMOVE(details, '$.models') ELSE details END AS details");
 
         $query->when($filters['search'] ?? null, function ($query, string $search) {
@@ -225,6 +223,14 @@ class ActivityLogService
             ->when($filters['model_type'] ?? null, fn ($query, string $modelType) => $query->where(function ($query) use ($modelType) {
                 $query->where('model_type', $modelType)->orWhereJsonContains('details->model_types', $modelType);
             }))
+            ->when($filters['model_reference'] ?? null, function ($query, string $reference) {
+                $reference = trim($reference);
+
+                $query->where(function ($query) use ($reference) {
+                    $query->where('model_id', 'like', "%{$reference}%")
+                        ->orWhereRaw('CAST(details AS CHAR) LIKE ?', ["%{$reference}%"]);
+                });
+            })
             ->when($filters['company_id'] ?? null, fn ($query, int|string $companyId) => $query->where(function ($query) use ($companyId) {
                 $query->where('details->company_id', (int) $companyId)->orWhereJsonContains('details->company_ids', (int) $companyId);
             }))
@@ -376,15 +382,40 @@ class ActivityLogService
             return ['old' => $this->sanitizeModelAttributes($model->getAttributes())];
         }
 
-        $changes = collect($model->getChanges())->filter(fn (mixed $value, string $key): bool => ! $model->originalIsEquivalent($key))->all();
-        $attributes = $this->sanitizeModelAttributes($changes);
+        // `getChanges()` can contain an attribute that was assigned during a
+        // request even though it still represents the same persisted value
+        // (the common example is assigning null to an already-null column).
+        // Build the diff from the model's original values and compare the
+        // sanitized values as a final guard, so those assignments never reach
+        // the audit log.
+        $attributes = collect($model->getChanges())
+            ->filter(fn (mixed $value, string $key): bool => ! $model->originalIsEquivalent($key))
+            ->map(fn (mixed $value) => $this->sanitizeValue($value))
+            ->all();
         $old = [];
 
         foreach (array_keys($attributes) as $key) {
-            $old[$key] = $this->sanitizeValue($model->getRawOriginal($key));
+            $oldValue = $this->sanitizeValue($model->getRawOriginal($key));
+
+            if ($this->valuesEquivalent($oldValue, $attributes[$key])) {
+                unset($attributes[$key]);
+
+                continue;
+            }
+
+            $old[$key] = $oldValue;
         }
 
-        return ['attributes' => $attributes, 'old' => $old];
+        return ['attributes' => $this->sanitizeModelAttributes($attributes), 'old' => $this->sanitizeModelAttributes($old)];
+    }
+
+    private function valuesEquivalent(mixed $old, mixed $new): bool
+    {
+        if ($old === $new) {
+            return true;
+        }
+
+        return is_scalar($old) && is_scalar($new) && (string) $old === (string) $new;
     }
 
     /**

@@ -34,6 +34,7 @@ class ActivityLogController extends Controller
             'action' => ['nullable', Rule::in(['created', 'updated', 'deleted'])],
             'user_id' => ['nullable', 'integer'],
             'model_type' => ['nullable', 'string', 'max:255'],
+            'model_reference' => ['nullable', 'string', 'max:100'],
             'company_id' => ['nullable', 'integer'],
             'date_from' => ['nullable', 'string', 'max:10'],
             'date_to' => ['nullable', 'string', 'max:10'],
@@ -59,7 +60,17 @@ class ActivityLogController extends Controller
 
     public function details(Activity $activity): JsonResponse
     {
-        abort_unless($activity->source === 'request', 404);
+        abort_unless(in_array($activity->source, ['request', 'model'], true), 404);
+        $activity = Activity::query()->findOrFail($activity->id);
+
+        $modelType = request()->query('model_type');
+        $modelId = request()->query('model_id');
+
+        if ($activity->source === 'request' && filled($modelType) && filled($modelId)) {
+            $details = $activity->details ?? collect();
+            $models = collect($details->get('models', []))->filter(fn (array $model): bool => ($model['model_type'] ?? null) === $modelType && (string) ($model['model_id'] ?? '') === (string) $modelId)->values();
+            $activity->setAttribute('details', $details->put('models', $models->all()));
+        }
 
         $row = $this->activityRow($activity->load('user:id,name,email'), Company::query()->get()->keyBy('id'), collect());
 
@@ -83,6 +94,7 @@ class ActivityLogController extends Controller
             $data['filters']['user_id'] ?? null,
             $data['filters']['company_id'] ?? null,
             $data['filters']['model_type'] ?? null,
+            $data['filters']['model_reference'] ?? null,
             $request->input('date_from'),
             $request->input('date_to'),
         ])->filter(fn (mixed $value): bool => filled($value))->count();
@@ -193,6 +205,7 @@ class ActivityLogController extends Controller
 
         $row = [
             'id' => $activity->id,
+            'detailsActivityId' => $activity->id,
             'userId' => $activity->user_id,
             'isRequest' => $isRequest,
             'actionLabel' => $action['label'],
@@ -253,6 +266,8 @@ class ActivityLogController extends Controller
         $row['modelContextLinks'] = $modelRows->map(fn (array $model): array => [
             'label' => $model['modelContextLabel'],
             'url' => $model['url'],
+            'modelType' => $model['modelType'],
+            'modelId' => $model['modelId'],
         ])->unique(fn (array $link): string => $link['label'])->values();
         $row['modelId'] = $firstModel['modelId'];
         $row['changes'] = $modelRows->flatMap(fn (array $model): Collection => $model['changes'])->values();
@@ -270,8 +285,8 @@ class ActivityLogController extends Controller
         $hasNumberColumn = $this->modelHasNumberColumn($modelType);
         $modelNumber = $model['model_number'] ?? null;
         $modelContextLabel = $modelTitle.($hasNumberColumn ? (filled($modelNumber) ? ' #'.$modelNumber : '') : ' #'.$modelId);
-        $attributes = collect($model['attributes'] ?? []);
-        $old = collect($model['old'] ?? []);
+        $attributes = collect($model['attributes'] ?? $model['new_data'] ?? []);
+        $old = collect($model['old'] ?? $model['old_data'] ?? []);
         $url = $this->modelUrl($modelType, $modelId);
         $action = $this->actionOptions()[$model['event'] ?? ''] ?? [
             'label' => __(ucfirst($model['event'] ?? 'activity')),
@@ -285,15 +300,31 @@ class ActivityLogController extends Controller
             'titleDetail' => $model['model_label'] ?? ($hasNumberColumn ? null : '#'.$modelId),
             'modelContextLabel' => $modelContextLabel,
             'modelId' => $modelId,
+            'modelType' => $modelType,
             'url' => $url,
-            'changes' => $attributes->keys()->merge($old->keys())->unique()->map(fn (string $key): array => [
-                'model' => $modelContextLabel,
-                'url' => $url,
-                'field' => $key,
-                'old' => $this->formatValue($old->get($key)),
-                'new' => $this->formatValue($attributes->get($key)),
-            ]),
+            'changes' => $attributes->keys()->merge($old->keys())->unique()
+                ->filter(fn (string $key): bool => $this->valuesDiffer($old->get($key), $attributes->get($key)))
+                ->map(fn (string $key): array => [
+                    'model' => $modelContextLabel,
+                    'url' => $url,
+                    'field' => $key,
+                    'old' => $this->formatValue($old->get($key)),
+                    'new' => $this->formatValue($attributes->get($key)),
+                ]),
         ];
+    }
+
+    private function valuesDiffer(mixed $old, mixed $new): bool
+    {
+        if ($old === $new) {
+            return false;
+        }
+
+        if (is_scalar($old) && is_scalar($new)) {
+            return (string) $old !== (string) $new;
+        }
+
+        return $old !== $new;
     }
 
     private function modelHasNumberColumn(?string $modelType): bool
@@ -385,8 +416,12 @@ class ActivityLogController extends Controller
             $modelRow['requestMethod'] = $requestRow['requestMethod'];
             $modelRow['requestContext'] = $requestRow['requestContext'];
             $modelRow['requestInput'] = $requestRow['requestInput'];
+            $modelRow['detailsActivityId'] = $requestRow['id'];
             $modelRow['modelContextLabels'] = $modelRows->flatMap(fn (array $row): Collection => $row['modelContextLabels'])->unique()->values();
             $modelRow['modelContextLinks'] = $modelRows->flatMap(fn (array $row): Collection => $row['modelContextLinks'])->unique(fn (array $link): string => $link['label'])->values();
+            // Preserve the change data for the details response. The listing
+            // does not render this collection, while the GET details endpoint
+            // uses it to build the old/new table.
             $modelRow['changes'] = $modelRows->sortByDesc(fn (array $row): int => $row['createdAtTimestamp'] ?? 0)->flatMap(fn (array $row): Collection => $row['changes'])->values();
             $modelRow['companyLabel'] ??= $requestRow['companyLabel'];
             $modelRow['impersonatedUserName'] ??= $requestRow['impersonatedUserName'];
