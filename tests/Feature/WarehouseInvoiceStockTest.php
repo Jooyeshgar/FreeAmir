@@ -18,6 +18,7 @@ use App\Models\Warehouse;
 use App\Models\WarehouseProductStock;
 use App\Services\AncillaryCostService;
 use App\Services\InvoiceService;
+use App\Services\ProductService;
 use App\Services\WarehouseService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -121,6 +122,22 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->assertFalse($decision->canProceed);
         $this->assertStock($this->mainWarehouse, 10);
         $this->assertStock($this->emptyWarehouse, 0);
+    }
+
+    public function test_recalculate_quantity_rebuilds_each_warehouse_stock(): void
+    {
+        $this->createInvoice(InvoiceType::BUY, 10, $this->mainWarehouse, true);
+        $this->createInvoice(InvoiceType::BUY, 4, $this->emptyWarehouse, true);
+        $this->createInvoice(InvoiceType::SELL, 3, $this->mainWarehouse, true);
+
+        WarehouseProductStock::query()->update(['quantity' => 0]);
+        $this->product->update(['quantity' => 0]);
+
+        $quantity = ProductService::recalculateQuantity($this->product->fresh());
+
+        $this->assertEqualsWithDelta(11, $quantity, 0.001);
+        $this->assertStock($this->mainWarehouse, 7);
+        $this->assertStock($this->emptyWarehouse, 4);
     }
 
     public function test_approved_sell_form_validation_checks_the_selected_warehouse(): void

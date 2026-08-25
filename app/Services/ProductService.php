@@ -283,6 +283,17 @@ class ProductService
     public static function recalculateQuantity(Product $product): float
     {
         return DB::transaction(function () use ($product): float {
+            $stocks = WarehouseProductStock::query()
+                ->where('product_id', $product->id)
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('warehouse_id');
+
+            foreach ($stocks as $stock) {
+                $stock->quantity = 0;
+                $stock->save();
+            }
+
             $invoices = Invoice::withoutGlobalScopes()
                 ->whereIn('status', InvoiceStatus::approvedOrSettled())
                 ->whereHas('items', function ($query) use ($product) {
@@ -298,9 +309,12 @@ class ProductService
                 ->get();
 
             $quantity = 0.0;
+            $warehouseQuantities = [];
 
             foreach ($invoices as $invoice) {
                 foreach ($invoice->items as $item) {
+                    $warehouseId = $item->warehouse_id ?? $product->warehouse_id;
+                    $warehouseQuantity = $warehouseQuantities[$warehouseId] ?? 0.0;
                     $item->quantity_at = $quantity;
                     $item->save();
 
@@ -310,6 +324,22 @@ class ProductService
                     };
 
                     $quantity += $sign * (float) $item->quantity;
+                    if ($warehouseId) {
+                        $warehouseQuantity += $sign * (float) $item->quantity;
+                        $warehouseQuantities[$warehouseId] = $warehouseQuantity;
+
+                        $stock = $stocks->get($warehouseId);
+                        if (! $stock) {
+                            $stock = WarehouseProductStock::query()->firstOrCreate(
+                                ['warehouse_id' => $warehouseId, 'product_id' => $product->id],
+                                ['quantity' => 0, 'average_cost' => $product->average_cost ?? 0]
+                            );
+                            $stocks->put($warehouseId, $stock);
+                        }
+
+                        $stock->quantity = $warehouseQuantity;
+                        $stock->save();
+                    }
                 }
             }
 
