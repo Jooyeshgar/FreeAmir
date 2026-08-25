@@ -176,7 +176,7 @@
 
     <section class="space-y-3 sm:space-y-4" aria-label="{{ __('Activity') }}">
         @forelse ($activities as $activity)
-            <article x-data="{ detailsOpen: false, requestInputOpen: false, detailsLoaded: false, detailsLoading: false, detailsHtml: '' }"
+            <article x-data="{ detailsOpen: false, requestInputOpen: false }"
                 class="group rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition duration-200 hover:border-slate-300 hover:shadow-md sm:p-4 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                     <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
@@ -232,19 +232,11 @@
                             {{ $activity['impersonatedUserName'] }}</span>
                     @endif
                     @if ($activity['hasDetails'])
-                        @if ($activity['isRequest'] && collect($activity['requestModels'] ?? [])->isNotEmpty())
-                            <div class="flex flex-wrap items-center gap-1.5">
-                                @foreach ($activity['requestModels'] as $modelIndex => $model)
-                                    <a href="{{ $model['url'] }}" class="inline-flex items-center rounded-full bg-sky-50 px-2.5 py-1 text-[11px] font-semibold text-sky-700 ring-1 ring-inset ring-sky-600/20 hover:bg-sky-100 dark:bg-sky-950/40 dark:text-sky-300" dir="ltr">{{ $model['modelContextLabel'] }}</a>
-                                    <button type="button" class="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 ring-1 ring-inset ring-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700" @click="detailsOpen = true; detailsLoading = true; fetch('{{ route('management.activity-logs.details', $activity['id']) }}?model={{ $modelIndex }}', { headers: { Accept: 'application/json' } }).then(response => response.json()).then(data => { detailsHtml = data.html; detailsLoaded = true; }).finally(() => detailsLoading = false);" aria-label="{{ __('Details') }}">{{ __('Details') }}</button>
-                                @endforeach
-                            </div>
-                        @elseif (! $activity['isRequest'])
                         <button type="button"
                             class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20 transition hover:bg-emerald-100 sm:h-7 sm:w-7 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-950/70"
-                            @click="detailsOpen = ! detailsOpen; if (! detailsLoaded && ! detailsLoading) { detailsLoading = true; fetch('{{ route('management.activity-logs.details', $activity['id']) }}', { headers: { Accept: 'application/json' } }).then(response => response.json()).then(data => { detailsHtml = data.html; detailsLoaded = true; detailsOpen = true; }).finally(() => detailsLoading = false); }"
-                            :aria-expanded="detailsOpen" aria-controls="activity-details-{{ $activity['id'] }}"
-                            aria-label="{{ __('Details') }}" title="{{ __('Details') }}">
+                            @click="detailsOpen = ! detailsOpen" :aria-expanded="detailsOpen"
+                            aria-controls="activity-details-{{ $activity['id'] }}" aria-label="{{ __('Details') }}"
+                            title="{{ __('Details') }}">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
                                 stroke="currentColor" stroke-width="1.8" class="h-4 w-4" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -253,17 +245,169 @@
                                     d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                             </svg>
                         </button>
-                        @endif
                     @endif
                 </div>
 
                 @if ($activity['hasDetails'])
                     <div id="activity-details-{{ $activity['id'] }}" x-cloak x-show="detailsOpen"
                         class="mt-4 border-t border-slate-100 pt-4 dark:border-slate-800">
-                        <template x-if="detailsLoading">
-                            <p class="text-sm text-slate-500">{{ __('Loading...') }}</p>
-                        </template>
-                        <div x-show="detailsLoaded" x-html="detailsHtml"></div>
+                        @if ($activity['requestContext'])
+                            <dl class="grid gap-2 text-xs sm:grid-cols-2 sm:gap-3 xl:grid-cols-5">
+                                @foreach ($activity['requestContext'] as $context)
+                                    <div class="rounded-xl bg-slate-50 p-3 dark:bg-slate-950/40">
+                                        <dt class="font-semibold text-slate-500">{{ $context['label'] }}</dt>
+                                        <dd class="mt-1 break-all font-mono text-slate-800 dark:text-slate-200"
+                                            dir="ltr">
+                                            @if ($context['url'] ?? null)
+                                                <a href="{{ $context['url'] }}"
+                                                    class="text-sky-700 hover:underline dark:text-sky-300">{{ $context['value'] }}</a>
+                                            @else
+                                                {{ $context['value'] }}
+                                            @endif
+                                        </dd>
+                                    </div>
+                                @endforeach
+                            </dl>
+                            @if ($activity['requestInput'])
+                                <button type="button"
+                                    class="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700"
+                                    @click="requestInputOpen = ! requestInputOpen" :aria-expanded="requestInputOpen"
+                                    aria-controls="request-input-{{ $activity['id'] }}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="1.8" class="h-3.5 w-3.5"
+                                        aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="M7.5 8.25h9m-9 3.75h9m-9 3.75h5.25M5.25 3.75h13.5a1.5 1.5 0 0 1 1.5 1.5v13.5a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5V5.25a1.5 1.5 0 0 1 1.5-1.5Z" />
+                                    </svg>
+                                    {{ __('Request details') }}
+                                </button>
+                                <pre id="request-input-{{ $activity['id'] }}" x-cloak x-show="requestInputOpen"
+                                    class="mt-2 max-h-72 max-w-full overflow-auto rounded-xl bg-slate-950 p-3 text-[11px] leading-5 text-slate-100 sm:p-4 sm:text-xs sm:leading-6"
+                                    dir="ltr">{{ $activity['requestInput'] }}</pre>
+                            @endif
+                        @endif
+                        @if ($activity['changes']->isNotEmpty())
+                            <div @class(['space-y-3', 'mt-3' => $activity['requestContext']])>
+                                @foreach ($activity['changes']->groupBy('model') as $affectedModel => $modelChanges)
+                                    <section x-data="{ modelOpen: false }"
+                                        class="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800"
+                                        data-affected-model="{{ $affectedModel }}">
+                                        <header
+                                            class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-800 dark:bg-slate-950/40">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <span
+                                                    class="text-[11px] font-semibold text-slate-500 dark:text-slate-400">{{ __('Affected model') }}</span>
+                                                @if ($modelChanges->first()['url'] ?? null)
+                                                    <a href="{{ $modelChanges->first()['url'] }}"
+                                                        class="font-mono text-xs font-bold text-sky-700 hover:underline dark:text-sky-300"
+                                                        dir="ltr">{{ $affectedModel }}</a>
+                                                @else
+                                                    <bdi class="font-mono text-xs font-bold text-sky-700 dark:text-sky-300"
+                                                        dir="ltr">{{ $affectedModel }}</bdi>
+                                                @endif
+                                            </div>
+                                            <button type="button"
+                                                class="inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-800"
+                                                @click="modelOpen = ! modelOpen" :aria-expanded="modelOpen"
+                                                aria-label="{{ __('Details') }}">
+                                                <span
+                                                    x-text="modelOpen ? '{{ __('Close') }}' : '{{ __('Details') }}'"></span>
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                                                    fill="none" stroke="currentColor" stroke-width="1.8"
+                                                    class="h-3.5 w-3.5 transition-transform"
+                                                    :class="modelOpen ? 'rotate-180' : ''" aria-hidden="true">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        d="m6 9 6 6 6-6" />
+                                                </svg>
+                                            </button>
+                                        </header>
+
+                                        <div x-cloak x-show="modelOpen" class="space-y-2 sm:hidden p-3">
+                                            @foreach ($modelChanges as $change)
+                                                <div @class([
+                                                    'rounded-lg border border-slate-200 p-3 text-xs dark:border-slate-800',
+                                                    'bg-amber-50/70 font-bold dark:bg-amber-950/20' =>
+                                                        $change['old'] !== $change['new'],
+                                                ])>
+                                                    <p class="mb-2 font-mono font-bold text-slate-700 dark:text-slate-200"
+                                                        dir="ltr">{{ $change['field'] }}</p>
+                                                    <dl class="grid gap-2">
+                                                        <div @class([
+                                                            'rounded-lg p-2',
+                                                            'bg-rose-50 dark:bg-rose-950/30' => $change['old'] !== $change['new'],
+                                                        ])>
+                                                            <dt class="text-[11px] font-semibold text-slate-400">
+                                                                {{ __('Previous value') }}</dt>
+                                                            <dd>
+                                                                <pre @class([
+                                                                    'mt-1 whitespace-pre-wrap break-all',
+                                                                    'font-bold text-rose-700 dark:text-rose-300' =>
+                                                                        $change['old'] !== $change['new'],
+                                                                ]) dir="ltr">{{ $change['old'] }}</pre>
+                                                            </dd>
+                                                        </div>
+                                                        <div @class([
+                                                            'rounded-lg p-2',
+                                                            'bg-emerald-50 dark:bg-emerald-950/30' => $change['old'] !== $change['new'],
+                                                        ])>
+                                                            <dt class="text-[11px] font-semibold text-slate-400">
+                                                                {{ __('New value') }}</dt>
+                                                            <dd>
+                                                                <pre @class([
+                                                                    'mt-1 whitespace-pre-wrap break-all',
+                                                                    'font-bold text-emerald-700 dark:text-emerald-300' =>
+                                                                        $change['old'] !== $change['new'],
+                                                                ]) dir="ltr">{{ $change['new'] }}</pre>
+                                                            </dd>
+                                                        </div>
+                                                    </dl>
+                                                </div>
+                                            @endforeach
+                                        </div>
+
+                                        <div x-cloak x-show="modelOpen" class="hidden overflow-x-auto sm:block">
+                                            <table class="table table-sm min-w-[32rem]">
+                                                <thead>
+                                                    <tr>
+                                                        <th>{{ __('Field') }}</th>
+                                                        <th>{{ __('Previous value') }}</th>
+                                                        <th>{{ __('New value') }}</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach ($modelChanges as $change)
+                                                        <tr @class([
+                                                            'bg-amber-50/70 font-bold dark:bg-amber-950/20' =>
+                                                                $change['old'] !== $change['new'],
+                                                        ])>
+                                                            <td @class([
+                                                                'font-mono text-xs',
+                                                                'font-bold' => $change['old'] !== $change['new'],
+                                                            ]) dir="ltr">
+                                                                {{ $change['field'] }}</td>
+                                                            <td>
+                                                                <pre @class([
+                                                                    'whitespace-pre-wrap break-all text-xs',
+                                                                    'font-bold text-rose-700 dark:text-rose-300' =>
+                                                                        $change['old'] !== $change['new'],
+                                                                ]) dir="ltr">{{ $change['old'] }}</pre>
+                                                            </td>
+                                                            <td>
+                                                                <pre @class([
+                                                                    'whitespace-pre-wrap break-all text-xs',
+                                                                    'font-bold text-emerald-700 dark:text-emerald-300' =>
+                                                                        $change['old'] !== $change['new'],
+                                                                ]) dir="ltr">{{ $change['new'] }}</pre>
+                                                            </td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </section>
+                                @endforeach
+                            </div>
+                        @endif
                     </div>
                 @endif
             </article>
