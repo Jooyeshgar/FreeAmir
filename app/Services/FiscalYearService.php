@@ -2304,9 +2304,11 @@ class FiscalYearService
                 continue;
             }
 
-            Document::withoutGlobalScope(FiscalYearScope::class)
-                ->whereKey($documentMapping[$oldDocumentId])
-                ->update(['documentable_id' => $chequeMapping[$oldChequeId]]);
+            app(ActivityLogService::class)->updateModels(
+                Document::withoutGlobalScope(FiscalYearScope::class)
+                    ->whereKey($documentMapping[$oldDocumentId]),
+                ['documentable_id' => $chequeMapping[$oldChequeId]]
+            );
         }
     }
 

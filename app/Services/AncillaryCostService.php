@@ -236,7 +236,9 @@ class AncillaryCostService
             $itemIds[] = $ancillaryCostItem->id;
         }
 
-        $ancillaryCost->items()->whereNotIn('id', $itemIds)->delete();
+        app(ActivityLogService::class)->deleteModels(
+            $ancillaryCost->items()->whereNotIn('id', $itemIds)->getQuery()
+        );
     }
 
     /**

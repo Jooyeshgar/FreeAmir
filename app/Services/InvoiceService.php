@@ -228,7 +228,7 @@ class InvoiceService
             $chequeIds = $invoice->payments()->whereNotNull('cheque_id')->pluck('cheque_id')->unique();
             Cheque::whereIn('id', $chequeIds)->each(fn (Cheque $cheque) => app(ChequeService::class)->delete($cheque));
 
-            $invoice->items()->delete();
+            app(ActivityLogService::class)->deleteModels($invoice->items()->getQuery());
 
             $invoice->delete();
         });
