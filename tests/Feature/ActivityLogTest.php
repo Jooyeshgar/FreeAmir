@@ -120,6 +120,50 @@ class ActivityLogTest extends TestCase
         $this->assertArrayNotHasKey('name', $models->first()['old']);
     }
 
+    public function test_activity_log_listing_does_not_load_request_model_snapshots(): void
+    {
+        $actor = User::factory()->create();
+        Activity::create([
+            'log_name' => 'request',
+            'description' => 'POST test',
+            'event' => 'post',
+            'user_id' => $actor->id,
+            'properties' => ['route' => 'test', 'models' => [['model_type' => Company::class, 'model_id' => 1]]],
+        ]);
+
+        $service = app(ActivityLogService::class);
+        $result = $service->index([]);
+        $listed = $result['activities']->getCollection()->first();
+
+        $this->assertNotNull($listed);
+        $this->assertFalse($listed->details->has('models'));
+    }
+
+    public function test_request_activity_details_are_fetched_on_demand(): void
+    {
+        $actor = User::factory()->create();
+        $activity = Activity::create([
+            'log_name' => 'request',
+            'description' => 'POST test',
+            'event' => 'post',
+            'user_id' => $actor->id,
+            'properties' => [
+                'route' => 'test',
+                'models' => [[
+                    'model_type' => Company::class,
+                    'model_id' => 1,
+                    'event' => 'created',
+                    'attributes' => ['name' => 'Acme'],
+                    'old' => [],
+                ]],
+            ],
+        ]);
+
+        $response = $this->actingAs($actor)->getJson(route('management.activity-logs.details', $activity));
+
+        $response->assertOk()->assertJsonPath('html', fn (string $html): bool => str_contains($html, 'Acme'));
+    }
+
     public function test_a_write_request_only_keeps_attributes_that_really_changed(): void
     {
         $actor = User::factory()->create();
