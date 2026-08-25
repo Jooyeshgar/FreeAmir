@@ -557,7 +557,7 @@ class SubjectService
             $sum = (clone $query)->sum('value');
             $count = $query->count();
 
-            $query->update(['subject_id' => $destination->id]);
+            app(ActivityLogService::class)->updateModels($query, ['subject_id' => $destination->id]);
 
             return [
                 'count' => $count,
@@ -622,7 +622,7 @@ class SubjectService
 
             $sum = (clone $query)->sum('value');
             $count = $query->count();
-            $query->update(['subject_id' => $newSubject->id]);
+            app(ActivityLogService::class)->updateModels($query, ['subject_id' => $newSubject->id]);
 
             return [
                 'count' => $count,

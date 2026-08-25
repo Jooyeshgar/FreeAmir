@@ -2,13 +2,18 @@
 
 namespace Tests\Feature;
 
+use App\Enums\SubjectType;
 use App\Models\Activity;
 use App\Models\Company;
 use App\Models\Config;
 use App\Models\Document;
 use App\Models\Scopes\FiscalYearScope;
+use App\Models\Subject;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Services\ActivityLogService;
+use App\Services\DocumentService;
+use App\Services\SubjectService;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -139,6 +144,109 @@ class ActivityLogTest extends TestCase
 
         $activity = Activity::query()->sole();
         $this->assertSame([], $activity->details->get('models'));
+    }
+
+    public function test_document_delete_request_records_the_document_and_every_transaction(): void
+    {
+        $actor = User::factory()->create();
+        $company = Company::factory()->create(['fiscal_year' => 1403]);
+        $actor->companies()->syncWithoutDetaching([$company->id]);
+        config(['active-company-id' => $company->id, 'active-company-fiscal-year' => 1403]);
+
+        $subject = Subject::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'parent_id' => null,
+            'name' => 'Cash',
+            'code' => '001',
+            'type' => SubjectType::BOTH,
+        ]);
+        $document = Document::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'number' => 101,
+            'date' => '2024-03-21',
+            'creator_id' => $actor->id,
+            'title' => 'Delete audit',
+        ]);
+        $transactions = collect([100, -100])->map(fn (int $value) => Transaction::create([
+            'subject_id' => $subject->id,
+            'document_id' => $document->id,
+            'user_id' => $actor->id,
+            'value' => $value,
+            'desc' => 'Delete audit',
+        ]));
+
+        Route::delete('/test/activity-log/document/{document}', function (int $document) {
+            DocumentService::deleteDocument($document);
+
+            return response()->noContent();
+        })->middleware('web');
+
+        Activity::query()->delete();
+        $this->actingAs($actor)->delete("/test/activity-log/document/{$document->id}")->assertNoContent();
+
+        $models = collect(Activity::query()->sole()->details->get('models'));
+
+        $this->assertCount(3, $models);
+        $this->assertTrue($models->contains(fn (array $model): bool => $model['event'] === 'deleted'
+            && $model['model_type'] === Document::class
+            && $model['model_id'] === $document->id));
+        $this->assertEqualsCanonicalizing(
+            $transactions->pluck('id')->all(),
+            $models->where('event', 'deleted')->where('model_type', Transaction::class)->pluck('model_id')->all()
+        );
+    }
+
+    public function test_subject_transfer_request_records_every_updated_transaction(): void
+    {
+        $actor = User::factory()->create();
+        $company = Company::factory()->create(['fiscal_year' => 1403]);
+        $actor->companies()->syncWithoutDetaching([$company->id]);
+        config(['active-company-id' => $company->id, 'active-company-fiscal-year' => 1403]);
+
+        $source = Subject::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'parent_id' => null,
+            'name' => 'Source',
+            'code' => '001',
+            'type' => SubjectType::BOTH,
+        ]);
+        $destination = Subject::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'parent_id' => null,
+            'name' => 'Destination',
+            'code' => '002',
+            'type' => SubjectType::BOTH,
+        ]);
+        $document = Document::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'number' => 102,
+            'date' => now()->toDateString(),
+            'creator_id' => $actor->id,
+            'title' => 'Transfer audit',
+        ]);
+        $transactions = collect([200, -200])->map(fn (int $value) => Transaction::create([
+            'subject_id' => $source->id,
+            'document_id' => $document->id,
+            'user_id' => $actor->id,
+            'value' => $value,
+            'desc' => 'Transfer audit',
+        ]));
+
+        Route::put('/test/activity-log/subject-transfer', function () use ($source, $destination) {
+            app(SubjectService::class)->transferSubject($source, $destination);
+
+            return response()->noContent();
+        })->middleware('web');
+
+        Activity::query()->delete();
+        $this->actingAs($actor)->put('/test/activity-log/subject-transfer')->assertNoContent();
+
+        $models = collect(Activity::query()->sole()->details->get('models'))
+            ->where('event', 'updated')->where('model_type', Transaction::class);
+
+        $this->assertEqualsCanonicalizing($transactions->pluck('id')->all(), $models->pluck('model_id')->all());
+        $this->assertTrue($models->every(fn (array $model): bool => $model['old']['subject_id'] === $source->id
+            && $model['attributes']['subject_id'] === $destination->id));
     }
 
     public function test_failed_write_request_discards_buffered_model_changes(): void

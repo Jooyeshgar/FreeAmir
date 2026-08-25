@@ -354,7 +354,7 @@ class InvoiceService
 
         CostOfGoodsService::refreshProductCOGAfterItemsDeletion($invoice, $itemId);
 
-        $invoice->items()->whereNotIn('id', $itemId)->delete();
+        app(ActivityLogService::class)->deleteModels($invoice->items()->whereNotIn('id', $itemId)->getQuery());
     }
 
     public function changeInvoiceStatus(Invoice $invoice, string $status): void

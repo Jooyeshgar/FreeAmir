@@ -38,6 +38,43 @@ class ActivityLogService
 
     private ?User $requestAuthenticatedUser = null;
 
+    /**
+     * Update matching models without bypassing Eloquent model events.
+     *
+     * @param  Builder<Model>  $query
+     * @param  array<string, mixed>  $attributes
+     */
+    public function updateModels(Builder $query, array $attributes): int
+    {
+        $updated = 0;
+
+        $query->eachById(function (Model $model) use ($attributes, &$updated): void {
+            if ($model->update($attributes)) {
+                $updated++;
+            }
+        });
+
+        return $updated;
+    }
+
+    /**
+     * Delete matching models without bypassing Eloquent model events.
+     *
+     * @param  Builder<Model>  $query
+     */
+    public function deleteModels(Builder $query): int
+    {
+        $deleted = 0;
+
+        $query->eachById(function (Model $model) use (&$deleted): void {
+            if ($model->delete()) {
+                $deleted++;
+            }
+        });
+
+        return $deleted;
+    }
+
     public function __construct(private readonly ImpersonateManager $impersonateManager) {}
 
     public function resolveActor(?User $authenticatedUser = null): ?User
