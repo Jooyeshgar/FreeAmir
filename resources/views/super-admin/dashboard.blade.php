@@ -87,8 +87,7 @@
                     <h2 class="font-bold">{{ __('Active users') }}</h2>
                     <p class="mt-1 text-xs text-slate-400">{{ __('Current platform engagement') }}</p>
                 </div>
-                <span class="rounded-lg bg-[#16a394]/15 px-2 py-1 text-[10px] font-bold text-emerald-300">DAU /
-                    WAU / MAU</span>
+                <span class="rounded-lg bg-[#16a394]/15 px-2 py-1 text-[10px] font-bold text-emerald-300">{{ __('DAU / WAU / MAU') }}</span>
             </header>
             <x-charts.pie-chart chart-id="management-active-users-chart" height-class="mt-5 h-64" :labels="[__('Today'), __('Earlier this week'), __('Earlier this month'), __('Inactive')]" :data="$viewModel['activeUserSegments']"
                 :colors="['#16a394', '#f5b94c', '#f07662', '#33455b']" cutout="67%"
@@ -124,7 +123,7 @@
                         </div>
                         @unless ($loop->last)
                             <span
-                                class="absolute-end-2.5 top-1/2 z-10 hidden h-5 w-5 -translate-y-1/2 place-items-center rounded-full bg-white text-[10px] text-slate-400 shadow sm:grid rtl:rotate-180">→</span>
+                                class="absolute-end-2.5 top-1/2 z-10 hidden h-5 w-5 -translate-y-1/2 place-items-center rounded-full border border-slate-200 bg-white text-[10px] text-slate-700 shadow sm:grid rtl:rotate-180 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">→</span>
                         @endunless
                     </div>
                 @endforeach
@@ -207,7 +206,7 @@
                         {{ localizeNumber($day['count']) }}
                     </div>
                     <span class="mt-2 block text-[9px] text-slate-400">
-                    {{ __($day['label']) }}
+                    {{ $viewModel['activityLabels'][$loop->index] }}
                     </span>
                 </div>
             @endforeach

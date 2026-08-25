@@ -28,7 +28,7 @@
 <div x-data="{ sidebarOpen: false }" @keydown.escape.window="sidebarOpen = false">
     <div x-cloak x-show="sidebarOpen" x-transition.opacity class="fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-sm lg:hidden" @click="sidebarOpen = false"></div>
 
-    <aside id="management-sidebar" :class="sidebarOpen ? 'translate-x-0' : 'translate-x-full ltr:-translate-x-full'" class="fixed inset-y-0 start-0 z-50 flex w-72 flex-col overflow-y-auto bg-[#15263b] text-slate-300 shadow-2xl transition-transform duration-300 lg:translate-x-0">
+    <aside id="management-sidebar" :class="sidebarOpen ? 'translate-x-0' : 'ltr:-translate-x-full rtl:translate-x-full'" class="fixed inset-y-0 start-0 z-50 flex w-72 flex-col overflow-y-auto bg-[#15263b] text-slate-300 shadow-2xl transition-transform duration-300 lg:translate-x-0">
         <div class="grid-paper pointer-events-none absolute inset-0 opacity-70"></div>
         <div class="relative flex h-24 items-center gap-3 border-b border-white/10 px-6">
             <a href="{{ route('management.dashboard') }}" class="flex min-w-0 flex-1 items-center gap-3">
@@ -57,7 +57,7 @@
         </div>
     </aside>
 
-    <div class="min-h-screen lg:ps-72">
+    <div class="min-h-screen ltr:lg:pl-72 rtl:lg:pr-72">
         <header class="sticky top-0 z-30 border-b border-slate-200/80 bg-[#f5f7f6]/90 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90">
             <div class="flex h-20 items-center gap-3 px-4 sm:px-6 xl:px-8">
                 <button type="button" class="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 text-slate-600 lg:hidden dark:border-slate-700" @click="sidebarOpen=true" aria-controls="management-sidebar" aria-label="{{ __('Menu') }}"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" /></svg></button>

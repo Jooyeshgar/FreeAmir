@@ -3286,5 +3286,8 @@
     "Highest usage": "بیشترین مصرف",
     "Usage decline compared with last month": "افت مصرف نسبت به ماه قبل",
     "No usage data for this month.": "برای این ماه داده‌ای از مصرف وجود ندارد.",
-    "No usage declines compared with last month.": "نسبت به ماه قبل افت مصرفی ثبت نشده است."
+    "No usage declines compared with last month.": "نسبت به ماه قبل افت مصرفی ثبت نشده است.",
+    "New users": "کاربران جدید",
+    "Open and closed periods": "دوره‌های باز و بسته",
+    "DAU / WAU / MAU": "کاربران فعال روزانه / هفتگی / ماهانه"
 }
