@@ -208,7 +208,7 @@ class AncillaryCostService
                 DocumentService::deleteDocument($ancillaryCost->document_id);
             }
 
-            $ancillaryCost->items()->delete();
+            app(ActivityLogService::class)->deleteModels($ancillaryCost->items()->getQuery());
             $ancillaryCost->delete();
 
             CostOfGoodsService::updateProductsAverageCost($invoice);

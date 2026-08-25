@@ -97,7 +97,7 @@ class CustomerGroupService
     {
         DB::transaction(function () use ($customerGroup) {
             foreach ($customerGroup->customers as $customer) {
-                $customer->comments()->delete();
+                app(ActivityLogService::class)->deleteModels($customer->comments()->getQuery());
                 $customer->delete();
                 $customer->subject?->delete();
             }
