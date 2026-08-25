@@ -199,6 +199,19 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->assertStock($this->emptyWarehouse, 0);
     }
 
+    public function test_editing_approved_invoice_reverses_old_warehouse_quantity_before_reapplying(): void
+    {
+        $buy = $this->createInvoice(InvoiceType::BUY, 4, $this->mainWarehouse, true);
+
+        InvoiceService::updateInvoice($buy->id, $this->invoiceData(InvoiceType::BUY), [
+            $this->item(2, $this->emptyWarehouse),
+        ], true);
+
+        $this->assertStock($this->mainWarehouse, 0);
+        $this->assertStock($this->emptyWarehouse, 2);
+        $this->assertSame($this->emptyWarehouse->id, $buy->fresh()->items->first()->warehouse_id);
+    }
+
     public function test_stock_mutation_rejects_an_outgoing_invoice_that_would_make_warehouse_negative(): void
     {
         $sell = $this->createInvoice(InvoiceType::SELL, 1, $this->emptyWarehouse, false);

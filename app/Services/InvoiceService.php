@@ -125,6 +125,8 @@ class InvoiceService
     public static function updateInvoice(int $invoiceId, array $invoiceData, array $items = [], bool $approved = false): array
     {
         $invoice = Invoice::findOrFail($invoiceId);
+        $wasApproved = $invoice->status->isApprovedOrSettled();
+        $oldItems = $wasApproved ? $invoice->items->toArray() : [];
 
         $invoiceData = self::normalizeInvoiceData($invoiceData);
 
@@ -132,9 +134,49 @@ class InvoiceService
         $buildResult = $transactionBuilder->build();
 
         $createdDocument = null;
-        $invoice = self::updateInvoiceWithoutApproval($invoice, $invoiceData, $items, $buildResult);
+        $handledApprovedEdit = false;
 
-        if ($approved) {
+        // Approved invoices already changed inventory. Keep the reversal and
+        // replacement in one transaction so warehouse stock cannot be doubled.
+        if ($approved && $wasApproved) {
+            $handledApprovedEdit = true;
+            DB::transaction(function () use ($invoice, $invoiceData, $items, $buildResult, $oldItems, &$createdDocument) {
+                ProductService::subProductsQuantities($oldItems, $invoice->invoice_type);
+
+                $invoice->status = InvoiceStatus::UNAPPROVED;
+                CostOfGoodsService::updateProductsAverageCost($invoice);
+                ProductService::updateWarehouseAverageCosts($invoice);
+
+                if ($invoice->document_id) {
+                    DocumentService::deleteDocument($invoice->document_id);
+                    $invoice->document_id = null;
+                }
+
+                $invoiceData['vat'] = $buildResult['totalVat'];
+                $invoiceData['amount'] = $buildResult['totalAmount'];
+                $invoiceData['title'] = $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? ''));
+                $invoiceData['status'] = InvoiceStatus::UNAPPROVED;
+                $invoice->update($invoiceData);
+                self::syncInvoiceItems($invoice, $items);
+
+                $createdDocument = self::createDocumentFromInvoiceItems(auth()->user(), $invoice);
+                $invoice->update([
+                    ...$invoiceData,
+                    'status' => InvoiceStatus::APPROVED,
+                    'document_id' => $createdDocument->id,
+                ]);
+
+                ProductService::addProductsQuantities($items, $invoice->invoice_type);
+                $invoice->refresh();
+                CostOfGoodsService::updateProductsAverageCost($invoice);
+                ProductService::updateWarehouseAverageCosts($invoice);
+                self::syncCOGAfterForInvoiceItems($invoice);
+            });
+        } else {
+            $invoice = self::updateInvoiceWithoutApproval($invoice, $invoiceData, $items, $buildResult);
+        }
+
+        if ($approved && ! $handledApprovedEdit) {
 
             if ($invoice->invoice_type === InvoiceType::SELL) {
                 $invoice->update(['status' => InvoiceStatus::READY_TO_APPROVE]);
