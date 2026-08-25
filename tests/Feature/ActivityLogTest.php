@@ -142,6 +142,7 @@ class ActivityLogTest extends TestCase
     public function test_request_activity_details_are_fetched_on_demand(): void
     {
         $actor = User::factory()->create();
+        $actor->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
         $activity = Activity::create([
             'log_name' => 'request',
             'description' => 'POST test',
