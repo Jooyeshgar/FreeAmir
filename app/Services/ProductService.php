@@ -178,28 +178,34 @@ class ProductService
         $ancillaryCost->loadMissing('items', 'invoice.items');
 
         foreach ($ancillaryCost->items as $ancillaryCostItem) {
-            $invoiceItem = $ancillaryCost->invoice->items
-                ->first(fn (InvoiceItem $item) => $item->itemable_type === Product::class
-                    && (int) $item->itemable_id === (int) $ancillaryCostItem->product_id);
+            $invoiceItems = $ancillaryCost->invoice->items
+                ->filter(fn (InvoiceItem $item) => $item->itemable_type === Product::class
+                    && (int) $item->itemable_id === (int) $ancillaryCostItem->product_id
+                    && $item->warehouse_id);
+            $totalQuantity = (float) $invoiceItems->sum('quantity');
 
-            if (! $invoiceItem?->warehouse_id) {
+            if ($totalQuantity <= 0) {
                 continue;
             }
 
-            $stock = WarehouseProductStock::query()
-                ->where('product_id', $ancillaryCostItem->product_id)
-                ->where('warehouse_id', $invoiceItem->warehouse_id)
-                ->lockForUpdate()
-                ->first();
+            foreach ($invoiceItems as $invoiceItem) {
+                $stock = WarehouseProductStock::query()
+                    ->where('product_id', $ancillaryCostItem->product_id)
+                    ->where('warehouse_id', $invoiceItem->warehouse_id)
+                    ->lockForUpdate()
+                    ->first();
 
-            if (! $stock || (float) $stock->quantity <= 0) {
-                continue;
+                if (! $stock || (float) $stock->quantity <= 0) {
+                    continue;
+                }
+
+                $allocation = (float) $ancillaryCostItem->amount
+                    * ((float) $invoiceItem->quantity / $totalQuantity);
+                $costDelta = $allocation * ($reverse ? -1 : 1);
+                $stockValue = ((float) $stock->quantity * (float) $stock->average_cost) + $costDelta;
+                $stock->average_cost = max(0.0, $stockValue / (float) $stock->quantity);
+                $stock->save();
             }
-
-            $costDelta = (float) $ancillaryCostItem->amount * ($reverse ? -1 : 1);
-            $stockValue = ((float) $stock->quantity * (float) $stock->average_cost) + $costDelta;
-            $stock->average_cost = max(0.0, $stockValue / (float) $stock->quantity);
-            $stock->save();
         }
     }
 
