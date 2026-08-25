@@ -229,7 +229,7 @@ class PaymentService
                     Document::withoutGlobalScopes()->where('documentable_type', $lockedCheque->getMorphClass())->where('documentable_id', $lockedCheque->id)->pluck('id')
                 )->filter()->unique();
 
-                $lockedCheque->payments()->delete();
+                app(ActivityLogService::class)->deleteModels($lockedCheque->payments()->getQuery());
                 $lockedCheque->delete();
 
                 foreach ($documentIds as $documentId) {

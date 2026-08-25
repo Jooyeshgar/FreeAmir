@@ -180,6 +180,8 @@ class RolesAndPermissionsSeeder extends Seeder
         $extras = [
             'home',
             'access-super-admin-panel',
+            'activity-logs.index',
+            'activity-logs.details',
             'api.access',
             'change-company',
             'update-global-configs',

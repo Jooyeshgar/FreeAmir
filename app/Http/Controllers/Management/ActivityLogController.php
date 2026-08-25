@@ -7,6 +7,7 @@ use App\Models\Activity;
 use App\Models\Company;
 use App\Services\ActivityLogService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Exceptions\UrlGenerationException;
 use Illuminate\Support\Collection;
@@ -54,6 +55,17 @@ class ActivityLogController extends Controller
             $this->activityLogService->index($filters),
             $request,
         ));
+    }
+
+    public function details(Activity $activity): JsonResponse
+    {
+        abort_unless($activity->source === 'request', 404);
+
+        $row = $this->activityRow($activity->load('user:id,name,email'), Company::query()->get()->keyBy('id'), collect());
+
+        return response()->json([
+            'html' => view('super-admin.activity-logs._details', ['activity' => $row])->render(),
+        ]);
     }
 
     /**
@@ -154,6 +166,7 @@ class ActivityLogController extends Controller
     private function activityRow(Activity $activity, Collection $companyLookup, Collection $impersonatedUsers): array
     {
         $details = $activity->details ?? collect();
+        $aggregatedModels = collect($details->get('models', []));
         $attributes = collect($details->get('attributes', []));
         $old = collect($details->get('old', []));
         $changeKeys = $attributes->keys()->merge($old->keys())->unique();
@@ -178,7 +191,7 @@ class ActivityLogController extends Controller
         $route = $details->get('route');
         $routeUrl = $isRequest ? $this->namedRouteUrl($route) : null;
 
-        return [
+        $row = [
             'id' => $activity->id,
             'userId' => $activity->user_id,
             'isRequest' => $isRequest,
@@ -219,6 +232,63 @@ class ActivityLogController extends Controller
             'changes' => $changeKeys->map(fn (string $key): array => [
                 'model' => $modelContextLabel,
                 'url' => $modelUrl,
+                'field' => $key,
+                'old' => $this->formatValue($old->get($key)),
+                'new' => $this->formatValue($attributes->get($key)),
+            ]),
+        ];
+
+        if (! $isRequest || $aggregatedModels->isEmpty()) {
+            return $row;
+        }
+
+        $modelRows = $aggregatedModels->map(fn (array $model): array => $this->aggregatedModelRow($model));
+        $firstModel = $modelRows->first();
+        $row['actionLabel'] = $firstModel['actionLabel'];
+        $row['actionStyle'] = $firstModel['actionStyle'];
+        $row['title'] = $firstModel['title'];
+        $row['titleDetail'] = $firstModel['titleDetail'];
+        $row['modelContextLabel'] = $firstModel['modelContextLabel'];
+        $row['modelContextLabels'] = $modelRows->pluck('modelContextLabel')->unique()->values();
+        $row['modelContextLinks'] = $modelRows->map(fn (array $model): array => [
+            'label' => $model['modelContextLabel'],
+            'url' => $model['url'],
+        ])->unique(fn (array $link): string => $link['label'])->values();
+        $row['modelId'] = $firstModel['modelId'];
+        $row['changes'] = $modelRows->flatMap(fn (array $model): Collection => $model['changes'])->values();
+        $row['hasDetails'] = true;
+
+        return $row;
+    }
+
+    /** @param array<string, mixed> $model */
+    private function aggregatedModelRow(array $model): array
+    {
+        $modelType = $model['model_type'] ?? null;
+        $modelId = $model['model_id'] ?? null;
+        $modelTitle = __(class_basename($modelType ?? 'Activity'));
+        $hasNumberColumn = $this->modelHasNumberColumn($modelType);
+        $modelNumber = $model['model_number'] ?? null;
+        $modelContextLabel = $modelTitle.($hasNumberColumn ? (filled($modelNumber) ? ' #'.$modelNumber : '') : ' #'.$modelId);
+        $attributes = collect($model['attributes'] ?? []);
+        $old = collect($model['old'] ?? []);
+        $url = $this->modelUrl($modelType, $modelId);
+        $action = $this->actionOptions()[$model['event'] ?? ''] ?? [
+            'label' => __(ucfirst($model['event'] ?? 'activity')),
+            'style' => 'bg-slate-100 text-slate-700 ring-slate-600/20 dark:bg-slate-800 dark:text-slate-300',
+        ];
+
+        return [
+            'actionLabel' => $action['label'],
+            'actionStyle' => $action['style'],
+            'title' => $modelTitle,
+            'titleDetail' => $model['model_label'] ?? ($hasNumberColumn ? null : '#'.$modelId),
+            'modelContextLabel' => $modelContextLabel,
+            'modelId' => $modelId,
+            'url' => $url,
+            'changes' => $attributes->keys()->merge($old->keys())->unique()->map(fn (string $key): array => [
+                'model' => $modelContextLabel,
+                'url' => $url,
                 'field' => $key,
                 'old' => $this->formatValue($old->get($key)),
                 'new' => $this->formatValue($attributes->get($key)),

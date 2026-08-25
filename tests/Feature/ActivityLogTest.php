@@ -2,13 +2,18 @@
 
 namespace Tests\Feature;
 
+use App\Enums\SubjectType;
 use App\Models\Activity;
 use App\Models\Company;
 use App\Models\Config;
 use App\Models\Document;
 use App\Models\Scopes\FiscalYearScope;
+use App\Models\Subject;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Services\ActivityLogService;
+use App\Services\DocumentService;
+use App\Services\SubjectService;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -85,6 +90,230 @@ class ActivityLogTest extends TestCase
         $this->assertSame('POST', $activity->details->get('method'));
         $this->assertSame('[REDACTED]', $activity->details->get('request_input')['password']);
         $this->assertStringNotContainsString('do-not-store-this', $activity->details->toJson());
+    }
+
+    public function test_a_write_request_stores_all_changed_models_in_one_database_row(): void
+    {
+        $actor = User::factory()->create();
+
+        Route::post('/test/activity-log/aggregate', function () {
+            $first = Company::factory()->create(['name' => 'Before']);
+            $first->update(['name' => 'After']);
+            Company::factory()->create(['name' => 'Second']);
+
+            return response()->noContent();
+        })->middleware('web');
+
+        Activity::query()->delete();
+        $this->actingAs($actor)->post('/test/activity-log/aggregate')->assertNoContent();
+
+        $this->assertSame(1, Activity::query()->count());
+        $activity = Activity::query()->sole();
+        $models = collect($activity->details->get('models'));
+
+        $this->assertSame('request', $activity->source);
+        $this->assertSame('POST', $activity->details->get('method'));
+        $this->assertCount(2, $models);
+        $this->assertTrue($models->every(fn (array $model): bool => $model['model_type'] === Company::class));
+        $this->assertSame('created', $models->first()['event']);
+        $this->assertSame('After', $models->first()['attributes']['name']);
+        $this->assertArrayNotHasKey('name', $models->first()['old']);
+    }
+
+    public function test_activity_log_listing_does_not_load_request_model_snapshots(): void
+    {
+        $actor = User::factory()->create();
+        Activity::create([
+            'log_name' => 'request',
+            'description' => 'POST test',
+            'event' => 'post',
+            'user_id' => $actor->id,
+            'properties' => ['route' => 'test', 'models' => [['model_type' => Company::class, 'model_id' => 1]]],
+        ]);
+
+        $service = app(ActivityLogService::class);
+        $result = $service->index([]);
+        $listed = $result['activities']->getCollection()->first();
+
+        $this->assertNotNull($listed);
+        $this->assertFalse($listed->details->has('models'));
+    }
+
+    public function test_request_activity_details_are_fetched_on_demand(): void
+    {
+        $actor = User::factory()->create();
+        $actor->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+        $activity = Activity::create([
+            'log_name' => 'request',
+            'description' => 'POST test',
+            'event' => 'post',
+            'user_id' => $actor->id,
+            'properties' => [
+                'route' => 'test',
+                'models' => [[
+                    'model_type' => Company::class,
+                    'model_id' => 1,
+                    'event' => 'created',
+                    'attributes' => ['name' => 'Acme'],
+                    'old' => [],
+                ]],
+            ],
+        ]);
+
+        $response = $this->actingAs($actor)->getJson(route('management.activity-logs.details', $activity));
+
+        $response->assertOk()->assertJsonPath('html', fn (string $html): bool => str_contains($html, 'Acme'));
+    }
+
+    public function test_a_write_request_only_keeps_attributes_that_really_changed(): void
+    {
+        $actor = User::factory()->create();
+        $document = Document::create([
+            'number' => 100,
+            'documentable_id' => null,
+            'documentable_type' => null,
+        ]);
+        Activity::query()->delete();
+
+        Route::put('/test/activity-log/real-changes', function () use ($document) {
+            $document->update([
+                'number' => 100,
+                'documentable_id' => null,
+                'documentable_type' => null,
+            ]);
+
+            return response()->noContent();
+        })->middleware('web');
+
+        $this->actingAs($actor)->put('/test/activity-log/real-changes')->assertNoContent();
+
+        $activity = Activity::query()->sole();
+        $this->assertSame([], $activity->details->get('models'));
+    }
+
+    public function test_document_delete_request_records_the_document_and_every_transaction(): void
+    {
+        $actor = User::factory()->create();
+        $company = Company::factory()->create(['fiscal_year' => 1403]);
+        $actor->companies()->syncWithoutDetaching([$company->id]);
+        config(['active-company-id' => $company->id, 'active-company-fiscal-year' => 1403]);
+
+        $subject = Subject::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'parent_id' => null,
+            'name' => 'Cash',
+            'code' => '001',
+            'type' => SubjectType::BOTH,
+        ]);
+        $document = Document::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'number' => 101,
+            'date' => '2024-03-21',
+            'creator_id' => $actor->id,
+            'title' => 'Delete audit',
+        ]);
+        $transactions = collect([100, -100])->map(fn (int $value) => Transaction::create([
+            'subject_id' => $subject->id,
+            'document_id' => $document->id,
+            'user_id' => $actor->id,
+            'value' => $value,
+            'desc' => 'Delete audit',
+        ]));
+
+        Route::delete('/test/activity-log/document/{document}', function (int $document) {
+            DocumentService::deleteDocument($document);
+
+            return response()->noContent();
+        })->middleware('web');
+
+        Activity::query()->delete();
+        $this->actingAs($actor)->delete("/test/activity-log/document/{$document->id}")->assertNoContent();
+
+        $models = collect(Activity::query()->sole()->details->get('models'));
+
+        $this->assertCount(3, $models);
+        $this->assertTrue($models->contains(fn (array $model): bool => $model['event'] === 'deleted'
+            && $model['model_type'] === Document::class
+            && $model['model_id'] === $document->id));
+        $this->assertEqualsCanonicalizing(
+            $transactions->pluck('id')->all(),
+            $models->where('event', 'deleted')->where('model_type', Transaction::class)->pluck('model_id')->all()
+        );
+    }
+
+    public function test_subject_transfer_request_records_every_updated_transaction(): void
+    {
+        $actor = User::factory()->create();
+        $company = Company::factory()->create(['fiscal_year' => 1403]);
+        $actor->companies()->syncWithoutDetaching([$company->id]);
+        config(['active-company-id' => $company->id, 'active-company-fiscal-year' => 1403]);
+
+        $source = Subject::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'parent_id' => null,
+            'name' => 'Source',
+            'code' => '001',
+            'type' => SubjectType::BOTH,
+        ]);
+        $destination = Subject::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'parent_id' => null,
+            'name' => 'Destination',
+            'code' => '002',
+            'type' => SubjectType::BOTH,
+        ]);
+        $document = Document::withoutGlobalScopes()->create([
+            'company_id' => $company->id,
+            'number' => 102,
+            'date' => now()->toDateString(),
+            'creator_id' => $actor->id,
+            'title' => 'Transfer audit',
+        ]);
+        $transactions = collect([200, -200])->map(fn (int $value) => Transaction::create([
+            'subject_id' => $source->id,
+            'document_id' => $document->id,
+            'user_id' => $actor->id,
+            'value' => $value,
+            'desc' => 'Transfer audit',
+        ]));
+
+        Route::put('/test/activity-log/subject-transfer', function () use ($source, $destination) {
+            app(SubjectService::class)->transferSubject($source, $destination);
+
+            return response()->noContent();
+        })->middleware('web');
+
+        Activity::query()->delete();
+        $this->actingAs($actor)->put('/test/activity-log/subject-transfer')->assertNoContent();
+
+        $models = collect(Activity::query()->sole()->details->get('models'))
+            ->where('event', 'updated')->where('model_type', Transaction::class);
+
+        $this->assertEqualsCanonicalizing($transactions->pluck('id')->all(), $models->pluck('model_id')->all());
+        $this->assertTrue($models->every(fn (array $model): bool => $model['old']['subject_id'] === $source->id
+            && $model['attributes']['subject_id'] === $destination->id));
+    }
+
+    public function test_failed_write_request_discards_buffered_model_changes(): void
+    {
+        $actor = User::factory()->create();
+
+        Route::post('/test/activity-log/failure', function () {
+            Company::factory()->create();
+
+            throw new \RuntimeException('request failed');
+        })->middleware('web');
+
+        Activity::query()->delete();
+        $this->withoutExceptionHandling();
+
+        try {
+            $this->actingAs($actor)->post('/test/activity-log/failure');
+        } catch (\RuntimeException) {
+            // Expected.
+        }
+
+        $this->assertDatabaseCount('activity_log', 0);
     }
 
     public function test_activity_log_can_be_filtered_by_action_company_and_date(): void
@@ -648,13 +877,11 @@ class ActivityLogTest extends TestCase
 
         $this->post('/test/activity-log/multiple-model-events')->assertNoContent();
 
-        $modelActivities = Activity::query()->where('source', 'model')->where('model_type', Company::class)->get();
+        $activity = Activity::query()->where('source', 'request')->latest('id')->firstOrFail();
 
-        $this->assertCount(3, $modelActivities);
-        $this->assertTrue($modelActivities->every(
-            fn (Activity $activity): bool => (int) $activity->user_id === $impersonator->id
-                && (int) $activity->details->get('impersonated_user_id') === $impersonated->id,
-        ));
+        $this->assertCount(3, $activity->details->get('models'));
+        $this->assertSame($impersonator->id, (int) $activity->user_id);
+        $this->assertSame($impersonated->id, (int) $activity->details->get('impersonated_user_id'));
         $this->assertLessThanOrEqual(1, $impersonatorLookupCount);
     }
 

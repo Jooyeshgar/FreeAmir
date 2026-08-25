@@ -181,9 +181,9 @@ class DocumentService
             );
             $existingTransactionIds[] = $transaction->id;
         }
-        Transaction::where('document_id', $documentId)
-            ->whereNotIn('id', $existingTransactionIds)
-            ->delete();
+        app(ActivityLogService::class)->deleteModels(
+            Transaction::where('document_id', $documentId)->whereNotIn('id', $existingTransactionIds)
+        );
 
         DB::commit();
     }
@@ -197,8 +197,8 @@ class DocumentService
                 $documentFileService->delete($documentFile);
             }
 
-            Transaction::where('document_id', $documentId)->delete();
-            Document::where('id', $documentId)->delete();
+            app(ActivityLogService::class)->deleteModels(Transaction::where('document_id', $documentId));
+            app(ActivityLogService::class)->deleteModels(Document::where('id', $documentId));
         });
     }
 

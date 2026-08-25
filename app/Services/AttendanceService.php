@@ -375,9 +375,11 @@ class AttendanceService
             ])
         );
 
-        AttendanceLog::where('employee_id', $employeeId)
-            ->whereBetween('log_date', [$startDate->toDateString(), $endDate->toDateString()])
-            ->update(['monthly_attendance_id' => $attendance->id]);
+        app(ActivityLogService::class)->updateModels(
+            AttendanceLog::where('employee_id', $employeeId)
+                ->whereBetween('log_date', [$startDate->toDateString(), $endDate->toDateString()]),
+            ['monthly_attendance_id' => $attendance->id]
+        );
 
         return $attendance;
     }
