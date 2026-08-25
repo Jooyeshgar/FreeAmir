@@ -358,6 +358,7 @@ class ActivityLogTest extends TestCase
             ->assertSee('>POST</span>', false)
             ->assertSee(__('Details'))
             ->assertSee('x-show="detailsOpen"', false)
+            ->assertSee('fetch(', false)
             ->assertSee(route('users.show', $superAdmin), false)
             ->assertViewHas('activities', fn ($activities): bool => collect($activities->items())->every(fn (array $activity): bool => ! array_key_exists('userEmail', $activity)))
             ->assertDontSee('HTTP POST')
@@ -486,8 +487,7 @@ class ActivityLogTest extends TestCase
             ->assertSee(__('Company').' #'.$company->id)
             ->assertSee('127.0.0.1')
             ->assertSee('Created Company')
-            ->assertSee(__('Request details'))
-            ->assertSee('requestInputOpen: false', false)
+            ->assertDontSee(__('Request details'))
             ->assertSee('href="'.route('companies.store').'"', false)
             ->assertSee('fiscal_year');
     }
@@ -705,10 +705,9 @@ class ActivityLogTest extends TestCase
             ->get(route('management.activity-logs.index'))
             ->assertOk()
             ->assertSee('aria-controls="activity-details-', false)
-            ->assertSee('space-y-2 sm:hidden', false)
-            ->assertSee('sm:block', false)
-            ->assertSee(__('Previous value'))
-            ->assertSee(__('New value'));
+            ->assertSee('fetch(', false)
+            ->assertDontSee(__('Previous value'))
+            ->assertDontSee(__('New value'));
     }
 
     public function test_activity_logging_can_be_changed_from_management_settings(): void

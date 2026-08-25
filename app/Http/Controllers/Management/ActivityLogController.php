@@ -34,6 +34,7 @@ class ActivityLogController extends Controller
             'action' => ['nullable', Rule::in(['created', 'updated', 'deleted'])],
             'user_id' => ['nullable', 'integer'],
             'model_type' => ['nullable', 'string', 'max:255'],
+            'model_identifier' => ['nullable', 'string', 'max:100'],
             'company_id' => ['nullable', 'integer'],
             'date_from' => ['nullable', 'string', 'max:10'],
             'date_to' => ['nullable', 'string', 'max:10'],
@@ -59,7 +60,7 @@ class ActivityLogController extends Controller
 
     public function details(Activity $activity): JsonResponse
     {
-        abort_unless($activity->source === 'request', 404);
+        abort_unless($activity->source === 'request' || $activity->source === 'model', 404);
 
         $row = $this->activityRow($activity->load('user:id,name,email'), Company::query()->get()->keyBy('id'), collect());
 
@@ -83,6 +84,7 @@ class ActivityLogController extends Controller
             $data['filters']['user_id'] ?? null,
             $data['filters']['company_id'] ?? null,
             $data['filters']['model_type'] ?? null,
+            $data['filters']['model_identifier'] ?? null,
             $request->input('date_from'),
             $request->input('date_to'),
         ])->filter(fn (mixed $value): bool => filled($value))->count();

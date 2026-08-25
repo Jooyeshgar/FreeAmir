@@ -225,6 +225,18 @@ class ActivityLogService
             ->when($filters['model_type'] ?? null, fn ($query, string $modelType) => $query->where(function ($query) use ($modelType) {
                 $query->where('model_type', $modelType)->orWhereJsonContains('details->model_types', $modelType);
             }))
+            ->when($filters['model_identifier'] ?? null, function ($query, string $identifier) {
+                $query->where(function ($query) use ($identifier) {
+                    $query->where('model_id', $identifier)
+                        ->orWhere('details->model_number', $identifier)
+                        ->orWhereJsonContains('details->model_ids', is_numeric($identifier) ? (int) $identifier : $identifier)
+                        ->orWhereJsonContains('details->model_numbers', $identifier);
+
+                    if (is_numeric($identifier)) {
+                        $query->orWhereJsonContains('details->model_numbers', (int) $identifier);
+                    }
+                });
+            })
             ->when($filters['company_id'] ?? null, fn ($query, int|string $companyId) => $query->where(function ($query) use ($companyId) {
                 $query->where('details->company_id', (int) $companyId)->orWhereJsonContains('details->company_ids', (int) $companyId);
             }))
