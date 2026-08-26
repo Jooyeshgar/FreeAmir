@@ -1,11 +1,11 @@
 <x-card class="rounded-2xl w-full" class_body="p-4">
-    <div class="flex gap-2">
+    <div class="flex flex-wrap items-end gap-2">
         <x-text-input input_name="title" title="{{ __('document name') }}"
             input_value="{{ old('title') ?? $document->title }}" placeholder="{{ __('document name') }}"
             label_text_class="text-gray-500" label_class="w-full" input_class="max-w-96"></x-text-input>
         <x-text-input input_value="{{ $document->id ?? '' }}" input_name="document_id" label_text_class="text-gray-500"
             label_class="w-full hidden"></x-text-input>
-        <div class="flex-1"></div>
+        <div class="hidden flex-1 lg:block"></div>
         <x-text-input disabled="true" input_value="{{ formatDocumentNumber($previousDocumentNumber) }}" input_name=""
             title="{{ __('previous document number') }}" placeholder="{{ __('previous document number') }}"
             label_text_class="text-gray-500 text-nowrap"></x-text-input>
@@ -41,14 +41,14 @@
             {{ __('credit') }}
         </div>
     </div>
-    <div class="min-h-96">
+    <div class="min-h-96 overflow-x-auto overscroll-x-contain">
         <div id="transactions" x-data="{ activeTab: {{ $total }} }"
             @click.outside="
                 activeTab = null;
                 $store.account.clear();
             ">
             <template x-for="(transaction, index) in transactions" :key="transaction.id">
-                <div :class="{ 'active': activeTab === index }" class="transaction flex gap-2 items-center px-4 pb-3"
+                <div :class="{ 'active': activeTab === index }" class="transaction flex min-w-max gap-2 items-center px-4 pb-3"
                     @click.stop="
                         if (activeTab === index) {
                             activeTab = null;

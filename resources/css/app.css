@@ -218,7 +218,6 @@ jdp-container .jdp-days .jdp-day.selected {
 main {
     position: relative;
     z-index: 2;
-    padding: 0 .4rem;
 }
 
 :root {
@@ -245,6 +244,30 @@ main {
 }
 
 @layer components {
+    .mobile-main-menu details > ul {
+        position: static;
+        width: 100%;
+        max-width: none;
+        margin-top: .25rem;
+        border: 0;
+        box-shadow: none;
+        background: color-mix(in oklab, var(--color-base-200) 65%, transparent);
+    }
+
+    .mobile-main-menu :is(a, summary, button) {
+        min-height: 44px;
+        white-space: normal;
+        text-wrap: wrap;
+    }
+
+    [data-mobile-menu] > summary {
+        list-style: none;
+    }
+
+    [data-mobile-menu] > summary::-webkit-details-marker {
+        display: none;
+    }
+
     .app-main-menu > li > details {
         overflow: visible;
     }
@@ -303,6 +326,72 @@ main {
 
     .super-admin-content .btn {
         @apply rounded-xl;
+    }
+
+    @media (max-width: 767px) {
+        main {
+            font-size: .875rem;
+        }
+
+        main form :is(.flex, .grid) {
+            max-width: 100%;
+        }
+
+        main .transaction {
+            min-width: max-content;
+        }
+
+        main :has(> .transaction) {
+            max-width: 100%;
+            overflow-x: auto;
+            overscroll-behavior-inline: contain;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        main :is(.card-body, .modal-box) {
+            padding: 1rem;
+        }
+
+        main :is(.card-title, h1, h2) {
+            overflow-wrap: anywhere;
+        }
+
+        main :is(.card-actions, .modal-action) {
+            flex-wrap: wrap;
+        }
+
+        main :is(.card-actions, .modal-action) > :is(.btn, button, a),
+        main form > :is(.btn, button[type='submit']) {
+            min-height: 44px;
+        }
+
+        main :is(.input, .select, .textarea, .file-input) {
+            max-width: 100%;
+        }
+
+        main .stats {
+            max-width: 100%;
+            overflow-x: auto;
+        }
+
+        main table:not(.document-print-table):not(.report) {
+            min-width: max-content;
+        }
+
+        main table:not(.document-print-table):not(.report) :is(th, td) {
+            white-space: nowrap;
+        }
+
+        main table:not(.document-print-table):not(.report):not(:only-child) {
+            display: table;
+        }
+
+        main :has(> table:not(.document-print-table):not(.report)) {
+            max-width: 100%;
+            overflow-x: auto;
+            overscroll-behavior-inline: contain;
+            -webkit-overflow-scrolling: touch;
+        }
     }
 }
 

@@ -1,15 +1,20 @@
 <header class="sticky top-0 z-30 w-full border-b border-base-content/8 bg-base-100/90 backdrop-blur-md">
-    <div class="navbar min-h-14 items-center justify-between gap-3 px-3 min-[1430px]:w-[1430px] min-[1430px]:mx-auto">
-        <nav class="flex min-w-0 flex-1 items-center gap-1" aria-label="{{ __('Main navigation') }}">
+    <div class="navbar mx-auto min-h-14 w-full max-w-[1430px] items-center justify-between gap-2 px-3">
+        <nav class="hidden min-w-0 flex-1 items-center gap-1 xl:flex" aria-label="{{ __('Main navigation') }}">
             <a href="/" class="flex shrink-0 items-center rounded-lg p-1.5 transition-colors hover:bg-base-200" aria-label="{{ config('app.name') }}">
                 <img src="/images/logo.png" alt="Logo" class="h-9 w-9 object-contain">
             </a>
-            <ul class="app-main-menu menu px-1 lg:menu-horizontal lg:flex-nowrap" data-main-menu>
+            <ul class="app-main-menu menu menu-horizontal flex-nowrap px-1" data-main-menu>
                 <x-menu />
             </ul>
         </nav>
 
-        <nav aria-label="{{ __('User menu') }}">
+        <a href="/" class="flex shrink-0 items-center rounded-lg p-1.5 transition-colors hover:bg-base-200 xl:hidden"
+            aria-label="{{ config('app.name') }}">
+            <img src="/images/logo.png" alt="Logo" class="h-9 w-9 object-contain">
+        </a>
+
+        <nav class="hidden xl:block" aria-label="{{ __('User menu') }}">
             <ul class="app-main-menu flex shrink-0 items-center menu menu-horizontal px-1" data-main-menu>
                 @can('access-super-admin-panel')
                     <li>
@@ -87,6 +92,52 @@
                     </details>
                 </li>
             </ul>
+        </nav>
+
+        <nav class="ms-auto flex items-center gap-1 xl:hidden" aria-label="{{ __('Mobile navigation') }}">
+            <label class="swap swap-rotate btn btn-ghost btn-square min-h-11 min-w-11" aria-label="{{ __('Dark mode') }}">
+                <input type="checkbox" value="dark" class="theme-controller" />
+                <svg class="swap-off h-5 w-5 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12Zm0-16v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" />
+                </svg>
+                <svg class="swap-on h-5 w-5 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />
+                </svg>
+            </label>
+
+            <details class="dropdown dropdown-end" data-mobile-menu>
+                <summary class="btn btn-ghost btn-square min-h-11 min-w-11" aria-label="{{ __('Main navigation') }}">
+                    <svg class="h-6 w-6 fill-none stroke-current" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true">
+                        <path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </summary>
+                <div class="dropdown-content z-50 mt-2 max-h-[calc(100dvh-5rem)] w-[min(22rem,calc(100vw-1.5rem))] overflow-y-auto rounded-box border border-base-300 bg-base-100 p-2 shadow-xl">
+                    <ul class="mobile-main-menu menu w-full p-0" data-main-menu>
+                        <x-menu />
+                    </ul>
+                    <div class="divider my-2"></div>
+                    <ul class="menu w-full p-0">
+                        @can('access-super-admin-panel')
+                            <li><a href="{{ route('management.dashboard') }}">{{ __('Admin panel') }}</a></li>
+                        @endcan
+                        <li class="menu-title"><span>{{ __('Company') }}</span></li>
+                        @foreach (auth()->user()->companies as $company)
+                            <li><a href="{{ route('change-company', ['company' => $company]) }}">{{ $company->name . ' - ' . $company->fiscal_year }}</a></li>
+                        @endforeach
+                        <li class="menu-title"><span>{{ __('Language') }}</span></li>
+                        <li><form method="POST" action="{{ route('locale') }}">@csrf<input type="hidden" name="locale" value="fa"><button type="submit" lang="fa">{{ __('Farsi') }}</button></form></li>
+                        <li><form method="POST" action="{{ route('locale') }}">@csrf<input type="hidden" name="locale" value="en"><button type="submit" lang="en">{{ __('English') }}</button></form></li>
+                        <li class="menu-title"><span class="truncate">{{ Auth::user()->name }}</span></li>
+                        @can('api-tokens.index')
+                            <li><a href="{{ route('api-tokens.index') }}">{{ __('API Tokens') }}</a></li>
+                        @endcan
+                        @if (Auth::user()->employee && Auth::user()->can('employee-portal.dashboard'))
+                            <li><a href="{{ route('employee-portal.employee.show') }}">{{ __('My Information') }}</a></li>
+                        @endif
+                        <li><a href="/logout" class="text-error">{{ __('Logout') }}</a></li>
+                    </ul>
+                </div>
+            </details>
         </nav>
     </div>
 

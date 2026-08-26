@@ -139,6 +139,24 @@ function initializeMainMenuDropdowns() {
 
 document.addEventListener('DOMContentLoaded', initializeMainMenuDropdowns);
 
+function initializeMobileMenus() {
+    document.querySelectorAll('[data-mobile-menu]').forEach((menu) => {
+        menu.addEventListener('click', (event) => {
+            if (event.target.closest('a[href]')) {
+                menu.removeAttribute('open');
+            }
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!menu.contains(event.target)) {
+                menu.removeAttribute('open');
+            }
+        });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', initializeMobileMenus);
+
 function convertToJalali(gy, gm, gd) {
     // Implementation of gregorian_to_jalali function in JavaScript
     gy = parseInt(gy);
