@@ -1,4 +1,4 @@
-<div class="grid grid-cols-2 gap-6">
+<div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
     <div class="col-span-2 md:col-span-1">
         <x-input name="name" id="name" title="{{ __('Name') }}" :value="old('name', $workSite->name ?? '')" placeholder="{{ __('Work site name') }}" required />
     </div>

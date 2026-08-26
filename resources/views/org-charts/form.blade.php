@@ -1,4 +1,4 @@
-<div class="grid grid-cols-2 gap-6">
+<div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
     <div class="col-span-2 md:col-span-1">
         <x-input name="title" id="title" title="{{ __('Title') }}" :value="old('title', $orgChart->title ?? '')" placeholder="{{ __('e.g. CEO') }}" required />
     </div>

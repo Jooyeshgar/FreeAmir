@@ -1,4 +1,4 @@
-<div class="grid grid-cols-2 gap-6">
+<div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
 
     <div class="col-span-2 md:col-span-1">
         <x-select name="employee_id" id="employee_id" title="{{ __('Employee') }}" :selected="old('employee_id', isset($salaryDecree) ? $salaryDecree->employee_id : '')" :options="$employees

@@ -141,14 +141,48 @@ document.addEventListener('DOMContentLoaded', initializeMainMenuDropdowns);
 
 function initializeMobileMenus() {
     document.querySelectorAll('[data-mobile-menu]').forEach((menu) => {
+        const toggle = menu.querySelector('summary');
+
+        // Keep the hamburger's accessible state in sync with the native
+        // <details> disclosure state. This also makes the control reliable
+        // for assistive technology when opened with keyboard input.
+        const syncExpandedState = () => {
+            if (toggle) {
+                toggle.setAttribute('aria-expanded', menu.open ? 'true' : 'false');
+            }
+        };
+
+        menu.addEventListener('toggle', syncExpandedState);
+        syncExpandedState();
+
         menu.addEventListener('click', (event) => {
-            if (event.target.closest('a[href]')) {
+            if (event.target.closest('a[href], button[type="submit"]')) {
                 menu.removeAttribute('open');
             }
         });
 
         document.addEventListener('click', (event) => {
             if (!menu.contains(event.target)) {
+                menu.removeAttribute('open');
+            }
+        });
+
+        // Escape should dismiss the menu and return focus to the hamburger,
+        // matching expected disclosure-menu behaviour on desktop and mobile.
+        menu.addEventListener('keydown', (event) => {
+            if (event.key !== 'Escape' || !menu.open) {
+                return;
+            }
+
+            menu.removeAttribute('open');
+            toggle?.focus();
+            event.preventDefault();
+        });
+
+        // Avoid leaving an expanded mobile menu visible after crossing into
+        // the desktop breakpoint where the control is hidden.
+        window.addEventListener('resize', () => {
+            if (window.matchMedia('(min-width: 1280px)').matches && menu.open) {
                 menu.removeAttribute('open');
             }
         });

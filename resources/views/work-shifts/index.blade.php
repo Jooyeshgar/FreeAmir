@@ -3,8 +3,8 @@
 
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <div class="flex items-center justify-between gap-3">
-                <form action="{{ route('attendance.work-shifts.index') }}" method="GET" class="flex items-center gap-2">
+            <div class="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
+                <form action="{{ route('attendance.work-shifts.index') }}" method="GET" class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                     <div class="w-60 max-w-full [&_.input]:input-sm">
                         <x-input type="text" name="search" value="{{ $search }}" placeholder="{{ __('Filter by name') }}" />
                     </div>    
@@ -20,7 +20,8 @@
                 @endcan
             </div>
 
-            <table class="table w-full mt-4 overflow-auto">
+            <div class="mt-4 w-full overflow-x-auto overscroll-x-contain">
+            <table class="table w-full min-w-[56rem]">
                 <thead>
                     <tr>
                         <th>{{ __('Name') }}</th>
@@ -78,6 +79,7 @@
                     @endforelse
                 </tbody>
             </table>
+            </div>
 
             <div class="mt-4">
                 {{ $workShifts->withQueryString()->links() }}

@@ -1,7 +1,7 @@
 <div>
-    <fieldset id="subjectForm" class="grid grid-cols-2 gap-6 border p-5 my-3">
+    <fieldset id="subjectForm" class="grid grid-cols-1 gap-6 border p-4 my-3 sm:grid-cols-2 sm:p-5">
         <div class="col-span-2 md:col-span-1">
-            <div class="flex gap-4" x-data="{
+                <div class="flex flex-col gap-4 sm:flex-row" x-data="{
                 selectedName: @js($selectedSubject?->name ?? ''),
                 selectedCode: @js($selectedSubject?->code ?? ''),
                 selectedId: @js($selectedSubject?->id ?? ''),
@@ -9,7 +9,7 @@
                 <x-input name="key" value="{{ $config->key }}" hidden />
                 <x-input name="{{ $config->key }}" id="{{ $config->key }}" placeholder="{{ __('Select Subject Code') }}" title="{{ __('Subject Code') }}"
                     x-bind:value="$store.utils.formatCode(selectedCode)" hidden />
-                <x-subject-select class="w-2/3" :subjects="$subjects" title="{{ $config->desc }}" placeholder="{{ __('Select a subject') }}"
+                <x-subject-select class="w-full sm:w-2/3" :subjects="$subjects" title="{{ $config->desc }}" placeholder="{{ __('Select a subject') }}"
                     @selected="
                         selectedName = $event.detail.name;
                         selectedCode = $event.detail.code;

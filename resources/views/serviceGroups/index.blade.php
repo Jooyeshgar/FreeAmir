@@ -27,7 +27,8 @@
             </div>
 
             <div class="p-4 sm:p-5">
-            <table class="table w-full overflow-auto">
+            <div class="w-full overflow-x-auto overscroll-x-contain">
+            <table class="table w-full min-w-[42rem]">
                 <thead>
                     <tr>
                         <th class="px-4 py-2">{{ __('SSTID') }}</th>
@@ -75,6 +76,7 @@
                     @endforeach
                 </tbody>
             </table>
+            </div>
             </div>
 
             {{-- Pagination --}}

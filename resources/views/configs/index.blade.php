@@ -23,7 +23,8 @@
                 <div class="card-title">{{ __('Edit Config') }}</div>
                 <x-show-message-bags />
                 <div class="card-body">
-                    <table class="table w-full mt-4 overflow-auto">
+                    <div class="mt-4 w-full overflow-x-auto overscroll-x-contain">
+                    <table class="table w-full min-w-[40rem]">
                         <thead>
                             <tr>
                                 <th class="px-4 py-2">{{ __('Subject') }}</th>
@@ -54,6 +55,7 @@
                             @endforeach
                         </tbody>
                     </table>
+                    </div>
                 </div>
             </div>
         </div>

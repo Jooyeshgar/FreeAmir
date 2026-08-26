@@ -1,4 +1,4 @@
-<div class="grid grid-cols-2 gap-5">
+<div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
     <div class="col-span-2 md:col-span-1">
         <x-input name="name" id="name" title="{{ __('Name') }}" :value="old('name', $serviceGroup->name ?? '')"
             placeholder="{{ __('Please enter name') }}" />

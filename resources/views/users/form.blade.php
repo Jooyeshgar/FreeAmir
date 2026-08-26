@@ -3,7 +3,7 @@
     $oldCompanies = old('company', $user?->companies->pluck('id')->map(fn($id) => (string) $id)->toArray() ?? []);
 @endphp
 
-<div class="grid grid-cols-2 gap-6">
+<div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
     <x-input title="{{ __('Name') }}" name="name" :value="old('name', $user->name ?? '')" />
     <x-input title="{{ __('Email') }}" name="email" :value="old('email', $user->email ?? '')" type="email" />
     <x-input title="{{ __('Password') }}" type="password" name="password" />

@@ -1,4 +1,4 @@
-<div class="grid grid-cols-2 gap-6">
+<div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
     <div class="col-span-2 md:col-span-1">
         <label for="work_site_id" class="label block text-sm font-medium">{{ __('Work Site') }}*</label>
         <select name="work_site_id" id="work_site_id"

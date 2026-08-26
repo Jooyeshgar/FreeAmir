@@ -106,12 +106,12 @@
             </label>
 
             <details class="dropdown dropdown-end" data-mobile-menu>
-                <summary class="btn btn-ghost btn-square min-h-11 min-w-11" aria-label="{{ __('Main navigation') }}">
+                <summary id="mobile-menu-toggle" class="btn btn-ghost btn-square min-h-11 min-w-11" aria-label="{{ __('Main navigation') }}" aria-controls="mobile-menu-panel" aria-expanded="false">
                     <svg class="h-6 w-6 fill-none stroke-current" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true">
                         <path stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16" />
                     </svg>
                 </summary>
-                <div class="dropdown-content z-50 mt-2 max-h-[calc(100dvh-5rem)] w-[min(22rem,calc(100vw-1.5rem))] overflow-y-auto rounded-box border border-base-300 bg-base-100 p-2 shadow-xl">
+                <div id="mobile-menu-panel" class="dropdown-content z-50 mt-2 max-h-[calc(100dvh-5rem)] w-[min(22rem,calc(100vw-1.5rem))] overflow-y-auto rounded-box border border-base-300 bg-base-100 p-2 shadow-xl" role="navigation" aria-label="{{ __('Main navigation') }}">
                     <ul class="mobile-main-menu menu w-full p-0" data-main-menu>
                         <x-menu />
                     </ul>

@@ -73,13 +73,19 @@
 <body
     class="admin-shell min-h-screen overflow-x-hidden bg-[#f5f7f6] text-[#172033] antialiased dark:bg-slate-950 dark:text-slate-100"
     dir="{{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }}">
-    <div x-data="{ sidebarOpen: false }" @keydown.escape.window="sidebarOpen = false">
+    <div x-data="{ sidebarOpen: false, isMobile: window.innerWidth < 1024 }"
+        x-init="window.addEventListener('resize', () => { isMobile = window.innerWidth < 1024; if (!isMobile) sidebarOpen = false })"
+        @keydown.escape.window="sidebarOpen = false"
+        :class="{ 'overflow-hidden lg:overflow-visible': sidebarOpen }">
         <div x-cloak x-show="sidebarOpen" x-transition.opacity
             class="fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-sm lg:hidden" @click="sidebarOpen = false"></div>
 
         <aside id="management-sidebar"
+            aria-label="{{ __('Super-Admin navigation') }}"
+            :aria-hidden="isMobile && !sidebarOpen"
+            :inert="isMobile && !sidebarOpen"
             :class="sidebarOpen ? 'translate-x-0' : '{{ $isRtl ? 'translate-x-full' : '-translate-x-full' }}'"
-            class="fixed inset-y-0 {{ $isRtl ? 'right-0' : 'left-0' }} z-50 flex w-72 flex-col overflow-y-auto bg-[#15263b] text-slate-300 shadow-2xl transition-transform duration-300 lg:translate-x-0">
+            class="fixed inset-y-0 {{ $isRtl ? 'right-0' : 'left-0' }} z-50 flex w-[min(18rem,calc(100vw-1rem))] max-w-full flex-col overflow-y-auto bg-[#15263b] text-slate-300 shadow-2xl transition-transform duration-300 lg:w-72 lg:translate-x-0">
             <div class="grid-paper pointer-events-none absolute inset-0 opacity-70"></div>
             <div class="relative flex h-20 items-center gap-3 border-b border-white/10 px-6">
                 <a href="{{ route('management.dashboard') }}" class="flex min-w-0 flex-1 items-center gap-3">
@@ -95,7 +101,7 @@
                 </a>
                 <button type="button"
                     class="grid h-9 w-9 place-items-center rounded-lg text-slate-400 hover:bg-white/10 lg:hidden"
-                    @click="sidebarOpen=false" aria-label="{{ __('Close') }}"><svg class="h-5 w-5" fill="none"
+                    @click="sidebarOpen=false" aria-controls="management-sidebar" aria-label="{{ __('Close') }}"><svg class="h-5 w-5" fill="none"
                         stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" d="m6 6 12 12M18 6 6 18" />
                     </svg></button>
@@ -144,6 +150,7 @@
                     <button type="button"
                         class="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 text-slate-600 lg:hidden dark:border-slate-700"
                         @click="sidebarOpen=true" aria-controls="management-sidebar"
+                        :aria-expanded="sidebarOpen"
                         aria-label="{{ __('Menu') }}"><svg class="h-5 w-5" fill="none" stroke="currentColor"
                             viewBox="0 0 24 24">
                             <path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" />
