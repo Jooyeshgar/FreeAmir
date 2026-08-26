@@ -141,7 +141,7 @@
 
   [data-theme='dark'] & {
     background-image:
-      linear-gradient(rgb(2 6 23 / 0.76), rgb(2 6 23 / 0.76)),
+      linear-gradient(rgb(255 0 0 / 0.5), rgb(255 0 0 / 0.5)),
       url('../images/inbg-dark.jpeg');
   }
 }
