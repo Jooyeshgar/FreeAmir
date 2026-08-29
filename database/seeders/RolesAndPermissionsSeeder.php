@@ -27,6 +27,12 @@ class RolesAndPermissionsSeeder extends Seeder
 
     public function run(): void
     {
+        $this->seedPermissionsAndRoles();
+        $this->seedDemoUsersAndEmployees();
+    }
+
+    public function seedPermissionsAndRoles(): void
+    {
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         foreach ($this->definePermissions() as $permission) {
@@ -34,7 +40,6 @@ class RolesAndPermissionsSeeder extends Seeder
         }
 
         $this->seedRoles();
-        $this->seedDemoUsersAndEmployees();
     }
 
     /**

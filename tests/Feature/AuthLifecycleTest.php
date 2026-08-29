@@ -944,6 +944,27 @@ class AuthLifecycleTest extends TestCase
         ]);
     }
 
+    public function test_company_registration_bootstraps_missing_admin_permissions(): void
+    {
+        Company::create(['name' => 'Existing Company', 'fiscal_year' => 1404, 'currency' => 'Rial']);
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->post(route('registered-user.company.store'), [
+            'name' => 'Registered Company',
+            'fiscal_year' => 1405,
+            'currency' => 'Rial',
+            'phone_number' => '09121234567',
+        ]);
+
+        $response->assertRedirect(route('home'));
+
+        $company = Company::where('name', 'Registered Company')->firstOrFail();
+
+        $this->assertTrue($user->fresh()->can('home'));
+        $this->assertTrue($user->fresh()->can('documents.show'));
+        $this->withCookie('active-company-id', (string) $company->id)->get(route('home'))->assertOk();
+    }
+
     public function test_user_can_request_a_password_reset_email_and_reset_their_password(): void
     {
         Notification::fake();

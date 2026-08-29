@@ -7,13 +7,19 @@
             <h2 class="mt-1 text-2xl font-bold tracking-tight">{{ __('Companies and fiscal years') }}</h2>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ __('Manage every company record and its fiscal-year access.') }}</p>
         </div>
-        @cannot('access-super-admin-panel')
-            @can('companies.create')
-                <a href="{{ route('companies.create') }}" class="btn btn-primary gap-2 rounded-xl shadow-lg shadow-primary/15">
-                    <span class="text-lg leading-none">+</span>{{ __('Create Company') }}
-                </a>
-            @endcan
-        @endcannot
+        @if ($canCreateFirstCompany)
+            <a href="{{ route('companies.create') }}" data-testid="create-first-company" class="btn btn-primary gap-2 rounded-xl shadow-lg shadow-primary/15">
+                <span class="text-lg leading-none">+</span>{{ __('Create Company') }}
+            </a>
+        @else
+            @cannot('access-super-admin-panel')
+                @can('companies.create')
+                    <a href="{{ route('companies.create') }}" class="btn btn-primary gap-2 rounded-xl shadow-lg shadow-primary/15">
+                        <span class="text-lg leading-none">+</span>{{ __('Create Company') }}
+                    </a>
+                @endcan
+            @endcannot
+        @endif
     </div>
 
     <section class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">

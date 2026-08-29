@@ -13,6 +13,7 @@ use Database\Seeders\BankSeeder;
 use Database\Seeders\ConfigSeeder;
 use Database\Seeders\CustomerGroupSeeder;
 use Database\Seeders\ProductGroupSeeder;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\ServiceGroupSeeder;
 use Database\Seeders\SubjectSeeder;
 use Illuminate\Contracts\View\View;
@@ -75,6 +76,7 @@ class CompanyController extends Controller
 
         return view($view, [
             'companies' => $companies,
+            'canCreateFirstCompany' => $user->can('access-super-admin-panel') && $user->companies()->doesntExist(),
         ]);
     }
 
@@ -394,7 +396,17 @@ class CompanyController extends Controller
                 }
             }
 
-            $creator->assignRole(Role::firstOrCreate(['name' => __('Admin')]));
+            $adminRole = Role::where('name', __('Admin'))->first();
+
+            $requiredAdminPermissions = ['home', 'documents.show'];
+
+            if ($adminRole === null || $adminRole->permissions()->whereIn('name', $requiredAdminPermissions)->count() !== count($requiredAdminPermissions)) {
+                app(RolesAndPermissionsSeeder::class)->seedPermissionsAndRoles();
+                $adminRole = Role::where('name', __('Admin'))->firstOrFail();
+            }
+
+            $creator->unsetRelation('roles');
+            $creator->assignRole($adminRole);
 
             // The authorization check before company creation caches this user's wildcard permissions.
             $creator->forgetWildcardPermissionIndex();
