@@ -1,9 +1,9 @@
 <x-login-layout>
     @include('auth.partials.header')
 
-    <div class="login-bg bg-cover bg-center rounded-t-3xl flex-1 border-8 border-gray-200 border-opacity-85 overflow-hidden">
-        <div class="flex items-center justify-center rounded-3xl">
-            <div class="card w-96 p-7 mt-16 bg-white">
+    <div class="login-bg flex flex-1 flex-col overflow-hidden bg-cover bg-center sm:rounded-t-3xl sm:border-8 sm:border-gray-200 sm:border-opacity-85">
+        <div class="flex items-center justify-center px-3 py-6 sm:px-6 sm:py-10 md:py-14">
+            <div class="card w-full max-w-sm bg-white p-4 shadow-xl sm:p-7">
                 <form method="POST" action="{{ route('registered-user.company.store') }}">
                     @csrf
                     <h1 class="font-bold text-center">{{ __('Create your company') }}</h1>
@@ -15,9 +15,9 @@
                     <x-text-input class="mt-1 w-full" input_name="currency" id="currency" title="{{ __('Currency') }}" placeHolder="{{ __('Enter your company\'s currency') }}" :input_value="old('currency', 'Rial')" />
                     <x-text-input class="mt-1 w-full" input_name="phone_number" id="phone_number" title="{{ __('Phone number') }}" placeHolder="{{ __('Enter your company\'s phone number') }}" :input_value="old('phone_number')" />
 
-                    <div class="flex items-center justify-between mt-4">
-                        <button type="submit" class="btn bg-blue-500 hover:bg-blue-600 text-white">{{ __('Create') }}</button>
-                        <a href="{{ route('login') }}" class="btn bg-gray-300 hover:bg-gray-400 text-black">{{ __('Back to Login') }}</a>
+                    <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <button type="submit" class="btn bg-blue-500 text-white hover:bg-blue-600 sm:flex-1">{{ __('Create') }}</button>
+                        <a href="{{ route('login') }}" class="btn bg-gray-300 text-black hover:bg-gray-400 sm:flex-1">{{ __('Back to Login') }}</a>
                     </div>
                 </form>
             </div>

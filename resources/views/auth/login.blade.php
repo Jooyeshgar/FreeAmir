@@ -1,9 +1,9 @@
 <x-login-layout>
     @include('auth.partials.header')
 
-    <div x-data="loginForm(@js(old('email', '')))" class="login-bg bg-cover bg-center rounded-t-3xl flex-1 border-8 border-gray-200 p-0 border-opacity-85 overflow-hidden">
-        <div class="flex items-center justify-center rounded-3xl">
-            <div class="card w-96 p-7 mt-16 bg-white">
+    <div x-data="loginForm(@js(old('email', '')))" class="login-bg flex flex-1 flex-col overflow-hidden bg-cover bg-center sm:rounded-t-3xl sm:border-8 sm:border-gray-200 sm:border-opacity-85">
+        <div class="flex items-center justify-center px-3 py-6 sm:px-6 sm:py-10 md:py-14">
+            <div class="card w-full max-w-sm bg-white p-4 shadow-xl sm:p-7">
                 <form method="POST" action="{{ route('login') }}" autocomplete="on">
                     @csrf
                     <h1 class="font-bold text-center">{{ __('Login') }}</h1>
@@ -17,9 +17,9 @@
                         <input type="hidden" name="remember" value="0">
                         <x-checkbox name="remember" id="remember" value="1" :title="__('Remember Me')" :checked="old('remember', '0')" />
                     </div>
-                    <div class="flex items-center justify-between mt-4 pl-2">
-                        <button type="submit" class="btn bg-blue-500 hover:bg-blue-600 text-white py-2 px-8 rounded">{{ __('Login') }}</button>
-                        <a href="{{ route('password.request') }}" class="btn bg-gray-300 hover:bg-gray-400 text-black py-2 px-8 rounded">{{ __('Forgot Password') }}</a>
+                    <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <button type="submit" class="btn bg-blue-500 px-8 py-2 text-white hover:bg-blue-600 sm:flex-1">{{ __('Login') }}</button>
+                        <a href="{{ route('password.request') }}" class="btn bg-gray-300 px-4 py-2 text-black hover:bg-gray-400 sm:flex-1">{{ __('Forgot Password') }}</a>
                     </div>
                 </form>
 
