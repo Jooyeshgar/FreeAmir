@@ -14,14 +14,14 @@
 @endphp
 
 <div
-    {{ $attributes->class(['relative', $heightClass]) }}
+    {{ $attributes->class(['relative w-full min-w-0 overflow-hidden', $heightClass]) }}
     dir="ltr"
     @if (count($tabs))
         data-chart-tabs='@json($tabs)'
         data-active-tab="{{ $resolvedActiveTab }}"
     @endif
 >
-    <canvas id="{{ $resolvedChartId }}"></canvas>
+    <canvas id="{{ $resolvedChartId }}" class="max-w-full"></canvas>
 </div>
 
 @push('footer')

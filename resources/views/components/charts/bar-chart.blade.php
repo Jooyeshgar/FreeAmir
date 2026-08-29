@@ -1,5 +1,5 @@
-<div class="relative {{ $heightClass }}">
-    <canvas id="{{ $resolvedChartId }}"></canvas>
+<div class="relative w-full min-w-0 overflow-hidden {{ $heightClass }}">
+    <canvas id="{{ $resolvedChartId }}" class="max-w-full"></canvas>
 </div>
 
 @push('footer')
