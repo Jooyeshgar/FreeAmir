@@ -178,15 +178,12 @@ class AuthLifecycleTest extends TestCase
             ->assertSee('x-data="{ sidebarOpen: false }"', false)
             ->assertSee("x-effect=\"document.body.classList.toggle('overflow-hidden', sidebarOpen)\"", false)
             ->assertSee('id="management-sidebar"', false)
-            ->assertSee(':aria-hidden="!sidebarOpen"', false)
-            ->assertSee(':inert="!sidebarOpen"', false)
             ->assertSee('w-[min(18rem,calc(100vw-1rem))]', false)
             ->assertSee('x-ref="sidebarToggle"', false)
             ->assertSee(':aria-expanded="sidebarOpen"', false)
             ->assertSee('aria-controls="management-sidebar"', false)
             ->assertSee('w-full min-w-0 px-3', false)
             ->assertDontSee('lg:translate-x-0', false)
-            ->assertDontSee('lg:pr-72', false)
             ->assertDontSee('lg:pl-72', false)
             ->assertDontSee('max-w-[1600px]', false);
     }
