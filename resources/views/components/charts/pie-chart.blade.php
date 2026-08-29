@@ -21,8 +21,8 @@
     $resolvedData = count($data) ? array_values($data) : $items->pluck($metric)->values()->all();
 @endphp
 
-<div {{ $attributes->class([$heightClass]) }}>
-    <canvas id="{{ $resolvedChartId }}"></canvas>
+<div {{ $attributes->class(['relative w-full min-w-0 overflow-hidden', $heightClass]) }}>
+    <canvas id="{{ $resolvedChartId }}" class="max-w-full"></canvas>
 </div>
 
 @push('footer')
