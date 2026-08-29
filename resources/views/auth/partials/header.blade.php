@@ -7,7 +7,7 @@
         <form method="POST" action="{{ route('locale') }}" class="language-picker__form">
             @csrf
             <label for="auth-locale" class="sr-only">{{ __('Language') }}</label>
-            <select id="auth-locale" name="locale" class="locale select select-sm max-w-28 px-2 sm:select-md sm:max-w-none sm:px-3" onchange="this.form.submit()">
+            <select id="auth-locale" name="locale" class="locale select select-sm pr-10 pl-3 py-2 max-w-28 sm:select-md sm:max-w-none" onchange="this.form.submit()">
                 <option lang="fa" value="fa" @selected(app()->isLocale('fa'))>{{ __('Farsi') }}</option>
                 <option lang="en" value="en" @selected(app()->isLocale('en'))>{{ __('English') }}</option>
             </select>

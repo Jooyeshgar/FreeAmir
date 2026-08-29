@@ -9,17 +9,17 @@
                     <h1 class="font-bold text-center">{{ __('Login') }}</h1>
                     <x-show-message-bags />
                     
-                    <x-text-input class="mt-1 w-full max-w-xs" :title="__('Email')" input_name="email" id_input="email"
+                    <x-text-input class="mx-auto mt-1 w-full max-w-xs" :title="__('Email')" input_name="email" id_input="email"
                         type="email" :placeholder="__('Enter your email')" x-model="email" autocomplete="username" required autofocus />
-                    <x-text-input class="mt-1 w-full max-w-xs" :title="__('Password')" input_name="password" id_input="password"
+                    <x-text-input class="mx-auto mt-1 w-full max-w-xs" :title="__('Password')" input_name="password" id_input="password"
                         type="password" :placeholder="__('Enter your password')" autocomplete="current-password" required />
                     <div class="mt-3">
                         <input type="hidden" name="remember" value="0">
                         <x-checkbox name="remember" id="remember" value="1" :title="__('Remember Me')" :checked="old('remember', '0')" />
                     </div>
-                    <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <button type="submit" class="btn bg-blue-500 px-8 py-2 text-white hover:bg-blue-600 sm:flex-1">{{ __('Login') }}</button>
-                        <a href="{{ route('password.request') }}" class="btn bg-gray-300 px-4 py-2 text-black hover:bg-gray-400 sm:flex-1">{{ __('Forgot Password') }}</a>
+                    <div class="mx-auto mt-4 flex w-full max-w-xs flex-col gap-2 min-[375px]:flex-row min-[375px]:items-center min-[375px]:gap-1">
+                        <button type="submit" class="btn bg-blue-500 px-8 py-2 text-white hover:bg-blue-600 min-[375px]:w-[70%] min-[375px]:shrink-0">{{ __('Login') }}</button>
+                        <a href="{{ route('password.request') }}" class="btn whitespace-nowrap bg-gray-300 px-4 py-2 text-black hover:bg-gray-400 min-[375px]:min-w-0 min-[375px]:flex-1 min-[375px]:px-1 min-[375px]:text-xs">{{ __('Forgot Password') }}</a>
                     </div>
                 </form>
 
