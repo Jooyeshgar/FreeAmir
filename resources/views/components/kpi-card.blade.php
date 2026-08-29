@@ -11,7 +11,7 @@
     $displayValue = is_numeric($value) ? number_format($value) : $value;
 @endphp
 
-<article {{ $attributes->class(['group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:border-[#16a394]/20 hover:shadow-[0_14px_45px_rgba(21,38,59,.08)] dark:border-slate-800 dark:bg-slate-900']) }}>
+<article {{ $attributes->class(['group relative overflow-hidden min-w-0 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition hover:-translate-y-1 hover:border-[#16a394]/20 hover:shadow-[0_14px_45px_rgba(21,38,59,.08)] sm:p-5 dark:border-slate-800 dark:bg-slate-900']) }}>
     <div class="flex items-start justify-between">
         <div class="{{ $iconClass }} grid h-11 w-11 place-items-center rounded-xl">
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
