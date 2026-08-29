@@ -7,10 +7,10 @@ use App\Models\Config;
 use App\Models\Document;
 use App\Models\Scopes\FiscalYearScope;
 use App\Models\User;
+use App\Notifications\ResetPasswordNotification;
 use App\Notifications\UserVerificationNotification;
 use App\Services\GlobalConfigService;
 use Illuminate\Auth\Events\Verified;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Auth;
@@ -955,12 +955,19 @@ class AuthLifecycleTest extends TestCase
         ]);
 
         $response->assertSessionHas('success', __(Password::RESET_LINK_SENT));
-        Notification::assertSentTo($user, ResetPassword::class, function (ResetPassword $notification, array $channels) use (&$resetToken): bool {
+        Notification::assertSentTo($user, ResetPasswordNotification::class, function (ResetPasswordNotification $notification, array $channels) use (&$resetToken): bool {
             $resetToken = $notification->token;
 
             return in_array('mail', $channels, true);
         });
         $this->assertNotNull($resetToken);
+
+        $notification = Notification::sent($user, ResetPasswordNotification::class)->first();
+        $mail = $notification->toMail($user);
+        $this->assertSame('auth.reset-password-email', $mail->view);
+        $this->assertStringContainsString($resetToken, $mail->viewData['actionUrl']);
+        $this->assertStringContainsString(urlencode($user->email), $mail->viewData['actionUrl']);
+        $this->assertStringContainsString(__('Reset Password'), $mail->render());
 
         $response = $this->post(route('password.update'), [
             'token' => $resetToken,
