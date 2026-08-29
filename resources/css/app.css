@@ -306,6 +306,111 @@ main {
     }
 }
 
+/* Keep management screens dense enough for phones and tablets. */
+@media (max-width: 1023.98px) {
+    .admin-shell main {
+        font-size: 0.875rem;
+    }
+
+    .admin-shell main :is(h1, .text-3xl, .sm\:text-3xl, .md\:text-3xl) {
+        font-size: 1.25rem !important;
+        line-height: 1.75rem !important;
+    }
+
+    .admin-shell main :is(h2, .text-2xl, .sm\:text-2xl, .md\:text-2xl) {
+        font-size: 1.125rem !important;
+        line-height: 1.625rem !important;
+    }
+
+    .admin-shell main :is(h3, .text-xl, .sm\:text-xl, .md\:text-xl) {
+        font-size: 1rem !important;
+        line-height: 1.5rem !important;
+    }
+
+    .admin-shell main :is(.text-lg, .sm\:text-lg, .md\:text-lg) {
+        font-size: 0.875rem !important;
+        line-height: 1.25rem !important;
+    }
+
+    .admin-shell main :is(.text-base, .sm\:text-base, .md\:text-base) {
+        font-size: 0.8125rem !important;
+    }
+
+    .admin-shell main :is(.text-sm, .sm\:text-sm, .md\:text-sm) {
+        font-size: 0.75rem !important;
+    }
+
+    .admin-shell main :is(.text-xs, .sm\:text-xs, .md\:text-xs) {
+        font-size: 0.6875rem !important;
+    }
+
+    .admin-shell main .btn {
+        min-height: 2.25rem;
+        height: 2.25rem;
+        padding-inline: 0.75rem;
+        font-size: 0.75rem !important;
+    }
+
+    .admin-shell main .btn-sm {
+        min-height: 2rem;
+        height: 2rem;
+        padding-inline: 0.625rem;
+        font-size: 0.6875rem !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .admin-shell main {
+        font-size: 0.8125rem;
+    }
+
+    .admin-shell main :is(h1, .text-3xl, .sm\:text-3xl) {
+        font-size: 1.125rem !important;
+        line-height: 1.625rem !important;
+    }
+
+    .admin-shell main :is(h2, .text-2xl, .sm\:text-2xl) {
+        font-size: 1rem !important;
+        line-height: 1.5rem !important;
+    }
+
+    .admin-shell main :is(h3, .text-xl, .sm\:text-xl) {
+        font-size: 0.875rem !important;
+        line-height: 1.25rem !important;
+    }
+
+    .admin-shell main :is(.text-lg, .sm\:text-lg) {
+        font-size: 0.8125rem !important;
+        line-height: 1.125rem !important;
+    }
+
+    .admin-shell main :is(.text-base, .sm\:text-base) {
+        font-size: 0.75rem !important;
+    }
+
+    .admin-shell main :is(.text-sm, .sm\:text-sm) {
+        font-size: 0.6875rem !important;
+    }
+
+    .admin-shell main :is(.text-xs, .sm\:text-xs) {
+        font-size: 0.625rem !important;
+    }
+
+    .admin-shell main .btn {
+        min-height: 2rem;
+        height: 2rem;
+        padding-inline: 0.625rem;
+        font-size: 0.6875rem !important;
+    }
+
+    .admin-shell main .btn-sm {
+        min-height: 1.75rem;
+        height: 1.75rem;
+        padding-inline: 0.5rem;
+        font-size: 0.625rem !important;
+    }
+}
+
 #originalTransactions .removeButton {
     display: none;
 }

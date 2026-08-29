@@ -1,7 +1,7 @@
 <x-platform-layout :title="__('Companies')">
     <x-show-message-bags />
 
-    <div class="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+    <div class="mb-6 px-2 flex justify-between gap-4 mt-2">
         <div>
             <p class="text-xs font-bold uppercase tracking-[0.16em] text-emerald-600 dark:text-emerald-400">{{ __('Organization') }}</p>
             <h2 class="mt-1 text-2xl font-bold tracking-tight">{{ __('Companies and fiscal years') }}</h2>
@@ -9,16 +9,14 @@
         </div>
         @cannot('access-super-admin-panel')
             @can('companies.create')
-                <a href="{{ route('companies.create') }}" class="btn btn-primary gap-2 rounded-xl shadow-lg shadow-primary/15">
-                    <span class="text-lg leading-none">+</span>{{ __('Create Company') }}
-                </a>
+                <a href="{{ route('companies.create') }}" class="btn btn-primary gap-2 rounded-xl shadow-lg shadow-primary/15"><span class="text-lg leading-none">+</span>{{ __('Create Company') }}</a>
             @endcan
         @endcannot
     </div>
 
     <section class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div class="flex flex-col justify-between gap-2 border-b border-slate-200/80 p-3 dark:border-slate-800 sm:flex-row sm:items-center">
-            <form action="{{ route('companies.index') }}" method="GET" class="flex w-full min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto pb-1 sm:flex-1">
+            <form action="{{ route('companies.index') }}" method="GET" class="flex flex-wrap w-full min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto pb-1 sm:flex-1">
                 <label class="input input-bordered flex h-9 w-[19.5rem] max-w-full shrink-0 items-center gap-1.5 rounded-lg bg-slate-50 text-sm dark:bg-slate-950/50 sm:w-[21rem]">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-4.35-4.35M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg>
                     <input type="search" name="search" value="{{ request('search') }}" class="grow" placeholder="{{ __('Search companies') }}">
