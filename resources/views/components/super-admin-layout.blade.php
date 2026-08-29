@@ -223,10 +223,10 @@
                 </div>
                 <x-impersonation-banner within-sticky-header />
             </header>
-            <main class="relative mx-auto w-full max-w-[1600px] px-4 pb-7 pt-10 sm:px-7 sm:pt-12 xl:px-10 xl:pb-10">
+            <main class="relative w-full min-w-0 px-3 pb-7 pt-6 sm:px-6 sm:pt-10 lg:px-8 xl:px-10 xl:pb-10">
                 {{ $slot }}</main>
             <footer
-                class="mx-auto flex w-full max-w-[1600px] justify-between border-t border-slate-200 px-4 py-5 text-[10px] text-slate-400 sm:px-6 xl:px-8 dark:border-slate-800">
+                class="flex w-full flex-wrap justify-between gap-2 border-t border-slate-200 px-4 py-5 text-[10px] text-slate-400 sm:px-6 xl:px-8 dark:border-slate-800">
                 <span>{{ __(config('app.name')) }} · {{ __('Version') }}
                     {{ localizeNumber(config('app.version')) }}</span><span>{{ __('Super-Admin Panel') }}</span>
             </footer>

@@ -184,9 +184,11 @@ class AuthLifecycleTest extends TestCase
             ->assertSee('x-ref="sidebarToggle"', false)
             ->assertSee(':aria-expanded="sidebarOpen"', false)
             ->assertSee('aria-controls="management-sidebar"', false)
+            ->assertSee('w-full min-w-0 px-3', false)
             ->assertDontSee('lg:translate-x-0', false)
             ->assertDontSee('lg:pr-72', false)
-            ->assertDontSee('lg:pl-72', false);
+            ->assertDontSee('lg:pl-72', false)
+            ->assertDontSee('max-w-[1600px]', false);
     }
 
     public function test_platform_admin_can_switch_between_management_and_current_workspace(): void
@@ -331,6 +333,8 @@ class AuthLifecycleTest extends TestCase
             ->assertSee('data-chart-tab="companies"', false)
             ->assertSee('data-chart-tab="documents"', false)
             ->assertSee('id="management-active-users-chart"', false)
+            ->assertSee('lg:grid-cols-[minmax(0,1.65fr)_minmax(18rem,1fr)]', false)
+            ->assertSee('h-56 sm:h-64 lg:h-72', false)
             ->assertSee("type: 'line'", false)
             ->assertSee("type: 'doughnut'", false)
             ->assertSee('group relative overflow-hidden', false)
