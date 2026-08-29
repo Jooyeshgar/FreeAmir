@@ -10,14 +10,14 @@
                     <p class="text-sm mt-2">{{ __('Your default accounting subjects will be created automatically.') }}</p>
                     <x-show-message-bags />
 
-                    <x-text-input class="mt-1 w-full" input_name="name" id="name" title="{{ __('Company name') }}" placeHolder="{{ __('Enter your company\'s name') }}" :input_value="old('name')" />
-                    <x-text-input class="mt-1 w-full" input_name="fiscal_year" id="fiscal_year" title="{{ __('Fiscal year') }}" placeHolder="{{ __('Enter your company\'s fiscal year') }}" :input_value="old('fiscal_year', toEnglish(jdate('Y')))" />
-                    <x-text-input class="mt-1 w-full" input_name="currency" id="currency" title="{{ __('Currency') }}" placeHolder="{{ __('Enter your company\'s currency') }}" :input_value="old('currency', 'Rial')" />
-                    <x-text-input class="mt-1 w-full" input_name="phone_number" id="phone_number" title="{{ __('Phone number') }}" placeHolder="{{ __('Enter your company\'s phone number') }}" :input_value="old('phone_number')" />
+                    <x-text-input class="mx-auto mt-1 w-full max-w-xs" input_name="name" id="name" title="{{ __('Company name') }}" placeHolder="{{ __('Enter your company\'s name') }}" :input_value="old('name')" />
+                    <x-text-input class="mx-auto mt-1 w-full max-w-xs" input_name="fiscal_year" id="fiscal_year" title="{{ __('Fiscal year') }}" placeHolder="{{ __('Enter your company\'s fiscal year') }}" :input_value="old('fiscal_year', toEnglish(jdate('Y')))" />
+                    <x-text-input class="mx-auto mt-1 w-full max-w-xs" input_name="currency" id="currency" title="{{ __('Currency') }}" placeHolder="{{ __('Enter your company\'s currency') }}" :input_value="old('currency', 'Rial')" />
+                    <x-text-input class="mx-auto mt-1 w-full max-w-xs" input_name="phone_number" id="phone_number" title="{{ __('Phone number') }}" placeHolder="{{ __('Enter your company\'s phone number') }}" :input_value="old('phone_number')" />
 
-                    <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <button type="submit" class="btn bg-blue-500 text-white hover:bg-blue-600 sm:flex-1">{{ __('Create') }}</button>
-                        <a href="{{ route('login') }}" class="btn bg-gray-300 text-black hover:bg-gray-400 sm:flex-1">{{ __('Back to Login') }}</a>
+                    <div class="mx-auto mt-4 flex w-full max-w-xs flex-col gap-2 min-[375px]:flex-row min-[375px]:items-center min-[375px]:gap-1">
+                        <button type="submit" class="btn bg-blue-500 text-white hover:bg-blue-600 min-[375px]:w-[70%] min-[375px]:shrink-0">{{ __('Create') }}</button>
+                        <a href="{{ route('login') }}" class="btn whitespace-nowrap bg-gray-300 text-black hover:bg-gray-400 min-[375px]:min-w-0 min-[375px]:flex-1 min-[375px]:px-1 min-[375px]:text-xs">{{ __('Back to Login') }}</a>
                     </div>
                 </form>
             </div>

@@ -10,11 +10,11 @@
                     <p class="text-sm mt-2">{{ __('Enter your email and we will send you a password reset link.') }}</p>
                     <x-show-message-bags />
 
-                    <x-text-input class="mt-2 w-full max-w-xs" input_name="email" id="email" placeHolder="{{ __('Enter your email') }}" title="{{ __('Email') }}" type="email" :input_value="old('email')" />
+                    <x-text-input class="mx-auto mt-2 w-full max-w-xs" input_name="email" id="email" placeHolder="{{ __('Enter your email') }}" title="{{ __('Email') }}" type="email" :input_value="old('email')" />
                     
-                    <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <button type="submit" class="btn bg-blue-500 text-white hover:bg-blue-600 sm:flex-1">{{ __('Email Password Reset Link') }}</button>
-                        <a href="{{ route('login') }}" class="btn bg-gray-300 text-black hover:bg-gray-400 sm:flex-1">{{ __('Back to Login') }}</a>
+                    <div class="mx-auto mt-4 flex w-full max-w-xs flex-col gap-2 min-[375px]:flex-row min-[375px]:items-center min-[375px]:gap-1">
+                        <button type="submit" class="btn btn-sm whitespace-nowrap bg-blue-500 px-2 text-xs text-white hover:bg-blue-600 min-[375px]:w-[70%] min-[375px]:shrink-0 lg:text-sm">{{ __('Email Password Reset Link') }}</button>
+                        <a href="{{ route('login') }}" class="btn btn-sm whitespace-nowrap bg-gray-300 px-2 text-xs text-black hover:bg-gray-400 min-[375px]:min-w-0 min-[375px]:flex-1 lg:text-sm">{{ __('Back to Login') }}</a>
                     </div>
                 </form>
             </div>
