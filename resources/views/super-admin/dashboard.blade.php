@@ -2,7 +2,7 @@
     <x-show-message-bags />
 
     <section
-        class="admin-rise flex flex-col justify-between gap-5 rounded-2xl px-4 md:flex-row md:items-center md:px-6 md:py-6"
+        class="admin-rise my-2 flex flex-col justify-between gap-5 rounded-2xl px-4 py-5 md:flex-row md:items-center md:px-6 md:py-6"
         aria-labelledby="management-welcome">
         <div>
             <h2 id="management-welcome"
@@ -203,7 +203,7 @@
                     <b
                         class="mt-1 block text-lg">{{ localizeNumber(number_format($metrics['monthlyDocuments'])) }}</b>
                 </div>
-                <div class="rounded-xl border border-rose-100 bg-rose-50/50 p-4">
+                <div class="rounded-xl border border-rose-300 bg-rose-100 p-4">
                     <span class="text-[10px] text-rose-500">{{ __('Churn rate') }}</span>
                     <b class="mt-1 block text-lg text-rose-600">{{ localizeNumber($metrics['churnRate']) }}٪</b>
                 </div>
