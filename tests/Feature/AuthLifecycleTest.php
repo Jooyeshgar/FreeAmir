@@ -167,6 +167,28 @@ class AuthLifecycleTest extends TestCase
         $this->get(route('management.dashboard'))->assertOk()->assertSee('<html lang="en"', false);
     }
 
+    public function test_management_sidebar_is_an_accessible_hamburger_menu_at_every_breakpoint(): void
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+
+        $management = $this->actingAs($user)->get(route('management.dashboard'));
+
+        $management->assertOk()
+            ->assertSee('x-data="{ sidebarOpen: false }"', false)
+            ->assertSee("x-effect=\"document.body.classList.toggle('overflow-hidden', sidebarOpen)\"", false)
+            ->assertSee('id="management-sidebar"', false)
+            ->assertSee(':aria-hidden="!sidebarOpen"', false)
+            ->assertSee(':inert="!sidebarOpen"', false)
+            ->assertSee('w-[min(18rem,calc(100vw-1rem))]', false)
+            ->assertSee('x-ref="sidebarToggle"', false)
+            ->assertSee(':aria-expanded="sidebarOpen"', false)
+            ->assertSee('aria-controls="management-sidebar"', false)
+            ->assertDontSee('lg:translate-x-0', false)
+            ->assertDontSee('lg:pr-72', false)
+            ->assertDontSee('lg:pl-72', false);
+    }
+
     public function test_platform_admin_can_switch_between_management_and_current_workspace(): void
     {
         $user = User::factory()->create();
