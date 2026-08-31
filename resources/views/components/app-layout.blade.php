@@ -21,11 +21,11 @@
 
 </head>
 
-<body class="relative min-h-screen overflow-x-hidden bg-base-200 text-base-content">
+<body x-data="{ mobileMenuOpen: false }" @keydown.escape.window="mobileMenuOpen = false" :class="{ 'overflow-hidden': mobileMenuOpen }" class="relative min-h-screen overflow-x-hidden bg-base-200 text-base-content">
 
     <x-header />
 
-    <main class="min-[1430px]:w-[1430px] mx-auto mt-5">
+    <main class="min-[1430px]:w-[1430px] mx-auto mt-5" :class="{ 'pointer-events-none select-none blur-sm opacity-75': mobileMenuOpen }" :inert="mobileMenuOpen">
         {{ $slot }}
     </main>
 

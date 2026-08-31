@@ -1,7 +1,7 @@
 @php
     $topDropdownClass = 'app-main-menu-dropdown';
-    $topDropdownContentClass = 'app-main-menu-panel z-50 w-max min-w-56 max-w-[calc(100vw-2rem)] overflow-x-auto';
-    $scrollingTopDropdownContentClass = $topDropdownContentClass . ' max-h-[calc(100vh-6rem)] overflow-y-auto';
+    $topDropdownContentClass = 'z-50 min-w-0 max-w-full overflow-y-auto';
+    $scrollingTopDropdownContentClass = $topDropdownContentClass . ' max-h-[calc(100dvh-8rem)]';
 @endphp
 
 @can('home.*')
