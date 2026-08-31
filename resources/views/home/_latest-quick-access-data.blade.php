@@ -13,9 +13,9 @@
 <div class="mt-5 flex-1 overflow-hidden rounded-xl border border-base-300/70 bg-base-200/30" data-home-recent-list="{{ $area }}">
     <table class="w-full table-fixed text-xs">
         <colgroup>
-            <col class="w-[42%]">
-            <col class="w-[34%]">
-            <col class="w-[24%]">
+            <col class="w-[54%] sm:w-[42%]">
+            <col class="w-[16%] sm:w-[34%]">
+            <col class="w-[30%] sm:w-[24%]">
         </colgroup>
         <thead class="sr-only">
             <tr>
@@ -76,7 +76,7 @@
                                             </svg>
                                             @break
                                     @endswitch
-                                    <span class="truncate">{{ $item['type'] }}</span>
+                                    <span class="hidden truncate sm:inline">{{ $item['type'] }}</span>
                             @if (! empty($item['typeHref']))
                                 </a>
                             @else
