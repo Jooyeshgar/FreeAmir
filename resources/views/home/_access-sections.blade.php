@@ -31,12 +31,12 @@
     ])->map(fn (string $area) => $availableQuickLinks->firstWhere('area', $area))->filter();
 
     $businessGridClass = match (true) {
-        $canSales && $standaloneLinks->isNotEmpty() => 'md:grid-cols-2 xl:grid-cols-5',
-        $canSales => 'md:grid-cols-2 xl:grid-cols-4',
+        $canSales && $standaloneLinks->isNotEmpty() => 'lg:grid-cols-2 xl:grid-cols-5',
+        $canSales => 'lg:grid-cols-2 xl:grid-cols-4',
         $standaloneLinks->isNotEmpty() => 'xl:grid-cols-3',
         default => 'lg:max-w-2xl',
     };
-    $businessCardClass = ($canSales || $standaloneLinks->isNotEmpty()) ? 'xl:col-span-2' : '';
+    $businessCardClass = 'xl:col-span-2';
 @endphp
 
 @if (! $canFinancial && $quickLinks->isNotEmpty())
@@ -70,7 +70,7 @@
 
                     @include('home._latest-quick-access-data', ['area' => 'accounting', 'items' => $quickAccessRecentData['accounting']])
 
-                    <div class="mt-4 flex gap-1">
+                    <div class="mt-4 flex flex-col sm:flex-row gap-1">
                         @can('documents.index')
                             <a href="{{ route('documents.index') }}" class="flex min-w-0 flex-1 items-center justify-between gap-1 rounded-xl border border-transparent bg-base-100/60 px-2 py-2 text-xs transition hover:border-primary/15 hover:bg-primary/5">
                                 <span class="truncate">{{ __('Documents') }}</span><span class="inline-flex size-6 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary" aria-hidden="true">{{ app()->isLocale('fa') ? '←' : '→' }}</span>
@@ -110,7 +110,7 @@
 
                     @include('home._latest-quick-access-data', ['area' => 'sales', 'items' => $quickAccessRecentData['sales']])
 
-                    <div class="mt-4 flex gap-1">
+                    <div class="mt-4 flex flex-col sm:flex-row gap-1">
                         <a href="{{ route('invoices.index', ['invoice_type' => 'sell']) }}" class="flex min-w-0 flex-1 items-center justify-between gap-1 rounded-xl border border-transparent bg-base-100/60 px-2 py-2 text-xs transition hover:border-success/15 hover:bg-success/5">
                             <span class="truncate">{{ __('Sell Invoices') }}</span><span class="inline-flex size-6 shrink-0 items-center justify-center rounded-lg bg-success/10 text-success" aria-hidden="true">{{ app()->isLocale('fa') ? '←' : '→' }}</span>
                         </a>
@@ -127,7 +127,7 @@
             @endif
 
             @if ($standaloneLinks->isNotEmpty())
-                <aside class="grid gap-2 xl:auto-rows-fr" aria-label="{{ __('Quick Access') }}">
+                <aside class="grid gap-2 md:grid-cols-2 md:col-span-full xl:col-span-1 xl:grid-cols-1 xl:auto-rows-fr" aria-label="{{ __('Quick Access') }}">
                     @foreach ($standaloneLinks as $link)
                         @include('home._quick-access-link', compact('link'))
                     @endforeach
