@@ -1,7 +1,7 @@
 <x-app-layout :title="__('Home')">
     <x-show-message-bags />
 
-    <main class="home-dashboard pb-6">
+    <main class="home-dashboard w-full px-2 pb-6 text-sm sm:px-4 sm:text-base md:px-5 lg:px-6">
         @include('home._header', compact('homeVariant'))
 
         @include('home._financial-values')
