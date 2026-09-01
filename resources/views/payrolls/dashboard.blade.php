@@ -15,18 +15,18 @@
 <x-app-layout :title="__('Payroll Dashboard')">
     <x-show-message-bags />
 
-    <main class="mt-8 space-y-4">
+    <main class="mx-auto mt-4 w-full max-w-[1600px] space-y-4 px-2 sm:mt-6 sm:px-4 lg:px-6">
         <section class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-            <div>
-                <h1 class="text-2xl font-bold text-base-content">{{ __('Payroll Dashboard') }}</h1>
+            <div class="min-w-0">
+                <h1 class="text-xl font-bold text-base-content sm:text-2xl">{{ __('Payroll Dashboard') }}</h1>
                 <p class="mt-1 text-sm text-base-content/60">
                     {{ __('Overview of payments, deductions, and personnel attendance - report period: :period', ['period' => $periodLabel]) }}
                 </p>
             </div>
 
-            <form action="{{ route('salary.payrolls.dashboard') }}" method="GET" class="flex flex-wrap items-end gap-2">
+            <form action="{{ route('salary.payrolls.dashboard') }}" method="GET" class="grid w-full grid-cols-2 items-end gap-2 sm:flex sm:flex-wrap xl:w-auto">
 
-                <label class="form-control w-36">
+                <label class="form-control col-span-1 w-full sm:w-36">
                     <span class="label-text mb-1 text-xs">{{ __('Month') }}</span>
                     <select name="month" class="select select-sm select-bordered">
                         @foreach ($monthNames as $monthNumber => $monthName)
@@ -35,7 +35,7 @@
                     </select>
                 </label>
 
-                <label class="form-control w-44">
+                <label class="form-control col-span-1 w-full sm:w-44">
                     <span class="label-text mb-1 text-xs">{{ __('Organization Unit') }}</span>
                     <select name="organization_unit_id" class="select select-sm select-bordered">
                         <option value="">{{ __('All Units') }}</option>
@@ -45,29 +45,30 @@
                     </select>
                 </label>
 
-                <button type="submit" class="btn btn-sm btn-neutral">{{ __('Apply') }}</button>
-                <a href="{{ route('salary.payrolls.dashboard') }}" class="btn btn-sm btn-ghost">{{ __('Reset') }}</a>
+                <button type="submit" class="btn btn-sm btn-neutral w-full sm:w-auto">{{ __('Apply') }}</button>
+                <a href="{{ route('salary.payrolls.dashboard') }}" class="btn btn-sm btn-ghost w-full sm:w-auto">{{ __('Reset') }}</a>
 
                 @can('attendance.monthly-attendances.index')
-                    <a href="{{ route('attendance.monthly-attendances.index', ['year' => $year, 'month' => $month]) }}" class="btn btn-sm btn-info">
+                    <a href="{{ route('attendance.monthly-attendances.index', ['year' => $year, 'month' => $month]) }}"
+                        class="btn btn-sm btn-info col-span-2 w-full sm:w-auto">
                         {{ __('Calculate monthly payroll') }}
                     </a>
                 @else
-                    <button type="button" class="btn btn-sm btn-info" disabled>{{ __('Calculate monthly payroll') }}</button>
+                    <button type="button" class="btn btn-sm btn-info col-span-2 w-full sm:w-auto" disabled>{{ __('Calculate monthly payroll') }}</button>
                 @endcan
 
             </form>
         </section>
 
-        <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
+        <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
             @foreach ($metricCards as $card)
                 <x-metric-card :card="$card" />
             @endforeach
         </section>
 
         <section class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(20rem,0.8fr)_minmax(0,1.6fr)]">
-            <article class="card border border-base-300 bg-base-100/90 shadow-sm">
-                <div class="card-body">
+            <article class="card min-w-0 border border-base-300 bg-base-100/90 shadow-sm">
+                <div class="card-body p-4 sm:p-6">
                     <div class="flex items-start justify-between gap-3">
                         <div>
                             <h2 class="card-title text-base">{{ __('Cost Breakdown by Unit') }}</h2>
@@ -80,10 +81,10 @@
                             @php $barClass = $departmentBarClasses[$loop->index % count($departmentBarClasses)]; @endphp
                             <div>
                                 <div class="mb-1 flex items-center justify-between gap-3 text-sm">
-                                    <span class="font-medium">{{ $department['name'] }}</span>
+                                    <span class="min-w-0 truncate font-medium">{{ $department['name'] }}</span>
                                     <span class="text-xs text-base-content/60">{{ __(':count person(s)', ['count' => formatNumber($department['employees'])]) }}</span>
                                 </div>
-                                <div class="flex items-center gap-3">
+                                <div class="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
                                     <progress class="progress {{ $barClass }} h-2" value="{{ $department['percent'] }}" max="100"></progress>
                                     <span class="w-24 shrink-0 text-xs text-base-content/70">{{ formatNumber($department['cost']) }}</span>
                                 </div>
@@ -97,29 +98,31 @@
                 </div>
             </article>
 
-            <article class="card border border-base-300 bg-base-100/90 shadow-sm">
-                <div class="card-body">
-                    <div class="flex flex-wrap items-start justify-between gap-3">
-                        <div>
+            <article class="card min-w-0 border border-base-300 bg-base-100/90 shadow-sm">
+                <div class="card-body p-4 sm:p-6">
+                    <div class="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
+                        <div class="min-w-0">
                             <h2 class="card-title text-base">{{ __('Current Year Payroll and Deductions Trend') }}</h2>
                             <p class="text-xs text-base-content/55">{{ __('Monthly total (:currency)', ['currency' => __('Rial')]) }}</p>
                         </div>
-                        <div class="join">
+                        <div class="join max-w-full overflow-x-auto">
                             <button type="button" class="btn join-item btn-xs btn-active">{{ __('12 months') }}</button>
                             <button type="button" class="btn join-item btn-xs" disabled>{{ __('Quarterly') }}</button>
                             <button type="button" class="btn join-item btn-xs" disabled>{{ __('Year to date') }}</button>
                         </div>
                     </div>
-                    <div class="mt-3 h-72">
-                        <canvas id="payrollTrendChart" class="h-full w-full"></canvas>
+                    <div class="mt-3 w-full overflow-x-auto pb-2">
+                        <div class="h-60 min-w-[720px] sm:h-72">
+                            <canvas id="payrollTrendChart" class="h-full w-full"></canvas>
+                        </div>
                     </div>
                 </div>
             </article>
         </section>
 
-        <section class="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <section class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             <article class="card border border-base-300 bg-base-100/90 shadow-sm">
-                <div class="card-body">
+                <div class="card-body p-4 sm:p-6">
                     <div class="flex items-start justify-between gap-3">
                         <div>
                             <h2 class="card-title text-base">{{ __('Alerts and Reminders') }}</h2>
@@ -146,8 +149,8 @@
                                     </svg>
                                 </span>
                                 <div class="min-w-0 flex-1">
-                                    <div class="truncate text-sm font-semibold">{{ $alert['title'] }}</div>
-                                    <div class="truncate text-xs text-base-content/55">{{ $alert['description'] }}</div>
+                                    <div class="break-words text-sm font-semibold">{{ $alert['title'] }}</div>
+                                    <div class="break-words text-xs text-base-content/55">{{ $alert['description'] }}</div>
                                 </div>
                                 @if ($alert['tone'] === 'placeholder')
                                     <span class="badge badge-ghost badge-sm">{{ __('Sample') }}</span>
@@ -159,9 +162,9 @@
             </article>
 
             <article class="card border border-base-300 bg-base-100/90 shadow-sm">
-                <div class="card-body">
-                    <div class="flex items-start justify-between gap-3">
-                        <div>
+                <div class="card-body p-4 sm:p-6">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div class="min-w-0">
                             <h2 class="card-title text-base">{{ __('Payroll Approval Workflow') }}</h2>
                             <p class="text-xs text-base-content/55">{{ __('Status of circulating payroll records') }}</p>
                         </div>
@@ -185,8 +188,8 @@
                 </div>
             </article>
 
-            <article class="card border border-base-300 bg-base-100/90 shadow-sm">
-                <div class="card-body">
+            <article class="card border border-base-300 bg-base-100/90 shadow-sm md:col-span-2 xl:col-span-1">
+                <div class="card-body p-4 sm:p-6">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
                             <h2 class="card-title text-base">{{ __('Monthly Attendance') }}</h2>
@@ -195,7 +198,7 @@
                         <span class="badge badge-ghost">{{ __('All Personnel') }}</span>
                     </div>
 
-                    <div class="mt-3 grid grid-cols-1 items-center gap-4 sm:grid-cols-[12rem_1fr]">
+                    <div class="mt-3 grid grid-cols-1 items-center gap-4 sm:grid-cols-[12rem_minmax(0,1fr)]">
                         <div class="relative h-48">
                             <canvas id="attendanceDonutChart" class="h-full w-full"></canvas>
                             <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
@@ -238,23 +241,25 @@
                         </p>
                     </div>
 
-                    <div class="flex flex-wrap items-center gap-2">
-                        <div class="join">
-                            <a href="{{ route('salary.payrolls.dashboard', $statusParams) }}"
-                                class="btn join-item btn-xs {{ $statusFilter ? 'btn-ghost' : 'btn-primary' }}">
-                                {{ __('All') }}
-                                <span class="badge badge-sm">{{ formatNumber($statusSummaries->sum('count')) }}</span>
-                            </a>
-                            @foreach ($statusSummaries as $status)
-                                <a href="{{ route('salary.payrolls.dashboard', array_merge($statusParams, ['status' => $status['value']])) }}"
-                                    class="btn join-item btn-xs {{ $statusFilter === $status['value'] ? 'btn-primary' : 'btn-ghost' }}">
-                                    {{ $status['label'] }}
-                                    <span class="badge badge-sm">{{ formatNumber($status['count']) }}</span>
+                    <div class="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                        <div class="w-full overflow-x-auto pb-1 sm:w-auto">
+                            <div class="join min-w-max">
+                                <a href="{{ route('salary.payrolls.dashboard', $statusParams) }}"
+                                    class="btn join-item btn-xs {{ $statusFilter ? 'btn-ghost' : 'btn-primary' }}">
+                                    {{ __('All') }}
+                                    <span class="badge badge-sm">{{ formatNumber($statusSummaries->sum('count')) }}</span>
                                 </a>
-                            @endforeach
+                                @foreach ($statusSummaries as $status)
+                                    <a href="{{ route('salary.payrolls.dashboard', array_merge($statusParams, ['status' => $status['value']])) }}"
+                                        class="btn join-item btn-xs {{ $statusFilter === $status['value'] ? 'btn-primary' : 'btn-ghost' }}">
+                                        {{ $status['label'] }}
+                                        <span class="badge badge-sm">{{ formatNumber($status['count']) }}</span>
+                                    </a>
+                                @endforeach
+                            </div>
                         </div>
 
-                        <form action="{{ route('salary.payrolls.dashboard') }}" method="GET" class="flex flex-wrap items-end gap-2"
+                        <form action="{{ route('salary.payrolls.dashboard') }}" method="GET" class="grid w-full grid-cols-2 items-end gap-2 sm:flex sm:w-auto sm:flex-wrap"
                             @submit.prevent="load($event.currentTarget)">
                             <x-input name="year" value="{{ $year }}" hidden />
                             @if ($organizationUnitId)
@@ -263,15 +268,16 @@
                             @if ($statusFilter)
                                 <x-input name="status" value="{{ $statusFilter }}" hidden />
                             @endif
-                            <label class="form-control w-36">
+                            <label class="form-control w-full sm:w-36">
                                 <select name="month" class="select select-sm select-bordered" @change="load($event.target.form)">
                                     @foreach ($monthNames as $monthNumber => $monthName)
                                         <option value="{{ $monthNumber }}" @selected($month === $monthNumber)>{{ $monthName }}</option>
                                     @endforeach
                                 </select>
                             </label>
-                            <x-text-input input_class="input-sm" type="search" name="q" value="{{ $search }}" placeholder="{{ __('Search name or unit...') }}" />
-                            <button type="submit" class="btn btn-sm btn-ghost">{{ __('Search') }}</button>
+                            <x-text-input class="col-span-2 sm:w-64" input_class="input-sm" type="search" name="q" value="{{ $search }}"
+                                placeholder="{{ __('Search name or unit...') }}" />
+                            <button type="submit" class="btn btn-sm btn-ghost col-span-2 w-full sm:w-auto">{{ __('Search') }}</button>
                         </form>
 
                     </div>
@@ -336,7 +342,7 @@
                                     <td class="font-medium text-error">-{{ formatNumber($payroll->total_deductions) }}</td>
                                     <td>{{ formatNumber($payroll->employer_insurance) }}</td>
                                     <td class="font-bold">{{ formatNumber($payroll->net_payment) }} {{ __('Rial') }}</td>
-                                    <td><span class="badge {{ $payroll->statusBadgeClass() }} badge-sm">{{ $payroll->statusLabel() }}</span></td>
+                                    <td><span class="badge {{ $payroll->statusBadgeClass() }} badge-sm whitespace-nowrap">{{ $payroll->statusLabel() }}</span></td>
                                     <td>
                                         @can('salary.payrolls.show')
                                             <a href="{{ route('salary.payrolls.show', $payroll) }}" class="btn btn-xs btn-ghost">{{ __('View') }}</a>
@@ -361,7 +367,7 @@
         <section id="daily-attendance-log" x-data="payrollDashboardSection('daily-attendance-log')"
             :class="{ 'opacity-60 pointer-events-none': loading }" :aria-busy="loading"
             class="card border border-base-300 bg-base-100/90 shadow-sm">
-            <div class="card-body">
+            <div class="card-body p-4 sm:p-6">
                 <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div>
                         <h2 class="card-title text-base">{{ __('Daily Attendance Log') }} - {{ $periodLabel }}</h2>
@@ -369,7 +375,7 @@
                             {{ __('Click any available day to open its attendance log details.') }}
                         </p>
                     </div>
-                    <form action="{{ route('salary.payrolls.dashboard') }}" method="GET" class="flex flex-wrap items-end gap-2"
+                    <form action="{{ route('salary.payrolls.dashboard') }}" method="GET" class="grid w-full grid-cols-2 items-end gap-2 sm:flex sm:w-auto sm:flex-wrap"
                         @submit.prevent="load($event.currentTarget)">
                         <x-input name="year" value="{{ $year }}" hidden />
                         @if ($statusFilter)
@@ -378,7 +384,7 @@
                         @if ($search)
                             <x-input name="q" value="{{ $search }}" hidden />
                         @endif
-                        <label class="form-control w-36">
+                        <label class="form-control w-full sm:w-36">
                             <span class="label-text mb-1 text-xs">{{ __('Month') }}</span>
                             <select name="month" class="select select-sm select-bordered" @change="load($event.target.form)">
                                 @foreach ($monthNames as $monthNumber => $monthName)
@@ -386,7 +392,7 @@
                                 @endforeach
                             </select>
                         </label>
-                        <label class="form-control w-44">
+                        <label class="form-control w-full sm:w-44">
                             <span class="label-text mb-1 text-xs">{{ __('Organization Unit') }}</span>
                             <select name="organization_unit_id" class="select select-sm select-bordered">
                                 <option value="">{{ __('All Units') }}</option>
@@ -395,7 +401,7 @@
                                 @endforeach
                             </select>
                         </label>
-                        <button type="submit" class="btn btn-sm btn-outline">{{ __('Filter') }}</button>
+                        <button type="submit" class="btn btn-sm btn-outline col-span-2 w-full sm:w-auto">{{ __('Filter') }}</button>
                     </form>
                 </div>
 
@@ -405,7 +411,7 @@
                     </div>
                 @endif
 
-                <div class="mt-4 overflow-x-auto">
+                <div class="mt-4 overflow-x-auto pb-2">
                     <div class="min-w-[860px] space-y-2">
                         <div class="grid items-center gap-1"
                             style="grid-template-columns: 8rem repeat({{ $attendanceHeatmap['days']->count() }}, minmax(1.6rem, 1fr));">
@@ -439,7 +445,7 @@
                     </div>
                 @endif
 
-                <div class="mt-4 flex flex-wrap justify-end gap-4 text-xs text-base-content/60">
+                <div class="mt-4 grid grid-cols-2 gap-3 text-xs text-base-content/60 sm:flex sm:flex-wrap sm:justify-end sm:gap-4">
                     <span class="flex items-center gap-2"><span class="h-3 w-3 rounded bg-emerald-400"></span>{{ __('Full Attendance') }}</span>
                     <span class="flex items-center gap-2"><span class="h-3 w-3 rounded bg-amber-400"></span>{{ __('Delay / Early Leave') }}</span>
                     <span class="flex items-center gap-2"><span class="h-3 w-3 rounded bg-sky-400"></span>{{ __('Leave') }}</span>
@@ -579,7 +585,11 @@
                                             display: false,
                                         },
                                         ticks: {
+                                            autoSkip: false,
                                             color: theme.mutedTextColor,
+                                            font: {
+                                                size: 10,
+                                            },
                                         },
                                     },
                                     y: {
