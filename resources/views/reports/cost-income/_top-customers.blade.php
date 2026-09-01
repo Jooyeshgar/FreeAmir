@@ -18,12 +18,12 @@
         <div class="card-body p-4">
             <div class="flex items-start justify-between gap-2">
                 <div>
-                    <h2 class="card-title text-base">{{ $list['title'] }}</h2>
+                    <h2 class="card-title text-[.875rem] lg:text-base">{{ $list['title'] }}</h2>
                     <p class="text-xs text-base-content/55">{{ $list['subtitle'] }}</p>
                 </div>
             </div>
 
-            <div class="mt-3 space-y-2 text-sm">
+            <div class="mt-3 space-y-2 text-[.8125rem] lg:text-sm">
                 <div class="flex items-center justify-between border-b border-base-300 pb-2 text-xs font-semibold text-base-content/55">
                     <span>{{ __('Customer') }}</span>
                     <span>{{ __('Amount') }}</span>

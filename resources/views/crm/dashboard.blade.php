@@ -1,12 +1,12 @@
 <x-app-layout :title="__('CRM Dashboard')">
     <x-show-message-bags />
 
-    <main class="mt-8 space-y-4">
+    <main class="mt-4 space-y-3 text-[13px] sm:space-y-4 sm:text-sm lg:mt-8 lg:text-base">
         {{-- Header + shortcuts --}}
         <section class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
-                <h1 class="text-2xl font-bold text-base-content">{{ __('CRM Dashboard') }}</h1>
-                <p class="text-sm text-base-content/60">
+                <h1 class="text-xl font-bold text-base-content lg:text-2xl">{{ __('CRM Dashboard') }}</h1>
+                <p class="text-xs text-base-content/60 lg:text-sm">
                     {{ __('Customer sales overview for fiscal year :year', ['year' => $fiscalYear]) }}
                 </p>
             </div>
@@ -53,17 +53,17 @@
         </section>
 
         {{-- Aging + Sales trend --}}
-        <section class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(20rem,0.8fr)_minmax(0,1.6fr)]">
+        <section class="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-[minmax(18rem,0.8fr)_minmax(0,1.6fr)]">
             <article class="card border border-base-300 bg-base-100/90 shadow-sm">
                 <div class="card-body">
-                    <h2 class="card-title text-base">{{ __('Aging of unpaid invoices') }}</h2>
+                    <h2 class="card-title text-sm lg:text-base">{{ __('Aging of unpaid invoices') }}</h2>
                     <p class="text-xs text-base-content/55">{{ __('Receivables grouped by age') }}</p>
                     @php $agingTotal = collect($aging)->sum('amount'); @endphp
                     <div class="mt-3 space-y-4">
                         @forelse ($aging as $bucket)
                             @php $percent = $agingTotal > 0 ? round($bucket['amount'] / $agingTotal * 100) : 0; @endphp
                             <div>
-                                <div class="flex items-center justify-between gap-3 text-sm">
+                                <div class="flex items-center justify-between gap-3 text-xs lg:text-sm">
                                     <span class="font-medium">{{ $bucket['label'] }}</span>
                                     <span class="text-xs text-base-content/70">{{ formatNumber($bucket['amount']) }} {{ __('Rial') }}</span>
                                 </div>
@@ -83,26 +83,28 @@
 
             <article class="card border border-base-300 bg-base-100/90 shadow-sm">
                 <div class="card-body">
-                    <h2 class="card-title text-base">{{ __('Sales trend') }}</h2>
+                    <h2 class="card-title text-sm lg:text-base">{{ __('Sales trend') }}</h2>
                     <p class="text-xs text-base-content/55">{{ __('Monthly net sales for the fiscal year') }}</p>
-                    <div class="mt-3 h-72">
-                        <canvas id="crmSalesTrendChart" class="h-full w-full"></canvas>
+                    <div class="mt-3 overflow-x-auto">
+                        <div class="h-56 min-w-[42rem] sm:h-64 sm:min-w-[48rem] lg:h-72 lg:min-w-0">
+                            <canvas id="crmSalesTrendChart" class="h-full w-full"></canvas>
+                        </div>
                     </div>
                 </div>
             </article>
         </section>
 
-        {{-- Sales by category + Top buyers (year) --}}
-        <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            <article class="card border border-base-300 bg-base-100/90 shadow-sm">
+        {{-- Sales by category + Top buyers --}}
+        <section class="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-3">
+            <article class="card border border-base-300 bg-base-100/90 shadow-sm md:col-span-1">
                 <div class="card-body">
-                    <h2 class="card-title text-base">{{ __('Sales by customer category') }}</h2>
+                    <h2 class="card-title text-sm lg:text-base">{{ __('Sales by customer category') }}</h2>
                     @if (count($salesByCategory))
                         <x-charts.pie-chart
                             :datas="$salesByCategory"
                             metric="amount"
                             :label="__('Sales')"
-                            heightClass="h-72" />
+                            heightClass="h-56 sm:h-64 lg:h-72" />
                     @else
                         <div class="mt-3 rounded-lg border border-dashed border-base-300 p-4 text-center text-sm text-base-content/60">
                             {{ __('No sales recorded') }}
@@ -111,10 +113,10 @@
                 </div>
             </article>
 
-            <article class="card border border-base-300 bg-base-100/90 shadow-sm">
+            <article class="card border border-base-300 bg-base-100/90 shadow-sm md:col-span-1">
                 <div class="card-body p-0">
                     <div class="border-b border-base-300 p-4">
-                        <h2 class="card-title text-base">{{ __('Top buyers (year)') }}</h2>
+                        <h2 class="card-title text-sm lg:text-base">{{ __('Top buyers (year)') }}</h2>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="table table-zebra">
@@ -138,14 +140,10 @@
                     </div>
                 </div>
             </article>
-        </section>
-
-        {{-- Top buyers (month) + Recent invoices --}}
-        <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            <article class="card border border-base-300 bg-base-100/90 shadow-sm">
+            <article class="card border border-base-300 bg-base-100/90 shadow-sm md:col-span-1">
                 <div class="card-body p-0">
                     <div class="border-b border-base-300 p-4">
-                        <h2 class="card-title text-base">{{ __('Top buyers this month') }}</h2>
+                        <h2 class="card-title text-sm lg:text-base">{{ __('Top buyers this month') }}</h2>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="table table-zebra">
@@ -169,11 +167,14 @@
                     </div>
                 </div>
             </article>
+        </section>
 
-            <article class="card border border-base-300 bg-base-100/90 shadow-sm">
+        {{-- Recent invoices --}}
+        <section class="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
+            <article class="card border border-base-300 bg-base-100/90 shadow-sm lg:col-span-2">
                 <div class="card-body p-0">
                     <div class="border-b border-base-300 p-4">
-                        <h2 class="card-title text-base">{{ __('Recent invoices') }}</h2>
+                        <h2 class="card-title text-sm lg:text-base">{{ __('Recent invoices') }}</h2>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="table table-zebra">
@@ -247,7 +248,16 @@
                                 },
                             },
                             scales: {
-                                x: { grid: { display: false }, ticks: { color: theme.mutedTextColor, font: { size: 11 } } },
+                                x: {
+                                    grid: { display: false },
+                                    ticks: {
+                                        autoSkip: false,
+                                        maxRotation: 45,
+                                        minRotation: 0,
+                                        color: theme.mutedTextColor,
+                                        font: { size: 11 },
+                                    },
+                                },
                                 y: { beginAtZero: true, grid: { color: theme.gridColor }, ticks: { color: theme.mutedTextColor } },
                             },
                         },
