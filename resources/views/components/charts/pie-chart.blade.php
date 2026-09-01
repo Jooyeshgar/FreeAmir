@@ -22,7 +22,7 @@
 @endphp
 
 <div {{ $attributes->class([$heightClass]) }}>
-    <canvas id="{{ $resolvedChartId }}"></canvas>
+    <canvas id="{{ $resolvedChartId }}" class="max-w-full"></canvas>
 </div>
 
 @push('footer')

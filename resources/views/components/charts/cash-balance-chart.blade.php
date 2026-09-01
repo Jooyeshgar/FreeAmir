@@ -19,8 +19,8 @@
 
     $convertedDatas = array_map(fn($value) => $value * -1, $datas);
 @endphp
-<div class="relative w-full h-[18rem]">
-    <canvas id="cashBalanceChart"></canvas>
+<div class="relative w-full h-56 sm:h-64 lg:h-72">
+    <canvas id="cashBalanceChart" class="max-w-full"></canvas>
 </div>
 
 @pushOnce('footer')

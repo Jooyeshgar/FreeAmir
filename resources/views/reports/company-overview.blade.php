@@ -16,20 +16,20 @@
             @endif
 
             @if ($canFinancial)
-                <section class="grid grid-cols-1 gap-4 xl:grid-cols-3">
+                <section class="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-3">
                     @include('reports.company-overview.cash-and-banks')
                     @include('reports.company-overview.income')
                     @include('reports.company-overview.profit')
                 </section>
 
-                <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                <section class="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
                     @include('reports.company-overview.bank-account-list')
                     @include('reports.company-overview.bank-account-chart')
                 </section>
             @endif
 
             @if ($canPopularItems || $canInventory)
-                <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                <section class="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2">
                     @if ($canInventory)
                         @include('reports.company-overview.warehouse')
                     @endif
@@ -41,9 +41,9 @@
             @endif
 
             @if ($canSales)
-                <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                <section class="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2">
                     @include('reports.company-overview.sell')
-                    @include('reports.company-overview.sold-amount')
+                    @include('reports.company-overview.purchase-amount')
                 </section>
             @endif
         @endif

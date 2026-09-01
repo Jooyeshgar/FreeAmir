@@ -1,7 +1,7 @@
 @props(['labels', 'datas'])
 
-<div class="h-[25rem]">
-    <canvas id="accountBalanceChart" class="w-full rounded-lg bg-white dark:bg-slate-900"></canvas>
+<div class="h-56 sm:h-64 lg:h-72">
+    <canvas id="accountBalanceChart" class="w-full max-w-full rounded-lg bg-white dark:bg-slate-900"></canvas>
 </div>
 
 @pushOnce('footer')
