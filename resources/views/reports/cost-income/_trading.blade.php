@@ -35,27 +35,25 @@
 
 <section class="space-y-3">
     <div>
-        <h2 class="text-lg font-bold text-base-content">{{ __('Sales and Purchases') }}</h2>
+        <h2 class="text-[.95rem] font-bold text-base-content lg:text-lg">{{ __('Sales and Purchases') }}</h2>
         <p class="text-xs text-base-content/55">{{ __('Trade activity sourced from invoices') }}</p>
     </div>
 
-    <div class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)]">
-        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            @foreach ($tradingCards as $card)
-                <x-metric-card :card="$card" />
-            @endforeach
-        </div>
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        @foreach ($tradingCards as $card)
+            <x-metric-card :card="$card" />
+        @endforeach
 
         <article class="card border border-base-300 bg-base-100/90 shadow-sm">
             <div class="card-body p-4">
                 <div class="mb-3">
-                    <h3 class="card-title text-base">{{ __('Sales vs Purchases') }}</h3>
+                    <h3 class="card-title text-[.875rem] lg:text-base">{{ __('Sales vs Purchases') }}</h3>
                     <p class="text-xs text-base-content/55">{{ __('Invoice totals for the current fiscal year') }}</p>
                 </div>
 
                 <div class="space-y-4">
                     <div>
-                        <div class="mb-1 flex items-center justify-between gap-3 text-sm">
+                        <div class="mb-1 flex items-center justify-between gap-3 text-[.8125rem] lg:text-sm">
                             <span class="font-medium">{{ __('Net Sales') }}</span>
                             <span class="tabular-nums">{{ formatNumber($netSales) }}</span>
                         </div>
@@ -63,7 +61,7 @@
                     </div>
 
                     <div>
-                        <div class="mb-1 flex items-center justify-between gap-3 text-sm">
+                        <div class="mb-1 flex items-center justify-between gap-3 text-[.8125rem] lg:text-sm">
                             <span class="font-medium">{{ __('Net Purchases') }}</span>
                             <span class="tabular-nums">{{ formatNumber($netPurchases) }}</span>
                         </div>

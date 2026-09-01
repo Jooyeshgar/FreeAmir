@@ -1,10 +1,10 @@
 <x-app-layout :title="__('Cost and Income Dashboard')">
     <x-show-message-bags />
 
-    <main class="mt-6 space-y-6">
+    <main class="cost-income-dashboard mt-6 space-y-6">
         <section class="flex flex-col gap-1">
-            <h1 class="text-2xl font-bold text-base-content">{{ __('Cost and Income Dashboard') }}</h1>
-            <p class="text-sm text-base-content/60">
+            <h1 class="text-[.95rem] font-bold text-base-content sm:text-[1rem] lg:text-2xl">{{ __('Cost and Income Dashboard') }}</h1>
+            <p class="text-[.8125rem] text-base-content/60 lg:text-sm">
                 {{ __('Profitability and trade for the current fiscal year') }}
             </p>
         </section>
@@ -15,7 +15,7 @@
             <div class="card-body p-4">
                 <div class="flex items-start justify-between gap-2">
                     <div>
-                        <h2 class="card-title text-base">{{ __('Monthly Income vs Cost') }}</h2>
+                        <h2 class="card-title text-[.875rem] lg:text-base">{{ __('Monthly Income vs Cost') }}</h2>
                         <p class="text-xs text-base-content/55">{{ __('Select a month on the chart to open its monthly income and expense workbench.') }}</p>
                     </div>
 
@@ -29,13 +29,15 @@
                     @endif
                 </div>
 
-                <div class="mt-3">
-                    <x-charts.bar-chart chart-id="costIncomeMonthlyChart" heightClass="h-72" :datasets="[
-                        ['label' => __('Actual Income'), 'data' => $monthlyIncome, 'backgroundColor' => '#22c55ecc', 'borderColor' => '#22c55e', 'order' => 2],
-                        ['label' => __('Actual Expense'), 'data' => $monthlyCost, 'backgroundColor' => '#ef4444cc', 'borderColor' => '#ef4444', 'order' => 2],
-                        ['label' => __('Forecast Income'), 'data' => $forecastIncome, 'type' => 'line', 'borderColor' => '#2563eb', 'backgroundColor' => '#2563eb', 'tension' => 0.4, 'pointRadius' => 3, 'pointHoverRadius' => 5, 'spanGaps' => true, 'order' => 1, 'datalabels' => ['display' => false]],
-                        ['label' => __('Forecast Expense'), 'data' => $forecastExpense, 'type' => 'line', 'borderColor' => '#f59e0b', 'backgroundColor' => '#f59e0b', 'tension' => 0.4, 'pointRadius' => 3, 'pointHoverRadius' => 5, 'spanGaps' => true, 'order' => 1, 'datalabels' => ['display' => false]],
-                    ]" :links="$monthlyBudgetLinks" />
+                <div class="mt-3 overflow-x-auto">
+                    <div class="min-w-[42rem] sm:min-w-0">
+                        <x-charts.bar-chart chart-id="costIncomeMonthlyChart" heightClass="h-72" :datasets="[
+                            ['label' => __('Actual Income'), 'data' => $monthlyIncome, 'backgroundColor' => '#22c55ecc', 'borderColor' => '#22c55e', 'order' => 2],
+                            ['label' => __('Actual Expense'), 'data' => $monthlyCost, 'backgroundColor' => '#ef4444cc', 'borderColor' => '#ef4444', 'order' => 2],
+                            ['label' => __('Forecast Income'), 'data' => $forecastIncome, 'type' => 'line', 'borderColor' => '#2563eb', 'backgroundColor' => '#2563eb', 'tension' => 0.4, 'pointRadius' => 3, 'pointHoverRadius' => 5, 'spanGaps' => true, 'order' => 1, 'datalabels' => ['display' => false]],
+                            ['label' => __('Forecast Expense'), 'data' => $forecastExpense, 'type' => 'line', 'borderColor' => '#f59e0b', 'backgroundColor' => '#f59e0b', 'tension' => 0.4, 'pointRadius' => 3, 'pointHoverRadius' => 5, 'spanGaps' => true, 'order' => 1, 'datalabels' => ['display' => false]],
+                        ]" :links="$monthlyBudgetLinks" />
+                    </div>
                 </div>
 
                 @if ($monthsWithoutDocuments !== [])
@@ -50,10 +52,10 @@
 
         @if (auth()->user()->can('budgets.store') && auth()->user()->can('budgets.search-subjects'))
             <dialog id="cost-income-forecast-modal" class="modal">
-                <div class="modal-box relative w-11/12 max-w-3xl overflow-visible p-0">
+                <div class="modal-box relative max-h-[90vh] w-11/12 max-w-3xl overflow-y-auto p-0">
                     <div class="flex items-center justify-between border-b border-base-300 px-5 py-4">
                         <div>
-                            <h3 class="text-lg font-bold">{{ __('New Forecast') }}</h3>
+                            <h3 class="text-[.95rem] font-bold lg:text-lg">{{ __('New Forecast') }}</h3>
                             <p class="mt-1 text-xs text-base-content/50">{{ __('Apply one forecast amount to all selected months.') }}</p>
                         </div>
                         <form method="dialog">
@@ -67,21 +69,21 @@
                         <x-input name="source" value="cost-income" hidden />
 
                         <fieldset>
-                            <legend class="mb-2 text-sm font-semibold text-base-content">{{ __('Months') }}</legend>
+                            <legend class="mb-2 text-[.8125rem] font-semibold text-base-content lg:text-sm">{{ __('Months') }}</legend>
                             <p class="mb-3 text-xs text-base-content/50">{{ __('The current month and following months are selected by default.') }}</p>
                             <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                                 @foreach ($forecastMonths as $monthNumber => $monthName)
                                     <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-base-300 bg-base-100 px-3 py-2 transition-colors hover:border-primary/50 hover:bg-primary/5">
                                         <input type="checkbox" name="months[]" value="{{ $monthNumber }}" class="checkbox checkbox-primary checkbox-sm"
                                             @checked(in_array($monthNumber, old('months', $defaultForecastMonths)))>
-                                        <span class="text-sm">{{ $monthName }}</span>
+                                        <span class="text-[.8125rem] lg:text-sm">{{ $monthName }}</span>
                                     </label>
                                 @endforeach
                             </div>
                         </fieldset>
 
-                        <div class="grid grid-cols-12 items-end gap-2">
-                            <fieldset class="col-span-8 min-w-0" x-data="{
+                        <div class="grid grid-cols-1 items-end gap-3 md:grid-cols-12 md:gap-2">
+                            <fieldset class="min-w-0 md:col-span-8" x-data="{
                                 selectedName: '',
                                 selectedCode: '',
                                 selectedId: @js(old('subject_id')),
@@ -93,17 +95,19 @@
                                 <x-input name="subject_id" x-bind:value="selectedId" hidden />
                             </fieldset>
 
-                            <fieldset class="col-span-4 min-w-0">
+                            <fieldset class="min-w-0 md:col-span-4">
                                 <label for="bulk_forecast_amount_display" class="label block text-xs font-medium">
                                     <span>{{ __('Forecast Amount') }} ({{ $currency }})</span>
-                                    <span class="mt-0.5 block font-normal text-base-content/50">{{ __('Enter income as a positive amount and expense as a negative amount.') }}</span>
                                 </label>
-                                <div x-data="{ forecastAmount: @js(old('forecast_amount', '')) }">
+                                <div class="flex flex-col">
+                                    <p class="order-last mb-1 text-xs font-normal leading-5 text-base-content/50 sm:order-first">{{ __('Enter income as a positive amount and expense as a negative amount.') }}</p>
+                                    <div x-data="{ forecastAmount: @js(old('forecast_amount', '')) }">
                                     <x-input name="forecast_amount" x-bind:value="forecastAmount" hidden />
                                     <x-text-input id="bulk_forecast_amount_display" required placeholder="{{ localizeNumber('0') }}"
                                         input_class="grow bg-transparent tabular-nums outline-none" x-bind:value="forecastAmount"
                                         x-on:input="forecastAmount = $store.utils.convertToEnglish($event.target.value)"
                                         x-effect="$el.value = forecastAmount ? $store.utils.localizeNumber($store.utils.formatNumber(forecastAmount)) : ''" />
+                                    </div>
                                 </div>
                             </fieldset>
                         </div>
@@ -120,10 +124,10 @@
             </dialog>
         @endif
 
-        <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <section class="grid grid-cols-1 gap-4 lg:grid-cols-2">
             @include('reports.cost-income._breakdown')
         </section>
-
+        
         @include('reports.cost-income._trading')
 
         <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">

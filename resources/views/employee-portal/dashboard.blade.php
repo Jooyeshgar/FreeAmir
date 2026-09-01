@@ -4,14 +4,14 @@
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
 
         <a href="{{ route('employee-portal.employee.show') }}" class="stat bg-base-100 shadow rounded-box hover:bg-base-200 transition">
-            <div class="stat-title">{{ __('Full Name') }}</div>
+            <div class="stat-title text-xs sm:text-sm mb-1">{{ __('Full Name') }}</div>
             <div class="stat-figure text-primary">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
             </div>
-            <div class="stat-value text-lg">{{ $employee->first_name }} {{ $employee->last_name }}</div>
-            <div class="stat-desc">{{ $employee->national_code }}</div>
+            <div class="stat-value text-base break-words">{{ $employee->first_name }} {{ $employee->last_name }}</div>
+            <div class="stat-desc text-xs sm:text-sm">{{ $employee->national_code }}</div>
         </a>
 
         <a href="{{ route('employee-portal.personnel-requests.index') }}" class="stat bg-base-100 shadow rounded-box">
@@ -20,8 +20,8 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
             </div>
-            <div class="stat-title">{{ __('Requests') }}</div>
-            <div class="stat-desc flex flex-col">
+            <div class="stat-title text-xs sm:text-sm mb-1">{{ __('Requests') }}</div>
+            <div class="stat-desc flex flex-col text-xs sm:text-sm">
                 <span class="text-success">{{ localizeNumber($requestsCount['approved'] ?? 0) }} {{ __('Request')  }} {{ __('Approved') }}</span>
                 <span class="text-error">{{ localizeNumber($requestsCount['rejected'] ?? 0) }} {{ __('Request')  }} {{ __('rejected') }}</span>
                 <span class="text-warning">{{ localizeNumber($requestsCount['pending'] ?? 0) }} {{ __('Request')  }} {{ __('In Pending') }}</span>
@@ -37,8 +37,8 @@
                             d="M8 3v4m8-4v4M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2zm-2 5h18" />
                     </svg>
                 </div>
-                <div class="stat-title">{{ __('Last Monthly Attendances') }}</div>
-                <div class="stat-value text-sm">{{ \App\Models\MonthlyAttendance::MONTH_NAMES[$lastMonthlyAttendance->month] ?? $lastMonthlyAttendance->month }}</div>
+                <div class="stat-title text-xs sm:text-sm mb-1">{{ __('Last Monthly Attendances') }}</div>
+                <div class="stat-value text-sm sm:text-base break-words">{{ \App\Models\MonthlyAttendance::MONTH_NAMES[$lastMonthlyAttendance->month] ?? $lastMonthlyAttendance->month }}</div>
             </a>
         @else
             <a href="#" class="stat bg-base-100 shadow rounded-box opacity-50 cursor-not-allowed">
@@ -48,8 +48,8 @@
                             d="M8 3v4m8-4v4M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2zm-2 5h18" />
                     </svg>
                 </div>
-                <div class="stat-title">{{ __('Last Monthly Attendances') }}</div>
-                <div class="stat-value text-sm">{{ __('No monthly attendance records found.') }}</div>
+                <div class="stat-title text-xs sm:text-sm mb-1">{{ __('Last Monthly Attendances') }}</div>
+                <div class="stat-value text-sm sm:text-base break-words">{{ __('No monthly attendance records found.') }}</div>
             </a>
         @endisset
 
@@ -62,8 +62,8 @@
                             d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                 </div>
-                <div class="stat-title">{{ __('Last payslips') }}</div>
-                <div class="stat-value text-sm">{{ __('Payslips') }} {{ \App\Models\MonthlyAttendance::MONTH_NAMES[$lastPayroll->month] ?? $lastPayroll->month }}</div>
+                <div class="stat-title text-xs sm:text-sm mb-1">{{ __('Last payslips') }}</div>
+                <div class="stat-value text-sm sm:text-base break-words">{{ __('Payslips') }} {{ \App\Models\MonthlyAttendance::MONTH_NAMES[$lastPayroll->month] ?? $lastPayroll->month }}</div>
             </a>
         @else
             <a href="#" class="stat bg-base-100 shadow rounded-box opacity-50 cursor-not-allowed">
@@ -73,8 +73,8 @@
                             d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                 </div>
-                <div class="stat-title">{{ __('Last payslips') }}</div>
-                <div class="stat-value text-sm">{{ __('No payslips records found.') }}</div>
+                <div class="stat-title text-xs sm:text-sm mb-1">{{ __('Last payslips') }}</div>
+                <div class="stat-value text-sm sm:text-base break-words">{{ __('No payslips records found.') }}</div>
             </a>
         @endisset
 
@@ -84,14 +84,14 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <div class="flex items-center justify-between mb-2">
-                <h2 class="card-title text-base">{{ __('Recent Attendance') }}</h2>
-                <a href="{{ route('employee-portal.attendance-logs') }}" class="btn btn-sm btn-ghost">
+                <h2 class="card-title text-sm sm:text-base">{{ __('Recent Attendance') }}</h2>
+                <a href="{{ route('employee-portal.attendance-logs') }}" class="btn btn-xs sm:btn-sm btn-ghost text-xs sm:text-sm">
                     {{ __('View All') }}
                 </a>
             </div>
 
             <div class="overflow-x-auto">
-                <table class="table w-full">
+                <table class="table w-full text-xs sm:text-sm">
                     <thead>
                         <tr>
                             <th>{{ __('Date') }}</th>
