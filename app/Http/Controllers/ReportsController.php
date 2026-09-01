@@ -101,6 +101,7 @@ class ReportsController extends Controller
         if ($canSales) {
             $data['monthlySellAmount'] = $this->companyOverviewService->getMonthlyProductsStat();
             $data['sellAmountPerProducts'] = $this->companyOverviewService->getSellAmountPerProducts();
+            $data['buyAmountPerProducts'] = $this->companyOverviewService->getBuyAmountPerProducts();
             $data['totalBuyAmount'] = $this->companyOverviewService->totalBuyAmount();
         }
 
