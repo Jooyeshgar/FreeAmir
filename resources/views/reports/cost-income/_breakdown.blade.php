@@ -21,34 +21,34 @@
 
 @foreach ($breakdownSections as $section)
     @php $sectionTotal = max($section['items']->sum('amount'), 1); @endphp
-    <article class="card border border-base-300 bg-base-100/90 shadow-sm">
+    <article class="card min-w-0 overflow-hidden border border-base-300 bg-base-100/90 shadow-sm">
         <div class="card-body p-4">
             <div class="flex items-start justify-between gap-2">
                 <div>
-                    <h2 class="card-title text-base">{{ $section['title'] }}</h2>
+                    <h2 class="card-title text-[.875rem] lg:text-base">{{ $section['title'] }}</h2>
                     <p class="text-xs text-base-content/55">{{ $section['subtitle'] }}</p>
                 </div>
             </div>
 
             @if ($section['items']->isNotEmpty())
-                <div class="mt-4 grid grid-cols-1 items-center gap-5 sm:grid-cols-[13rem_1fr]">
+                <div class="mt-4 grid min-w-0 grid-cols-1 items-center gap-5 sm:grid-cols-[13rem_minmax(0,1fr)]">
                     <div class="relative mx-auto h-52 w-52">
                         <canvas id="{{ $section['id'] }}" class="h-full w-full"></canvas>
                         <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-                            <span class="text-lg font-bold tabular-nums">{{ formatNumber($section['items']->sum('amount')) }}</span>
+                            <span class="text-[.95rem] font-bold tabular-nums lg:text-lg">{{ formatNumber($section['items']->sum('amount')) }}</span>
                             <span class="text-xs text-base-content/55">{{ $section['centerLabel'] }}</span>
                         </div>
                     </div>
 
-                    <ul class="space-y-2 text-sm">
+                    <ul class="min-w-0 space-y-2 text-[.8125rem] lg:text-sm">
                         @foreach ($section['items']->take(6) as $index => $item)
-                            <li class="flex items-center justify-between gap-3">
+                            <li class="flex min-w-0 items-center justify-between gap-3">
                                 <span class="flex min-w-0 items-center gap-2">
                                     <span class="h-2.5 w-2.5 shrink-0 rounded-full"
                                         style="background: {{ $breakdownPalette[$index % count($breakdownPalette)] }}"></span>
                                     <span class="truncate font-medium">{{ $item['name'] }}</span>
                                 </span>
-                                <span class="shrink-0 tabular-nums">
+                                <span class="max-w-[55%] min-w-0 shrink break-all tabular-nums text-right">
                                     {{ formatNumber($item['amount']) }}
                                     <span class="text-base-content/45">{{ formatNumber(round($item['amount'] / $sectionTotal * 100)) }}{{ __('Percent sign') }}</span>
                                 </span>
@@ -56,7 +56,7 @@
                         @endforeach
 
                         @if ($section['items']->count() > 6)
-                            <li class="flex items-center justify-between gap-3 border-t border-base-300 pt-2 text-xs text-base-content/55">
+                            <li class="flex min-w-0 items-center justify-between gap-3 border-t border-base-300 pt-2 text-xs text-base-content/55">
                                 <span>{{ __('Other') }}</span>
                                 <span class="tabular-nums">{{ formatNumber($section['items']->slice(6)->sum('amount')) }}</span>
                             </li>
