@@ -108,6 +108,25 @@ class CompanyOverviewServiceTest extends TestCase
         $this->assertEquals(array_sum($amounts), $result->sum('amount'));
     }
 
+    public function test_buy_amount_per_products_uses_only_approved_purchases(): void
+    {
+        $product = $this->makeProduct();
+
+        $buy = $this->makeInvoice(jalali_to_gregorian(1405, 4, 1, '-'), InvoiceType::BUY, InvoiceStatus::APPROVED, 1000);
+        $this->makeInvoiceItem($buy, $product, amount: 1000);
+
+        $unapproved = $this->makeInvoice(jalali_to_gregorian(1405, 4, 2, '-'), InvoiceType::BUY, InvoiceStatus::UNAPPROVED, 500);
+        $this->makeInvoiceItem($unapproved, $product, amount: 500);
+
+        $sell = $this->makeInvoice(jalali_to_gregorian(1405, 4, 3, '-'), InvoiceType::SELL, InvoiceStatus::APPROVED, 300);
+        $this->makeInvoiceItem($sell, $product, amount: 300);
+
+        $row = $this->service()->getBuyAmountPerProducts()->firstWhere('name', $product->name);
+
+        $this->assertNotNull($row);
+        $this->assertSame(1000, $row['amount']);
+    }
+
     public function test_popular_products_rank_approved_sales_by_quantity(): void
     {
         $low = $this->makeProduct();
