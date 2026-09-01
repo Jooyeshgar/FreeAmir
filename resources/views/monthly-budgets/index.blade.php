@@ -1,21 +1,21 @@
 <x-app-layout :title="__('Monthly Income and Expense Workbench')">
     <x-show-message-bags />
 
-    <main class="mt-6 space-y-5">
+    <main class="mx-auto mt-4 w-full max-w-[1430px] space-y-4 px-2 sm:mt-6 sm:space-y-5 sm:px-4 lg:px-6">
         <section class="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/10 via-base-100 to-secondary/10 shadow-sm">
-            <div class="relative flex flex-col gap-5 p-5 lg:flex-row lg:items-center lg:justify-between lg:p-6">
-                <div class="flex items-start gap-4">
-                    <span class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-content shadow-lg shadow-primary/20">
+            <div class="relative flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between lg:p-6">
+                <div class="flex min-w-0 items-start gap-3 sm:gap-4">
+                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-content shadow-lg shadow-primary/20 sm:h-12 sm:w-12 sm:rounded-2xl">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 19V5m0 14h16M8 15l3-3 3 2 5-7m0 0h-4m4 0v4" />
                         </svg>
                     </span>
-                    <div>
+                    <div class="min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
-                            <h1 class="text-xl font-bold text-base-content sm:text-2xl">{{ __('Monthly Income and Expense Workbench') }}</h1>
+                            <h1 class="break-words text-xl font-bold text-base-content sm:text-2xl">{{ __('Monthly Income and Expense Workbench') }}</h1>
                             <span class="badge badge-primary badge-outline">{{ $selectedMonthLabel }}</span>
                             @if (! $hasDocuments)
-                                <span class="badge badge-warning badge-outline gap-1">
+                                <span class="inline-flex max-w-full rounded-lg border border-warning px-2 py-1 text-xs leading-5 text-warning">
                                     {{ __('No accounting document exists for calculating actual income and expense.') }}
                                 </span>
                             @endif
@@ -26,10 +26,10 @@
                     </div>
                 </div>
 
-                <form method="GET" action="{{ route('budgets.index') }}">
+                <form method="GET" action="{{ route('budgets.index') }}" class="w-full sm:w-auto lg:shrink-0">
                     <label class="form-control">
                         <span class="mb-1 text-xs font-medium text-base-content/55">{{ __('Month') }}</span>
-                        <select name="month" class="select select-bordered select-sm min-w-40 bg-base-100/90" onchange="this.form.submit()">
+                        <select name="month" class="select select-bordered select-sm w-1/2 bg-base-100/90 sm:min-w-40" onchange="this.form.submit()">
                             @foreach ($months as $monthNumber => $monthName)
                                 <option value="{{ $monthNumber }}" @selected($selectedMonth === $monthNumber)>{{ $monthName }}</option>
                             @endforeach
@@ -38,8 +38,8 @@
                 </form>
             </div>
 
-            <div class="relative flex flex-wrap items-center justify-between gap-3 border-t border-primary/10 bg-base-100/45 px-5 py-3 lg:px-6">
-                <div class="flex flex-wrap items-center gap-2 text-xs text-base-content/55">
+            <div class="relative flex flex-col items-stretch gap-3 border-t border-primary/10 bg-base-100/45 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-5 lg:px-6">
+                <div class="flex min-w-0 flex-wrap items-center gap-2 text-xs text-base-content/55">
                     <span class="badge badge-ghost gap-1"><span class="h-1.5 w-1.5 rounded-full bg-success"></span>{{ trans_choice(':count income lines', $incomeLinesCount, ['count' => localizeNumber($incomeLinesCount)]) }}</span>
                     <span class="badge badge-ghost gap-1"><span class="h-1.5 w-1.5 rounded-full bg-error"></span>{{ trans_choice(':count expense lines', $expenseLinesCount, ['count' => localizeNumber($expenseLinesCount)]) }}</span>
                     @if ($hasDocuments)
@@ -48,11 +48,11 @@
                 </div>
 
                 @can('budgets.rollover')
-                    <form method="POST" action="{{ route('budgets.rollover') }}"
+                    <form method="POST" action="{{ route('budgets.rollover') }}" class="w-full sm:w-auto"
                         onsubmit="return confirm('{{ __('Copy the previous month forecast into :month. Existing values for this month will be replaced.', ['month' => $selectedMonthLabel]) }}')">
                         @csrf
                         <x-input name="month" value="{{ $selectedMonth }}" hidden />
-                        <button type="submit" class="btn btn-ghost btn-sm" @disabled(! $hasPreviousForecast)
+                        <button type="submit" class="btn btn-ghost btn-sm w-full sm:w-auto" @disabled(! $hasPreviousForecast)
                             title="{{ ! $hasPreviousForecast ? __('No forecast exists for the previous month.') : '' }}">
                             {{ __('Copy Previous Month') }}
                         </button>
@@ -63,7 +63,7 @@
 
         <section class="space-y-4">
             @if ((auth()->user()->can('budgets.store') && auth()->user()->can('budgets.search-subjects')) || $hasOverlappingForecasts)
-                <div role="alert" class="alert alert-warning border border-warning/30 bg-warning/10 text-sm text-amber-900 dark:text-slate-100">
+                <div role="alert" class="alert alert-warning grid grid-cols-[auto_minmax(0,1fr)] items-start border border-warning/30 bg-warning/10 px-3 text-sm text-amber-900 sm:px-4 dark:text-slate-100">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.6 2.7 17.2A2 2 0 0 0 4.4 20h15.2a2 2 0 0 0 1.7-2.8L13.7 3.6a2 2 0 0 0-3.4 0Z" />
                     </svg>
@@ -73,7 +73,7 @@
 
             @if (auth()->user()->can('budgets.store') && auth()->user()->can('budgets.search-subjects'))
                 <article class="card overflow-visible border border-base-300 bg-base-100 shadow-sm">
-                    <div class="flex items-center gap-3 border-b border-base-300 px-5 py-4">
+                    <div class="flex items-center gap-3 border-b border-base-300 px-4 py-4 sm:px-5">
                         <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-7-7h14" />
@@ -85,12 +85,12 @@
                         </div>
                     </div>
 
-                    <form method="POST" action="{{ route('budgets.store') }}" class="p-5">
+                    <form method="POST" action="{{ route('budgets.store') }}" class="p-4 sm:p-5">
                         @csrf
                         @method('PUT')
                         <x-input name="month" value="{{ $selectedMonth }}" hidden />
 
-                        <div class="grid grid-cols-1 items-end gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(16rem,2fr)_auto]">
+                        <div class="grid grid-cols-1 items-end gap-4 md:grid-cols-[minmax(0,3fr)_minmax(16rem,2fr)_auto]">
                             <fieldset class="form-control min-w-0" x-data="{
                                 selectedName: @js($selectedSubject?->name ?? ''),
                                 selectedCode: @js($selectedSubject?->code ?? ''),
@@ -103,10 +103,17 @@
                             </fieldset>
 
                             <fieldset class="form-control min-w-0">
-                                <label for="forecast_amount_display" class="label block py-1 text-xs font-medium">
-                                    <span>{{ __('Forecast Amount') }} ({{ $currency }})</span>
-                                    <span class="mt-0.5 block font-normal text-base-content/50">{{ __('Enter income as a positive amount and expense as a negative amount; the sign must match the subject type.') }}</span>
+                                <label for="forecast_amount_display" class="label py-1 text-xs font-medium">
+                                    <span class="tooltip hidden text-base-content/50 md:inline-flex lg:hidden"
+                                        data-tip="{{ __('Enter income as a positive amount and expense as a negative amount; the sign must match the subject type.') }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mb-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 17v-6m0-4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+                                        </svg>
+                                        <span class="sr-only">{{ __('Enter income as a positive amount and expense as a negative amount; the sign must match the subject type.') }}</span>
+                                    </span>
+                                    {{ __('Forecast Amount') }} ({{ $currency }})
                                 </label>
+                                <span class="mt-0.5 font-normal text-xs text-base-content/50 md:hidden lg:block">{{ __('Enter income as a positive amount and expense as a negative amount; the sign must match the subject type.') }}</span>
                                 <div x-data="{ forecastAmount: @js(old('forecast_amount', '')) }">
                                     <x-input name="forecast_amount" x-bind:value="forecastAmount" hidden />
                                     <x-text-input id="forecast_amount_display" required placeholder="{{ localizeNumber('0') }}"
@@ -116,8 +123,8 @@
                                 </div>
                             </fieldset>
 
-                            <div class="justify-self-start">
-                                <button type="submit" class="btn btn-primary btn-sm h-10 gap-1.5 whitespace-nowrap px-3" title="{{ __('Save Forecast Line') }}">
+                            <div class="w-full justify-self-start sm:w-auto">
+                                <button type="submit" class="btn btn-primary btn-sm h-10 w-full gap-1.5 whitespace-nowrap px-3 sm:w-auto" title="{{ __('Save Forecast Line') }}">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-7-7h14" />
                                     </svg>
@@ -132,8 +139,8 @@
             @foreach ([[$displayBudgetLines, false], ...($hasMoreBudgetLines ? [[$allBudgetLinesByForecast, true]] : [])] as [$tableLines, $isModal])
                 @if ($isModal)
                     <dialog id="all-monthly-forecasts-modal" class="modal">
-                        <div class="modal-box w-11/12 max-w-6xl p-0">
-                            <div class="flex items-center justify-between border-b border-base-300 px-5 py-4">
+                        <div class="modal-box max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-6xl p-0 sm:max-h-[calc(100dvh-2rem)] sm:w-11/12">
+                            <div class="flex items-center justify-between border-b border-base-300 px-4 py-3 sm:px-5 sm:py-4">
                                 <div>
                                     <h3 class="text-lg font-bold">{{ __('Forecasts') }}</h3>
                                     <p class="mt-1 text-xs text-base-content/50">{{ $selectedMonthLabel }}
@@ -144,16 +151,16 @@
                             </div>
                 @else
                     <article class="card overflow-hidden border border-base-300 bg-base-100 shadow-sm">
-                        <div class="flex flex-wrap items-center gap-3 border-b border-base-300 px-5 py-4">
+                        <div class="flex flex-wrap items-center gap-3 border-b border-base-300 px-4 py-4 sm:px-5">
                             <div class="w-full">
-                                <div class="flex flex-wrap items-center justify-between gap-4">
+                                <div class="flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                                     <div class="flex flex-wrap items-center gap-2">
                                         <h2 class="font-bold text-base-content">{{ __('Forecasts') }}</h2>
                                         <span class="badge badge-neutral badge-sm">{{ localizeNumber($budgetLines->count()) }}</span>
                                         <span class="badge badge-primary badge-outline badge-sm">{{ trans_choice(':count manual forecasts', $manualForecastsCount, ['count' => localizeNumber($manualForecastsCount)]) }}</span>
                                     </div>
                                     @if ($hasMoreBudgetLines)
-                                        <button type="button" class="btn btn-outline btn-primary btn-sm" onclick="document.getElementById('all-monthly-forecasts-modal').showModal()">{{ __('Show all') }}</button>
+                                        <button type="button" class="btn btn-outline btn-primary btn-sm w-full sm:w-auto" onclick="document.getElementById('all-monthly-forecasts-modal').showModal()">{{ __('Show all') }}</button>
                                     @endif
                                 </div>
                                 <div class="mt-3 grid w-full grid-cols-1 gap-x-4 gap-y-2 text-[11px] text-base-content/55 sm:grid-cols-2 xl:grid-cols-4">
@@ -289,13 +296,13 @@
                 [__('Actual Cost Breakdown'), __('Actual values for the five largest items.'), 'monthlyExpenseActualItemsChart', $expenseItemDatasets[1] ?? null],
             ] as [$title, $description, $chartId, $dataset])
                 <article class="card border border-base-300 bg-base-100 shadow-sm">
-                    <div class="card-body p-5">
+                    <div class="card-body p-4 sm:p-5">
                         <div>
                             <h2 class="card-title text-base">{{ $title }}</h2>
                             <p class="text-xs text-base-content/50">{{ $description }}</p>
                         </div>
                         <div class="mt-2">
-                            <x-charts.item-comparison-pie :chart-id="$chartId" height-class="h-64" :datasets="$dataset ? [$dataset] : []" />
+                            <x-charts.item-comparison-pie :chart-id="$chartId" height-class="h-56 sm:h-64" :datasets="$dataset ? [$dataset] : []" />
                         </div>
                     </div>
                 </article>
@@ -303,13 +310,113 @@
         </section>
 
         <article class="card border border-base-300 bg-base-100 shadow-sm">
-            <div class="card-body p-5">
+            <div class="card-body p-4 sm:p-5">
                 <div>
                     <h2 class="card-title text-base">{{ __('Actual vs Forecast') }}</h2>
                     <p class="text-xs text-base-content/50">{{ $hasDocuments ? __('Calculated from accounting documents for :month.', ['month' => $selectedMonthLabel]) : __('No accounting document exists for calculating actual income and expense.') }}</p>
                 </div>
-                <div class="mt-2"><x-charts.monthly-budget-comparison chart-id="monthlyBudgetVarianceChart" heightClass="h-72" :datasets="$comparisonDatasets" /></div>
+                <div class="mt-2 overflow-x-auto"><div class="min-w-[34rem] sm:min-w-0"><x-charts.monthly-budget-comparison chart-id="monthlyBudgetVarianceChart" heightClass="h-64 sm:h-72" :datasets="$comparisonDatasets" /></div></div>
             </div>
         </article>
     </main>
+
+    @push('footer')
+        <style>
+            @media (max-width: 63.999rem) {
+                .monthly-budget-table thead {
+                    display: none;
+                }
+
+                .monthly-budget-table,
+                .monthly-budget-table tbody {
+                    display: block;
+                    width: 100%;
+                }
+
+                .monthly-budget-table tbody {
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: .75rem;
+                    padding: .75rem;
+                }
+
+                .monthly-budget-table tbody tr {
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: .75rem 1rem;
+                    min-width: 0;
+                    padding: 1rem;
+                    border: 1px solid var(--color-base-300);
+                    border-radius: .75rem;
+                    background: var(--color-base-100);
+                }
+
+                .monthly-budget-table tbody td {
+                    display: flex;
+                    min-width: 0;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: .75rem;
+                    padding: 0;
+                    text-align: end;
+                    white-space: normal;
+                }
+
+                .monthly-budget-table tbody td::before {
+                    content: attr(data-label);
+                    flex: none;
+                    color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
+                    font-size: .7rem;
+                    font-weight: 600;
+                }
+
+                .monthly-budget-table tbody td:first-child {
+                    display: block;
+                    grid-column: 1 / -1;
+                    padding-bottom: .75rem;
+                    border-bottom: 1px solid var(--color-base-200);
+                    text-align: start;
+                }
+
+                .monthly-budget-table tbody td:first-child::before,
+                .monthly-budget-table tbody td.monthly-budget-row-action::before {
+                    display: none;
+                }
+
+                .monthly-budget-table tbody td.monthly-budget-row-action {
+                    grid-column: 1 / -1;
+                    justify-content: end;
+                }
+
+                .monthly-budget-table tbody tr.monthly-budget-empty-row {
+                    display: block;
+                    grid-column: 1 / -1;
+                }
+
+                .monthly-budget-table tbody tr.monthly-budget-empty-row td {
+                    display: block;
+                    padding: 2rem 1rem;
+                    border: 0;
+                    text-align: center;
+                }
+            }
+
+            @media (max-width: 39.999rem) {
+                .monthly-budget-table tbody {
+                    grid-template-columns: minmax(0, 1fr);
+                    padding: .5rem;
+                }
+
+                .monthly-budget-table tbody tr {
+                    grid-template-columns: minmax(0, 1fr);
+                    padding: .875rem;
+                }
+
+                .monthly-budget-table tbody td:first-child,
+                .monthly-budget-table tbody td.monthly-budget-row-action {
+                    grid-column: auto;
+                }
+            }
+        </style>
+    @endpush
 </x-app-layout>
