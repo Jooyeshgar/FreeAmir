@@ -21,9 +21,12 @@
         ],
         [
             'title' => __('Net Profit'),
-            'value' => abs($profitValue),
-            'suffix' => $profitValue >= 0 ? __('Profit') : __('Loss'),
-            'tone' => $profitValue >= 0 ? 'success' : 'error',
+            'value' => abs((int) ($forecastProfit ?? $profitValue)),
+            'suffix' => ($forecastProfit ?? $profitValue) >= 0 ? __('Profit') : __('Loss'),
+            'detail' => __('Completed') . ': ' . localizeNumber(number_format(abs((float) ($actualCompletedProfit ?? 0)))) . ' ' . $currency . ' (' . localizeNumber(number_format((float) ($profitCompletionPercent ?? 0), 0)) . __('Percent sign') . ')',
+            'progress' => $profitCompletionPercent ?? 0,
+            'progressLabel' => __('FY forecast'),
+            'tone' => ($forecastProfit ?? $profitValue) >= 0 ? 'success' : 'error',
             'icon' => 'profit',
         ],
         [

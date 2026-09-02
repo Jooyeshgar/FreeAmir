@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
+use App\Models\MonthlyBudget;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
@@ -61,7 +62,7 @@ class CostIncomeDashboardTest extends TestCase
         $response = $this->actingAs($this->user)->get(route('reports.cost-income'));
 
         $response->assertOk()->assertViewIs('reports.cost-income.index');
-        foreach (['totalIncome', 'totalCost', 'profit', 'margin', 'monthlyIncome', 'monthlyCost', 'forecastIncome', 'forecastExpense', 'debtors', 'creditors'] as $key) {
+        foreach (['totalIncome', 'totalCost', 'profit', 'forecastProfit', 'actualCompletedProfit', 'profitCompletionPercent', 'margin', 'monthlyIncome', 'monthlyCost', 'forecastIncome', 'forecastExpense', 'debtors', 'creditors'] as $key) {
             $response->assertViewHas($key);
         }
         $response->assertViewHas('monthlyBudgetLinks', fn (array $links) => count($links) === 12 && str_contains($links[0], 'month=1'))
@@ -113,6 +114,25 @@ class CostIncomeDashboardTest extends TestCase
             ->assertViewHas('monthlyCost', fn (array $values) => $values['تیر'] === 300.75)
             ->assertViewHas('forecastIncome', fn (array $values) => $values['تیر'] === 900.25)
             ->assertViewHas('forecastExpense', fn (array $values) => $values['تیر'] === 300.75);
+    }
+
+    public function test_dashboard_calculates_full_year_forecasted_profit_and_completion(): void
+    {
+        $this->travelTo(Carbon::parse(jalali_to_gregorian(1405, 5, 15, '-').' 12:00:00'));
+        $income = $this->nonPermanentSubject('Forecast income', SubjectType::CREDITOR);
+        $expense = $this->nonPermanentSubject('Forecast expense', SubjectType::DEBTOR);
+        foreach (range(1, 12) as $month) {
+            MonthlyBudget::create(['company_id' => $this->companyId, 'subject_id' => $income->id, 'month' => $month, 'budget_type' => 'income', 'forecast_amount' => 1000]);
+            MonthlyBudget::create(['company_id' => $this->companyId, 'subject_id' => $expense->id, 'month' => $month, 'budget_type' => 'expense', 'forecast_amount' => 400]);
+        }
+        $this->transaction($income->id, 900, jalali_to_gregorian(1405, 4, 10, '-'));
+        $this->transaction($expense->id, -300, jalali_to_gregorian(1405, 4, 10, '-'));
+        $this->grant('reports.cost-income');
+
+        $this->actingAs($this->user)->get(route('reports.cost-income'))->assertOk()
+            ->assertViewHas('forecastProfit', 7200.0)
+            ->assertViewHas('actualCompletedProfit', 600.0)
+            ->assertViewHas('profitCompletionPercent', 8);
     }
 
     public function test_missing_document_months_use_the_configured_english_list_separators(): void

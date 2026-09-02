@@ -9,6 +9,8 @@
     'series' => null,
     'tone' => null,
     'icon' => null,
+    'progress' => null,
+    'progressLabel' => null,
 ])
 
 @php
@@ -21,6 +23,8 @@
     $series = $series ?? data_get($card, 'series');
     $tone = $tone ?? data_get($card, 'tone', 'info');
     $icon = $icon ?? data_get($card, 'icon');
+    $progress = $progress ?? data_get($card, 'progress');
+    $progressLabel = $progressLabel ?? data_get($card, 'progressLabel');
     $displayValue = is_numeric($rawValue) ? formatNumber($rawValue) : $rawValue;
 
     // Default icon set. `icon` may be either a named key below or a raw SVG path string.
@@ -184,6 +188,16 @@
                 <div class="text-xs text-base-content/60 dark:text-slate-400">{{ $suffix }}</div>
             @endif
         </div>
+
+        @if ($progress !== null)
+            <div class="flex items-center gap-2">
+                @if (filled($progressLabel))
+                    <span class="shrink-0 text-[10px] leading-none text-base-content/50 dark:text-slate-400">{{ $progressLabel }}</span>
+                @endif
+                <progress class="progress progress-success h-1.5 min-w-0 flex-1" value="{{ max(0, min(100, (float) $progress)) }}" max="100"
+                    aria-label="{{ __('Completed') }}: {{ localizeNumber(number_format((float) $progress, 0)) }}{{ __('Percent sign') }}"></progress>
+            </div>
+        @endif
 
         <div class="mt-auto flex items-center justify-between gap-2 text-xs">
             @if ($change !== null)

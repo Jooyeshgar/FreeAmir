@@ -20,7 +20,12 @@ class CostIncomeController extends Controller
         $summary = $this->service->summary();
         $topCustomers = $this->service->topCustomers();
         $invoices = $this->service->invoiceSummary();
-        $forecastChart = $this->monthlyBudgetService->fullYearAnalysis()['chart'];
+        $fullYearAnalysis = $this->monthlyBudgetService->fullYearAnalysis();
+        $forecastChart = $fullYearAnalysis['chart'];
+        $forecastTotals = $fullYearAnalysis['totals'];
+        $forecastProfit = $forecastTotals['forecastIncome'] + $forecastTotals['forecastExpense'];
+        $actualCompletedProfit = $forecastTotals['actualIncome'] + $forecastTotals['actualExpense'];
+        $profitCompletionPercent = $forecastProfit > 0 ? max(0, min(100, round($actualCompletedProfit / $forecastProfit * 100))) : 0;
         $monthlyIncome = array_combine($forecastChart['labels'], array_map(fn (int|float|null $value) => abs((float) ($value ?? 0)), $forecastChart['actualIncome']));
         $monthlyCost = array_combine($forecastChart['labels'], array_map(fn (int|float|null $value) => abs((float) ($value ?? 0)), $forecastChart['actualExpense']));
         $forecastIncome = array_combine($forecastChart['labels'], array_map(fn (int|float $value) => abs((float) $value), $forecastChart['forecastIncome']));
@@ -39,6 +44,9 @@ class CostIncomeController extends Controller
             'totalIncome' => $summary['totalIncome'],
             'totalCost' => $summary['totalCost'],
             'profit' => $summary['profit'],
+            'forecastProfit' => $forecastProfit,
+            'actualCompletedProfit' => $actualCompletedProfit,
+            'profitCompletionPercent' => $profitCompletionPercent,
             'margin' => $summary['margin'],
             'incomeBreakdown' => $summary['incomeBreakdown'],
             'costBreakdown' => $summary['costBreakdown'],
