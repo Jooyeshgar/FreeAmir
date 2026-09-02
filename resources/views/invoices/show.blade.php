@@ -196,7 +196,7 @@
                                 </p>
                             </div>
                         </div>
-                        <div class="card bg-base-200 shadow md:col-span-2 lg:col-span-4">
+                        <div class="card bg-base-200 shadow md:col-span-2 lg:col-span-5">
                             <div class="card-body p-4">
                                 <h3
                                     class="card-title text-xs uppercase tracking-wide text-gray-500 dark:text-slate-300">
