@@ -37,7 +37,7 @@
                 [&_.select]:transition [&_.select:focus]:border-primary [&_.select:focus]:outline-none [&_.select:focus]:ring-2 [&_.select:focus]:ring-primary/10
                 [&_.textarea]:min-h-28 [&_.textarea]:rounded-lg [&_.textarea]:border-base-300 [&_.textarea]:bg-base-100 [&_.textarea]:shadow-sm
                 [&_.textarea]:transition [&_.textarea:focus]:border-primary [&_.textarea:focus]:outline-none [&_.textarea:focus]:ring-2 [&_.textarea:focus]:ring-primary/10">
-                <div class="grid grid-cols-2 items-start gap-x-5 gap-y-4 xl:grid-cols-3" x-data="{
+                <div class="grid grid-cols-1 sm:grid-cols-2 items-start gap-x-5 gap-y-4 xl:grid-cols-3" x-data="{
                     direction: @js($selectedDirectionValue),
                     bankAccountId: @js((string) $selectedBankAccountId),
                 }">
@@ -58,7 +58,7 @@
 
                     <x-text-input input_name="title" title="{{ __('Cheque Title') }}"
                         input_value="{{ old('title') ?? ($cheque?->title ?? '') }}" placeholder="{{ __('Cheque Title') }}"
-                        label_text_class="text-sm text-gray-500 text-nowrap"></x-text-input>
+                        label_text_class="text-sm text-gray-500"></x-text-input>
 
                     <div class="col-span-2 md:col-span-1">
                         @php
@@ -88,14 +88,14 @@
                         <x-text-input data-jdp title="{{ __('Issue date') }}" input_name="issue_date"
                             id_input="issue_date" placeholder="{{ __('Issue date') }}" readonly required
                             input_value="{{ old('issue_date') ?? convertToJalali($cheque?->write_date ?? now(), true) }}"
-                            label_text_class="text-sm text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
+                            label_text_class="text-sm text-gray-500" input_class="datePicker"></x-text-input>
                     </div>
 
                     <div class="col-span-2 md:col-span-1">
                         <x-text-input data-jdp title="{{ __('Due date') }}" input_name="due_date"
                             id_input="due_date" placeholder="{{ __('Due date') }}" readonly required
                             input_value="{{ old('due_date') ?? ($cheque ? convertToJalali($cheque->due_date, true) : '') }}"
-                            label_text_class="text-sm text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
+                            label_text_class="text-sm text-gray-500" input_class="datePicker"></x-text-input>
                     </div>
 
                     <div class="col-span-2 md:col-span-1">
@@ -150,7 +150,7 @@
                                         </option>
                                     @endforeach
                                 </select>
-                                <div class="label text-xs opacity-60">{{ __('Selecting a chequebook automatically assigns its next leaf as the cheque number.') }}</div>
+                                <p class="mt-1 text-xs leading-relaxed break-words whitespace-normal text-base-content/60">{{ __('Selecting a chequebook automatically assigns its next leaf as the cheque number.') }}</p>
                             </fieldset>
                         </div>
                     </div>

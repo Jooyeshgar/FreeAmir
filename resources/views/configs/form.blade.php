@@ -1,5 +1,5 @@
 <div>
-    <fieldset id="subjectForm" class="grid grid-cols-2 gap-6 border p-5 my-3">
+    <fieldset id="subjectForm" class="grid grid-cols-1 sm:grid-cols-2 gap-6 border p-5 my-3">
         <div class="col-span-2 md:col-span-1">
             <div class="flex gap-4" x-data="{
                 selectedName: @js($selectedSubject?->name ?? ''),

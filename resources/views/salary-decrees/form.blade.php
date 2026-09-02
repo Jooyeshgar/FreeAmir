@@ -1,4 +1,4 @@
-<div class="grid grid-cols-2 gap-6">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
 
     <div class="col-span-2 md:col-span-1">
         <x-select name="employee_id" id="employee_id" title="{{ __('Employee') }}" :selected="old('employee_id', isset($salaryDecree) ? $salaryDecree->employee_id : '')" :options="$employees
@@ -45,19 +45,19 @@
     <h3 class="text-base font-semibold text-gray-500 mb-3">{{ __('Payroll Benefits') }}</h3>
 
     <div class="overflow-x-auto">
-        <table class="table w-full">
+        <table class="table w-full min-w-[40rem]">
             <thead>
                 <tr>
-                    <th>{{ __('Payroll Element') }}</th>
-                    <th>{{ __('Value') }}</th>
-                    <th></th>
+                    <th class="whitespace-nowrap">{{ __('Payroll Element') }}</th>
+                    <th class="whitespace-nowrap">{{ __('Value') }}</th>
+                    <th class="w-28"></th>
                 </tr>
             </thead>
             <tbody id="benefits-body">
                 <template x-for="(benefit, index) in benefits" :key="index">
                     <tr>
-                        <td>
-                            <select :name="`benefits[${index}][element_id]`" class="select  w-full"
+                        <td class="min-w-[18rem]">
+                            <select :name="`benefits[${index}][element_id]`" class="select w-full"
                                 x-model="benefit.element_id" @change="fillDefault(index)" required>
                                 <option value="">— {{ __('Select Element') }} —</option>
                                 @foreach ($payrollElements as $element)
@@ -65,11 +65,11 @@
                                 @endforeach
                             </select>
                         </td>
-                        <td>
+                        <td class="min-w-[12rem]">
                             <x-input type="number" name="" x-bind="{ name: 'benefits[' + index + '][value]' }" x-model="benefit.value" placeholder="0" required />
                         </td>
-                        <td>
-                            <button type="button" @click="remove(index)" class="btn btn-sm btn-error btn-outline">
+                        <td class="whitespace-nowrap">
+                            <button type="button" @click="remove(index)" class="btn btn-sm btn-error btn-outline whitespace-nowrap">
                                 {{ __('Remove') }}
                             </button>
                         </td>
