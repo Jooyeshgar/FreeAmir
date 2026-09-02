@@ -247,7 +247,7 @@ class AncillaryCostController extends Controller
         }
 
         $invoiceItems = $invoice->items()
-            ->where('itemable_type', \App\Models\Product::class)
+            ->where('itemable_type', Product::class)
             ->with('itemable')
             ->get();
 
@@ -273,7 +273,7 @@ class AncillaryCostController extends Controller
         auth()->user()->can('ancillary-costs.approve');
 
         if (! $service->getChangeStatusValidation($ancillaryCost)['allowed']) {
-            redirect()->back()->with('error', $service->getChangeStatusValidation($ancillaryCost)['reason']);
+            return redirect()->back()->with('error', $service->getChangeStatusValidation($ancillaryCost)['reason']);
         }
 
         $service->changeAncillaryCostStatus($ancillaryCost, $status);

@@ -1105,12 +1105,15 @@
 
                     @php
                         $isSellWorkflow = $invoice->invoice_type === App\Enums\InvoiceType::SELL;
+                        $isVoided = $isSellWorkflow && (bool) $invoice->voidInvoice;
                         $canApprove =
                             ($isSellWorkflow ? false : $invoice->status->isPending()) ||
                             $invoice->status->isReadyToApprove() ||
                             $invoice->status->isUnapproved() ||
                             $invoice->status->isApprovedInactive();
-                        $canUnapprove = $invoice->status->isApprovedOrSettled();
+                        // Settled invoices are shown as disabled in the list and cannot
+                        // change status until their payments are removed.
+                        $canUnapprove = $invoice->status->isApproved();
                         $isSettled = $invoice->status->isPartiallyPaid() || $invoice->status->isPaid();
 
                         $hasMoadianSuccess = $invoice->moadianHistories->contains(function ($history) {
@@ -1227,6 +1230,10 @@
                                     class="btn btn-accent inline-flex tooltip">
                                     {{ __('Fix Conflict') }}
                                 </a>
+                            @elseif ($isVoided)
+                                <span class="tooltip" data-tip="{{ __('To change the status, first unapprove the voiding invoice.') }}">
+                                    <button class="btn btn-error btn-disabled cursor-not-allowed">{{ __('Unapprove') }}</button>
+                                </span>
                             @else
                                 <form
                                     action="{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}{{ $changeStatusValidation->hasWarning() ? '?confirm=1' : '' }}"
