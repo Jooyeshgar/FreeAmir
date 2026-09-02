@@ -1,6 +1,6 @@
 <x-card class="rounded-2xl w-full" class_body="p-4">
-    <div class="flex gap-2 items-center justify-start">
-        <div class="flex w-1/4">
+    <div class="grid grid-cols-1 gap-2 md:grid-cols-2 xl:flex xl:items-center xl:justify-start">
+        <div class="flex w-full xl:w-1/4">
 
             @php
                 $initialCustomerId = old('customer_id', $invoice->customer_id ?? null);
@@ -13,7 +13,7 @@
                     '</a>';
             @endphp
 
-            <div class="flex flex-wrap w-3/4" x-data="{
+            <div class="flex flex-wrap w-full xl:w-3/4" x-data="{
                 customer_id: '{{ $initialCustomerId }}',
                 selectedValue: '{{ $initialSelectedValue }}',
             }">
@@ -39,14 +39,14 @@
             </div>
         </div>
         <x-input id="invoice_type" name="invoice_type" value="sell" hidden />
-        <div class="flex w-1/3">
+        <div class="flex w-full xl:w-1/3">
             <x-text-input input_name="title" title="{{ __('Invoice Name') }}"
                 input_value="{{ old('title') ?? ($invoice->title ?? '') }}" placeholder="{{ __('Invoice Name') }}"
-                label_text_class="text-gray-500" label_class="w-1/2"></x-text-input>
+                label_text_class="text-gray-500" label_class="w-full xl:w-1/2"></x-text-input>
         </div>
     </div>
 
-    <div class="flex justify-start gap-2 mt-2">
+    <div class="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2 xl:flex xl:justify-start">
         <x-text-input input_value="{{ old('invoice_id') ?? ($invoice->id ?? '') }}" input_name="invoice_id"
             label_text_class="text-gray-500" label_class="w-full hidden"></x-text-input>
         @if (!$invoice->exists)
@@ -75,8 +75,10 @@
             label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
     </div>
 </x-card>
-<x-card class="mt-4 rounded-2xl w-full" class_body="p-0 pt-0 mt-4" x-data="transactionForm">
-    <div class="flex flex-wrap overflow-x-auto overflow-y-hidden gap-2 items-center px-4">
+<x-card class="mt-4 min-w-0 max-w-full rounded-2xl w-full" class_body="p-0 pt-0 mt-4" x-data="transactionForm">
+    <div class="max-w-full overflow-x-auto overflow-y-hidden">
+        <div class="w-max min-w-full">
+            <div class="flex w-max min-w-full gap-2 items-center px-4">
         <div class="text-sm flex-1 max-w-8 text-center text-gray-500 pt-3">*</div>
         <div class="text-sm flex-1 min-w-24 max-w-64 text-center text-gray-500 pt-3">
             <div
@@ -115,7 +117,7 @@
     <div class="min-h-96">
         <div id="transactions" x-data="{ activeTab: {{ $total }} }">
             <template x-for="(transaction, index) in transactions" :key="transaction.id">
-                <div :class="{ 'active': activeTab === index }" class="transaction flex gap-2 items-center px-4 pb-3"
+                <div :class="{ 'active': activeTab === index }" class="transaction flex w-max min-w-full gap-2 items-center px-4 pb-3"
                     @click="activeTab = index">
                     <div class="relative flex-1 text-center max-w-8 pt-2 pb-2 transaction-count-container">
                         <span class="transaction-count block"
@@ -225,7 +227,7 @@
             </template>
         </div>
 
-        <button class="flex justify-content gap-4 align-center w-full px-4" id="addTransaction"
+        <button class="flex justify-content gap-4 align-center w-max min-w-full px-4" id="addTransaction"
             @click="addTransaction; activeTab = transactions.length;" type="button">
             <div
                 class="bg-gray-200 max-h-10 min-h-10 hover:bg-gray-300 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600 border-none btn w-full rounded-md btn-active">
@@ -233,9 +235,11 @@
                 {{ __('Add Transaction') }}
             </div>
         </button>
+            </div>
+        </div>
     </div>
     <hr style="">
-    <div class="flex flex-row justify-between" x-data="{ subtractionsInput: '{{ old('subtraction') ?? ($invoice->subtraction ?? 0) }}' }">
+    <div class="flex flex-col justify-between md:flex-row" x-data="{ subtractionsInput: '{{ old('subtraction') ?? ($invoice->subtraction ?? 0) }}' }">
         <div class="flex justify-start px-4 gap-4 py-3 rounded-b-2xl">
             <x-text-input placeholder="{{ localizeNumber('0') }}" label_text_class="text-gray-500"
                 label_class="w-full" input_name="subtraction" title="{{ __('Subtractions') }}"
@@ -245,7 +249,7 @@
                 x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(subtractionsInput))">
             </x-text-input>
         </div>
-        <div class="flex justify-end px-4 gap-4 py-3 rounded-b-2xl">
+        <div class="flex flex-col justify-end px-4 gap-4 py-3 rounded-b-2xl md:flex-row">
             <div
                 class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 dark:border-slate-700 dark:shadow-none shadow-sm rounded-xl border border-gray-200">
                 <span class="text-sm font-medium text-gray-500 dark:text-slate-300">{{ __('Total Quantity') }}:</span>
@@ -276,15 +280,15 @@
     </div>
 </x-card>
 
-<div class="mt-4 flex gap-2 justify-end">
+<div class="mt-4 flex gap-2 justify-start sm:justify-end">
     <a href="{{ route('invoices.index', ['invoice_type' => 'sell']) }}" type="submit"
-        class="btn btn-default rounded-md dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-600">{{ __('cancel') }}</a>
-    <button id="submitForm" type="submit" class="btn text-white btn-primary rounded-md">{{ __('save') }}
+        class="btn btn-sm lg:btn-md btn-default rounded-md dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-600">{{ __('cancel') }}</a>
+    <button id="submitForm" type="submit" class="btn btn-sm lg:btn-md text-white btn-primary rounded-md">{{ __('save') }}
     </button>
 
     @can('invoices.approve')
         <button id="submitFormAndApprove" type="submit" name="approve" value="1"
-            class="btn text-white btn-primary rounded-md">{{ __('save and ready to approve') }}</button>
+            class="btn btn-sm lg:btn-md text-white btn-primary rounded-md">{{ __('save and ready to approve') }}</button>
     @endcan
 </div>
 
