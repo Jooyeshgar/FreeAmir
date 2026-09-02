@@ -1,4 +1,4 @@
-<div class="grid grid-cols-2 gap-6">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
     <div class="col-span-2 md:col-span-1">
         @php
             $initialGroupId = old('group', $service->group ?? null);

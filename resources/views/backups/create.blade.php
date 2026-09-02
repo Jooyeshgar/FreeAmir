@@ -38,7 +38,7 @@
                 x-init="fetchSize()"
                 x-on:submit="handleSubmit($event)">
                 @csrf
-                <fieldset id="previousYears" class="grid grid-cols-2 gap-6 p-5 my-3">
+                <fieldset id="previousYears" class="grid grid-cols-1 sm:grid-cols-2 gap-6 p-5 my-3">
                     <div class="form-control">
                         <label for="source_id" class="label">
                             <span class="label-text">{{ __('Backup from') }}</span>
@@ -61,7 +61,7 @@
                                 <thead>
                                     <tr>
                                         <th>{{ __('Select') }}</th>
-                                        <th>{{ __('Table Name') }}</th>
+                                        <th class="whitespace-nowrap">{{ __('Table Name') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-100">
@@ -81,7 +81,7 @@
 
                                             <td class="px-4 py-3">
                                                 <div class="flex flex-col gap-1">
-                                                    <label for="table_{{ $key }}" class="text-label cursor-pointer">{{ $value }}</label>
+                                                    <label for="table_{{ $key }}" class="text-label cursor-pointer whitespace-nowrap">{{ $value }}</label>
 
                                                     @if ($isDocumentFiles)
                                                         <span x-show="docFileSizeMb !== null" x-cloak class="text-xs text-warning"

@@ -1,4 +1,4 @@
-<div class="grid grid-cols-2 gap-6">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
     <div class="col-span-2 md:col-span-1">
         <x-input name="income_to" id="income_to" type="number" title="{{ __('Income To') }}" :value="old('income_to', $taxSlab->income_to ?? '')" placeholder="{{ __('Leave empty for unlimited') }}" />
     </div>

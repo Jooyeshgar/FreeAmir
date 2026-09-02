@@ -8,7 +8,7 @@
                 @csrf
                 @method('PATCH')
 
-                <fieldset id="companyForm" class="grid grid-cols-2 gap-6 border p-5 my-3">
+                <fieldset id="companyForm" class="grid grid-cols-1 sm:grid-cols-2 gap-6 border p-5 my-3">
                     <legend>{{ __('company') }}</legend>
                     <div class="col-span-2 md:col-span-1">
                         <x-input name="name" id="name" title="{{ __('Company name') }}" :value="old('name', $company->name ?? '')" required />
