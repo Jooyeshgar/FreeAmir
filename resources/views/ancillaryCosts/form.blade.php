@@ -1,14 +1,14 @@
 <div x-data="ancillaryCostForm">
     <x-card class="rounded-2xl w-full" class_body="p-4">
-        <div class="flex gap-2 items-center justify-start">
-            <div class="flex w-1/4">
+        <div class="grid grid-cols-1 gap-2 md:grid-cols-2 lg:flex lg:items-center lg:justify-start">
+            <div class="flex w-full lg:w-1/4">
                 @php
                     $initialCustomerId = old('customer_id', $ancillaryCost->customer_id ?? null);
                     $initialSelectedValue = $initialCustomerId ? "customer-$initialCustomerId" : null;
                     $hint = '<a class="link text-blue-500 hover:underline" href="' .route('customers.create') .'">' . __('Add Customer') . '</a>';
                 @endphp
 
-                <div class="flex flex-wrap w-3/4" x-data="{
+                <div class="flex flex-wrap w-full lg:w-3/4" x-data="{
                         customer_id: '{{ $initialCustomerId }}',
                         selectedValue: '{{ $initialSelectedValue }}',
                     }">
@@ -52,8 +52,8 @@
                     </div>
                 </div>
             </div>
-            <div class="flex w-1/4">
-                <div class="flex-wrap">
+            <div class="flex w-full lg:w-1/4">
+                <div class="flex-wrap w-full">
                     <span class="text-gray-500 w-full"> {{ __('Cost Type') }} </span>
                     <select name="type" id="type" x-model="selectedCostType"
                         class="h-10 min-h-10 border border-slate-400 w-full rounded-md text-gray-500 px-2">
@@ -64,7 +64,7 @@
                     </select>
                 </div>
             </div>
-            <div class="flex w-1/8">
+            <div class="flex w-full lg:w-1/8">
                 <x-text-input placeholder="0" title="{{ __('VAT') }} (%)" input_name="vat" x-model="vat"
                     input_value="{{ old('vat') ?? $ancillaryCost->vat }}" label_text_class="text-gray-500"
                     label_class="w-full" input_class="border-gray-300"></x-text-input>
@@ -76,8 +76,10 @@
             </div>
     </x-card>
 
-    <x-card class="mt-4 rounded-2xl w-full" class_body="p-4">
-        <div class="flex overflow-x-auto overflow-y-hidden gap-2 items-center px-4 pb-2">
+    <x-card class="mt-4 rounded-2xl w-full" class_body="p-0 pt-0 mt-4">
+        <div class="overflow-x-auto overflow-y-hidden lg:overflow-visible">
+            <div class="w-max min-w-full">
+        <div class="flex w-max min-w-full gap-2 items-center px-4 pb-2">
             <div class="text-sm flex-1 max-w-8 text-center text-gray-500">
                 #
             </div>
@@ -105,7 +107,7 @@
             <template x-if="availableProducts && availableProducts.length > 0">
                 <div>
                     <template x-for="(product, index) in availableProducts" :key="product.id">
-                        <div class="flex gap-2 items-center px-4 py-3 border-b">
+                        <div class="flex w-max min-w-full gap-2 items-center px-4 py-3 border-b">
                             <div class="flex-1 text-center max-w-8">
                                 <span class="text-gray-500" x-text="index + 1"></span>
                             </div>
@@ -141,16 +143,18 @@
                 </div>
             </template>
         </div>
+            </div>
+        </div>
         <hr>
-        <div class="flex flex-row justify-end">
-            <div class="flex justify-end px-4 gap-4 py-3">
-                <div class="flex items-center gap-2 px-4 py-2 shadow-sm rounded-xl border border-gray-200">
+        <div class="flex flex-row flex-wrap justify-end">
+            <div class="flex flex-wrap justify-end px-4 gap-4 py-3">
+                <div class="flex items-center gap-2 px-4 py-2 shadow-sm rounded-xl border border-gray-200 max-w-full">
                     <span class="text-sm font-medium text-gray-500">{{ __('Total') }} ({{ config('amir.currency') ?? __('Rial') }}):</span>
                     <span class="text-lg font-bold text-green-600" x-text="calculateTotal().toLocaleString('fa-IR')">
                         0
                     </span>
                 </div>
-                <div class="flex items-center gap-2 px-4 py-2 shadow-sm rounded-xl border border-gray-200">
+                <div class="flex items-center gap-2 px-4 py-2 shadow-sm rounded-xl border border-gray-200 max-w-full">
                     <span class="text-sm font-medium text-gray-500">{{ __('Total with VAT') }} ({{ config('amir.currency') ?? __('Rial') }}):</span>
                     <span class="text-lg font-bold text-green-600"
                         x-text="calculateTotalWithVat(Number(vat)).toLocaleString('fa-IR')">
