@@ -3,11 +3,11 @@
     $groupHint = '<a class="link text-blue-500" href="' . route('customer-groups.create') . '">' . __('Create new group') . '</a>';
 @endphp
 
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
     <div class="p-4">
         <div>
             <div class="text-sm font-semibold text-gray-600 mb-3">{{ __('Identity Information') }}</div>
-            <div class="grid grid-cols-2 gap-1 ">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-1 ">
                 <div>
                     <x-select title="{{ __('Account Plan Group') }}" name="group_id" id="group_id"
                         :options="$groups->pluck('name', 'id')" :selected="old('group_id', $customer->group_id ?? null)" :hint="$groupHint" />
@@ -35,14 +35,14 @@
                 </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <span class="label"> {{ __('Type') }}</span>
-                    <select name="type" id="type" class="select">
+                <fieldset class="form-control w-full">
+                    <label for="type" class="label">{{ __('Type') }}</label>
+                    <select name="type" id="type" class="select w-full">
                         @foreach (App\Enums\CustomerType::cases() as $type)
                             <option value="{{ $type->valueName() }}" @selected(old('type', $customer?->type?->valueName() ?? '') === $type->valueName())>{{ $type->label() }}</option>
                         @endforeach
                     </select>
-                </div>
+                </fieldset>
             </div>
         </div>
 
@@ -72,7 +72,7 @@
             </button>
         </div>
         <div x-show="activeTab === 'contact'" x-cloak>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
                 <div>
                     <x-input title="{{ __('Mobile') }}" name="mobile" placeholder="{{ __('Mobile') }}" :value="old('mobile', $customer->mobile ?? '')" />
                 </div>
@@ -95,14 +95,14 @@
                 <div>
                     <x-input title="{{ __('Postal code') }}" name="postal_code" :value="old('postal_code', $customer->postal_code ?? '')" placeholder="{{ __('Postal code') }}" />
                 </div>
-                <div class="md:col-span-3">
-                    <x-textarea title="{{ __('Address') }}" name="address" id="address" :value="old('address', $customer->address ?? '')" placeholder="{{ __('Address') }}" />
-                </div>
+            </div>
+            <div class="md:col-span-3">
+                <x-textarea title="{{ __('Address') }}" name="address" id="address" :value="old('address', $customer->address ?? '')" placeholder="{{ __('Address') }}" />
             </div>
         </div>
         <div x-show="activeTab === 'financial'" x-cloak>
             <div class="text-sm font-semibold text-gray-600 mb-3">{{ __('Account 1') }}</div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 border-b pb-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 border-b pb-4">
                 <div>
                     <x-input title="{{ __('Name') }}" name="acc_name_1" placeholder="{{ __('Name') }}"
                         :value="old('acc_name_1', $customer->acc_name_1 ?? '')" />
@@ -117,7 +117,7 @@
                 </div>
             </div>
             <div class="text-sm font-semibold text-gray-600 mb-3 mt-4">{{ __('Account 2') }}</div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                     <x-input title="{{ __('Name') }}" name="acc_name_2" placeholder="{{ __('Name') }}"
                         :value="old('acc_name_2', $customer->acc_name_2 ?? '')" />

@@ -10,7 +10,7 @@
             <form method="POST" action="{{ route('api-tokens.store') }}">
                 @csrf
 
-                <div class="grid grid-cols-4 gap-5" x-data="{
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" x-data="{
                     permissionSearch: '',
                     matches(permission) {
                         return permission.toLowerCase().includes(this.permissionSearch.trim().toLowerCase());

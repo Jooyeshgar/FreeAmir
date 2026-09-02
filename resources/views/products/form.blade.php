@@ -1,4 +1,4 @@
-<div class="grid grid-cols-2 gap-6">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
     <div class="col-span-2 md:col-span-1">
         @php
             $initialGroupId = old('group', $product->group ?? null);
@@ -57,8 +57,8 @@
     <div class="col-span-2 md:col-span-1">
         <x-input name="discount_formula" id="discount_formula" title="{{ __('Discount formula') }}" :value="old('discount_formula', $product->discount_formula ?? '')"
             placeholder="{{ __('Please enter the discount formula') }}"
-            hint="{{ __('(From amount) - (To amount) : Discount amount') }}"
-            hint2="{{ __('For example:') . ' 1-30:400, 30-100:360.7' }}" />
+            :hint="__('(From amount) - (To amount) : Discount amount')"
+            :hint2="__('For example:') . ' 1-30:400, 30-100:360.7'" />
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">

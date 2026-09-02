@@ -3,7 +3,7 @@
     $oldCompanies = old('company', $user?->companies->pluck('id')->map(fn($id) => (string) $id)->toArray() ?? []);
 @endphp
 
-<div class="grid grid-cols-2 gap-6">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
     <x-input title="{{ __('Name') }}" name="name" :value="old('name', $user->name ?? '')" />
     <x-input title="{{ __('Email') }}" name="email" :value="old('email', $user->email ?? '')" type="email" />
     <x-input title="{{ __('Password') }}" type="password" name="password" />
@@ -35,7 +35,7 @@
 @canany(['users.create', 'users.update'])
     <div class="divider"></div>
     <h3 class="label">{{ __('Roles') }}</h3>
-    <div class="grid gap-3 grid-cols-5">
+    <div class="grid !grid-cols-2 gap-2 md:!grid-cols-3 lg:!grid-cols-5">
         @foreach ($roles as $role)
             @continue($role->name === 'Super-Admin' && ! auth()->user()->hasRole('Super-Admin'))
             <x-checkbox :title="$role->name" name="role[]" :value="$role->name" id="role-{{ $role->id }}"
@@ -46,7 +46,7 @@
 
 <div class="divider"></div>
 <h3 class="label">{{ __('Companies') }}</h3>
-<div class="grid gap-3 grid-cols-5">
+<div class="grid !grid-cols-2 gap-2 md:!grid-cols-3 lg:!grid-cols-5">
     @foreach ($companies as $company)
         <x-checkbox :title="$company->name" name="company[]" :value="$company->id" id="company-{{ $company->id }}"
             :checked="in_array((string) $company->id, $oldCompanies)" />

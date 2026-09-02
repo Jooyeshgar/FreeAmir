@@ -1,4 +1,4 @@
-<div class="grid grid-cols-2 gap-4">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     <x-input name="document_id" value="{{ $document->id }}" hidden />
     <x-input name="user_id" value="{{ auth()->id() }}" hidden />
 

@@ -11,7 +11,7 @@
             <form action="{{ route('companies.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 @if ($previousYears->isNotEmpty())
-                    <fieldset id="previousYears" class="grid grid-cols-2 gap-6 border p-5 my-3"
+                    <fieldset id="previousYears" class="grid grid-cols-1 sm:grid-cols-2 gap-6 border p-5 my-3"
                         x-data="{
                             subjectsChecked: @js(in_array(FiscalYearSection::SUBJECTS->value, old('tables_to_copy', array_map(fn ($c) => $c->value, FiscalYearSection::cases())))),
                         }">
@@ -67,7 +67,7 @@
                     </fieldset>
                 @endif
 
-                <fieldset id="companyForm" class="grid grid-cols-2 gap-6 border p-5 my-3">
+                <fieldset id="companyForm" class="grid grid-cols-1 sm:grid-cols-2 gap-6 border p-5 my-3">
                     <legend>{{ __('company') }}</legend>
                     <div class="col-span-2 md:col-span-1">
                         <x-input name="name" id="name" title="{{ __('Company name') }}" :value="old('name', $company->name ?? '')" required />
@@ -89,10 +89,12 @@
                     <div class="col-span-2 md:col-span-1">
                         <x-input name="tax_id" id="tax_id" title="{{ __('Tax ID') }}" :value="old('tax_id', '')" />
                     </div>
-                    <div class="flex gap-2">
+                    <div class="flex flex-wrap gap-2">
                         <div class="col-span-2 md:col-span-1">
                             <x-file-input name="certificate" title="{{ __('SSL Certificate') }}" accept=".crt,.cer" />
                         </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
                         <div class="col-span-2 md:col-span-1">
                             <x-file-input name="private_key" title="{{ __('Private Key') }}" accept=".pem" />
                         </div>
