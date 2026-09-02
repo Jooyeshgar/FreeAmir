@@ -9,7 +9,7 @@
             <x-show-message-bags />
 
             <x-card class="rounded-2xl w-full" class_body="p-4">
-                <div class="flex justify-start gap-2 mt-2">
+                <div class="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
                     <x-text-input data-jdp title="{{ __('Void date') }}" input_name="date" placeholder="{{ __('Void date') }}" readonly
                         input_value="{{ old('date') ?? convertToJalali($invoice->date && $invoice->date->isAfter(now()) ? $invoice->date->addDay() : now(), true) }}"
                         label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
@@ -22,9 +22,10 @@
                     </x-text-input>
                 </div>
 
-                <div class="card-actions justify-end">
-                    <a href="{{ route('invoices.show', $invoice) }}" class="btn btn-ghost">{{ __('Back') }}</a>
-                    <button type="submit" class="btn btn-primary">{{ __('Void') }}</button>
+                <div class="card-actions justify-start sm:justify-end">
+                    <a href="{{ route('invoices.show', $invoice) }}"
+                        class="btn btn-sm lg:btn-md btn-ghost">{{ __('Back') }}</a>
+                    <button type="submit" class="btn btn-sm lg:btn-md btn-primary">{{ __('Void') }}</button>
                 </div>
             </x-card>
         </div>
