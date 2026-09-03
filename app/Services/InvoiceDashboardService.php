@@ -103,7 +103,7 @@ class InvoiceDashboardService
                     ->whereBetween('date', [$from->toDateString(), $to->toDateString()]);
             })
             ->with([
-                'invoice:id,date,invoice_type,status',
+                'invoice:id,date,amount,invoice_type,status',
                 'itemable:id,name',
             ])
             ->get();
@@ -112,16 +112,12 @@ class InvoiceDashboardService
     private function summary(Collection $items): array
     {
         $byInvoice = $items->groupBy('invoice_id');
-        $netSales = $this->netItemsByInvoiceType($items, InvoiceType::SELL, [InvoiceType::RETURN_SELL, InvoiceType::VOID]);
-        $netPurchases = $this->netItemsByInvoiceType($items, InvoiceType::BUY, [InvoiceType::RETURN_BUY]);
+        $netSales = $this->netInvoicesByType($byInvoice, InvoiceType::SELL, [InvoiceType::RETURN_SELL, InvoiceType::VOID]);
+        $netPurchases = $this->netInvoicesByType($byInvoice, InvoiceType::BUY, [InvoiceType::RETURN_BUY]);
         $sales = $byInvoice->filter(fn (Collection $group) => $group->first()->invoice->invoice_type === InvoiceType::SELL);
         $purchases = $byInvoice->filter(fn (Collection $group) => $group->first()->invoice->invoice_type === InvoiceType::BUY);
-        $salesReturns = (float) $items
-            ->filter(fn (InvoiceItem $item) => in_array($item->invoice->invoice_type, [InvoiceType::RETURN_SELL, InvoiceType::VOID], true))
-            ->sum('amount');
-        $purchaseReturns = (float) $items
-            ->filter(fn (InvoiceItem $item) => $item->invoice->invoice_type === InvoiceType::RETURN_BUY)
-            ->sum('amount');
+        $salesReturns = $this->invoiceAmountForTypes($byInvoice, [InvoiceType::RETURN_SELL, InvoiceType::VOID]);
+        $purchaseReturns = $this->invoiceAmountForTypes($byInvoice, [InvoiceType::RETURN_BUY]);
 
         return [
             'net_sales' => round($netSales, 2),
@@ -129,24 +125,31 @@ class InvoiceDashboardService
             'trade_balance' => round($netSales - $netPurchases, 2),
             'sales_count' => $sales->count(),
             'purchase_count' => $purchases->count(),
-            'average_sale' => round((float) $sales->avg(fn (Collection $group) => (float) $group->sum('amount')), 2),
-            'average_purchase' => round((float) $purchases->avg(fn (Collection $group) => (float) $group->sum('amount')), 2),
+            'average_sale' => round((float) $sales->avg(fn (Collection $group) => (float) $group->first()->invoice->amount), 2),
+            'average_purchase' => round((float) $purchases->avg(fn (Collection $group) => (float) $group->first()->invoice->amount), 2),
             'sales_returns' => round($salesReturns, 2),
             'purchase_returns' => round($purchaseReturns, 2),
         ];
     }
 
-    private function netItemsByInvoiceType(Collection $items, InvoiceType $positive, array $negative): float
+    private function netInvoicesByType(Collection $byInvoice, InvoiceType $positive, array $negative): float
     {
-        return (float) $items->sum(function (InvoiceItem $item) use ($positive, $negative) {
-            $type = $item->invoice->invoice_type;
+        return (float) $byInvoice->sum(function (Collection $group) use ($positive, $negative) {
+            $invoice = $group->first()->invoice;
 
-            if ($type === $positive) {
-                return (float) $item->amount;
+            if ($invoice->invoice_type === $positive) {
+                return (float) $invoice->amount;
             }
 
-            return in_array($type, $negative, true) ? -(float) $item->amount : 0.0;
+            return in_array($invoice->invoice_type, $negative, true) ? -(float) $invoice->amount : 0.0;
         });
+    }
+
+    private function invoiceAmountForTypes(Collection $byInvoice, array $types): float
+    {
+        return (float) $byInvoice
+            ->filter(fn (Collection $group) => in_array($group->first()->invoice->invoice_type, $types, true))
+            ->sum(fn (Collection $group) => (float) $group->first()->invoice->amount);
     }
 
     private function trend(Collection $items, string $itemableType, Carbon $from, Carbon $to): array

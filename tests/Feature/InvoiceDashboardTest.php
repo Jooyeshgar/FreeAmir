@@ -81,6 +81,15 @@ class InvoiceDashboardTest extends TestCase
         $response->assertSee('data-invoice-dashboard', false);
     }
 
+    public function test_invalid_period_is_rejected(): void
+    {
+        $this->grant('invoices.dashboard');
+
+        $this->actingAs($this->user)
+            ->get(route('invoices.dashboard', ['period' => 'all-time']))
+            ->assertSessionHasErrors('period');
+    }
+
     public function test_dashboard_requires_its_permission(): void
     {
         $this->actingAs($this->user)
@@ -137,6 +146,28 @@ class InvoiceDashboardTest extends TestCase
             ['name' => __('Services'), 'amount' => 800.0],
         ], $data['salesMix']);
         $this->assertSame('Dashboard Service', $data['topSales']->first()['name']);
+    }
+
+    public function test_summary_uses_invoice_totals_including_invoice_level_adjustments(): void
+    {
+        $product = Product::factory()->create(['company_id' => $this->companyId]);
+
+        $sell = $this->invoice(InvoiceType::SELL, InvoiceStatus::APPROVED, 1, '2026-08-10', 1200);
+        $this->item($sell, $product, 1, 1000, 1000);
+
+        $buy = $this->invoice(InvoiceType::BUY, InvoiceStatus::APPROVED, 2, '2026-08-11', 850);
+        $this->item($buy, $product, 1, 800, 800);
+
+        $returnSell = $this->invoice(InvoiceType::RETURN_SELL, InvoiceStatus::APPROVED, 3, '2026-08-12', 250);
+        $this->item($returnSell, $product, 1, 200, 200);
+
+        $data = app(InvoiceDashboardService::class)->dashboard();
+
+        $this->assertSame(950.0, $data['summary']['net_sales']);
+        $this->assertSame(850.0, $data['summary']['net_purchases']);
+        $this->assertSame(1200.0, $data['summary']['average_sale']);
+        $this->assertSame(850.0, $data['summary']['average_purchase']);
+        $this->assertSame(250.0, $data['summary']['sales_returns']);
     }
 
     public function test_period_filter_excludes_old_invoices_and_company_scope_is_preserved(): void
