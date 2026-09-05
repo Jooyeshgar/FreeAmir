@@ -29,8 +29,6 @@ class Company extends Model
 
     /**
      * Return the inclusive Gregorian boundaries of this Jalali fiscal year.
-     *
-     * @return array{0: Carbon, 1: Carbon}
      */
     public function fiscalYearRange(): array
     {
