@@ -221,6 +221,77 @@ main {
     padding: 0 .4rem;
 }
 
+/*
+ * Listing screens share the workspace layout, but many of their tables and
+ * filter bars predate the responsive design. Keep wide data readable by
+ * scrolling it inside the content area, and let controls use the available
+ * width instead of widening the whole page.
+ */
+.workspace-content {
+    width: 100%;
+    max-width: 100%;
+}
+
+.workspace-content :where(.card, .card-body, form, fieldset) {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.workspace-content .table {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: thin;
+}
+
+.workspace-content .table > thead {
+    display: table-header-group;
+}
+
+.workspace-content .table > tbody {
+    display: table-row-group;
+}
+
+.workspace-content .table > tfoot {
+    display: table-footer-group;
+}
+
+@media (max-width: 1023px) {
+    .workspace-content :where(form.flex, .card-actions, [role='tablist']) {
+        flex-wrap: wrap;
+    }
+
+    .workspace-content :where(form.flex, form.grid) > :where(div, fieldset, label) {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 639px) {
+    main {
+        padding-inline: .25rem;
+    }
+
+    .workspace-content .card-body {
+        padding: 1rem;
+    }
+
+    .workspace-content :where(form.flex, form.grid) > :where(div, fieldset, label) {
+        width: 100%;
+    }
+
+    .workspace-content :where(form.flex, form.grid) :where(.input, .select, .textarea, .file-input) {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .workspace-content :where(form.flex, form.grid) > :where(button, a.btn),
+    .workspace-content form > :where(.card-actions, .form-actions) :where(button, a.btn) {
+        flex: 1 1 auto;
+    }
+}
+
 :root {
     --freeamir-control-focus-color: rgb(15 23 42 / 0.42);
     --freeamir-control-focus-shadow: rgb(15 23 42 / 0.08);

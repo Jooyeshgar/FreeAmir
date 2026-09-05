@@ -25,8 +25,10 @@
 
     <x-header />
 
-    <main class="min-[1430px]:w-[1430px] mx-auto mt-5">
-        {{ $slot }}
+    <main class="mx-auto mt-5 w-full min-w-0 min-[1430px]:w-[1430px]">
+        <div class="workspace-content min-w-0">
+            {{ $slot }}
+        </div>
     </main>
 
     <footer class="mt-8 text-center text-xs opacity-60 pb-4">
