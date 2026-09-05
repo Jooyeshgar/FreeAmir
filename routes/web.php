@@ -112,6 +112,7 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::post('products/{product}/recalculate-quantity', [Controllers\ProductController::class, 'recalculateQuantity'])->name('products.recalculate-quantity');
     Route::resource('products', Controllers\ProductController::class);
     Route::get('warehouses/transfer', [Controllers\WarehouseController::class, 'transferForm'])->name('warehouses.transfer');
+    Route::get('warehouses/search-products', [Controllers\WarehouseController::class, 'searchProducts'])->name('warehouses.search-products');
     Route::post('warehouses/transfer', [Controllers\WarehouseController::class, 'transfer'])->name('warehouses.transfer.store');
     Route::get('warehouses/transfer-history', [Controllers\WarehouseController::class, 'transferHistory'])->name('warehouses.transfer-history');
     Route::resource('warehouses', Controllers\WarehouseController::class);

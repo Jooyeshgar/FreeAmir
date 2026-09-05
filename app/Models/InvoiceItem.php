@@ -15,7 +15,6 @@ class InvoiceItem extends Model
         'itemable_id',
         'itemable_type',
         'invoice_id',
-        'warehouse_id',
         'quantity',
         'unit_price',
         'unit_discount',
@@ -36,8 +35,4 @@ class InvoiceItem extends Model
         return $this->morphTo();
     }
 
-    public function warehouse()
-    {
-        return $this->belongsTo(Warehouse::class);
-    }
 }

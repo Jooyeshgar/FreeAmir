@@ -6,6 +6,7 @@ use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
@@ -34,7 +35,6 @@ class Product extends Model
         'inventory_subject_id',
         'vat',
         'average_cost',
-        'warehouse_id',
     ];
 
     protected $casts = [
@@ -89,9 +89,9 @@ class Product extends Model
         return $this->belongsTo(Subject::class, 'inventory_subject_id');
     }
 
-    public function warehouse(): BelongsTo
+    public function warehouses(): BelongsToMany
     {
-        return $this->belongsTo(Warehouse::class);
+        return $this->belongsToMany(Warehouse::class, 'warehouse_product_stocks')->withPivot(['quantity', 'average_cost'])->withTimestamps();
     }
 
     public function warehouseStocks(): HasMany

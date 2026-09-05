@@ -33,6 +33,7 @@ class InvoiceService
     public static function createInvoice(User $user, array $invoiceData, array $items = [], bool $approved = false): array
     {
         $date = $invoiceData['date'] ?? now()->toDateString();
+        $items = self::assignWarehouseToItems($items, $invoiceData['warehouse_id'] ?? null);
 
         $transactionBuilder = new InvoiceTransactionBuilder($items, $invoiceData);
         $buildResult = $transactionBuilder->build();
@@ -129,6 +130,7 @@ class InvoiceService
         $oldItems = $wasApproved ? $invoice->items->toArray() : [];
 
         $invoiceData = self::normalizeInvoiceData($invoiceData);
+        $items = self::assignWarehouseToItems($items, $invoiceData['warehouse_id'] ?? null);
 
         $transactionBuilder = new InvoiceTransactionBuilder($items, $invoiceData);
         $buildResult = $transactionBuilder->build();
@@ -287,6 +289,7 @@ class InvoiceService
             'invoice_type' => $invoiceData['invoice_type'],
             'number' => isset($invoiceData['number']) ? (int) $invoiceData['number'] : null,
             'customer_id' => $invoiceData['customer_id'],
+            'warehouse_id' => $invoiceData['warehouse_id'],
             'returned_invoice_id' => $invoiceData['returned_invoice_id'] ?? null,
             'document_number' => $invoiceData['document_number'],
             'description' => $invoiceData['description'] ?? null,
@@ -296,6 +299,11 @@ class InvoiceService
         ];
 
         return $invoiceData;
+    }
+
+    private static function assignWarehouseToItems(array $items, ?int $warehouseId): array
+    {
+        return array_map(fn (array $item) => [...$item, 'warehouse_id' => $warehouseId], $items);
     }
 
     /**
@@ -367,7 +375,6 @@ class InvoiceService
 
             $invoiceItemData = [
                 'invoice_id' => $invoice->id,
-                'warehouse_id' => $product ? ($item['warehouse_id'] ?? $product->warehouse_id) : null,
                 'quantity' => $quantity,
                 'cog_after' => $product?->average_cost ?? $unitPrice,                                            // must be updated after creating invoice
                 'quantity_at' => $quantityAt,                                                                    // stock level before this invoice was applied
@@ -525,7 +532,7 @@ class InvoiceService
                 'vat_is_value' => true,
                 'unit' => $t->unit_price,
                 'total' => $t->amount,
-                'warehouse_id' => $t->warehouse_id,
+                'warehouse_id' => $invoice->warehouse_id,
             ])
             ->values()
             ->all();
@@ -874,7 +881,7 @@ class InvoiceService
             $requiredQuantity = $invoiceItem->quantity;
             $availableQuantity = (float) WarehouseProductStock::query()
                 ->where('product_id', $product->id)
-                ->where('warehouse_id', $invoiceItem->warehouse_id)
+                ->where('warehouse_id', $invoiceItem->invoice->warehouse_id)
                 ->value('quantity');
 
             if ($availableQuantity < $requiredQuantity) {
@@ -1005,6 +1012,7 @@ class InvoiceService
             'date' => $validated['date'],
             'invoice_type' => InvoiceType::fromName($validated['invoice_type']),
             'customer_id' => $validated['customer_id'],
+            'warehouse_id' => $validated['warehouse_id'],
             'returned_invoice_id' => $validated['returned_invoice_id'] ?? null,
             'document_number' => $validated['document_number'],
             'number' => $validated['invoice_number'],
@@ -1030,7 +1038,7 @@ class InvoiceService
             'vat_is_value' => $vatIsValue,
             'unit' => $t['unit'] ?? 0,
             'total' => $t['total'] ?? 0,
-            'warehouse_id' => $t['warehouse_id'] ?? null,
+            'warehouse_id' => null,
         ])->toArray();
     }
 
@@ -1096,7 +1104,6 @@ class InvoiceService
                 'subject' => $item->itemable->name ?? null,
                 'product_id' => $isProduct ? $item->itemable->id : null,
                 'service_id' => $isProduct ? null : $item->itemable->id,
-                'warehouse_id' => $item->warehouse_id,
             ];
         });
     }
@@ -1179,7 +1186,6 @@ class InvoiceService
                     'vat' => $item->vat,
                     'amount' => $item->amount,
                     'description' => $item->description,
-                    'warehouse_id' => $item->warehouse_id,
                 ])->toArray()
             );
 

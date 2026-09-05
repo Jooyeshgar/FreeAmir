@@ -61,7 +61,22 @@
 
         <div class="card-body">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
-                <x-stat-card :title="__('Stock')" :value="formatNumber($product->quantity ?? 0)" :description="__('In Stock')" type="success" icon="quantity" />
+                <div class="stats shadow bg-success/10">
+                    <div class="stat min-w-0">
+                        <div class="stat-title">{{ __('Stock') }}</div>
+                        <div class="stat-value text-success">{{ formatNumber($product->quantity ?? 0) }}</div>
+                        <div class="stat-desc max-h-24 overflow-y-auto mt-2 space-y-1">
+                            @forelse ($product->warehouseStocks->sortBy('warehouse.name') as $stock)
+                                <a href="{{ route('warehouses.show', $stock->warehouse) }}" class="flex justify-between gap-4 link">
+                                    <span>{{ $stock->warehouse->name }}</span>
+                                    <span>{{ formatNumber($stock->quantity) }}</span>
+                                </a>
+                            @empty
+                                <span>{{ __('No warehouse stock found.') }}</span>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
                 <x-stat-card :title="__('Quantity warning')" :value="formatNumber($product->quantity_warning ?? 0)" :description="__('Alert Level')" type="warning" icon="warning" />
                 <x-stat-card :title="__('VAT')" :value="formatNumber($product->vat ?? 0) . '%'" :description="__('Tax Rate')" type="info" icon="vat" />
             </div>
@@ -103,6 +118,7 @@
                             <th class="px-4 py-3">{{ __('Date') }}</th>
                             <th class="px-4 py-3">{{ __('Invoice Number') }}</th>
                             <th class="px-4 py-3">{{ __('Customer Name') }}</th>
+                            <th class="px-4 py-3">{{ __('Warehouse') }}</th>
                             <th class="px-4 py-3 text-center">{{ __('Buy') }}</th>
                             <th class="px-4 py-3 text-center">{{ __('Sell') }}</th>
                             <th class="px-4 py-3 text-center">{{ __('Buy Unit Price') }}</th>
@@ -121,6 +137,13 @@
                                 </td>
                                 <td class="px-4 py-3">
                                     <a href="{{ route('customers.show', $item->invoice->customer_id) }}">{{ $item->invoice->customer->name }}</a>
+                                </td>
+                                <td class="px-4 py-3">
+                                    @if ($item->invoice->warehouse)
+                                        <a href="{{ route('warehouses.show', $item->invoice->warehouse) }}" class="link">{{ $item->invoice->warehouse->name }}</a>
+                                    @else
+                                        <span class="text-gray-400">-</span>
+                                    @endif
                                 </td>
 
                                 <td class="px-4 py-3 text-center">
@@ -207,7 +230,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="text-center py-8 text-gray-500">
+                                <td colspan="11" class="text-center py-8 text-gray-500">
                                     {{ __('No transactions found') }}
                                 </td>
                             </tr>

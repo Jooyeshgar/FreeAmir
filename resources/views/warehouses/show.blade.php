@@ -8,7 +8,6 @@
             </div>
         </div>
         <div class="flex flex-wrap gap-2">
-            <a class="btn btn-outline" href="{{ route('warehouses.transfer') }}">{{ __('Transfer Product') }}</a>
             <a class="btn btn-primary" href="{{ route('warehouses.edit', $warehouse) }}">{{ __('Edit') }}</a>
             @php
                 $deleteDisabledReason = match (true) {
@@ -64,6 +63,7 @@
                             <td>{{ formatNumber($stock->quantity) }}</td>
                             <td>{{ formatNumber($stock->average_cost) }}</td>
                             <td>
+                                <a class="btn btn-sm btn-outline" href="{{ route('warehouses.transfer', ['from_warehouse_id' => $warehouse->id, 'product_id' => $stock->product_id]) }}">{{ __('Transfer') }}</a>
                                 <a class="btn btn-sm btn-ghost" href="{{ route('products.show', $stock->product) }}">{{ __('View') }}</a>
                             </td>
                         </tr>

@@ -38,6 +38,7 @@ class StoreInvoiceRequest extends FormRequest
             'invoice_number' => convertToInt($this->input('invoice_number')),
             'subtractions' => convertToFloat($this->input('subtraction', 0)),
             'customer_id' => convertToInt($this->input('customer_id')),
+            'warehouse_id' => convertToInt($this->input('warehouse_id')),
             'include_last_years_invoices' => $this->boolean('include_last_years_invoices'),
         ]);
 
@@ -73,7 +74,6 @@ class StoreInvoiceRequest extends FormRequest
                         'unit_discount' => isset($t['off']) ? convertToFloat($t['off']) : 0,
                         'unit' => isset($t['unit']) ? convertToFloat($t['unit']) : null,
                         'total' => isset($t['total']) ? convertToFloat($t['total']) : null,
-                        'warehouse_id' => isset($t['warehouse_id']) ? convertToInt($t['warehouse_id']) : null,
                     ];
                 });
 
@@ -262,7 +262,8 @@ class StoreInvoiceRequest extends FormRequest
 
                 // Product quantity Check in warehouse
                 if ($transaction['item_type'] === 'product'
-                    && isset($transaction['item_id'], $transaction['warehouse_id'])
+                    && isset($transaction['item_id'])
+                    && $this->filled('warehouse_id')
                     && $transaction['quantity']
                     && $isApproved
                     && in_array($invoiceType, ['sell', 'return_buy'], true)) {
@@ -274,7 +275,7 @@ class StoreInvoiceRequest extends FormRequest
 
                     $availableQuantity = (float) WarehouseProductStock::query()
                         ->where('product_id', $product->id)
-                        ->where('warehouse_id', $transaction['warehouse_id'])
+                        ->where('warehouse_id', $this->input('warehouse_id'))
                         ->value('quantity');
 
                     if ($invoice && $invoice->status->isApprovedOrSettled()) {
@@ -284,7 +285,7 @@ class StoreInvoiceRequest extends FormRequest
                             ->first();
 
                         if ($oldItem
-                            && (int) $oldItem->warehouse_id === (int) $transaction['warehouse_id']
+                            && (int) $invoice->warehouse_id === (int) $this->input('warehouse_id')
                             && in_array($invoice->invoice_type, [InvoiceType::SELL, InvoiceType::RETURN_BUY], true)) {
                             $availableQuantity += (float) $oldItem->quantity;
                         }
@@ -346,6 +347,12 @@ class StoreInvoiceRequest extends FormRequest
 
             'subtractions' => 'nullable|numeric|min:0|max:'.self::DECIMAL_10_2_MAX,
 
+            'warehouse_id' => [
+                'required',
+                'integer',
+                Rule::exists('warehouses', 'id')->where('company_id', getActiveCompany()),
+            ],
+
             'transactions' => 'required|array|min:1',
 
             'transactions.*.item_id' => [
@@ -373,12 +380,6 @@ class StoreInvoiceRequest extends FormRequest
             'transactions.*.unit_discount' => 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX,
             'transactions.*.unit' => 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX,
             'transactions.*.total' => 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX,
-            'transactions.*.warehouse_id' => [
-                'required_if:transactions.*.item_type,product',
-                'nullable',
-                'integer',
-                Rule::exists('warehouses', 'id')->where('company_id', getActiveCompany()),
-            ],
         ];
 
         return $rules;

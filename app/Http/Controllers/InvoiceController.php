@@ -558,7 +558,7 @@ class InvoiceController extends Controller
                 'off' => $item->unit_discount,
                 'total' => $item->amount,
                 'desc' => $item->description,
-                'warehouse_id' => $item->warehouse_id,
+                'warehouse_id' => $item->invoice->warehouse_id,
             ];
         });
 

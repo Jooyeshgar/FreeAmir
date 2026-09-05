@@ -27,13 +27,6 @@ class ProductService
 
         $product = Product::create($data);
 
-        WarehouseProductStock::create([
-            'warehouse_id' => $product->warehouse_id,
-            'product_id' => $product->id,
-            'quantity' => $product->quantity ?? 0,
-            'average_cost' => $product->average_cost ?? 0,
-        ]);
-
         $this->syncSubjects($product);
         $this->syncWebsites($product, $websites);
 
@@ -87,7 +80,7 @@ class ProductService
 
             self::adjustForInvoice(
                 $product,
-                $invoiceItem['warehouse_id'] ?? $product->warehouse_id,
+                self::resolveWarehouseId($invoiceItem, $product),
                 (float) $invoiceItem['quantity'],
                 in_array($invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL], true) || $invoice_type->isVoid()
             );
@@ -117,7 +110,7 @@ class ProductService
 
             self::adjustForInvoice(
                 $product,
-                $invoiceItem['warehouse_id'] ?? $product->warehouse_id,
+                self::resolveWarehouseId($invoiceItem, $product),
                 (float) $invoiceItem['quantity'],
                 in_array($invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL], true) || $invoice_type->isVoid(),
                 true
@@ -135,9 +128,9 @@ class ProductService
 
     private static function adjustForInvoice(Product $product, ?int $warehouseId, float $quantity, bool $incoming, bool $reverse = false): void
     {
-        $warehouse = $warehouseId ? Warehouse::findOrFail($warehouseId) : $product->warehouse;
+        $warehouse = $warehouseId ? Warehouse::findOrFail($warehouseId) : null;
         if (! $warehouse) {
-            return;
+            throw ValidationException::withMessages(['warehouse_id' => __('The selected warehouse is invalid.')]);
         }
 
         if ((int) $warehouse->company_id !== (int) $product->company_id) {
@@ -171,6 +164,17 @@ class ProductService
 
         $stock->quantity = (float) $stock->quantity + $delta;
         $stock->save();
+    }
+
+    private static function resolveWarehouseId(array $invoiceItem, Product $product): ?int
+    {
+        if (isset($invoiceItem['warehouse_id'])) {
+            return (int) $invoiceItem['warehouse_id'];
+        }
+
+        $invoiceWarehouseId = isset($invoiceItem['invoice_id']) ? Invoice::query()->whereKey($invoiceItem['invoice_id'])->value('warehouse_id') : null;
+
+        return $invoiceWarehouseId ?? Warehouse::query()->where('company_id', $product->company_id)->orderBy('id')->value('id');
     }
 
     public static function adjustWarehouseAverageCostForAncillaryCost(AncillaryCost $ancillaryCost, bool $reverse = false): void
@@ -214,13 +218,13 @@ class ProductService
         $invoice->loadMissing('items.itemable', 'ancillaryCosts.items');
 
         foreach ($invoice->items as $invoiceItem) {
-            if ($invoiceItem->itemable_type !== Product::class || ! $invoiceItem->warehouse_id) {
+            if ($invoiceItem->itemable_type !== Product::class || ! $invoice->warehouse_id) {
                 continue;
             }
 
             $stock = WarehouseProductStock::query()
                 ->where('product_id', $invoiceItem->itemable_id)
-                ->where('warehouse_id', $invoiceItem->warehouse_id)
+                ->where('warehouse_id', $invoice->warehouse_id)
                 ->lockForUpdate()
                 ->first();
 
@@ -313,7 +317,7 @@ class ProductService
 
             foreach ($invoices as $invoice) {
                 foreach ($invoice->items as $item) {
-                    $warehouseId = $item->warehouse_id ?? $product->warehouse_id;
+                    $warehouseId = $invoice->warehouse_id;
                     $warehouseQuantity = $warehouseQuantities[$warehouseId] ?? 0.0;
                     $item->quantity_at = $quantity;
                     $item->save();

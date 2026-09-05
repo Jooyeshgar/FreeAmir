@@ -198,7 +198,6 @@ class ProductImportService
                     ]);
                 }
 
-                $data['warehouse_id'] = $warehouse->id;
 
                 try {
                     if ($existing) {

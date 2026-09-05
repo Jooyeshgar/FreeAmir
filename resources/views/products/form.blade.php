@@ -63,7 +63,8 @@
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-            <x-checkbox title="{{ __('Oversell') }}" name="oversell" id="oversell" :checked="old('oversell', $product->oversell ?? 0)" />
+            <input type="hidden" name="oversell" value="0">
+            <x-checkbox title="{{ __('Oversell') }}" name="oversell" id="oversell" value="1" :checked="(bool) old('oversell', $product->oversell ?? false)" />
         </div>
         <div class="md:col-span-2">
             <x-input @input="$event.target.value = $store.utils.formatNumber($event.target.value)"
@@ -79,15 +80,5 @@
     </div>
 
     @include('products.websites.form', ['websites' => isset($product) ? $product->productWebsites : []])
-
-    <div class="col-span-2 md:col-span-1">
-        <label class="label" for="warehouse_id">{{ __('Warehouse') }}</label>
-        <select name="warehouse_id" id="warehouse_id" class="select select-bordered w-full">
-            <option value="">{{ __('Select Warehouse') }}</option>
-            @foreach ($warehouses as $warehouse)
-                <option value="{{ $warehouse->id }}" @selected(old('warehouse_id', $product->warehouse_id ?? null) == $warehouse->id)>{{ $warehouse->name }}</option>
-            @endforeach
-        </select>
-    </div>
 
 </div>

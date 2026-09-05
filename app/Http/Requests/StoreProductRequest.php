@@ -28,7 +28,6 @@ class StoreProductRequest extends FormRequest
             'code' => ['nullable', Rule::unique('products', 'code')->where('company_id', getActiveCompany())],
             'name' => 'required|max:20|string|regex:/^[\w\d\s\-\:\.]*$/u',
             'group' => 'required|exists:product_groups,id|integer',
-            'warehouse_id' => ['required', 'integer', Rule::exists('warehouses', 'id')->where('company_id', getActiveCompany())],
             'location' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
             'quantity' => [
                 'nullable',
@@ -51,6 +50,7 @@ class StoreProductRequest extends FormRequest
             'sstid' => 'nullable|string',
             'websites' => 'nullable|array',
             'websites.*.link' => 'required|url',
+            'oversell' => ['required', 'boolean'],
         ];
     }
 

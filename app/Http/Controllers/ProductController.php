@@ -29,7 +29,7 @@ class ProductController extends Controller
 
     public function index()
     {
-        $query = Product::with('warehouse')->orderBy('code');
+        $query = Product::query()->orderBy('code');
 
         if (request()->has('name') && request('name')) {
             $query->where('name', 'like', '%'.request('name').'%');
@@ -78,9 +78,8 @@ class ProductController extends Controller
     public function create()
     {
         $groups = ProductGroup::select('id', 'name')->limit(20)->get();
-        $warehouses = Warehouse::get();
 
-        return view('products.create', compact('groups', 'warehouses'));
+        return view('products.create', compact('groups'));
     }
 
     public function store(StoreProductRequest $request)
@@ -97,9 +96,8 @@ class ProductController extends Controller
         $productGroupIdsForSelect = ProductGroup::select('id', 'name')->limit(20)->pluck('id');
         $oldGroup = $product->productGroup;
         $groups = ProductGroup::whereIn('id', $productGroupIdsForSelect->push($oldGroup->id)->unique())->get();
-        $warehouses = Warehouse::get();
 
-        return view('products.edit', compact('product', 'groups', 'warehouses'));
+        return view('products.edit', compact('product', 'groups'));
     }
 
     public function update(UpdateProductRequest $request, Product $product)
@@ -113,13 +111,13 @@ class ProductController extends Controller
 
     public function show(Product $product)
     {
-        $product->load('productGroup', 'productWebsites', 'warehouse', 'warehouseStocks.warehouse');
+        $product->load('productGroup', 'productWebsites', 'warehouseStocks.warehouse');
 
         $product->lastCOG = $this->productService->lastApprovedBuyInvoiceItemCOG($product) ?? 0;
         $product->salesProfit = $this->productService->totalSell($product) + $this->productService->totalCOGS($product);
 
         $historyItems = $product->invoiceItems()
-            ->with(['invoice.customer', 'invoice.ancillaryCosts.items' => function ($query) use ($product) {
+            ->with(['invoice.customer', 'invoice.warehouse', 'invoice.ancillaryCosts.items' => function ($query) use ($product) {
                 $query->where('product_id', $product->id);
             }])
             ->tap(function ($q) {
@@ -213,6 +211,7 @@ class ProductController extends Controller
         return [
             'name' => __('Product name'),
             ...$this->reportColumnMapping(),
+            ...$this->warehouseColumnMapping(),
             'income_subject_code' => __('Revenue subject code'),
             'cogs_subject_code' => __('COGS subject code'),
             'inventory_subject_code' => __('Inventory subject code'),
@@ -243,6 +242,14 @@ class ProductController extends Controller
             'cogs_account' => __('COGS account amount'),
             'inventory_account' => __('Inventory account amount'),
             'sales_return_account' => __('Sales return account amount'),
+            ...$this->warehouseColumnMapping(),
         ];
+    }
+
+    private function warehouseColumnMapping(): array
+    {
+        return Warehouse::query()->orderBy('name')->get(['id', 'name'])->mapWithKeys(
+            fn (Warehouse $warehouse) => ['warehouse_'.$warehouse->id => $warehouse->name]
+        )->all();
     }
 }

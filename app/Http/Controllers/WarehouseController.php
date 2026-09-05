@@ -89,10 +89,50 @@ class WarehouseController extends Controller
 
     public function transferForm()
     {
+        $selectedWarehouse = request()->filled('from_warehouse_id')
+            ? Warehouse::find(request()->integer('from_warehouse_id'))
+            : null;
+        $selectedProduct = request()->filled('product_id')
+            ? Product::with('productGroup')->find(request()->integer('product_id'))
+            : null;
+
+        $products = Product::with('productGroup')->orderBy('name')->limit(30)->get();
+        if ($selectedProduct && ! $products->contains('id', $selectedProduct->id)) {
+            $products->prepend($selectedProduct);
+        }
+
         return view('warehouses.transfer', [
             'warehouses' => Warehouse::get(),
-            'products' => Product::limit(30)->get(),
+            'products' => $products,
+            'selectedWarehouse' => $selectedWarehouse,
+            'selectedProduct' => $selectedProduct,
         ]);
+    }
+
+    public function searchProducts(Request $request)
+    {
+        $validated = $request->validate(['q' => 'required|string|max:100']);
+        $products = Product::with('productGroup')
+            ->where('name', 'like', '%'.$validated['q'].'%')
+            ->orderBy('name')
+            ->limit(30)
+            ->get();
+
+        return response()->json($products->isEmpty() ? [] : [[
+            'id' => 'group_products',
+            'headerGroup' => 'product',
+            'options' => $products->map(function (Product $product) {
+                $group = $product->productGroup ?? (object) ['id' => 0, 'name' => 'General'];
+
+                return [
+                    'id' => $product->id,
+                    'groupId' => $group->id,
+                    'groupName' => $group->name,
+                    'text' => $product->name,
+                    'type' => 'product',
+                ];
+            })->groupBy('groupId'),
+        ]]);
     }
 
     public function transferHistory(Request $request): View
