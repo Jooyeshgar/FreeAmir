@@ -8,6 +8,7 @@ use App\Models\ProductGroup;
 use App\Models\Subject;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Models\WarehouseProductStock;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Spatie\Permission\Models\Permission;
@@ -192,6 +193,67 @@ class ProductImportExportTest extends TestCase
             'product_id' => $imported->id,
         ]);
         $this->assertSame($warehouse->id, $imported->warehouseStocks()->first()->warehouse_id);
+    }
+
+    public function test_import_updates_each_exported_warehouse_quantity_without_duplicating_product_stock(): void
+    {
+        $firstWarehouse = Warehouse::create([
+            'company_id' => $this->companyId,
+            'name' => 'First Warehouse',
+            'code' => 'FIRST',
+        ]);
+        $secondWarehouse = Warehouse::create([
+            'company_id' => $this->companyId,
+            'name' => 'Second Warehouse',
+            'code' => 'SECOND',
+        ]);
+        $product = Product::factory()->withGroup($this->productGroup)->withSubjects()->create([
+            'company_id' => $this->companyId,
+            'name' => 'Multi Warehouse Widget',
+            'code' => '5012',
+            'quantity' => 10,
+        ]);
+        WarehouseProductStock::create([
+            'warehouse_id' => $firstWarehouse->id,
+            'product_id' => $product->id,
+            'quantity' => 4,
+            'average_cost' => 100,
+        ]);
+        WarehouseProductStock::create([
+            'warehouse_id' => $secondWarehouse->id,
+            'product_id' => $product->id,
+            'quantity' => 6,
+            'average_cost' => 200,
+        ]);
+
+        $csv = $this->actingAs($this->user)->get(route('products.export'))->streamedContent();
+        $rows = $this->parseCsv($csv);
+        $headers = $rows[0];
+        $values = $rows[1];
+        $values[array_search('First Warehouse', $headers, true)] = '3';
+        $values[array_search('Second Warehouse', $headers, true)] = '7';
+
+        $handle = fopen('php://temp', 'r+');
+        fputcsv($handle, $headers);
+        fputcsv($handle, $values);
+        rewind($handle);
+        $csv = stream_get_contents($handle);
+        fclose($handle);
+
+        $this->actingAs($this->user)->post(route('products.import.store'), [
+            'file' => $this->upload($csv),
+        ])->assertSessionHas('success');
+
+        $this->assertSame(3.0, (float) WarehouseProductStock::where([
+            'warehouse_id' => $firstWarehouse->id,
+            'product_id' => $product->id,
+        ])->value('quantity'));
+        $this->assertSame(7.0, (float) WarehouseProductStock::where([
+            'warehouse_id' => $secondWarehouse->id,
+            'product_id' => $product->id,
+        ])->value('quantity'));
+        $this->assertSame(10.0, (float) $product->fresh()->quantity);
+        $this->assertSame(10.0, (float) WarehouseProductStock::where('product_id', $product->id)->sum('quantity'));
     }
 
     public function test_import_creates_new_group_and_product_with_auto_code(): void

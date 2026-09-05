@@ -8,6 +8,7 @@ use App\Models\Subject;
 use App\Models\Warehouse;
 use App\Models\WarehouseProductStock;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Storage;
@@ -113,7 +114,8 @@ class ProductImportService
      */
     public function import(UploadedFile|string $file, int $companyId): array
     {
-        $rows = $this->parse($file);
+        $warehouses = Warehouse::where('company_id', $companyId)->orderBy('name')->get(['id', 'name']);
+        $rows = $this->parse($file, $warehouses);
 
         if (empty($rows)) {
             $this->fail(__('The import file is empty or has no data rows.'));
@@ -187,17 +189,11 @@ class ProductImportService
 
                 $data = array_merge($data, $this->resolveSubjects($row, $group, $name, $companyId, $existing, $line));
 
-                $warehouseName = trim((string) ($row['warehouse'] ?? ''));
-                $warehouse = $warehouseName !== ''
-                    ? Warehouse::where('company_id', $companyId)->where('name', $warehouseName)->first()
-                    : Warehouse::where('company_id', $companyId)->orderBy('id')->first();
+                $warehouseQuantities = $this->warehouseQuantities($row);
 
-                if (! $warehouse) {
-                    $warehouse = Warehouse::create([
-                        'name' => $warehouseName !== '' ? $warehouseName : __('Main warehouse'),
-                        'company_id' => $companyId,
-                    ]);
-                }
+                $warehouse = $warehouseQuantities === []
+                    ? $this->legacyWarehouse($row, $companyId)
+                    : null;
 
                 try {
                     if ($existing) {
@@ -214,15 +210,11 @@ class ProductImportService
                         $imported++;
                     }
 
-                    // Warehouse placement is represented by the stock pivot.
-                    // Keep the imported quantity in that warehouse as well.
-                    WarehouseProductStock::updateOrCreate(
-                        ['warehouse_id' => $warehouse->id, 'product_id' => $product->id],
-                        [
-                            'quantity' => (float) ($product->quantity ?? 0),
-                            'average_cost' => (float) ($product->average_cost ?? 0),
-                        ]
-                    );
+                    if ($warehouseQuantities !== []) {
+                        $this->syncWarehouseQuantities($product, $warehouseQuantities);
+                    } else {
+                        $this->syncLegacyWarehouseQuantity($product, $warehouse, $row);
+                    }
                 } catch (ValidationException $e) {
                     throw $e;
                 } catch (\Throwable $e) {
@@ -243,10 +235,8 @@ class ProductImportService
 
     /**
      * Read the CSV and return a list of associative rows keyed by canonical column name.
-     *
-     * @return array<int, array<string, string>>
      */
-    private function parse(UploadedFile|string $file): array
+    private function parse(UploadedFile|string $file, Collection $warehouses): array
     {
         $contents = $this->readContents($file);
 
@@ -267,7 +257,7 @@ class ProductImportService
 
         $map = [];
         foreach ($header as $position => $label) {
-            $key = $this->canonicalHeader((string) $label);
+            $key = $this->canonicalHeader((string) $label, $warehouses, array_keys($map));
             if ($key !== null) {
                 $map[$key] = $position;
             }
@@ -323,12 +313,12 @@ class ProductImportService
     }
 
     /** Resolve canonical, English, Persian, and currently active translated headers. */
-    private function canonicalHeader(string $label): ?string
+    private function canonicalHeader(string $label, Collection $warehouses, array $mappedColumns): ?string
     {
         $normalized = $this->normalizeHeader($label);
 
         foreach (self::COLUMNS as $column) {
-            if ($normalized === $this->normalizeHeader($column)) {
+            if (! in_array($column, $mappedColumns, true) && $normalized === $this->normalizeHeader($column)) {
                 return $column;
             }
         }
@@ -336,18 +326,89 @@ class ProductImportService
         $locales = array_unique(array_filter(['en', 'fa', app()->getLocale(), config('app.fallback_locale')]));
 
         foreach (self::HEADER_TRANSLATIONS as $column => $translationKey) {
-            if ($normalized === $this->normalizeHeader($translationKey)) {
+            if (! in_array($column, $mappedColumns, true) && $normalized === $this->normalizeHeader($translationKey)) {
                 return $column;
             }
 
             foreach ($locales as $locale) {
-                if ($normalized === $this->normalizeHeader(Lang::get($translationKey, [], $locale))) {
+                if (! in_array($column, $mappedColumns, true) && $normalized === $this->normalizeHeader(Lang::get($translationKey, [], $locale))) {
                     return $column;
                 }
             }
         }
 
+        foreach ($warehouses as $warehouse) {
+            if ($normalized === $this->normalizeHeader($warehouse->name)) {
+                return 'warehouse_'.$warehouse->id;
+            }
+        }
+
         return null;
+    }
+
+    private function warehouseQuantities(array $row): array
+    {
+        $quantities = [];
+
+        foreach ($row as $column => $value) {
+            if (! preg_match('/^warehouse_(\d+)$/', $column, $matches)) {
+                continue;
+            }
+
+            $quantities[(int) $matches[1]] = trim((string) $value) === '' ? 0.0 : convertToFloat(str_replace(',', '', trim((string) $value)));
+        }
+
+        return $quantities;
+    }
+
+    private function syncWarehouseQuantities(Product $product, array $quantities): void
+    {
+        foreach ($quantities as $warehouseId => $quantity) {
+            $stock = WarehouseProductStock::firstOrNew([
+                'warehouse_id' => $warehouseId,
+                'product_id' => $product->id,
+            ]);
+            $stock->quantity = $quantity;
+            $stock->average_cost ??= (float) ($product->average_cost ?? 0);
+            $stock->save();
+        }
+
+        $product->quantity = (float) WarehouseProductStock::where('product_id', $product->id)->sum('quantity');
+        $product->save();
+    }
+
+    private function legacyWarehouse(array $row, int $companyId): Warehouse
+    {
+        $warehouseName = trim((string) ($row['warehouse'] ?? ''));
+        $warehouse = $warehouseName !== ''
+            ? Warehouse::where('company_id', $companyId)->where('name', $warehouseName)->first()
+            : Warehouse::where('company_id', $companyId)->orderBy('id')->first();
+
+        return $warehouse ?? Warehouse::create([
+            'name' => $warehouseName !== '' ? $warehouseName : __('Main warehouse'),
+            'company_id' => $companyId,
+        ]);
+    }
+
+    private function syncLegacyWarehouseQuantity(Product $product, ?Warehouse $warehouse, array $row): void
+    {
+        if (! array_key_exists('warehouse', $row) && ! array_key_exists('quantity', $row)) {
+            return;
+        }
+
+        if (! $warehouse) {
+            return;
+        }
+
+        WarehouseProductStock::where('product_id', $product->id)->where('warehouse_id', '!=', $warehouse->id)->update(['quantity' => 0]);
+
+        WarehouseProductStock::updateOrCreate(
+            ['warehouse_id' => $warehouse->id, 'product_id' => $product->id],
+            [
+                'quantity' => (float) ($product->quantity ?? 0),
+                'average_cost' => (float) ($product->average_cost ?? 0),
+            ]
+        );
     }
 
     private function normalizeHeader(string $header): string
