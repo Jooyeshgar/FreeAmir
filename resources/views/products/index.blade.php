@@ -182,7 +182,6 @@
                             <th class="px-4 py-2">{{ __('Total Sell') }}</th>
                             <th class="px-4 py-2">{{ __('Average Cost') }}</th>
                             <th class="px-4 py-2">{{ __('Sell price') }}</th>
-                            <th class="px-4 py-2">{{ __('Warehouse') }}</th>
                             @can('reports.journal')
                                 <th class="px-4 py-2">{{ __('Sales profit') }}</th>
                                 <th class="px-4 py-2"> </th>
@@ -216,13 +215,6 @@
                                 <td class="px-4 py-2">{{ formatNumber($product->totalSellCount) }}</td>
                                 <td class="px-4 py-2">{{ formatNumber($product->average_cost) }}</td>
                                 <td class="px-4 py-2">{{ formatNumber($product->selling_price) }}</td>
-                                <td class="px-4 py-2">
-                                    @if ($product->warehouse)
-                                        <a href="{{ route('warehouses.show', $product->warehouse) }}" class="text-sm">{{ $product->warehouse->name }}</a>
-                                    @else
-                                        <span class="text-sm text-base-content/40">-</span>
-                                    @endif
-                                </td>
                                 @can('reports.journal')
                                     <td class="px-4 py-2">{{ formatNumber($product->salesProfit) }}</td>
                                     <td class="px-4 py-2">

@@ -14,6 +14,12 @@
                     </a>
                 @endif
 
+                @if ($product->oversell === 1)
+                    <span class="badge badge-lg badge-warning">
+                        {{ __('product_oversell_allowed') }}
+                    </span>
+                @endif
+
                 @if ($product->location)
                     <span class="badge badge-lg badge-secondary gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -23,16 +29,6 @@
                         </svg>
                         {{ $product->location }}
                     </span>
-                @endif
-
-                @if ($product->warehouse)
-                    <a href="{{ route('warehouses.show', $product->warehouse) }}"
-                        class="badge badge-lg badge-success gap-2 transition hover:brightness-110">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.7" d="M3 7.5 12 3l9 4.5M4.5 8.25v8.25L12 21l7.5-4.5V8.25M12 12l7.5-3.75M12 12 4.5 8.25M12 12v9" />
-                        </svg>
-                        {{ $product->warehouse->name }}
-                    </a>
                 @endif
 
                 @if ($product->code)
@@ -64,10 +60,9 @@
         </div>
 
         <div class="card-body">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
                 <x-stat-card :title="__('Stock')" :value="formatNumber($product->quantity ?? 0)" :description="__('In Stock')" type="success" icon="quantity" />
                 <x-stat-card :title="__('Quantity warning')" :value="formatNumber($product->quantity_warning ?? 0)" :description="__('Alert Level')" type="warning" icon="warning" />
-                <x-stat-card :title="__('Oversell')" :value="formatNumber($product->oversell ?? 0)" :description="__('Allowed')" type="error" icon="oversell" />
                 <x-stat-card :title="__('VAT')" :value="formatNumber($product->vat ?? 0) . '%'" :description="__('Tax Rate')" type="info" icon="vat" />
             </div>
 
