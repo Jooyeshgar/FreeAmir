@@ -298,6 +298,7 @@ class InvoiceController extends Controller
 
         $invoice->load([
             'customer',
+            'warehouse',
             'document',
             'document.transactions',
             'items',

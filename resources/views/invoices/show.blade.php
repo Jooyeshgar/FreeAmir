@@ -34,6 +34,18 @@
                     {{ $invoice->status->label() }}
                 </span>
 
+                @if ($invoice->warehouse)
+                    <a href="{{ route('warehouses.show', $invoice->warehouse) }}"
+                        class="badge badge-lg badge-secondary gap-2 link">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-4h6v4M9 9h.01M15 9h.01M9 13h.01M15 13h.01" />
+                        </svg>
+                        {{ $invoice->warehouse->name }}
+                    </a>
+                @endif
+
                 @if ($isMoadianSendable && $invoice->status->isApprovedOrSettled())
                     <a class="badge badge-lg link"
                         href="{{ route('invoices.moadian-histories.show', $invoice) }}">{{ __('Moadian Histories') }}</a>

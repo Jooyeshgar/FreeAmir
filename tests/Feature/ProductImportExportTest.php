@@ -183,8 +183,11 @@ class ProductImportExportTest extends TestCase
         ])->assertSessionHas('success');
 
         $imported = Product::where('code', '5011')->firstOrFail();
-        $this->assertSame($warehouse->id, $imported->warehouse_id);
-        $this->assertSame($product->warehouse_id, $warehouse->id);
+        $this->assertDatabaseHas('warehouse_product_stocks', [
+            'warehouse_id' => $warehouse->id,
+            'product_id' => $imported->id,
+        ]);
+        $this->assertSame($warehouse->id, $imported->warehouseStocks()->first()->warehouse_id);
     }
 
     public function test_import_creates_new_group_and_product_with_auto_code(): void

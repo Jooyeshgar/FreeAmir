@@ -65,11 +65,11 @@
                     <div class="stat min-w-0">
                         <div class="stat-title">{{ __('Stock') }}</div>
                         <div class="stat-value text-success">{{ formatNumber($product->quantity ?? 0) }}</div>
-                        <div class="stat-desc max-h-24 overflow-y-auto mt-2 space-y-1">
+                        <div class="stat-desc mt-2 flex w-full gap-1 overflow-x-auto pb-1">
                             @forelse ($product->warehouseStocks->sortBy('warehouse.name') as $stock)
-                                <a href="{{ route('warehouses.show', $stock->warehouse) }}" class="flex justify-between gap-4 link">
+                                <a href="{{ route('warehouses.show', $stock->warehouse) }}" class="badge badge-outline badge-sm min-w-[calc((100%_-_1rem)/5)] shrink-0 gap-1 link whitespace-nowrap">
                                     <span>{{ $stock->warehouse->name }}</span>
-                                    <span>{{ formatNumber($stock->quantity) }}</span>
+                                    <span class="font-semibold">{{ formatNumber($stock->quantity) }}</span>
                                 </a>
                             @empty
                                 <span>{{ __('No warehouse stock found.') }}</span>

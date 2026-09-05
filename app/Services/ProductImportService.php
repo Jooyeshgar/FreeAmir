@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Subject;
 use App\Models\Warehouse;
+use App\Models\WarehouseProductStock;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Lang;
@@ -198,10 +199,10 @@ class ProductImportService
                     ]);
                 }
 
-
                 try {
                     if ($existing) {
                         $this->productService->update($existing, $data);
+                        $product = $existing->fresh();
                         $updated++;
                     } else {
                         // The products table requires these columns; default them
@@ -209,9 +210,19 @@ class ProductImportService
                         $data['quantity'] ??= 0;
                         $data['selling_price'] ??= 0;
                         $data['code'] = $code ?? (Product::max('code') + 1);
-                        $this->productService->create($data);
+                        $product = $this->productService->create($data);
                         $imported++;
                     }
+
+                    // Warehouse placement is represented by the stock pivot.
+                    // Keep the imported quantity in that warehouse as well.
+                    WarehouseProductStock::updateOrCreate(
+                        ['warehouse_id' => $warehouse->id, 'product_id' => $product->id],
+                        [
+                            'quantity' => (float) ($product->quantity ?? 0),
+                            'average_cost' => (float) ($product->average_cost ?? 0),
+                        ]
+                    );
                 } catch (ValidationException $e) {
                     throw $e;
                 } catch (\Throwable $e) {
