@@ -23,12 +23,15 @@
         </details>
     </li>
 @endcan
-@canany(['invoices.index', 'invoices.inactive', 'customers.create', 'ancillary-costs.index',
+@canany(['invoices.dashboard', 'invoices.index', 'invoices.inactive', 'customers.create', 'ancillary-costs.index',
     'invoices.moadian-histories.index'])
     <li>
         <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('Invoices') }}</summary>
             <ul class="{{ $topDropdownContentClass }}">
+                @can('invoices.dashboard')
+                    <li><a href="{{ route('invoices.dashboard') }}">{{ __('Invoice Dashboard') }}</a></li>
+                @endcan
                 @can('invoices.index')
                     <li>
                         <details>
