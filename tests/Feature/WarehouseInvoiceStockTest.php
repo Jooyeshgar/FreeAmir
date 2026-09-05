@@ -209,7 +209,10 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->assertNotSame($this->mainWarehouse->id, $targetWarehouse->id);
         $this->assertSame($targetWarehouse->id, $importedItems[Product::class]->warehouse_id);
         $this->assertNull($importedItems[Service::class]->warehouse_id);
-        $this->assertSame($target->id, $importedItems[Product::class]->warehouse->company_id);
+        $this->assertSame(
+            $target->id,
+            Warehouse::withoutGlobalScopes()->findOrFail($importedItems[Product::class]->warehouse_id)->company_id
+        );
     }
 
     public function test_approved_sell_form_validation_checks_the_selected_warehouse(): void
