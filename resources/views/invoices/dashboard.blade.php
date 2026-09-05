@@ -1,6 +1,6 @@
 @php
-    $period = $filters['period'] ?? 'year';
-    $mixTotal = collect($salesMix)->sum('amount');
+    $productSalesTotal = collect($productSalesBreakdown)->sum('amount');
+    $serviceSalesTotal = collect($serviceSalesBreakdown)->sum('amount');
 @endphp
 
 <x-app-layout :title="__('Invoice Dashboard')">
@@ -23,14 +23,12 @@
                 </div>
 
                 <form action="{{ route('invoices.dashboard') }}" method="GET" class="flex flex-wrap items-end gap-2">
-                    <label class="form-control w-44">
-                        <span class="label-text mb-1 text-xs">{{ __('Time Period') }}</span>
-                        <select name="period" class="select select-sm select-bordered">
-                            @foreach ($periodOptions as $value => $label)
-                                <option value="{{ $value }}" @selected($period === $value)>{{ $label }}</option>
-                            @endforeach
-                        </select>
-                    </label>
+                    <div class="w-44">
+                        <x-date-picker name="start_date" :title="__('Start date')" :value="old('start_date', convertToJalali($filters['start_date'], true))" />
+                    </div>
+                    <div class="w-44">
+                        <x-date-picker name="end_date" :title="__('End date')" :value="old('end_date', convertToJalali($filters['end_date'], true))" />
+                    </div>
                     <button type="submit" class="btn btn-sm btn-neutral">{{ __('Apply') }}</button>
                     <a href="{{ route('invoices.dashboard') }}" class="btn btn-sm btn-ghost">{{ __('Reset') }}</a>
                 </form>
@@ -56,6 +54,37 @@
                     </div>
                 </div>
             </div>
+        </section>
+
+        <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <x-metric-card
+                :title="__('Product sales revenue')"
+                :value="$summary['product_revenue']"
+                :suffix="__('Rial')"
+                :detail="__('Net of sales returns and VAT')"
+                tone="success"
+                icon="sales" />
+            <x-metric-card
+                :title="__('Product COGS')"
+                :value="$summary['product_cogs']"
+                :suffix="__('Rial')"
+                :detail="__('Cost snapshot at the time of sale')"
+                tone="error"
+                icon="cogs" />
+            <x-metric-card
+                :title="__('Product gross profit')"
+                :value="$summary['product_profit']"
+                :suffix="__('Rial')"
+                :detail="__('Revenue minus COGS')"
+                tone="primary"
+                icon="profit" />
+            <x-metric-card
+                :title="__('Product gross margin')"
+                :value="$summary['product_profit_margin']"
+                suffix="%"
+                :detail="__('Gross profit as a percentage of product revenue')"
+                tone="warning"
+                icon="profit" />
         </section>
 
         <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -115,23 +144,41 @@
             </article>
         </section>
 
-        <section class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(20rem,0.8fr)_minmax(0,1.4fr)]">
+        <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
             <article class="card border border-base-300 bg-base-100/90 shadow-sm">
                 <div class="card-body">
-                    <h2 class="card-title text-base">{{ __('Sales mix') }}</h2>
-                    <p class="text-xs text-base-content/55">{{ __('Product and service share of net sales') }}</p>
-                    @if ($mixTotal > 0)
+                    <h2 class="card-title text-base">{{ __('Product sales breakdown') }}</h2>
+                    <p class="text-xs text-base-content/55">{{ __('Share of net product sales by product') }}</p>
+                    @if ($productSalesTotal > 0)
                         <div class="mt-3 h-72">
-                            <canvas id="invoiceSalesMixChart" class="h-full w-full"></canvas>
+                            <canvas id="productSalesPieChart" class="h-full w-full"></canvas>
                         </div>
                     @else
                         <div class="mt-3 flex h-72 items-center justify-center rounded-lg border border-dashed border-base-300 text-sm text-base-content/55">
-                            {{ __('No approved sales in this period') }}
+                            {{ __('No approved product sales in this period') }}
                         </div>
                     @endif
                 </div>
             </article>
 
+            <article class="card border border-base-300 bg-base-100/90 shadow-sm">
+                <div class="card-body">
+                    <h2 class="card-title text-base">{{ __('Service sales breakdown') }}</h2>
+                    <p class="text-xs text-base-content/55">{{ __('Share of net service sales by service') }}</p>
+                    @if ($serviceSalesTotal > 0)
+                        <div class="mt-3 h-72">
+                            <canvas id="serviceSalesPieChart" class="h-full w-full"></canvas>
+                        </div>
+                    @else
+                        <div class="mt-3 flex h-72 items-center justify-center rounded-lg border border-dashed border-base-300 text-sm text-base-content/55">
+                            {{ __('No approved service sales in this period') }}
+                        </div>
+                    @endif
+                </div>
+            </article>
+        </section>
+
+        <section class="grid grid-cols-1 gap-4">
             <article class="card border border-base-300 bg-base-100/90 shadow-sm">
                 <div class="card-body p-0">
                     <div class="border-b border-base-300 p-4">
@@ -151,7 +198,14 @@
                             <tbody>
                                 @forelse ($topSales as $row)
                                     <tr>
-                                        <td class="font-medium">{{ $row['name'] }}</td>
+                                        <td class="font-medium">
+                                            @php($detailRoute = $row['itemable_type'] === App\Models\Product::class ? 'products.show' : 'services.show')
+                                            @can($detailRoute)
+                                                <a href="{{ route($detailRoute, $row['id']) }}" class="link link-primary">{{ $row['name'] }}</a>
+                                            @else
+                                                {{ $row['name'] }}
+                                            @endcan
+                                        </td>
                                         <td><span class="badge badge-ghost badge-sm">{{ $row['kind'] }}</span></td>
                                         <td class="text-end tabular-nums">{{ formatNumber($row['quantity']) }}</td>
                                         <td class="text-end tabular-nums">{{ formatNumber($row['amount']) }}</td>
@@ -218,15 +272,16 @@
             document.addEventListener('DOMContentLoaded', () => {
                 const productTrend = @json($productTrend);
                 const serviceTrend = @json($serviceTrend);
-                const salesMix = @json($salesMix);
+                const productSalesBreakdown = @json($productSalesBreakdown);
+                const serviceSalesBreakdown = @json($serviceSalesBreakdown);
                 const charts = {};
 
                 const palette = {
                     sell: '#10b981',
                     buy: '#0ea5e9',
-                    product: '#8b5cf6',
-                    service: '#f59e0b',
                 };
+
+                const pieColors = ['#8b5cf6', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#14b8a6', '#6366f1'];
 
                 const money = (value) => Number(value || 0).toLocaleString();
 
@@ -280,18 +335,18 @@
                     });
                 };
 
-                const renderMix = () => {
-                    const canvas = document.getElementById('invoiceSalesMixChart');
+                const renderPie = (id, rows) => {
+                    const canvas = document.getElementById(id);
                     if (!canvas || !window.Chart) return;
 
-                    charts.mix?.destroy();
-                    charts.mix = new Chart(canvas, {
-                        type: 'doughnut',
+                    charts[id]?.destroy();
+                    charts[id] = new Chart(canvas, {
+                        type: 'pie',
                         data: {
-                            labels: salesMix.map((row) => row.name),
+                            labels: rows.map((row) => row.name),
                             datasets: [{
-                                data: salesMix.map((row) => row.amount),
-                                backgroundColor: [palette.product, palette.service],
+                                data: rows.map((row) => row.amount),
+                                backgroundColor: rows.map((row, index) => pieColors[index % pieColors.length]),
                                 borderWidth: 0,
                                 hoverOffset: 6,
                             }],
@@ -299,7 +354,6 @@
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            cutout: '67%',
                             plugins: {
                                 datalabels: { display: false },
                                 legend: { position: 'bottom', labels: { usePointStyle: true, padding: 18 } },
@@ -312,7 +366,8 @@
                 const renderCharts = () => {
                     renderTrend('productInvoiceTrendChart', productTrend);
                     renderTrend('serviceInvoiceTrendChart', serviceTrend);
-                    renderMix();
+                    renderPie('productSalesPieChart', productSalesBreakdown);
+                    renderPie('serviceSalesPieChart', serviceSalesBreakdown);
                 };
 
                 renderCharts();

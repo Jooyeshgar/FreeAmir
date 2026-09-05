@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -24,6 +25,21 @@ class Company extends Model
     public function documents()
     {
         return $this->hasMany(Document::class);
+    }
+
+    /**
+     * Return the inclusive Gregorian boundaries of this Jalali fiscal year.
+     *
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    public function fiscalYearRange(): array
+    {
+        $year = (int) $this->fiscal_year;
+
+        $start = Carbon::parse(jalali_to_gregorian($year, 1, 1, '/'))->startOfDay();
+        $end = Carbon::parse(jalali_to_gregorian($year + 1, 1, 1, '/'))->subDay()->endOfDay();
+
+        return [$start, $end];
     }
 
     /**
