@@ -133,7 +133,21 @@
             </article>
         </section>
 
-        <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <section class="grid grid-cols-1 gap-4 xl:grid-cols-3">
+            <article class="card border border-base-300 bg-base-100/90 shadow-sm">
+                <div class="card-body">
+                    <h2 class="card-title text-base">{{ __('Sales mix') }}</h2>
+                    <p class="text-xs text-base-content/55">{{ __('Product and service share of net sales') }}</p>
+                    <x-charts.pie-chart
+                        chart-id="invoiceSalesMixChart"
+                        class="mt-3"
+                        height-class="h-72"
+                        :datas="$salesMix"
+                        metric="amount"
+                        :label="__('Sales')" />
+                </div>
+            </article>
+
             <article class="card border border-base-300 bg-base-100/90 shadow-sm">
                 <div class="card-body">
                     <h2 class="card-title text-base">{{ __('Product sales breakdown') }}</h2>
@@ -195,7 +209,9 @@
                                         <td><span class="badge badge-ghost badge-sm">{{ $row['kind'] }}</span></td>
                                         <td class="text-end tabular-nums">{{ formatNumber($row['quantity']) }}</td>
                                         <td class="text-end tabular-nums">{{ formatNumber($row['amount']) }}</td>
-                                        <td class="text-end tabular-nums">{{ formatNumber($row['profit_margin']) }}%</td>
+                                        <td class="text-end tabular-nums">
+                                            {{ $row['profit_margin'] === null ? '—' : formatNumber($row['profit_margin']).'%' }}
+                                        </td>
                                     </tr>
                                 @empty
                                     <tr><td colspan="5" class="text-center text-base-content/60">{{ __('No data') }}</td></tr>
