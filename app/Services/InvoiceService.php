@@ -12,6 +12,7 @@ use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\Service;
 use App\Models\User;
+use App\Models\WarehouseProductStock;
 use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -32,6 +33,7 @@ class InvoiceService
     public static function createInvoice(User $user, array $invoiceData, array $items = [], bool $approved = false): array
     {
         $date = $invoiceData['date'] ?? now()->toDateString();
+        $items = self::assignWarehouseToItems($items, $invoiceData['warehouse_id'] ?? null);
 
         $transactionBuilder = new InvoiceTransactionBuilder($items, $invoiceData);
         $buildResult = $transactionBuilder->build();
@@ -81,6 +83,7 @@ class InvoiceService
 
                 $createdInvoice->refresh();
                 CostOfGoodsService::updateProductsAverageCost($createdInvoice);
+                ProductService::updateWarehouseAverageCosts($createdInvoice);
 
                 self::syncCOGAfterForInvoiceItems($createdInvoice);
             });
@@ -123,16 +126,59 @@ class InvoiceService
     public static function updateInvoice(int $invoiceId, array $invoiceData, array $items = [], bool $approved = false): array
     {
         $invoice = Invoice::findOrFail($invoiceId);
+        $wasApproved = $invoice->status->isApprovedOrSettled();
+        $oldItems = $wasApproved ? $invoice->items->toArray() : [];
 
         $invoiceData = self::normalizeInvoiceData($invoiceData);
+        $items = self::assignWarehouseToItems($items, $invoiceData['warehouse_id'] ?? null);
 
         $transactionBuilder = new InvoiceTransactionBuilder($items, $invoiceData);
         $buildResult = $transactionBuilder->build();
 
         $createdDocument = null;
-        $invoice = self::updateInvoiceWithoutApproval($invoice, $invoiceData, $items, $buildResult);
+        $handledApprovedEdit = false;
 
-        if ($approved) {
+        // Approved invoices already changed inventory. Keep the reversal and
+        // replacement in one transaction so warehouse stock cannot be doubled.
+        if ($approved && $wasApproved) {
+            $handledApprovedEdit = true;
+            DB::transaction(function () use ($invoice, $invoiceData, $items, $buildResult, $oldItems, &$createdDocument) {
+                ProductService::subProductsQuantities($oldItems, $invoice->invoice_type);
+
+                $invoice->status = InvoiceStatus::UNAPPROVED;
+                CostOfGoodsService::updateProductsAverageCost($invoice);
+                ProductService::updateWarehouseAverageCosts($invoice);
+
+                if ($invoice->document_id) {
+                    DocumentService::deleteDocument($invoice->document_id);
+                    $invoice->document_id = null;
+                }
+
+                $invoiceData['vat'] = $buildResult['totalVat'];
+                $invoiceData['amount'] = $buildResult['totalAmount'];
+                $invoiceData['title'] = $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? ''));
+                $invoiceData['status'] = InvoiceStatus::UNAPPROVED;
+                $invoice->update($invoiceData);
+                self::syncInvoiceItems($invoice, $items);
+
+                $createdDocument = self::createDocumentFromInvoiceItems(auth()->user(), $invoice);
+                $invoice->update([
+                    ...$invoiceData,
+                    'status' => InvoiceStatus::APPROVED,
+                    'document_id' => $createdDocument->id,
+                ]);
+
+                ProductService::addProductsQuantities($items, $invoice->invoice_type);
+                $invoice->refresh();
+                CostOfGoodsService::updateProductsAverageCost($invoice);
+                ProductService::updateWarehouseAverageCosts($invoice);
+                self::syncCOGAfterForInvoiceItems($invoice);
+            });
+        } else {
+            $invoice = self::updateInvoiceWithoutApproval($invoice, $invoiceData, $items, $buildResult);
+        }
+
+        if ($approved && ! $handledApprovedEdit) {
 
             if ($invoice->invoice_type === InvoiceType::SELL) {
                 $invoice->update(['status' => InvoiceStatus::READY_TO_APPROVE]);
@@ -167,6 +213,7 @@ class InvoiceService
                 $invoice->refresh();
 
                 CostOfGoodsService::updateProductsAverageCost($invoice);
+                ProductService::updateWarehouseAverageCosts($invoice);
                 self::syncCOGAfterForInvoiceItems($invoice);
             });
         }
@@ -242,6 +289,7 @@ class InvoiceService
             'invoice_type' => $invoiceData['invoice_type'],
             'number' => isset($invoiceData['number']) ? (int) $invoiceData['number'] : null,
             'customer_id' => $invoiceData['customer_id'],
+            'warehouse_id' => $invoiceData['warehouse_id'],
             'returned_invoice_id' => $invoiceData['returned_invoice_id'] ?? null,
             'document_number' => $invoiceData['document_number'],
             'description' => $invoiceData['description'] ?? null,
@@ -251,6 +299,11 @@ class InvoiceService
         ];
 
         return $invoiceData;
+    }
+
+    private static function assignWarehouseToItems(array $items, ?int $warehouseId): array
+    {
+        return array_map(fn (array $item) => [...$item, 'warehouse_id' => $warehouseId], $items);
     }
 
     /**
@@ -383,6 +436,7 @@ class InvoiceService
         ProductService::addProductsQuantities($invoice->items->toArray(), $invoice->invoice_type);
         self::syncInvoiceItems($invoice, self::itemsFormatterForSyncingInvoiceItems($invoice));
         CostOfGoodsService::updateProductsAverageCost($invoice);
+        ProductService::updateWarehouseAverageCosts($invoice);
         self::syncCOGAfterForInvoiceItems($invoice);
     }
 
@@ -401,6 +455,7 @@ class InvoiceService
         self::unapproveAncillaryCostsOfInvoice($invoice);
         ProductService::subProductsQuantities($invoice->items->toArray(), $invoice->invoice_type);
         CostOfGoodsService::updateProductsAverageCost($invoice);
+        ProductService::updateWarehouseAverageCosts($invoice);
     }
 
     private function unapproveAncillaryCostsOfInvoice(Invoice $invoice): void
@@ -477,6 +532,7 @@ class InvoiceService
                 'vat_is_value' => true,
                 'unit' => $t->unit_price,
                 'total' => $t->amount,
+                'warehouse_id' => $invoice->warehouse_id,
             ])
             ->values()
             ->all();
@@ -823,7 +879,12 @@ class InvoiceService
             }
 
             $requiredQuantity = $invoiceItem->quantity;
-            if ($product->quantity < $requiredQuantity) {
+            $availableQuantity = (float) WarehouseProductStock::query()
+                ->where('product_id', $product->id)
+                ->where('warehouse_id', $invoiceItem->invoice->warehouse_id)
+                ->value('quantity');
+
+            if ($availableQuantity < $requiredQuantity) {
                 if ($product->oversell) {
                     $errors->push([
                         'rule' => 'oversell_allowed',
@@ -951,6 +1012,7 @@ class InvoiceService
             'date' => $validated['date'],
             'invoice_type' => InvoiceType::fromName($validated['invoice_type']),
             'customer_id' => $validated['customer_id'],
+            'warehouse_id' => $validated['warehouse_id'],
             'returned_invoice_id' => $validated['returned_invoice_id'] ?? null,
             'document_number' => $validated['document_number'],
             'number' => $validated['invoice_number'],
@@ -976,6 +1038,7 @@ class InvoiceService
             'vat_is_value' => $vatIsValue,
             'unit' => $t['unit'] ?? 0,
             'total' => $t['total'] ?? 0,
+            'warehouse_id' => null,
         ])->toArray();
     }
 

@@ -4,10 +4,15 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Models\AncillaryCost;
 use App\Models\AncillaryCostItem;
 use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Models\Product;
+use App\Models\Warehouse;
+use App\Models\WarehouseProductStock;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class ProductService
 {
@@ -73,6 +78,13 @@ class ProductService
                 continue;
             }
 
+            self::adjustForInvoice(
+                $product,
+                self::resolveWarehouseId($invoiceItem, $product),
+                (float) $invoiceItem['quantity'],
+                in_array($invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL], true) || $invoice_type->isVoid()
+            );
+
             if ($invoice_type === InvoiceType::BUY || $invoice_type === InvoiceType::RETURN_SELL || $invoice_type->isVoid()) {
                 $product->quantity += $invoiceItem['quantity'];
             } elseif ($invoice_type === InvoiceType::SELL || $invoice_type === InvoiceType::RETURN_BUY) {
@@ -96,6 +108,14 @@ class ProductService
                 continue;
             }
 
+            self::adjustForInvoice(
+                $product,
+                self::resolveWarehouseId($invoiceItem, $product),
+                (float) $invoiceItem['quantity'],
+                in_array($invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL], true) || $invoice_type->isVoid(),
+                true
+            );
+
             if ($invoice_type === InvoiceType::BUY || $invoice_type === InvoiceType::RETURN_SELL || $invoice_type->isVoid()) {
                 $product->quantity -= $invoiceItem['quantity'];
             } elseif ($invoice_type === InvoiceType::SELL || $invoice_type === InvoiceType::RETURN_BUY) {
@@ -106,9 +126,178 @@ class ProductService
         }
     }
 
+    private static function adjustForInvoice(Product $product, ?int $warehouseId, float $quantity, bool $incoming, bool $reverse = false): void
+    {
+        $warehouse = $warehouseId ? Warehouse::findOrFail($warehouseId) : null;
+        if (! $warehouse) {
+            throw ValidationException::withMessages(['warehouse_id' => __('The selected warehouse is invalid.')]);
+        }
+
+        if ((int) $warehouse->company_id !== (int) $product->company_id) {
+            throw ValidationException::withMessages([
+                'warehouse_id' => __('The selected warehouse is invalid.'),
+            ]);
+        }
+
+        WarehouseProductStock::firstOrCreate(
+            ['product_id' => $product->id, 'warehouse_id' => $warehouse->id],
+            ['quantity' => 0, 'average_cost' => $product->average_cost ?? 0]
+        );
+
+        $stock = WarehouseProductStock::query()
+            ->where('product_id', $product->id)
+            ->where('warehouse_id', $warehouse->id)
+            ->lockForUpdate()
+            ->firstOrFail();
+
+        $delta = $incoming ? $quantity : -$quantity;
+
+        if ($reverse) {
+            $delta *= -1;
+        }
+
+        if (! $product->oversell && (float) $stock->quantity + $delta < 0) {
+            throw ValidationException::withMessages([
+                'quantity' => __('The selected warehouse does not have enough stock.'),
+            ]);
+        }
+
+        $stock->quantity = (float) $stock->quantity + $delta;
+        $stock->save();
+    }
+
+    private static function resolveWarehouseId(array $invoiceItem, Product $product): ?int
+    {
+        if (isset($invoiceItem['warehouse_id'])) {
+            return (int) $invoiceItem['warehouse_id'];
+        }
+
+        $invoiceWarehouseId = isset($invoiceItem['invoice_id']) ? Invoice::query()->whereKey($invoiceItem['invoice_id'])->value('warehouse_id') : null;
+
+        return $invoiceWarehouseId ?? Warehouse::query()->where('company_id', $product->company_id)->orderBy('id')->value('id');
+    }
+
+    public static function adjustWarehouseAverageCostForAncillaryCost(AncillaryCost $ancillaryCost, bool $reverse = false): void
+    {
+        $ancillaryCost->loadMissing('items', 'invoice.items');
+
+        foreach ($ancillaryCost->items as $ancillaryCostItem) {
+            $warehouseId = $ancillaryCost->invoice->warehouse_id;
+            $invoiceItems = $ancillaryCost->invoice->items
+                ->filter(fn (InvoiceItem $item) => $item->itemable_type === Product::class
+                    && (int) $item->itemable_id === (int) $ancillaryCostItem->product_id);
+            $totalQuantity = (float) $invoiceItems->sum('quantity');
+
+            if (! $warehouseId || $totalQuantity <= 0) {
+                continue;
+            }
+
+            foreach ($invoiceItems as $invoiceItem) {
+                $stock = WarehouseProductStock::query()
+                    ->where('product_id', $ancillaryCostItem->product_id)
+                    ->where('warehouse_id', $warehouseId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (! $stock || (float) $stock->quantity <= 0) {
+                    continue;
+                }
+
+                $allocation = (float) $ancillaryCostItem->amount
+                    * ((float) $invoiceItem->quantity / $totalQuantity);
+                $costDelta = $allocation * ($reverse ? -1 : 1);
+                $stockValue = ((float) $stock->quantity * (float) $stock->average_cost) + $costDelta;
+                $stock->average_cost = max(0.0, $stockValue / (float) $stock->quantity);
+                $stock->save();
+            }
+        }
+    }
+
+    public static function updateWarehouseAverageCosts(Invoice $invoice): void
+    {
+        $invoice->loadMissing('items.itemable', 'ancillaryCosts.items');
+
+        foreach ($invoice->items as $invoiceItem) {
+            if ($invoiceItem->itemable_type !== Product::class || ! $invoice->warehouse_id) {
+                continue;
+            }
+
+            $stock = WarehouseProductStock::query()
+                ->where('product_id', $invoiceItem->itemable_id)
+                ->where('warehouse_id', $invoice->warehouse_id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $stock) {
+                continue;
+            }
+
+            $quantity = (float) $invoiceItem->quantity;
+            $stockQuantity = (float) $stock->quantity;
+            $incomingUnitCost = self::invoiceItemIncomingUnitCost($invoice, $invoiceItem);
+
+            if ($invoice->status->isApprovedOrSettled()) {
+                if (in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID], true)) {
+                    $quantityBefore = max(0.0, $stockQuantity - $quantity);
+                    $stock->average_cost = $stockQuantity > 0
+                        ? (($quantityBefore * (float) $stock->average_cost) + ($quantity * $incomingUnitCost)) / $stockQuantity
+                        : 0;
+                } elseif ($stockQuantity <= 0) {
+                    $stock->average_cost = 0;
+                }
+            } elseif (in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID], true)) {
+                $quantityBeforeReversal = $stockQuantity + $quantity;
+                $remainingValue = ($quantityBeforeReversal * (float) $stock->average_cost) - ($quantity * $incomingUnitCost);
+                $stock->average_cost = $stockQuantity > 0 ? max(0.0, $remainingValue / $stockQuantity) : 0;
+            } elseif ($invoice->invoice_type === InvoiceType::RETURN_BUY) {
+                $quantityBeforeReversal = max(0.0, $stockQuantity - $quantity);
+                $stock->average_cost = $stockQuantity > 0
+                    ? (($quantityBeforeReversal * (float) $stock->average_cost) + ($quantity * $incomingUnitCost)) / $stockQuantity
+                    : 0;
+            }
+
+            $stock->save();
+        }
+    }
+
+    private static function invoiceItemIncomingUnitCost(Invoice $invoice, InvoiceItem $invoiceItem): float
+    {
+        if (in_array($invoice->invoice_type, [InvoiceType::RETURN_SELL, InvoiceType::RETURN_BUY, InvoiceType::VOID], true)) {
+            $originalItem = InvoiceItem::query()
+                ->where('invoice_id', $invoice->returned_invoice_id)
+                ->where('itemable_type', Product::class)
+                ->where('itemable_id', $invoiceItem->itemable_id)
+                ->first();
+
+            return (float) ($originalItem?->cog_after ?? $invoiceItem->cog_after);
+        }
+
+        $baseCost = (float) $invoiceItem->amount - (float) ($invoiceItem->vat ?? 0);
+        $ancillaryCost = (float) $invoice->ancillaryCosts
+            ->where('status', InvoiceStatus::APPROVED)
+            ->flatMap->items
+            ->where('product_id', $invoiceItem->itemable_id)
+            ->sum('amount');
+
+        return (float) $invoiceItem->quantity > 0
+            ? ($baseCost + $ancillaryCost) / (float) $invoiceItem->quantity
+            : 0;
+    }
+
     public static function recalculateQuantity(Product $product): float
     {
         return DB::transaction(function () use ($product): float {
+            $stocks = WarehouseProductStock::query()
+                ->where('product_id', $product->id)
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('warehouse_id');
+
+            foreach ($stocks as $stock) {
+                $stock->quantity = 0;
+                $stock->save();
+            }
+
             $invoices = Invoice::withoutGlobalScopes()
                 ->whereIn('status', InvoiceStatus::approvedOrSettled())
                 ->whereHas('items', function ($query) use ($product) {
@@ -124,9 +313,12 @@ class ProductService
                 ->get();
 
             $quantity = 0.0;
+            $warehouseQuantities = [];
 
             foreach ($invoices as $invoice) {
                 foreach ($invoice->items as $item) {
+                    $warehouseId = $invoice->warehouse_id;
+                    $warehouseQuantity = $warehouseQuantities[$warehouseId] ?? 0.0;
                     $item->quantity_at = $quantity;
                     $item->save();
 
@@ -136,6 +328,22 @@ class ProductService
                     };
 
                     $quantity += $sign * (float) $item->quantity;
+                    if ($warehouseId) {
+                        $warehouseQuantity += $sign * (float) $item->quantity;
+                        $warehouseQuantities[$warehouseId] = $warehouseQuantity;
+
+                        $stock = $stocks->get($warehouseId);
+                        if (! $stock) {
+                            $stock = WarehouseProductStock::query()->firstOrCreate(
+                                ['warehouse_id' => $warehouseId, 'product_id' => $product->id],
+                                ['quantity' => 0, 'average_cost' => $product->average_cost ?? 0]
+                            );
+                            $stocks->put($warehouseId, $stock);
+                        }
+
+                        $stock->quantity = $warehouseQuantity;
+                        $stock->save();
+                    }
                 }
             }
 

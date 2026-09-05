@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
         try {
             $this->call([
                 CompanySeeder::class,
+                WarehouseSeeder::class,
                 SubjectSeeder::class,
                 ConfigSeeder::class,
                 BankSeeder::class,

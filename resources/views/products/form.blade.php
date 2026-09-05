@@ -63,7 +63,8 @@
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
-            <x-checkbox title="{{ __('Oversell') }}" name="oversell" id="oversell" :checked="old('oversell', $product->oversell ?? 0)" />
+            <input type="hidden" name="oversell" value="0">
+            <x-checkbox title="{{ __('Oversell') }}" name="oversell" id="oversell" value="1" :checked="(bool) old('oversell', $product->oversell ?? false)" />
         </div>
         <div class="md:col-span-2">
             <x-input @input="$event.target.value = $store.utils.formatNumber($event.target.value)"

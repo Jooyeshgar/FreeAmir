@@ -12,6 +12,7 @@ use App\Models\Product;
 use App\Models\Service;
 use App\Models\Subject;
 use App\Models\Transaction;
+use App\Models\Warehouse;
 use App\Services\DocumentImportExport\DocumentImportExportService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -97,6 +98,8 @@ class ReportExportService
             ? $available
             : array_intersect_key($available, array_flip(array_unique(['name', ...($validated['columns'] ?? [])])));
         $reportColumns = array_intersect(array_keys($this->productReportColumns()), array_keys($columns));
+        $warehouseColumns = array_keys(array_filter($columns, fn (string $column) => str_starts_with($column, 'warehouse_')));
+        $reportColumns = array_merge($reportColumns, $warehouseColumns);
         $reportRows = $this->warehouseDashboardService->report(['cols_submitted' => true, 'columns' => array_values($reportColumns)])['rows']
             ->keyBy(fn (array $row) => (string) $row['code']);
 
@@ -363,7 +366,15 @@ class ReportExportService
             'cogs_subject_code' => __('COGS subject code'), 'inventory_subject_code' => __('Inventory subject code'),
             'sales_returns_subject_code' => __('Sales returns subject code'), 'sstid' => __('Product SSTID'), 'location' => __('Location in warehouse'),
             'quantity_warning' => __('Quantity warning'), 'oversell' => __('Oversell'), 'discount_formula' => __('Discount formula'),
-            'description' => __('Description'), 'vat' => __('VAT')];
+            'description' => __('Description'), 'vat' => __('VAT'),
+            ...$this->warehouseColumns()];
+    }
+
+    private function warehouseColumns(): array
+    {
+        return Warehouse::query()->orderBy('name')->get(['id', 'name'])->mapWithKeys(
+            fn (Warehouse $warehouse) => ['warehouse_'.$warehouse->id => $warehouse->name]
+        )->all();
     }
 
     private function productReportColumns(): array

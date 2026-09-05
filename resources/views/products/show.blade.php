@@ -14,6 +14,12 @@
                     </a>
                 @endif
 
+                @if ($product->oversell === 1)
+                    <span class="badge badge-lg badge-warning">
+                        {{ __('product_oversell_allowed') }}
+                    </span>
+                @endif
+
                 @if ($product->location)
                     <span class="badge badge-lg badge-secondary gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -54,10 +60,24 @@
         </div>
 
         <div class="card-body">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
-                <x-stat-card :title="__('Stock')" :value="formatNumber($product->quantity ?? 0)" :description="__('In Stock')" type="success" icon="quantity" />
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+                <div class="stats shadow bg-success/10">
+                    <div class="stat min-w-0">
+                        <div class="stat-title">{{ __('Stock') }}</div>
+                        <div class="stat-value text-success">{{ formatNumber($product->quantity ?? 0) }}</div>
+                        <div class="stat-desc mt-2 flex w-full gap-1 overflow-x-auto pb-1">
+                            @forelse ($product->warehouseStocks->sortBy('warehouse.name') as $stock)
+                                <a href="{{ route('warehouses.show', $stock->warehouse) }}" class="badge badge-outline badge-sm min-w-[calc((100%_-_1rem)/5)] shrink-0 gap-1 link whitespace-nowrap">
+                                    <span>{{ $stock->warehouse->name }}</span>
+                                    <span class="font-semibold">{{ formatNumber($stock->quantity) }}</span>
+                                </a>
+                            @empty
+                                <span>{{ __('No warehouse stock found.') }}</span>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
                 <x-stat-card :title="__('Quantity warning')" :value="formatNumber($product->quantity_warning ?? 0)" :description="__('Alert Level')" type="warning" icon="warning" />
-                <x-stat-card :title="__('Oversell')" :value="formatNumber($product->oversell ?? 0)" :description="__('Allowed')" type="error" icon="oversell" />
                 <x-stat-card :title="__('VAT')" :value="formatNumber($product->vat ?? 0) . '%'" :description="__('Tax Rate')" type="info" icon="vat" />
             </div>
 
@@ -98,6 +118,7 @@
                             <th class="px-4 py-3">{{ __('Date') }}</th>
                             <th class="px-4 py-3">{{ __('Invoice Number') }}</th>
                             <th class="px-4 py-3">{{ __('Customer Name') }}</th>
+                            <th class="px-4 py-3">{{ __('Warehouse') }}</th>
                             <th class="px-4 py-3 text-center">{{ __('Buy') }}</th>
                             <th class="px-4 py-3 text-center">{{ __('Sell') }}</th>
                             <th class="px-4 py-3 text-center">{{ __('Buy Unit Price') }}</th>
@@ -116,6 +137,13 @@
                                 </td>
                                 <td class="px-4 py-3">
                                     <a href="{{ route('customers.show', $item->invoice->customer_id) }}">{{ $item->invoice->customer->name }}</a>
+                                </td>
+                                <td class="px-4 py-3">
+                                    @if ($item->invoice->warehouse)
+                                        <a href="{{ route('warehouses.show', $item->invoice->warehouse) }}" class="link">{{ $item->invoice->warehouse->name }}</a>
+                                    @else
+                                        <span class="text-gray-400">-</span>
+                                    @endif
                                 </td>
 
                                 <td class="px-4 py-3 text-center">
@@ -202,7 +230,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="text-center py-8 text-gray-500">
+                                <td colspan="11" class="text-center py-8 text-gray-500">
                                     {{ __('No transactions found') }}
                                 </td>
                             </tr>

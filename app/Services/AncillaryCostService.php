@@ -75,6 +75,7 @@ class AncillaryCostService
                 DocumentService::syncDocumentable($document, $ancillaryCost);
 
                 CostOfGoodsService::updateProductsAverageCost($invoice);
+                ProductService::adjustWarehouseAverageCostForAncillaryCost($ancillaryCost);
                 self::syncCOGAfterAncillarityCost($invoice);
                 self::syncInvoicePaymentStatus($invoice);
             });
@@ -161,6 +162,7 @@ class AncillaryCostService
                 ]);
 
                 CostOfGoodsService::updateProductsAverageCost($ancillaryCost->invoice);
+                ProductService::adjustWarehouseAverageCostForAncillaryCost($ancillaryCost);
                 self::syncCOGAfterAncillarityCost($ancillaryCost->invoice);
                 self::syncInvoicePaymentStatus($ancillaryCost->invoice);
             });
@@ -203,6 +205,11 @@ class AncillaryCostService
     {
         DB::transaction(function () use ($ancillaryCost) {
             $invoice = $ancillaryCost->invoice;
+            $wasApproved = $ancillaryCost->status->isApproved();
+
+            if ($wasApproved) {
+                $ancillaryCost->loadMissing('items', 'invoice.items');
+            }
 
             if ($ancillaryCost->document) {
                 DocumentService::deleteDocument($ancillaryCost->document_id);
@@ -212,6 +219,10 @@ class AncillaryCostService
             $ancillaryCost->delete();
 
             CostOfGoodsService::updateProductsAverageCost($invoice);
+
+            if ($wasApproved) {
+                ProductService::adjustWarehouseAverageCostForAncillaryCost($ancillaryCost, true);
+            }
 
             self::syncCOGAfterAncillarityCost($invoice);
             self::syncInvoicePaymentStatus($invoice);
@@ -306,6 +317,7 @@ class AncillaryCostService
             $ancillaryCost->update();
             self::syncAncillaryCostItems($ancillaryCost, self::itemsFormatterForSyncingAncillaryCostItems($ancillaryCost));
             CostOfGoodsService::updateProductsAverageCost($ancillaryCost->invoice);
+            ProductService::adjustWarehouseAverageCostForAncillaryCost($ancillaryCost);
             self::syncCOGAfterAncillarityCost($ancillaryCost->invoice);
         } else {
             $ancillaryCost->status = InvoiceStatus::UNAPPROVED;
@@ -316,6 +328,7 @@ class AncillaryCostService
             }
             $ancillaryCost->update();
             CostOfGoodsService::updateProductsAverageCost($ancillaryCost->invoice);
+            ProductService::adjustWarehouseAverageCostForAncillaryCost($ancillaryCost, true);
             self::syncCOGAfterAncillarityCost($ancillaryCost->invoice);
         }
 

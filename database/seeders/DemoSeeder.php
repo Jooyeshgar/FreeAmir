@@ -24,6 +24,7 @@ class DemoSeeder extends Seeder
 
         try {
             $this->call([
+                WarehouseSeeder::class,
                 BankAccountSeeder::class,
                 CustomerSeeder::class,
                 ProductSeeder::class,

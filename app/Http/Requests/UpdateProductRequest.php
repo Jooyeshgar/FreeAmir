@@ -49,6 +49,7 @@ class UpdateProductRequest extends FormRequest
             'sstid' => 'nullable|string',
             'websites' => 'nullable|array',
             'websites.*.link' => 'required|url',
+            'oversell' => ['required', 'boolean'],
         ];
     }
 
