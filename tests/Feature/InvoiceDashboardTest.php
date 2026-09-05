@@ -75,7 +75,6 @@ class InvoiceDashboardTest extends TestCase
             'summary',
             'productTrend',
             'serviceTrend',
-            'salesMix',
             'productSalesBreakdown',
             'serviceSalesBreakdown',
             'topSales',
@@ -83,8 +82,11 @@ class InvoiceDashboardTest extends TestCase
         ]);
         $response->assertSee('data-invoice-dashboard', false);
         $response->assertSee('productInvoiceTrendChart', false);
-        $response->assertSee('invoiceSalesMixChart', false);
+        $response->assertDontSee('invoiceSalesMixChart', false);
         $response->assertSee('productSalesPieChart', false);
+        $response->assertSee('name="start_date"', false);
+        $response->assertSee('name="end_date"', false);
+        $response->assertSee('data-jdp', false);
         $response->assertViewHas('filters', [
             'start_date' => jalali_to_gregorian(1405, 1, 1, '-'),
             'end_date' => Carbon::parse(jalali_to_gregorian(1406, 1, 1, '-'))->subDay()->toDateString(),
@@ -183,10 +185,6 @@ class InvoiceDashboardTest extends TestCase
         $this->assertSame(800.0, array_sum($data['serviceTrend']['sell']));
         $this->assertSame(200.0, array_sum($data['serviceTrend']['buy']));
         $this->assertSame([
-            ['name' => __('Products'), 'amount' => 700.0],
-            ['name' => __('Services'), 'amount' => 800.0],
-        ], $data['salesMix']);
-        $this->assertSame([
             ['id' => $product->id, 'name' => 'Dashboard Product', 'amount' => 700.0],
         ], $data['productSalesBreakdown']->all());
         $this->assertSame([
@@ -270,29 +268,6 @@ class InvoiceDashboardTest extends TestCase
         $this->assertSame(400.0, $data['summary']['product_cogs']);
         $this->assertSame(480.0, $data['summary']['product_profit']);
         $this->assertSame(54.55, $data['summary']['product_profit_margin']);
-    }
-
-    public function test_sales_mix_reverses_product_returns_and_voids_and_service_returns(): void
-    {
-        $product = Product::factory()->create(['company_id' => $this->companyId]);
-        $service = Service::factory()->create(['company_id' => $this->companyId]);
-
-        $productSale = $this->invoice(InvoiceType::SELL, InvoiceStatus::APPROVED, 1, '2026-08-10', 1000);
-        $this->item($productSale, $product, 1, 1000, 1000);
-        $productReturn = $this->invoice(InvoiceType::RETURN_SELL, InvoiceStatus::APPROVED, 2, '2026-08-11', 200);
-        $this->item($productReturn, $product, 1, 200, 200);
-        $productVoid = $this->invoice(InvoiceType::VOID, InvoiceStatus::APPROVED, 3, '2026-08-12', 100);
-        $this->item($productVoid, $product, 1, 100, 100);
-
-        $serviceSale = $this->invoice(InvoiceType::SELL, InvoiceStatus::APPROVED, 4, '2026-08-13', 900);
-        $this->item($serviceSale, $service, 1, 900, 900);
-        $serviceReturn = $this->invoice(InvoiceType::RETURN_SELL, InvoiceStatus::APPROVED, 5, '2026-08-14', 100);
-        $this->item($serviceReturn, $service, 1, 100, 100);
-
-        $this->assertSame([
-            ['name' => __('Products'), 'amount' => 700.0],
-            ['name' => __('Services'), 'amount' => 800.0],
-        ], app(InvoiceDashboardService::class)->dashboard()['salesMix']);
     }
 
     public function test_service_created_by_invoice_service_does_not_report_snapshot_as_profit_margin(): void

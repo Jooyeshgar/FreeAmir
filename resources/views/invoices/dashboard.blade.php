@@ -3,7 +3,7 @@
 
     <main class="mt-8 space-y-4" data-invoice-dashboard>
         <section class="rounded-xl border border-base-300 bg-base-100 shadow-sm">
-            <div class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+            <div class="grid gap-5 p-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-end">
                 <div class="max-w-3xl">
                     <div class="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
                         <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
@@ -17,12 +17,18 @@
                     </p>
                 </div>
 
-                <form action="{{ route('invoices.dashboard') }}" method="GET" class="flex flex-wrap items-end gap-2">
-                    <div class="w-44">
-                        <x-date-picker name="start_date" :title="__('Start date')" :value="old('start_date', convertToJalali($filters['start_date'], true))" />
+                <form action="{{ route('invoices.dashboard') }}" method="GET" class="flex max-w-md flex-wrap items-end gap-2 xl:justify-self-end">
+                    <div class="w-36 [&_.input]:input-sm">
+                        <x-text-input data-jdp title="{{ __('Start date') }}" input_name="start_date"
+                            placeholder="{{ __('Start date') }}" readonly
+                            input_value="{{ old('start_date') ?? convertToJalali($filters['start_date'], true) }}"
+                            label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
                     </div>
-                    <div class="w-44">
-                        <x-date-picker name="end_date" :title="__('End date')" :value="old('end_date', convertToJalali($filters['end_date'], true))" />
+                    <div class="w-36 [&_.input]:input-sm">
+                        <x-text-input data-jdp title="{{ __('End date') }}" input_name="end_date"
+                            placeholder="{{ __('End date') }}" readonly
+                            input_value="{{ old('end_date') ?? convertToJalali($filters['end_date'], true) }}"
+                            label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
                     </div>
                     <button type="submit" class="btn btn-sm btn-neutral">{{ __('Apply') }}</button>
                     <a href="{{ route('invoices.dashboard') }}" class="btn btn-sm btn-ghost">{{ __('Reset') }}</a>
@@ -133,21 +139,7 @@
             </article>
         </section>
 
-        <section class="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            <article class="card border border-base-300 bg-base-100/90 shadow-sm">
-                <div class="card-body">
-                    <h2 class="card-title text-base">{{ __('Sales mix') }}</h2>
-                    <p class="text-xs text-base-content/55">{{ __('Product and service share of net sales') }}</p>
-                    <x-charts.pie-chart
-                        chart-id="invoiceSalesMixChart"
-                        class="mt-3"
-                        height-class="h-72"
-                        :datas="$salesMix"
-                        metric="amount"
-                        :label="__('Sales')" />
-                </div>
-            </article>
-
+        <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
             <article class="card border border-base-300 bg-base-100/90 shadow-sm">
                 <div class="card-body">
                     <h2 class="card-title text-base">{{ __('Product sales breakdown') }}</h2>
@@ -280,4 +272,11 @@
             </article>
         </section>
     </main>
+
+    @pushOnce('scripts')
+        <script type="module">
+            jalaliDatepicker.startWatch();
+        </script>
+    @endPushOnce
+
 </x-app-layout>

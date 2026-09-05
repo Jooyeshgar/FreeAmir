@@ -32,7 +32,6 @@ class InvoiceDashboardService
             'summary' => $this->summary($items),
             'productTrend' => $this->trend($items, Product::class, $from, $to),
             'serviceTrend' => $this->trend($items, Service::class, $from, $to),
-            'salesMix' => $this->salesMix($items),
             'productSalesBreakdown' => $this->salesBreakdown($items, Product::class),
             'serviceSalesBreakdown' => $this->salesBreakdown($items, Service::class),
             'topSales' => $this->topSales($items),
@@ -239,20 +238,6 @@ class InvoiceDashboardService
         }
 
         return $topSales;
-    }
-
-    private function salesMix(Collection $items): array
-    {
-        return [
-            [
-                'name' => __('Products'),
-                'amount' => round(max(0, $this->netItemSales($items->where('itemable_type', Product::class))), 2),
-            ],
-            [
-                'name' => __('Services'),
-                'amount' => round(max(0, $this->netItemSales($items->where('itemable_type', Service::class))), 2),
-            ],
-        ];
     }
 
     private function netItemSales(Collection $items): float
