@@ -72,7 +72,6 @@ class ReturnInvoiceCOGSTest extends TestCase
         );
         $product = Product::factory()->withGroup($group)->withSubjects()->create(array_merge([
             'company_id' => $this->companyId,
-            'warehouse_id' => $warehouse->id,
         ], $overrides));
         WarehouseProductStock::firstOrCreate(
             ['warehouse_id' => $warehouse->id, 'product_id' => $product->id],
@@ -91,6 +90,8 @@ class ReturnInvoiceCOGSTest extends TestCase
         ?int $returnedInvoiceId = null
     ): array {
         $number ??= ++$this->nextInvoiceNumber;
+        $productItem = collect($items)->firstWhere('itemable_type', 'product');
+        $warehouseId = $productItem['warehouse_id'] ?? null;
 
         $result = InvoiceService::createInvoice(
             $this->user,
@@ -99,6 +100,7 @@ class ReturnInvoiceCOGSTest extends TestCase
                 'date' => $date ?? now()->toDateString(),
                 'invoice_type' => $type,
                 'customer_id' => $this->customer->id,
+                'warehouse_id' => $warehouseId,
                 'document_number' => $number,
                 'number' => $number,
                 'returned_invoice_id' => $returnedInvoiceId,
@@ -145,7 +147,7 @@ class ReturnInvoiceCOGSTest extends TestCase
         return [
             'itemable_type' => 'product',
             'itemable_id' => $product->id,
-            'warehouse_id' => $product->warehouse_id,
+            'warehouse_id' => $product->warehouseStocks()->orderBy('warehouse_id')->value('warehouse_id'),
             'quantity' => $qty,
             'unit' => $unit,
             'unit_discount' => 0,

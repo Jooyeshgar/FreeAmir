@@ -168,15 +168,19 @@ class ProductImportExportTest extends TestCase
         ]);
         $product = Product::factory()->withGroup($this->productGroup)->withSubjects()->create([
             'company_id' => $this->companyId,
-            'warehouse_id' => $warehouse->id,
             'name' => 'Warehouse Widget',
             'code' => '5010',
+        ]);
+        $product->warehouseStocks()->create([
+            'warehouse_id' => $warehouse->id,
+            'quantity' => 0,
+            'average_cost' => 0,
         ]);
 
         [$headers, $values] = $this->parseCsv($this->actingAs($this->user)->get(route('products.export'))->streamedContent());
         $row = array_combine($headers, $values);
 
-        $this->assertSame('Central Warehouse', $row['Warehouse']);
+        $this->assertSame('0', $row['Central Warehouse']);
 
         $this->actingAs($this->user)->post(route('products.import.store'), [
             'file' => $this->upload("code,name,group_name,Warehouse\n5011,Imported Warehouse Widget,{$this->productGroup->name},Central Warehouse\n"),

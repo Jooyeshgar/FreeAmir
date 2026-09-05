@@ -182,20 +182,20 @@ class ProductService
         $ancillaryCost->loadMissing('items', 'invoice.items');
 
         foreach ($ancillaryCost->items as $ancillaryCostItem) {
+            $warehouseId = $ancillaryCost->invoice->warehouse_id;
             $invoiceItems = $ancillaryCost->invoice->items
                 ->filter(fn (InvoiceItem $item) => $item->itemable_type === Product::class
-                    && (int) $item->itemable_id === (int) $ancillaryCostItem->product_id
-                    && $item->warehouse_id);
+                    && (int) $item->itemable_id === (int) $ancillaryCostItem->product_id);
             $totalQuantity = (float) $invoiceItems->sum('quantity');
 
-            if ($totalQuantity <= 0) {
+            if (! $warehouseId || $totalQuantity <= 0) {
                 continue;
             }
 
             foreach ($invoiceItems as $invoiceItem) {
                 $stock = WarehouseProductStock::query()
                     ->where('product_id', $ancillaryCostItem->product_id)
-                    ->where('warehouse_id', $invoiceItem->warehouse_id)
+                    ->where('warehouse_id', $warehouseId)
                     ->lockForUpdate()
                     ->first();
 

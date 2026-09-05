@@ -206,7 +206,7 @@ class WarehouseTest extends TestCase
         $this->get(route('warehouses.transfer-history'))->assertOk()->assertSee('Transferred Product')->assertSee($this->user->name);
     }
 
-    public function test_product_create_and_update_reject_another_company_warehouse(): void
+    public function test_product_create_and_update_ignore_legacy_warehouse_field(): void
     {
         $this->user->givePermissionTo([
             Permission::firstOrCreate(['name' => 'products.store']),
@@ -214,7 +214,6 @@ class WarehouseTest extends TestCase
         ]);
 
         $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId]);
-        $ownWarehouse = $this->makeWarehouse();
         $otherCompany = Company::factory()->create();
         $foreignWarehouse = Warehouse::withoutGlobalScopes()->create([
             'company_id' => $otherCompany->id,
@@ -229,18 +228,18 @@ class WarehouseTest extends TestCase
             'quantity' => '0',
         ];
 
-        $this->post(route('products.store'), $payload)->assertSessionHasErrors('warehouse_id');
+        $this->post(route('products.store'), $payload)->assertSessionHasNoErrors();
 
         $product = Product::factory()->withGroup($group)->withSubjects()->create([
             'company_id' => $this->companyId,
-            'warehouse_id' => $ownWarehouse->id,
         ]);
+        $payload['code'] = 'WH-SCOPE-UPDATED';
 
-        $this->put(route('products.update', $product), $payload)->assertSessionHasErrors('warehouse_id');
-        $this->assertSame($ownWarehouse->id, $product->fresh()->warehouse_id);
+        $this->put(route('products.update', $product), $payload)->assertSessionHasNoErrors();
+        $this->assertFalse(array_key_exists('warehouse_id', $product->fresh()->getAttributes()));
     }
 
-    public function test_invoice_requires_company_warehouse_for_product_rows(): void
+    public function test_invoice_requires_company_warehouse(): void
     {
         $otherCompany = Company::factory()->create();
         $foreignWarehouse = Warehouse::withoutGlobalScopes()->create([
@@ -252,24 +251,18 @@ class WarehouseTest extends TestCase
         $rules = $request->rules();
 
         $validator = validator([
-            'transactions' => [[
-                'item_type' => 'product',
-                'warehouse_id' => $foreignWarehouse->id,
-            ]],
+            'warehouse_id' => $foreignWarehouse->id,
         ], [
-            'transactions.*.warehouse_id' => $rules['transactions.*.warehouse_id'],
+            'warehouse_id' => $rules['warehouse_id'],
         ]);
 
         $this->assertTrue($validator->fails());
-        $this->assertArrayHasKey('transactions.0.warehouse_id', $validator->errors()->toArray());
+        $this->assertArrayHasKey('warehouse_id', $validator->errors()->toArray());
 
         $missingValidator = validator([
-            'transactions' => [[
-                'item_type' => 'product',
-                'warehouse_id' => null,
-            ]],
+            'warehouse_id' => null,
         ], [
-            'transactions.*.warehouse_id' => $rules['transactions.*.warehouse_id'],
+            'warehouse_id' => $rules['warehouse_id'],
         ]);
 
         $this->assertTrue($missingValidator->fails());
@@ -282,7 +275,6 @@ class WarehouseTest extends TestCase
         $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId]);
         $product = Product::factory()->withGroup($group)->withSubjects()->create([
             'company_id' => $this->companyId,
-            'warehouse_id' => $source->id,
             'quantity' => 12,
             'average_cost' => 100,
         ]);
@@ -302,7 +294,6 @@ class WarehouseTest extends TestCase
 
         app(ProductService::class)->update($product, [
             'name' => 'Edited Product',
-            'warehouse_id' => $newDefault->id,
         ]);
 
         $this->assertDatabaseHas('warehouse_product_stocks', [

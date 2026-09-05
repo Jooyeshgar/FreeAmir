@@ -68,7 +68,6 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->emptyWarehouse = $this->warehouse('Empty');
         $this->product = Product::factory()->withGroup($group)->withSubjects()->create([
             'company_id' => $this->company->id,
-            'warehouse_id' => $this->mainWarehouse->id,
             'quantity' => 0,
             'average_cost' => 100,
         ]);
@@ -144,7 +143,7 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->assertStock($this->emptyWarehouse, 4);
     }
 
-    public function test_fiscal_year_import_remaps_product_item_warehouse_and_clears_service_item_warehouse(): void
+    public function test_fiscal_year_import_remaps_invoice_warehouse(): void
     {
         $serviceGroup = ServiceGroup::factory()->withSubject()->create(['company_id' => $this->company->id]);
         $service = Service::factory()->withGroup($serviceGroup)->withSubject()->create(['company_id' => $this->company->id]);
@@ -156,6 +155,7 @@ class WarehouseInvoiceStockTest extends TestCase
             'status' => InvoiceStatus::UNAPPROVED,
             'customer_id' => $this->customer->id,
             'creator_id' => $this->user->id,
+            'warehouse_id' => $this->mainWarehouse->id,
             'subtraction' => 0,
             'vat' => 0,
             'amount' => 200,
@@ -165,7 +165,6 @@ class WarehouseInvoiceStockTest extends TestCase
             'invoice_id' => $invoice->id,
             'itemable_id' => $this->product->id,
             'itemable_type' => Product::class,
-            'warehouse_id' => $this->mainWarehouse->id,
             'quantity' => 1,
             'unit_price' => 100,
             'unit_discount' => 0,
@@ -176,7 +175,6 @@ class WarehouseInvoiceStockTest extends TestCase
             'invoice_id' => $invoice->id,
             'itemable_id' => $service->id,
             'itemable_type' => Service::class,
-            'warehouse_id' => $this->mainWarehouse->id,
             'quantity' => 1,
             'unit_price' => 100,
             'unit_discount' => 0,
@@ -204,14 +202,11 @@ class WarehouseInvoiceStockTest extends TestCase
             ->where('company_id', $target->id)
             ->where('number', $invoice->number)
             ->firstOrFail();
-        $importedItems = InvoiceItem::where('invoice_id', $targetInvoice->id)->get()->keyBy('itemable_type');
-
         $this->assertNotSame($this->mainWarehouse->id, $targetWarehouse->id);
-        $this->assertSame($targetWarehouse->id, $importedItems[Product::class]->warehouse_id);
-        $this->assertNull($importedItems[Service::class]->warehouse_id);
+        $this->assertSame($targetWarehouse->id, $targetInvoice->warehouse_id);
         $this->assertSame(
             $target->id,
-            Warehouse::withoutGlobalScopes()->findOrFail($importedItems[Product::class]->warehouse_id)->company_id
+            Warehouse::withoutGlobalScopes()->findOrFail($targetInvoice->warehouse_id)->company_id
         );
     }
 
@@ -236,7 +231,7 @@ class WarehouseInvoiceStockTest extends TestCase
         $errors = $this->validateForm($payload, $sell);
         $this->assertArrayHasKey('transactions.0.quantity', $errors);
 
-        $this->assertSame($this->mainWarehouse->id, $sell->fresh()->items->first()->warehouse_id);
+        $this->assertSame($this->mainWarehouse->id, $sell->fresh()->warehouse_id);
         $this->assertStock($this->mainWarehouse, 6);
         $this->assertStock($this->emptyWarehouse, 0);
     }
@@ -268,11 +263,11 @@ class WarehouseInvoiceStockTest extends TestCase
         ]);
 
         $missingPayload = $this->formPayload(InvoiceType::BUY, 1, $this->mainWarehouse, false);
-        unset($missingPayload['transactions'][0]['warehouse_id']);
+        unset($missingPayload['warehouse_id']);
 
-        $this->assertArrayHasKey('transactions.0.warehouse_id', $this->validateForm($missingPayload));
+        $this->assertArrayHasKey('warehouse_id', $this->validateForm($missingPayload));
         $this->assertArrayHasKey(
-            'transactions.0.warehouse_id',
+            'warehouse_id',
             $this->validateForm($this->formPayload(InvoiceType::BUY, 1, $foreignWarehouse, false))
         );
     }
@@ -282,11 +277,11 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->createInvoice(InvoiceType::BUY, 10, $this->mainWarehouse, true);
         $sell = $this->createInvoice(InvoiceType::SELL, 2, $this->mainWarehouse, false);
 
-        InvoiceService::updateInvoice($sell->id, $this->invoiceData(InvoiceType::SELL), [
-            $this->item(2, $this->emptyWarehouse),
+        InvoiceService::updateInvoice($sell->id, $this->invoiceData(InvoiceType::SELL, $this->emptyWarehouse), [
+            $this->item(2),
         ]);
 
-        $this->assertSame($this->emptyWarehouse->id, $sell->fresh()->items->first()->warehouse_id);
+        $this->assertSame($this->emptyWarehouse->id, $sell->fresh()->warehouse_id);
         $this->assertStock($this->mainWarehouse, 10);
         $this->assertStock($this->emptyWarehouse, 0);
     }
@@ -295,13 +290,13 @@ class WarehouseInvoiceStockTest extends TestCase
     {
         $buy = $this->createInvoice(InvoiceType::BUY, 4, $this->mainWarehouse, true);
 
-        InvoiceService::updateInvoice($buy->id, $this->invoiceData(InvoiceType::BUY), [
-            $this->item(2, $this->emptyWarehouse),
+        InvoiceService::updateInvoice($buy->id, $this->invoiceData(InvoiceType::BUY, $this->emptyWarehouse), [
+            $this->item(2),
         ], true);
 
         $this->assertStock($this->mainWarehouse, 0);
         $this->assertStock($this->emptyWarehouse, 2);
-        $this->assertSame($this->emptyWarehouse->id, $buy->fresh()->items->first()->warehouse_id);
+        $this->assertSame($this->emptyWarehouse->id, $buy->fresh()->warehouse_id);
     }
 
     public function test_stock_mutation_rejects_an_outgoing_invoice_that_would_make_warehouse_negative(): void
@@ -321,7 +316,7 @@ class WarehouseInvoiceStockTest extends TestCase
 
         $void = (new InvoiceService)->voidInvoice($sell, $this->user, now()->toDateString(), ++$this->nextInvoiceNumber)['invoice'];
 
-        $this->assertSame($this->mainWarehouse->id, $void->items->first()->warehouse_id);
+        $this->assertSame($this->mainWarehouse->id, $void->warehouse_id);
         $this->assertStock($this->mainWarehouse, 10);
 
         $this->unapprove($void);
@@ -334,7 +329,7 @@ class WarehouseInvoiceStockTest extends TestCase
         $service = Service::factory()->withGroup($serviceGroup)->withSubject()->create(['company_id' => $this->company->id]);
         $buy = InvoiceService::createInvoice(
             $this->user,
-            $this->invoiceData(InvoiceType::BUY),
+            $this->invoiceData(InvoiceType::BUY, $this->mainWarehouse),
             [[
                 'itemable_type' => 'service',
                 'itemable_id' => $service->id,
@@ -347,8 +342,6 @@ class WarehouseInvoiceStockTest extends TestCase
 
         $payload = $this->formPayload(InvoiceType::RETURN_BUY, 1, $this->mainWarehouse, false, $buy);
         $payload['transactions'][0]['item_id'] = 'service-'.$service->id;
-        unset($payload['transactions'][0]['warehouse_id']);
-
         $errors = $this->validateForm($payload);
 
         $this->assertArrayNotHasKey('transactions.0.item_id', $errors);
@@ -470,15 +463,15 @@ class WarehouseInvoiceStockTest extends TestCase
     {
         $result = InvoiceService::createInvoice(
             $this->user,
-            $this->invoiceData($type, $returnedInvoice),
-            [$this->item($quantity, $warehouse, $unit)],
+            $this->invoiceData($type, $warehouse, $returnedInvoice),
+            [$this->item($quantity, $unit)],
             $approved
         );
 
         return Invoice::withoutGlobalScopes()->with('items')->findOrFail($result['invoice']->id);
     }
 
-    private function invoiceData(InvoiceType $type, ?Invoice $returnedInvoice = null): array
+    private function invoiceData(InvoiceType $type, Warehouse $warehouse, ?Invoice $returnedInvoice = null): array
     {
         $number = ++$this->nextInvoiceNumber;
 
@@ -487,18 +480,18 @@ class WarehouseInvoiceStockTest extends TestCase
             'date' => now()->toDateString(),
             'invoice_type' => $type,
             'customer_id' => $this->customer->id,
+            'warehouse_id' => $warehouse->id,
             'document_number' => $number,
             'number' => $number,
             'returned_invoice_id' => $returnedInvoice?->id,
         ];
     }
 
-    private function item(float $quantity, Warehouse $warehouse, float $unit = 100): array
+    private function item(float $quantity, float $unit = 100): array
     {
         return [
             'itemable_type' => 'product',
             'itemable_id' => $this->product->id,
-            'warehouse_id' => $warehouse->id,
             'quantity' => $quantity,
             'unit' => $unit,
             'unit_discount' => 0,
@@ -525,9 +518,9 @@ class WarehouseInvoiceStockTest extends TestCase
             'invoice_number' => $number,
             'returned_invoice_id' => $returnedInvoice?->id,
             ...($approve ? ['approve' => '1'] : []),
+            'warehouse_id' => $warehouse->id,
             'transactions' => [[
                 'item_id' => 'product-'.$this->product->id,
-                'warehouse_id' => $warehouse->id,
                 'quantity' => $quantity,
                 'unit' => 100,
                 'off' => 0,

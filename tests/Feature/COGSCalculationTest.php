@@ -12,6 +12,8 @@ use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\User;
+use App\Models\Warehouse;
+use App\Models\WarehouseProductStock;
 use App\Services\AncillaryCostService;
 use App\Services\CostOfGoodsService;
 use App\Services\InvoiceService;
@@ -61,7 +63,21 @@ class COGSCalculationTest extends TestCase
     {
         $group = ProductGroup::withoutGlobalScopes()->where('company_id', $this->companyId)->firstOrFail();
 
-        return Product::factory()->withGroup($group)->withSubjects()->create(array_merge(['company_id' => $this->companyId], $overrides));
+        $warehouse = Warehouse::withoutGlobalScopes()->firstOrCreate(
+            ['company_id' => $this->companyId, 'code' => 'MAIN'],
+            ['name' => 'انبار اصلی']
+        );
+
+        $product = Product::factory()->withGroup($group)->withSubjects()->create(array_merge([
+            'company_id' => $this->companyId,
+        ], $overrides));
+
+        WarehouseProductStock::firstOrCreate(
+            ['warehouse_id' => $warehouse->id, 'product_id' => $product->id],
+            ['quantity' => (float) $product->quantity, 'average_cost' => (float) $product->average_cost]
+        );
+
+        return $product;
     }
 
     private function createInvoice(
@@ -73,6 +89,8 @@ class COGSCalculationTest extends TestCase
         ?int $returnedInvoiceId = null
     ): array {
         $number ??= ++$this->nextInvoiceNumber;
+        $productItem = collect($items)->firstWhere('itemable_type', 'product');
+        $warehouseId = $productItem['warehouse_id'] ?? null;
 
         $result = InvoiceService::createInvoice(
             $this->user,
@@ -81,6 +99,7 @@ class COGSCalculationTest extends TestCase
                 'date' => $date ?? now()->toDateString(),
                 'invoice_type' => $type,
                 'customer_id' => $this->customer->id,
+                'warehouse_id' => $warehouseId,
                 'document_number' => $number,
                 'number' => $number,
                 'returned_invoice_id' => $returnedInvoiceId,
@@ -127,6 +146,7 @@ class COGSCalculationTest extends TestCase
         return [
             'itemable_type' => 'product',
             'itemable_id' => $product->id,
+            'warehouse_id' => $product->warehouseStocks()->orderBy('warehouse_id')->value('warehouse_id'),
             'quantity' => $qty,
             'unit' => $unit,
             'unit_discount' => 0,
@@ -192,6 +212,7 @@ class COGSCalculationTest extends TestCase
             'description' => $invoice->description,
             'subtraction' => $invoice->subtraction ?? 0,
             'permanent' => $invoice->permanent ?? 0,
+            'warehouse_id' => $invoice->warehouse_id,
         ];
 
         $result = $this->updateInvoice($invoice, $payload, $newItems, $approved);

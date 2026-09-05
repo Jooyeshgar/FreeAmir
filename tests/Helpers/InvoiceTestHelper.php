@@ -20,22 +20,20 @@ trait InvoiceTestHelper
             ->where('company_id', $this->companyId)
             ->firstOrFail();
 
+        $warehouse = Warehouse::withoutGlobalScopes()->firstOrCreate(
+            ['company_id' => $this->companyId, 'code' => 'MAIN'],
+            ['name' => 'انبار اصلی']
+        );
+
         $product = Product::factory()
             ->withGroup($group)
             ->withSubjects()
             ->create(array_merge(['company_id' => $this->companyId], $overrides));
 
-        if (! $product->warehouse_id) {
-            $warehouse = Warehouse::withoutGlobalScopes()->firstOrCreate(
-                ['company_id' => $this->companyId, 'code' => 'MAIN'],
-                ['name' => 'انبار اصلی']
-            );
-            $product->updateQuietly(['warehouse_id' => $warehouse->id]);
-            WarehouseProductStock::firstOrCreate(
-                ['warehouse_id' => $warehouse->id, 'product_id' => $product->id],
-                ['quantity' => (float) $product->quantity, 'average_cost' => (float) $product->average_cost]
-            );
-        }
+        WarehouseProductStock::firstOrCreate(
+            ['warehouse_id' => $warehouse->id, 'product_id' => $product->id],
+            ['quantity' => (float) $product->quantity, 'average_cost' => (float) $product->average_cost]
+        );
 
         return $product;
     }
@@ -45,7 +43,7 @@ trait InvoiceTestHelper
         return [
             'itemable_type' => 'product',
             'itemable_id' => $product->id,
-            'warehouse_id' => $product->warehouse_id,
+            'warehouse_id' => $product->warehouseStocks()->orderBy('warehouse_id')->value('warehouse_id'),
             'quantity' => $qty,
             'unit' => $unit,
             'unit_discount' => 0,
@@ -62,6 +60,8 @@ trait InvoiceTestHelper
         ?int $returnedInvoiceId = null
     ): array|Exception {
         $number ??= ++$this->nextInvoiceNumber;
+        $productItem = collect($items)->firstWhere('itemable_type', 'product');
+        $warehouseId = $productItem['warehouse_id'] ?? null;
         if ($returnedInvoiceId) {
             $this->validateInvoiceItemsQuantity($returnedInvoiceId, $items);
         }
@@ -73,6 +73,7 @@ trait InvoiceTestHelper
                 'date' => $date ?? now()->toDateString(),
                 'invoice_type' => $type,
                 'customer_id' => $this->customer->id,
+                'warehouse_id' => $warehouseId,
                 'document_number' => $number,
                 'number' => $number,
                 'returned_invoice_id' => $returnedInvoiceId,
