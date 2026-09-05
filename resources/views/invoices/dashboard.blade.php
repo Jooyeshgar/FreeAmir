@@ -1,13 +1,8 @@
-@php
-    $productSalesTotal = collect($productSalesBreakdown)->sum('amount');
-    $serviceSalesTotal = collect($serviceSalesBreakdown)->sum('amount');
-@endphp
-
 <x-app-layout :title="__('Invoice Dashboard')">
     <x-show-message-bags />
 
     <main class="mt-8 space-y-4" data-invoice-dashboard>
-        <section class="overflow-hidden rounded-xl border border-base-300 bg-base-100 shadow-sm">
+        <section class="rounded-xl border border-base-300 bg-base-100 shadow-sm">
             <div class="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
                 <div class="max-w-3xl">
                     <div class="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
@@ -34,26 +29,6 @@
                 </form>
             </div>
 
-            <div class="grid border-t border-base-300 sm:grid-cols-3">
-                <div class="border-b border-base-300 p-4 sm:border-b-0 sm:border-e">
-                    <div class="text-xs text-base-content/50">{{ __('Net sales') }}</div>
-                    <div class="mt-1 text-xl font-black tabular-nums text-emerald-700 dark:text-emerald-300">
-                        {{ formatNumber($summary['net_sales']) }} <span class="text-xs font-normal">{{ __('Rial') }}</span>
-                    </div>
-                </div>
-                <div class="border-b border-base-300 p-4 sm:border-b-0 sm:border-e">
-                    <div class="text-xs text-base-content/50">{{ __('Net purchases') }}</div>
-                    <div class="mt-1 text-xl font-black tabular-nums text-sky-700 dark:text-sky-300">
-                        {{ formatNumber($summary['net_purchases']) }} <span class="text-xs font-normal">{{ __('Rial') }}</span>
-                    </div>
-                </div>
-                <div class="p-4">
-                    <div class="text-xs text-base-content/50">{{ __('Sales minus purchases') }}</div>
-                    <div class="mt-1 text-xl font-black tabular-nums {{ $summary['trade_balance'] >= 0 ? 'text-violet-700 dark:text-violet-300' : 'text-rose-700 dark:text-rose-300' }}">
-                        {{ formatNumber($summary['trade_balance']) }} <span class="text-xs font-normal">{{ __('Rial') }}</span>
-                    </div>
-                </div>
-            </div>
         </section>
 
         <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -70,7 +45,7 @@
                 :suffix="__('Rial')"
                 :detail="__('Cost snapshot at the time of sale')"
                 tone="error"
-                icon="cogs" />
+                icon="cost" />
             <x-metric-card
                 :title="__('Product gross profit')"
                 :value="$summary['product_profit']"
@@ -125,9 +100,16 @@
                         <h2 class="card-title text-base">{{ __('Product sell and buy trend') }}</h2>
                         <p class="text-xs text-base-content/55">{{ __('Net invoice-item amount after returns and voids') }}</p>
                     </div>
-                    <div class="mt-3 h-72">
-                        <canvas id="productInvoiceTrendChart" class="h-full w-full"></canvas>
-                    </div>
+                    <x-charts.line-chart
+                        chart-id="productInvoiceTrendChart"
+                        class="mt-3"
+                        height-class="h-72"
+                        :labels="$productTrend['labels']"
+                        :show-legend="true"
+                        :datasets="[
+                            ['label' => __('Sell'), 'data' => $productTrend['sell'], 'borderColor' => '#10b981', 'backgroundColor' => '#10b98120'],
+                            ['label' => __('Buy'), 'data' => $productTrend['buy'], 'borderColor' => '#0ea5e9', 'backgroundColor' => '#0ea5e914'],
+                        ]" />
                 </div>
             </article>
 
@@ -137,9 +119,16 @@
                         <h2 class="card-title text-base">{{ __('Service sell and buy trend') }}</h2>
                         <p class="text-xs text-base-content/55">{{ __('Net service invoice-item amount after returns') }}</p>
                     </div>
-                    <div class="mt-3 h-72">
-                        <canvas id="serviceInvoiceTrendChart" class="h-full w-full"></canvas>
-                    </div>
+                    <x-charts.line-chart
+                        chart-id="serviceInvoiceTrendChart"
+                        class="mt-3"
+                        height-class="h-72"
+                        :labels="$serviceTrend['labels']"
+                        :show-legend="true"
+                        :datasets="[
+                            ['label' => __('Sell'), 'data' => $serviceTrend['sell'], 'borderColor' => '#10b981', 'backgroundColor' => '#10b98120'],
+                            ['label' => __('Buy'), 'data' => $serviceTrend['buy'], 'borderColor' => '#0ea5e9', 'backgroundColor' => '#0ea5e914'],
+                        ]" />
                 </div>
             </article>
         </section>
@@ -149,15 +138,13 @@
                 <div class="card-body">
                     <h2 class="card-title text-base">{{ __('Product sales breakdown') }}</h2>
                     <p class="text-xs text-base-content/55">{{ __('Share of net product sales by product') }}</p>
-                    @if ($productSalesTotal > 0)
-                        <div class="mt-3 h-72">
-                            <canvas id="productSalesPieChart" class="h-full w-full"></canvas>
-                        </div>
-                    @else
-                        <div class="mt-3 flex h-72 items-center justify-center rounded-lg border border-dashed border-base-300 text-sm text-base-content/55">
-                            {{ __('No approved product sales in this period') }}
-                        </div>
-                    @endif
+                    <x-charts.pie-chart
+                        chart-id="productSalesPieChart"
+                        class="mt-3"
+                        height-class="h-72"
+                        :datas="$productSalesBreakdown"
+                        metric="amount"
+                        :label="__('Sales')" />
                 </div>
             </article>
 
@@ -165,20 +152,18 @@
                 <div class="card-body">
                     <h2 class="card-title text-base">{{ __('Service sales breakdown') }}</h2>
                     <p class="text-xs text-base-content/55">{{ __('Share of net service sales by service') }}</p>
-                    @if ($serviceSalesTotal > 0)
-                        <div class="mt-3 h-72">
-                            <canvas id="serviceSalesPieChart" class="h-full w-full"></canvas>
-                        </div>
-                    @else
-                        <div class="mt-3 flex h-72 items-center justify-center rounded-lg border border-dashed border-base-300 text-sm text-base-content/55">
-                            {{ __('No approved service sales in this period') }}
-                        </div>
-                    @endif
+                    <x-charts.pie-chart
+                        chart-id="serviceSalesPieChart"
+                        class="mt-3"
+                        height-class="h-72"
+                        :datas="$serviceSalesBreakdown"
+                        metric="amount"
+                        :label="__('Sales')" />
                 </div>
             </article>
         </section>
 
-        <section class="grid grid-cols-1 gap-4">
+        <section class="grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
             <article class="card border border-base-300 bg-base-100/90 shadow-sm">
                 <div class="card-body p-0">
                     <div class="border-b border-base-300 p-4">
@@ -193,6 +178,7 @@
                                     <th>{{ __('Type') }}</th>
                                     <th class="text-end">{{ __('Quantity') }}</th>
                                     <th class="text-end">{{ __('Sales') }} ({{ __('Rial') }})</th>
+                                    <th class="text-end">{{ __('Profit percentage') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -209,9 +195,67 @@
                                         <td><span class="badge badge-ghost badge-sm">{{ $row['kind'] }}</span></td>
                                         <td class="text-end tabular-nums">{{ formatNumber($row['quantity']) }}</td>
                                         <td class="text-end tabular-nums">{{ formatNumber($row['amount']) }}</td>
+                                        <td class="text-end tabular-nums">{{ formatNumber($row['profit_margin']) }}%</td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="4" class="text-center text-base-content/60">{{ __('No data') }}</td></tr>
+                                    <tr><td colspan="5" class="text-center text-base-content/60">{{ __('No data') }}</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </article>
+            <article class="card border border-base-300 bg-base-100/90 shadow-sm">
+                <div class="card-body p-0">
+                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-base-300 p-4">
+                        <div>
+                            <h2 class="card-title text-base">{{ __('Recent invoices') }}</h2>
+                            <p class="text-xs text-base-content/55">{{ __('Latest approved and settled invoices in this period') }}</p>
+                        </div>
+                        @can('invoices.index')
+                            <a href="{{ route('invoices.index', ['invoice_type' => 'sell']) }}" class="btn btn-sm btn-ghost">{{ __('Open invoice list') }}</a>
+                        @endcan
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="table table-zebra">
+                            <thead>
+                                <tr>
+                                    <th>{{ __('Invoice Number') }}</th>
+                                    <th>{{ __('Type') }}</th>
+                                    <th>{{ __('Customer') }}</th>
+                                    <th>{{ __('Date') }}</th>
+                                    <th class="text-end">{{ __('Amount') }} ({{ __('Rial') }})</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse ($recentInvoices as $invoice)
+                                    <tr class="hover">
+                                        <td>
+                                            @can('invoices.show')
+                                                <a href="{{ route('invoices.show', $invoice) }}" class="link link-hover">{{ localizeNumber($invoice->number) }}</a>
+                                            @else
+                                                {{ localizeNumber($invoice->number) }}
+                                            @endcan
+                                        </td>
+                                        <td>{{ $invoice->invoice_type->label() }}</td>
+                                        <td>
+                                            @if ($invoice->customer)
+                                                @can('customers.show')
+                                                    <a href="{{ route('customers.show', $invoice->customer) }}" class="link link-primary">
+                                                        {{ $invoice->customer->name }}
+                                                    </a>
+                                                @else
+                                                    {{ $invoice->customer->name }}
+                                                @endcan
+                                            @else
+                                                —
+                                            @endif
+                                        </td>
+                                        <td>{{ formatDate($invoice->date) }}</td>
+                                        <td class="text-end tabular-nums">{{ formatNumber($invoice->amount) }}</td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="5" class="text-center text-base-content/60">{{ __('No invoices found') }}</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
@@ -219,160 +263,5 @@
                 </div>
             </article>
         </section>
-
-        <section class="card border border-base-300 bg-base-100/90 shadow-sm">
-            <div class="card-body p-0">
-                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-base-300 p-4">
-                    <div>
-                        <h2 class="card-title text-base">{{ __('Recent invoices') }}</h2>
-                        <p class="text-xs text-base-content/55">{{ __('Latest approved and settled invoices in this period') }}</p>
-                    </div>
-                    @can('invoices.index')
-                        <a href="{{ route('invoices.index', ['invoice_type' => 'sell']) }}" class="btn btn-sm btn-ghost">{{ __('Open invoice list') }}</a>
-                    @endcan
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="table table-zebra">
-                        <thead>
-                            <tr>
-                                <th>{{ __('Invoice Number') }}</th>
-                                <th>{{ __('Type') }}</th>
-                                <th>{{ __('Customer') }}</th>
-                                <th>{{ __('Date') }}</th>
-                                <th class="text-end">{{ __('Amount') }} ({{ __('Rial') }})</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($recentInvoices as $invoice)
-                                <tr class="hover">
-                                    <td>
-                                        @can('invoices.show')
-                                            <a href="{{ route('invoices.show', $invoice) }}" class="link link-hover">{{ localizeNumber($invoice->number) }}</a>
-                                        @else
-                                            {{ localizeNumber($invoice->number) }}
-                                        @endcan
-                                    </td>
-                                    <td>{{ $invoice->invoice_type->label() }}</td>
-                                    <td>{{ $invoice->customer?->name ?? '—' }}</td>
-                                    <td>{{ formatDate($invoice->date) }}</td>
-                                    <td class="text-end tabular-nums">{{ formatNumber($invoice->amount) }}</td>
-                                </tr>
-                            @empty
-                                <tr><td colspan="5" class="text-center text-base-content/60">{{ __('No invoices found') }}</td></tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
     </main>
-
-    @push('scripts')
-        <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                const productTrend = @json($productTrend);
-                const serviceTrend = @json($serviceTrend);
-                const productSalesBreakdown = @json($productSalesBreakdown);
-                const serviceSalesBreakdown = @json($serviceSalesBreakdown);
-                const charts = {};
-
-                const palette = {
-                    sell: '#10b981',
-                    buy: '#0ea5e9',
-                };
-
-                const pieColors = ['#8b5cf6', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#14b8a6', '#6366f1'];
-
-                const money = (value) => Number(value || 0).toLocaleString();
-
-                const renderTrend = (id, data) => {
-                    const canvas = document.getElementById(id);
-                    if (!canvas || !window.Chart) return;
-
-                    charts[id]?.destroy();
-                    const theme = window.getFreeAmirChartTheme
-                        ? window.getFreeAmirChartTheme()
-                        : { mutedTextColor: '#64748b', gridColor: 'rgba(148,163,184,0.24)' };
-
-                    charts[id] = new Chart(canvas, {
-                        type: 'line',
-                        data: {
-                            labels: data.labels,
-                            datasets: [
-                                {
-                                    label: @json(__('Sell')),
-                                    data: data.sell,
-                                    borderColor: palette.sell,
-                                    backgroundColor: 'rgba(16,185,129,0.12)',
-                                    fill: true,
-                                    tension: 0.32,
-                                    pointRadius: 2,
-                                },
-                                {
-                                    label: @json(__('Buy')),
-                                    data: data.buy,
-                                    borderColor: palette.buy,
-                                    backgroundColor: 'rgba(14,165,233,0.08)',
-                                    fill: true,
-                                    tension: 0.32,
-                                    pointRadius: 2,
-                                },
-                            ],
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            interaction: { mode: 'index', intersect: false },
-                            plugins: {
-                                datalabels: { display: false },
-                                tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${money(context.parsed.y)}` } },
-                            },
-                            scales: {
-                                x: { grid: { display: false }, ticks: { color: theme.mutedTextColor, maxRotation: 0 } },
-                                y: { beginAtZero: true, grid: { color: theme.gridColor }, ticks: { color: theme.mutedTextColor, callback: money } },
-                            },
-                        },
-                    });
-                };
-
-                const renderPie = (id, rows) => {
-                    const canvas = document.getElementById(id);
-                    if (!canvas || !window.Chart) return;
-
-                    charts[id]?.destroy();
-                    charts[id] = new Chart(canvas, {
-                        type: 'pie',
-                        data: {
-                            labels: rows.map((row) => row.name),
-                            datasets: [{
-                                data: rows.map((row) => row.amount),
-                                backgroundColor: rows.map((row, index) => pieColors[index % pieColors.length]),
-                                borderWidth: 0,
-                                hoverOffset: 6,
-                            }],
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                datalabels: { display: false },
-                                legend: { position: 'bottom', labels: { usePointStyle: true, padding: 18 } },
-                                tooltip: { callbacks: { label: (context) => `${context.label}: ${money(context.parsed)} ${@json(__('Rial'))}` } },
-                            },
-                        },
-                    });
-                };
-
-                const renderCharts = () => {
-                    renderTrend('productInvoiceTrendChart', productTrend);
-                    renderTrend('serviceInvoiceTrendChart', serviceTrend);
-                    renderPie('productSalesPieChart', productSalesBreakdown);
-                    renderPie('serviceSalesPieChart', serviceSalesBreakdown);
-                };
-
-                renderCharts();
-                window.addEventListener('theme:changed', renderCharts);
-            });
-        </script>
-    @endpush
 </x-app-layout>

@@ -80,10 +80,21 @@ class InvoiceDashboardTest extends TestCase
             'recentInvoices',
         ]);
         $response->assertSee('data-invoice-dashboard', false);
+        $response->assertSee('productInvoiceTrendChart', false);
+        $response->assertSee('productSalesPieChart', false);
         $response->assertViewHas('filters', [
             'start_date' => jalali_to_gregorian(1405, 1, 1, '-'),
             'end_date' => Carbon::parse(jalali_to_gregorian(1406, 1, 1, '-'))->subDay()->toDateString(),
         ]);
+    }
+
+    public function test_dashboard_header_does_not_repeat_summary_values(): void
+    {
+        $view = file_get_contents(resource_path('views/invoices/dashboard.blade.php'));
+
+        $this->assertStringNotContainsString("__('Net sales')", $view);
+        $this->assertStringNotContainsString("__('Net purchases')", $view);
+        $this->assertStringNotContainsString("__('Sales minus purchases')", $view);
     }
 
     public function test_dates_outside_active_fiscal_year_are_rejected(): void
@@ -175,6 +186,7 @@ class InvoiceDashboardTest extends TestCase
             ['id' => $service->id, 'name' => 'Dashboard Service', 'amount' => 800.0],
         ], $data['serviceSalesBreakdown']->all());
         $this->assertSame('Dashboard Service', $data['topSales']->first()['name']);
+        $this->assertSame(100.0, $data['topSales']->first()['profit_margin']);
     }
 
     public function test_summary_uses_invoice_totals_including_invoice_level_adjustments(): void
@@ -255,7 +267,7 @@ class InvoiceDashboardTest extends TestCase
 
     public function test_dashboard_tables_link_to_item_and_invoice_details(): void
     {
-        $this->grant('invoices.dashboard', 'invoices.show', 'products.show');
+        $this->grant('invoices.dashboard', 'invoices.show', 'products.show', 'customers.show');
         $product = Product::factory()->create(['company_id' => $this->companyId, 'name' => 'Linked Product']);
         $sell = $this->invoice(InvoiceType::SELL, InvoiceStatus::APPROVED, 11, '2026-08-10', 500);
         $this->item($sell, $product, 1, 500, 500, 200);
@@ -264,7 +276,49 @@ class InvoiceDashboardTest extends TestCase
             ->get(route('invoices.dashboard'))
             ->assertOk()
             ->assertSee(route('products.show', $product), false)
-            ->assertSee(route('invoices.show', $sell), false);
+            ->assertSee(route('invoices.show', $sell), false)
+            ->assertSee(route('customers.show', $this->customer), false);
+    }
+
+    public function test_sales_breakdowns_keep_top_five_items_and_group_the_rest_as_other(): void
+    {
+        foreach (range(1, 7) as $index) {
+            $product = Product::factory()->create([
+                'company_id' => $this->companyId,
+                'name' => "Product {$index}",
+            ]);
+            $service = Service::factory()->create([
+                'company_id' => $this->companyId,
+                'name' => "Service {$index}",
+            ]);
+            $invoice = $this->invoice(InvoiceType::SELL, InvoiceStatus::APPROVED, $index, '2026-08-10', 0);
+            $this->item($invoice, $product, 1, 800 - ($index * 100), 800 - ($index * 100));
+            $this->item($invoice, $service, 1, 1600 - ($index * 200), 1600 - ($index * 200));
+        }
+
+        $data = app(InvoiceDashboardService::class)->dashboard();
+
+        $this->assertCount(6, $data['productSalesBreakdown']);
+        $this->assertSame(__('Other'), $data['productSalesBreakdown']->last()['name']);
+        $this->assertSame(300.0, $data['productSalesBreakdown']->last()['amount']);
+        $this->assertCount(6, $data['serviceSalesBreakdown']);
+        $this->assertSame(__('Other'), $data['serviceSalesBreakdown']->last()['name']);
+        $this->assertSame(600.0, $data['serviceSalesBreakdown']->last()['amount']);
+    }
+
+    public function test_top_sales_include_profit_percentage_from_historical_cost(): void
+    {
+        $product = Product::factory()->create(['company_id' => $this->companyId]);
+        $sell = $this->invoice(InvoiceType::SELL, InvoiceStatus::APPROVED, 1, '2026-08-10', 1000);
+        $this->item($sell, $product, 2, 500, 1000, 300);
+
+        $return = $this->invoice(InvoiceType::RETURN_SELL, InvoiceStatus::APPROVED, 2, '2026-08-11', 500);
+        $this->item($return, $product, 1, 500, 500, 300);
+
+        $row = app(InvoiceDashboardService::class)->dashboard()['topSales']->first();
+
+        $this->assertSame(500.0, $row['amount']);
+        $this->assertSame(40.0, $row['profit_margin']);
     }
 
     private function invoice(InvoiceType $type, InvoiceStatus $status, int $number, string $date, float $amount): Invoice

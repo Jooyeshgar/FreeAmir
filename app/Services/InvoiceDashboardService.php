@@ -137,7 +137,7 @@ class InvoiceDashboardService
             ], true))
             ->reduce(function (array $totals, InvoiceItem $item) {
                 $sign = $item->invoice->invoice_type === InvoiceType::SELL ? 1 : -1;
-                $revenue = ((float) $item->amount - (float) $item->vat) * $sign;
+                $revenue = $this->itemRevenue($item) * $sign;
                 $cost = (float) $item->cog_after * (float) $item->quantity * $sign;
 
                 $totals['revenue'] += $revenue;
@@ -210,7 +210,7 @@ class InvoiceDashboardService
 
     private function salesBreakdown(Collection $items, string $itemableType): Collection
     {
-        return $items
+        $sales = $items
             ->where('itemable_type', $itemableType)
             ->groupBy('itemable_id')
             ->map(function (Collection $group) {
@@ -225,6 +225,19 @@ class InvoiceDashboardService
             ->filter(fn (array $row) => $row['amount'] > 0)
             ->sortByDesc('amount')
             ->values();
+
+        $topSales = $sales->take(5)->values();
+        $otherAmount = (float) $sales->skip(5)->sum('amount');
+
+        if ($otherAmount > 0) {
+            $topSales->push([
+                'id' => null,
+                'name' => __('Other'),
+                'amount' => round($otherAmount, 2),
+            ]);
+        }
+
+        return $topSales;
     }
 
     private function netItemSales(Collection $items): float
@@ -249,6 +262,9 @@ class InvoiceDashboardService
             ->groupBy(fn (InvoiceItem $item) => $item->itemable_type.'-'.$item->itemable_id)
             ->map(function (Collection $group) {
                 $first = $group->first();
+                $revenue = $this->netItemRevenue($group);
+                $cost = $this->netItemCost($group);
+                $profitMargin = $revenue != 0.0 ? (($revenue - $cost) / $revenue) * 100 : 0.0;
 
                 return [
                     'id' => $first->itemable_id,
@@ -261,12 +277,36 @@ class InvoiceDashboardService
                         return $sign * (float) $item->quantity;
                     }),
                     'amount' => $this->netItemSales($group),
+                    'profit_margin' => round($profitMargin, 2),
                 ];
             })
             ->filter(fn (array $row) => $row['amount'] > 0)
             ->sortByDesc('amount')
             ->take(8)
             ->values();
+    }
+
+    private function netItemRevenue(Collection $items): float
+    {
+        return (float) $items->sum(function (InvoiceItem $item) {
+            $sign = $item->invoice->invoice_type === InvoiceType::SELL ? 1 : -1;
+
+            return $this->itemRevenue($item) * $sign;
+        });
+    }
+
+    private function netItemCost(Collection $items): float
+    {
+        return (float) $items->sum(function (InvoiceItem $item) {
+            $sign = $item->invoice->invoice_type === InvoiceType::SELL ? 1 : -1;
+
+            return (float) $item->cog_after * (float) $item->quantity * $sign;
+        });
+    }
+
+    private function itemRevenue(InvoiceItem $item): float
+    {
+        return (float) $item->amount - (float) $item->vat;
     }
 
     private function monthlyBuckets(Carbon $from, Carbon $to): array

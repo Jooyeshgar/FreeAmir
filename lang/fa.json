@@ -2155,6 +2155,7 @@
     "The end date must be within the active fiscal year.": "تاریخ پایان باید در محدوده سال مالی فعال باشد.",
     "The start date must be within the active fiscal year.": "تاریخ شروع باید در محدوده سال مالی فعال باشد.",
     "Profit Margin": "حاشیه سود",
+    "Profit percentage": "درصد سود",
     "Profit and loss": "سود و زیان",
     "Profit per Unit": "سود هر واحد",
     "Profitability and trade for the current fiscal year": "سودآوری و عملکرد تجاری سال مالی جاری",
