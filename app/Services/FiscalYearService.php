@@ -494,6 +494,7 @@ class FiscalYearService
                     $documentMapping = $idMappings['documents'] ?? [];
                     $productMapping = $idMappings['products'] ?? [];
                     $serviceMapping = $idMappings['services'] ?? [];
+                    $warehouseMapping = $idMappings['warehouses'] ?? [];
 
                     if (isset($importData['invoices'])) {
                         if (! empty($customerMapping)) {
@@ -507,7 +508,7 @@ class FiscalYearService
 
                     if (isset($importData['invoice_items'])) {
                         if (! empty($idMappings['invoices']) && ! (empty($productMapping) && empty($serviceMapping))) {
-                            self::_importInvoiceItems($importData['invoice_items'], $idMappings['invoices'], $productMapping, $serviceMapping);
+                            self::_importInvoiceItems($importData['invoice_items'], $idMappings['invoices'], $productMapping, $serviceMapping, $warehouseMapping);
                         } else {
                             Log::warning('Skipping invoice item import due to missing invoice or product or service mappings.', [
                                 'target_year_id' => $targetYearId,
@@ -2526,8 +2527,9 @@ class FiscalYearService
      * @param  array  $invoiceMapping  Mapping of old invoice ID to new invoice ID.
      * @param  array  $productMapping  Mapping of old product ID to new product ID.
      * @param  array  $serviceMapping  Mapping of old service ID to new service ID.
+     * @param  array  $warehouseMapping  Mapping of old warehouse ID to new warehouse ID.
      */
-    protected static function _importInvoiceItems(array $invoiceitemsData, array $invoiceMapping, array $productMapping, array $serviceMapping): void
+    protected static function _importInvoiceItems(array $invoiceitemsData, array $invoiceMapping, array $productMapping, array $serviceMapping, array $warehouseMapping): void
     {
         foreach ($invoiceitemsData as $invoiceItemData) {
             $oldInvoiceId = $invoiceItemData['invoice_id'] ?? null;
@@ -2552,9 +2554,12 @@ class FiscalYearService
             }
 
             $newInvoiceItem = new InvoiceItem;
-            $newInvoiceItem->fill(collect($invoiceItemData)->except(['id', 'invoice_id', 'itemable_id'])->toArray());
+            $newInvoiceItem->fill(collect($invoiceItemData)->except(['id', 'invoice_id', 'itemable_id', 'warehouse_id'])->toArray());
             $newInvoiceItem->invoice_id = $invoiceMapping[$oldInvoiceId];
-            $newInvoiceItem->itemable_id = in_array($invoiceItemData['itemable_type'], [Product::class, 'product']) ? $productMapping[$oldItemableId] : $serviceMapping[$oldItemableId];
+            $newInvoiceItem->itemable_id = $productCondition ? $productMapping[$oldItemableId] : $serviceMapping[$oldItemableId];
+            $newInvoiceItem->warehouse_id = $productCondition
+                ? ($warehouseMapping[$invoiceItemData['warehouse_id'] ?? null] ?? null)
+                : null;
             $newInvoiceItem->save();
         }
     }

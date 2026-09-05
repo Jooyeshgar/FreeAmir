@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\FiscalYearSection;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Http\Requests\StoreInvoiceRequest;
@@ -9,6 +10,7 @@ use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Service;
@@ -17,6 +19,7 @@ use App\Models\User;
 use App\Models\Warehouse;
 use App\Models\WarehouseProductStock;
 use App\Services\AncillaryCostService;
+use App\Services\FiscalYearService;
 use App\Services\InvoiceService;
 use App\Services\ProductService;
 use App\Services\WarehouseService;
@@ -139,6 +142,74 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->assertEqualsWithDelta(11, $quantity, 0.001);
         $this->assertStock($this->mainWarehouse, 7);
         $this->assertStock($this->emptyWarehouse, 4);
+    }
+
+    public function test_fiscal_year_import_remaps_product_item_warehouse_and_clears_service_item_warehouse(): void
+    {
+        $serviceGroup = ServiceGroup::factory()->withSubject()->create(['company_id' => $this->company->id]);
+        $service = Service::factory()->withGroup($serviceGroup)->withSubject()->create(['company_id' => $this->company->id]);
+        $invoice = Invoice::create([
+            'company_id' => $this->company->id,
+            'number' => ++$this->nextInvoiceNumber,
+            'date' => now()->toDateString(),
+            'invoice_type' => InvoiceType::SELL,
+            'status' => InvoiceStatus::UNAPPROVED,
+            'customer_id' => $this->customer->id,
+            'creator_id' => $this->user->id,
+            'subtraction' => 0,
+            'vat' => 0,
+            'amount' => 200,
+        ]);
+
+        InvoiceItem::create([
+            'invoice_id' => $invoice->id,
+            'itemable_id' => $this->product->id,
+            'itemable_type' => Product::class,
+            'warehouse_id' => $this->mainWarehouse->id,
+            'quantity' => 1,
+            'unit_price' => 100,
+            'unit_discount' => 0,
+            'vat' => 0,
+            'amount' => 100,
+        ]);
+        InvoiceItem::create([
+            'invoice_id' => $invoice->id,
+            'itemable_id' => $service->id,
+            'itemable_type' => Service::class,
+            'warehouse_id' => $this->mainWarehouse->id,
+            'quantity' => 1,
+            'unit_price' => 100,
+            'unit_discount' => 0,
+            'vat' => 0,
+            'amount' => 100,
+        ]);
+
+        $exportData = FiscalYearService::exportData($this->company->id, [
+            FiscalYearSection::SUBJECTS->value,
+            FiscalYearSection::CUSTOMERS->value,
+            FiscalYearSection::PRODUCTS->value,
+            FiscalYearSection::SERVICES->value,
+            FiscalYearSection::INVOICES->value,
+        ]);
+        $target = FiscalYearService::importData($exportData, [
+            'name' => 'Imported warehouse invoice year',
+            'fiscal_year' => 1406,
+        ]);
+
+        $targetWarehouse = Warehouse::withoutGlobalScopes()
+            ->where('company_id', $target->id)
+            ->where('code', $this->mainWarehouse->code)
+            ->firstOrFail();
+        $targetInvoice = Invoice::withoutGlobalScopes()
+            ->where('company_id', $target->id)
+            ->where('number', $invoice->number)
+            ->firstOrFail();
+        $importedItems = InvoiceItem::where('invoice_id', $targetInvoice->id)->get()->keyBy('itemable_type');
+
+        $this->assertNotSame($this->mainWarehouse->id, $targetWarehouse->id);
+        $this->assertSame($targetWarehouse->id, $importedItems[Product::class]->warehouse_id);
+        $this->assertNull($importedItems[Service::class]->warehouse_id);
+        $this->assertSame($target->id, $importedItems[Product::class]->warehouse->company_id);
     }
 
     public function test_approved_sell_form_validation_checks_the_selected_warehouse(): void
