@@ -7,53 +7,55 @@
                     class="btn btn-primary ">{{ __('Add Comment') }}</a>
             </div>
 
-            <table class="table w-full mt-4">
-                <thead>
-                    <tr>
-                        <th class="px-4 py-2">{{ __('Commented By') }}</th>
-                        <th class="px-4 py-2">{{ __('Content') }}</th>
-                        <th class="px-4 py-2">{{ __('Rating') }}</th>
-                        <th class="px-4 py-2">{{ __('Action') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-
-                    @foreach ($comments as $comment)
+            <div class="mt-4 overflow-x-auto">
+                <table class="table w-full min-w-full">
+                    <thead>
                         <tr>
-                            <td class="px-4 py-2">{{ $comment->commentBy->name }}</td>
-                            <td class="px-4 py-2 w-1/2">
-                                <button type="button"
-                                    class="text-right truncate max-w-xl hover:underline" data-full-content="{{ $comment->content }}"
-                                    data-comment-author="{{ $comment->commentBy->name }}" data-comment-rating="{{ $comment->rating }}">
-                                    {{ \Illuminate\Support\Str::limit($comment->content, 80, '…') }}
-                                </button>
-                            </td>
-                            <td class="px-4 py-2">
-                                <div class="rating rating-sm rating-half">
-                                    @for ($i = 1; $i <= 10; $i++)
-                                        @php
-                                            $starValue = $i / 2;
-                                            $isFilled = $starValue <= $comment->rating;
-                                        @endphp
-                                        <input type="radio" disabled class="pointer-events-none mask mask-star-2 {{ $i % 2 ? 'mask-half-1' : 'mask-half-2' }} 
-                                            {{ $isFilled ? 'bg-orange-400 dark:bg-sky-400' : 'bg-gray-300 dark:bg-gray-600' }}" />
-                                    @endfor
-                                </div>
-                            </td>
-                            <td class="px-4 py-2">
-                                <a href="{{ route('comments.edit', [$comment->customer_id, $comment]) }}"
-                                    class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                <form action="{{ route('comments.destroy', [$comment->customer_id, $comment]) }}" method="POST"
-                                    class="inline-block">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                                </form>
-                            </td>
+                            <th class="px-4 py-2">{{ __('Commented By') }}</th>
+                            <th class="px-4 py-2">{{ __('Content') }}</th>
+                            <th class="px-4 py-2">{{ __('Rating') }}</th>
+                            <th class="px-4 py-2">{{ __('Action') }}</th>
                         </tr>
-                    @endforeach
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+
+                        @foreach ($comments as $comment)
+                            <tr>
+                                <td class="px-4 py-2">{{ $comment->commentBy->name }}</td>
+                                <td class="px-4 py-2 w-1/2">
+                                    <button type="button"
+                                        class="text-right truncate max-w-xl hover:underline" data-full-content="{{ $comment->content }}"
+                                        data-comment-author="{{ $comment->commentBy->name }}" data-comment-rating="{{ $comment->rating }}">
+                                        {{ \Illuminate\Support\Str::limit($comment->content, 80, '…') }}
+                                    </button>
+                                </td>
+                                <td class="px-4 py-2">
+                                    <div class="rating rating-sm rating-half">
+                                        @for ($i = 1; $i <= 10; $i++)
+                                            @php
+                                                $starValue = $i / 2;
+                                                $isFilled = $starValue <= $comment->rating;
+                                            @endphp
+                                            <input type="radio" disabled class="pointer-events-none mask mask-star-2 {{ $i % 2 ? 'mask-half-1' : 'mask-half-2' }}
+                                                {{ $isFilled ? 'bg-orange-400 dark:bg-sky-400' : 'bg-gray-300 dark:bg-gray-600' }}" />
+                                        @endfor
+                                    </div>
+                                </td>
+                                <td class="px-4 py-2">
+                                    <div class="inline-flex gap-2">
+                                        <a href="{{ route('comments.edit', [$comment->customer_id, $comment]) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                        <form action="{{ route('comments.destroy', [$comment->customer_id, $comment]) }}" method="POST">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
 
             @if(count($comments ) === 0)
                 <p class="text-xs text-center text-gray-500 mt-1">{{ __('There is no comments.') }}</p>

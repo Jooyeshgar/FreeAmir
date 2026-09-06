@@ -18,20 +18,20 @@
                             <tr>
                                 <td class="px-4 py-2">{{ $bank->name }}</td>
                                 <td class="px-4 py-2">
-                                    <a href="{{ route('banks.edit', $bank) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                    <form action="{{ route('banks.destroy', $bank) }}" method="POST" class="inline-block">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                                    </form>
+                                    <div class="inline-flex gap-2">
+                                        <a href="{{ route('banks.edit', $bank) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                        <form action="{{ route('banks.destroy', $bank) }}" method="POST">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach
                     </tbody>
                 </table>
-
-                {{ $banks->links() }}
-
             </div>
+            {{ $banks->links() }}
         </div>
 </x-app-layout>

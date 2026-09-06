@@ -88,8 +88,8 @@
                 </form>
             </div>
 
-            <div class="p-4 sm:p-5">
-            <table class="table w-full overflow-auto">
+            <div class="p-4 sm:p-5 overflow-auto">
+            <table class="table w-full">
                 <thead>
                     <tr>
                         <th class="px-4 py-2">{{ __('Service Code') }}</th>
@@ -118,23 +118,19 @@
                                     href="{{ route('service-groups.show', $service->serviceGroup) }}">{{ $service->serviceGroup ? $service->serviceGroup->name : '' }}</a>
                             </td>
                             <td class="px-4 py-2">
-                                <a href="{{ route('services.edit', $service) }}"
-                                    class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                @if ($service->invoiceItems()->exists())
-                                    <span class="tooltip"
-                                        data-tip="{{ __('Cannot delete service that is used in invoice items') }}">
-                                        <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" disabled
-                                            title="{{ __('Cannot delete service that is used in invoice items') }}">{{ __('Delete') }}</button>
-                                    </span>
-                                @else
-                                    <form action="{{ route('services.destroy', $service) }}" method="POST"
-                                        class="inline-block">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit"
-                                            class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                                    </form>
-                                @endif
+                                <div class="inline-flex gap-2">
+                                    <a href="{{ route('services.edit', $service) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                    @if ($service->invoiceItems()->exists())
+                                        <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" title="{{ __('Cannot delete service that is used in invoice items') }}">{{ __('Delete') }}</button>
+                                    @else
+                                        <form action="{{ route('services.destroy', $service) }}" method="POST">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                        </form>
+                                    @endif
+                                </div>
+                                
                             </td>
                         </tr>
                     @endforeach

@@ -2,7 +2,7 @@
     <x-show-message-bags />
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <dl class="grid grid-cols-4 gap-3">
+            <dl class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
                 @foreach (\App\Enums\InvoiceStatus::cases() as $status)
                     @if (! $status->isReadyToApprove() && ! $status->isRejected())
                         @php
@@ -26,104 +26,107 @@
                 @endforeach
             </dl>
 
-            <table class="table w-full mt-4 overflow-auto">
-                <thead>
-                    <tr>
-                        <th class="p-2">{{ __('Ancillary Cost Number') }}</th>
-                        <th class="p-2">{{ __('Doc Number') }}</th>
-                        <th class="p-2">{{ __('Invoice Number') }}</th>
-                        <th class="p-2">{{ __('Cost Type') }}</th>
-                        <th class="p-2">{{ __('Date') }}</th>
-                        <th class="p-2">{{ __('Amount') }} ({{ config('amir.currency') ?? __('Rial') }})</th>
-                        <th class="p-2">{{ __('Status') }}</th>
-                        <th class="p-2">{{ __('Action') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-
-                    @foreach ($ancillaryCosts as $ancillaryCost)
+            <div class="overflow-x-auto">
+                <table class="table w-full">
+                    <thead>
                         <tr>
-                            <td class="p-2">{{ formatDocumentNumber($ancillaryCost->number) }}</td>
-                            <td class="p-2">
-                                @can('documents.show')
-                                    @if ($ancillaryCost->document_id)
-                                        <a href="{{ route('documents.show', $ancillaryCost->document_id) }}">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                            </svg>
-                                        </a>&nbsp;
-                                        <a class="link" href="{{ route('documents.edit', $ancillaryCost->document_id) }}">
-                                            {{ formatDocumentNumber($ancillaryCost->document->number) ?? '' }}</a>
-                                    @endif
-                                @else
-                                    <span class="text-gray-500">{{ formatDocumentNumber($ancillaryCost->document->number) }}</span>
-                                @endcan
-                            </td>
-                            <td class="p-2">
-                                <a class="link"
-                                    href="{{ route('invoices.show', $ancillaryCost->invoice_id) }}">{{ formatDocumentNumber($ancillaryCost->invoice->number) ?? '' }}</a>
-                            </td>
-                            <td class="p-2">{{ $ancillaryCost->type->label() }}</td>
-                            <td class="p-2">{{ formatDate($ancillaryCost->date) }}</td>
-                            <td class="p-2">{{ formatNumber($ancillaryCost->amount) }}</td>
-                            <td class="p-2">
-                                {{ $ancillaryCost->status?->label() ?? '' }}
-                            </td>
-                            <td class="p-2">
-                                <a href="{{ route('invoices.ancillary-costs.show', [$ancillaryCost->invoice_id, $ancillaryCost]) }}" class="btn btn-sm btn-info">{{ __('Show') }}</a>
-
-                                @can('ancillary-costs.approve')
-                                    @if ($ancillaryCost->changeStatusValidation['allowed'])
-                                        <form method="POST" action="{{ route('ancillary-costs.change-status', [$ancillaryCost, $ancillaryCost->status?->isApproved() ? 'unapprove' : 'approve']) }}" class="inline-block">
-                                            @csrf
-                                            <button type="submit" x-data="{}" class="btn btn-sm {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }}">
-                                                {{ __($ancillaryCost->status?->isApproved() ? 'Unapprove' : 'Approve') }}
-                                            </button>
-                                        </form>
-                                    @else
-                                        <span class="tooltip" data-tip="{{ $ancillaryCost->changeStatusValidation['reason'] }}">
-                                            <button class="btn btn-sm {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }} btn-disabled cursor-not-allowed"
-                                                disabled title="{{ $ancillaryCost->changeStatusValidation['reason'] }}">{{ $ancillaryCost->status?->isApproved() ? __('Unapprove') : __('Approve') }}</button>
-                                        </span>
-                                    @endif
-                                @endcan
-                                
-                                @if ($ancillaryCost->editDeleteStatus['allowed'])
-                                    @if (!$ancillaryCost->status->isApproved())
-                                        <a href="{{ route('invoices.ancillary-costs.edit', [$ancillaryCost->invoice_id, $ancillaryCost]) }}" class="btn btn-sm btn-info">
-                                            {{ __('Edit') }}</a>
-                                        <form action="{{ route('invoices.ancillary-costs.destroy', [$ancillaryCost->invoice_id, $ancillaryCost]) }}"
-                                            method="POST" class="inline-block"> 
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                                        </form>
-                                    @else
-                                        <span class="tooltip" data-tip="{{ __('Unapprove the ancillary cost first to edit') }}">
-                                            <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled
-                                                title="{{ __('Unapprove the ancillary cost first to edit') }}">{{ __('Edit') }}</button>
-                                        </span>
-                                        <span class="tooltip" data-tip="{{ __('Unapprove the ancillary cost first to delete') }}">
-                                            <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled
-                                                title="{{ __('Unapprove the ancillary cost first to delete') }}">{{ __('Delete') }}</button>
-                                        </span>
-                                    @endif
-                                @else
-                                    <span class="tooltip" data-tip="{{ $ancillaryCost->editDeleteStatus['reason'] }}">
-                                        <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" disabled
-                                            title="{{ $ancillaryCost->editDeleteStatus['reason'] }}">{{ __('Edit') }}</button>
-                                    </span>
-                                    <span class="tooltip" data-tip="{{ $ancillaryCost->editDeleteStatus['reason'] }}">
-                                        <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled
-                                            title="{{ $ancillaryCost->editDeleteStatus['reason'] }}">{{ __('Delete') }}</button>
-                                    </span>
-                                @endif
-                            </td>
+                            <th class="p-2">{{ __('Ancillary Cost Number') }}</th>
+                            <th class="p-2">{{ __('Doc Number') }}</th>
+                            <th class="p-2">{{ __('Invoice Number') }}</th>
+                            <th class="p-2">{{ __('Cost Type') }}</th>
+                            <th class="p-2">{{ __('Date') }}</th>
+                            <th class="p-2">{{ __('Amount') }} ({{ config('amir.currency') ?? __('Rial') }})</th>
+                            <th class="p-2">{{ __('Status') }}</th>
+                            <th class="p-2">{{ __('Action') }}</th>
                         </tr>
-                    @endforeach
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+
+                        @foreach ($ancillaryCosts as $ancillaryCost)
+                            <tr>
+                                <td class="p-2">{{ formatDocumentNumber($ancillaryCost->number) }}</td>
+                                <td class="p-2">
+                                    @can('documents.show')
+                                        @if ($ancillaryCost->document_id)
+                                            <a href="{{ route('documents.show', $ancillaryCost->document_id) }}">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                </svg>
+                                            </a>&nbsp;
+                                            <a class="link" href="{{ route('documents.edit', $ancillaryCost->document_id) }}">
+                                                {{ formatDocumentNumber($ancillaryCost->document->number) ?? '' }}</a>
+                                        @endif
+                                    @else
+                                        <span class="text-gray-500">{{ formatDocumentNumber($ancillaryCost->document->number) }}</span>
+                                    @endcan
+                                </td>
+                                <td class="p-2">
+                                    <a class="link" href="{{ route('invoices.show', $ancillaryCost->invoice_id) }}">{{ formatDocumentNumber($ancillaryCost->invoice->number) ?? '' }}</a>
+                                </td>
+                                <td class="p-2">{{ $ancillaryCost->type->label() }}</td>
+                                <td class="p-2">{{ formatDate($ancillaryCost->date) }}</td>
+                                <td class="p-2">{{ formatNumber($ancillaryCost->amount) }}</td>
+                                <td class="p-2">
+                                    {{ $ancillaryCost->status?->label() ?? '' }}
+                                </td>
+                                <td class="p-2 whitespace-nowrap">
+                                    <div class="flex items-center gap-2">
+                                        <a href="{{ route('invoices.ancillary-costs.show', [$ancillaryCost->invoice_id, $ancillaryCost]) }}" class="btn btn-sm btn-info">{{ __('Show') }}</a>
+
+                                    @can('ancillary-costs.approve')
+                                        @if ($ancillaryCost->changeStatusValidation['allowed'])
+                                            <form method="POST" action="{{ route('ancillary-costs.change-status', [$ancillaryCost, $ancillaryCost->status?->isApproved() ? 'unapprove' : 'approve']) }}" class="inline-block">
+                                                @csrf
+                                                <button type="submit" x-data="{}" class="btn btn-sm {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }}">
+                                                    {{ __($ancillaryCost->status?->isApproved() ? 'Unapprove' : 'Approve') }}
+                                                </button>
+                                            </form>
+                                        @else
+                                            <span class="lg:tooltip" data-tip="{{ $ancillaryCost->changeStatusValidation['reason'] }}">
+                                                <button class="btn btn-sm {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }} btn-disabled cursor-not-allowed"
+                                                    disabled title="{{ $ancillaryCost->changeStatusValidation['reason'] }}">{{ $ancillaryCost->status?->isApproved() ? __('Unapprove') : __('Approve') }}</button>
+                                            </span>
+                                        @endif
+                                    @endcan
+                                    
+                                    @if ($ancillaryCost->editDeleteStatus['allowed'])
+                                        @if (!$ancillaryCost->status->isApproved())
+                                            <a href="{{ route('invoices.ancillary-costs.edit', [$ancillaryCost->invoice_id, $ancillaryCost]) }}" class="btn btn-sm btn-info">
+                                                {{ __('Edit') }}</a>
+                                            <form action="{{ route('invoices.ancillary-costs.destroy', [$ancillaryCost->invoice_id, $ancillaryCost]) }}"
+                                                method="POST" class="inline-block"> 
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                            </form>
+                                        @else
+                                            <span class="lg:tooltip" data-tip="{{ __('Unapprove the ancillary cost first to edit') }}">
+                                                <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled
+                                                    title="{{ __('Unapprove the ancillary cost first to edit') }}">{{ __('Edit') }}</button>
+                                            </span>
+                                            <span class="lg:tooltip" data-tip="{{ __('Unapprove the ancillary cost first to delete') }}">
+                                                <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled
+                                                    title="{{ __('Unapprove the ancillary cost first to delete') }}">{{ __('Delete') }}</button>
+                                            </span>
+                                        @endif
+                                    @else
+                                        <span class="lg:tooltip" data-tip="{{ $ancillaryCost->editDeleteStatus['reason'] }}">
+                                            <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" disabled
+                                                title="{{ $ancillaryCost->editDeleteStatus['reason'] }}">{{ __('Edit') }}</button>
+                                        </span>
+                                        <span class="lg:tooltip" data-tip="{{ $ancillaryCost->editDeleteStatus['reason'] }}">
+                                            <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled
+                                                title="{{ $ancillaryCost->editDeleteStatus['reason'] }}">{{ __('Delete') }}</button>
+                                        </span>
+                                    @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
 
             @if (request('status') !== null)
                 <div class="px-4 py-2 text-left">

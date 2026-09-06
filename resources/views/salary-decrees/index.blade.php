@@ -30,58 +30,62 @@
                 @endcan
             </div>
 
-            <table class="table w-full mt-4 overflow-auto">
-                <thead>
-                    <tr>
-                        <th>{{ __('Employee') }}</th>
-                        <th>{{ __('Decree Name') }}</th>
-                        <th>{{ __('Start Date') }}</th>
-                        <th>{{ __('End Date') }}</th>
-                        <th>{{ __('Active') }}</th>
-                        <th>{{ __('Action') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($decrees as $decree)
+            <div class="overflow-auto">
+                <table class="table w-full mt-4">
+                    <thead>
                         <tr>
-                            <td>{{ $decree->employee->first_name }} {{ $decree->employee->last_name }}</td>
-                            <td>{{ $decree->name ?? '—' }}</td>
-                            <td>{{ formatDate($decree->start_date) }}</td>
-                            <td>{{ $decree->end_date ? formatDate($decree->end_date) : '—' }}</td>
-                            <td>
-                                @if ($decree->is_active)
-                                    <span class="badge badge-success">{{ __('Active') }}</span>
-                                @else
-                                    <span class="badge badge-ghost">{{ __('Inactive') }}</span>
-                                @endif
-                            </td>
-                            <td class="flex gap-2">
-                                @can('salary.salary-decrees.edit')
-                                    <a href="{{ route('salary.salary-decrees.edit', $decree) }}" class="btn btn-sm btn-info">
-                                        {{ __('Edit') }}
-                                    </a>
-                                @endcan
-                                @can('salary.salary-decrees.delete')
-                                    <form action="{{ route('salary.salary-decrees.destroy', $decree) }}" method="POST" class="inline-block mb-0"
-                                        onsubmit="return confirm('{{ __('Are you sure?') }}')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-error">
-                                            {{ __('Delete') }}
-                                        </button>
-                                    </form>
-                                @endcan
-                            </td>
+                            <th>{{ __('Employee') }}</th>
+                            <th>{{ __('Decree Name') }}</th>
+                            <th>{{ __('Start Date') }}</th>
+                            <th>{{ __('End Date') }}</th>
+                            <th>{{ __('Active') }}</th>
+                            <th>{{ __('Action') }}</th>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="7" class="text-center py-4 text-gray-500">
-                                {{ __('No salary decrees found.') }}
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @forelse ($decrees as $decree)
+                            <tr>
+                                <td>{{ $decree->employee->first_name }} {{ $decree->employee->last_name }}</td>
+                                <td>{{ $decree->name ?? '—' }}</td>
+                                <td>{{ formatDate($decree->start_date) }}</td>
+                                <td>{{ $decree->end_date ? formatDate($decree->end_date) : '—' }}</td>
+                                <td>
+                                    @if ($decree->is_active)
+                                        <span class="badge badge-success">{{ __('Active') }}</span>
+                                    @else
+                                        <span class="badge badge-ghost">{{ __('Inactive') }}</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <div class="inline-flex gap-2">
+                                        @can('salary.salary-decrees.edit')
+                                            <a href="{{ route('salary.salary-decrees.edit', $decree) }}" class="btn btn-sm btn-info">
+                                                {{ __('Edit') }}
+                                            </a>
+                                        @endcan
+                                        @can('salary.salary-decrees.delete')
+                                            <form action="{{ route('salary.salary-decrees.destroy', $decree) }}" method="POST" class="inline-block mb-0"
+                                                onsubmit="return confirm('{{ __('Are you sure?') }}')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-error">
+                                                    {{ __('Delete') }}
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="7" class="text-center py-4 text-gray-500">
+                                    {{ __('No salary decrees found.') }}
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
 
             {!! $decrees->withQueryString()->links() !!}
         </div>
