@@ -1,9 +1,9 @@
 <x-app-layout :title="__('Transfer Product')">
     <div class="card bg-base-100 shadow" x-data="{ selectedValue: '', productId: '{{ old('product_id', $selectedProduct?->id) }}' }">
-        <form method="POST" action="{{ route('warehouses.transfer.store') }}">@csrf<div class="card-body">
-                <h1 class="card-title">{{ __('Transfer Product') }}</h1>
+        <form method="POST" action="{{ route('warehouses.transfer.store') }}">@csrf<div class="card-body gap-5 p-4 sm:p-6">
+                <h1 class="card-title text-xl">{{ __('Transfer Product') }}</h1>
                 <x-show-message-bags />
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                         <label class="label">{{ __('Product') }}</label>
                         @php
@@ -40,13 +40,13 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="md:col-span-2">
+                    <div class="sm:col-span-2">
                         <x-textarea name="description" title="{{ __('Description') }}" />
                     </div>
                 </div>
-                <div class="card-actions justify-end">
-                    <a href="{{ route('warehouses.index') }}" class="btn btn-ghost">{{ __('Cancel') }}</a>
-                    <button class="btn btn-primary">{{ __('Transfer') }}</button>
+                <div class="card-actions grid grid-cols-2 gap-2 sm:flex sm:justify-end">
+                    <a href="{{ route('warehouses.index') }}" class="btn btn-ghost w-full sm:w-auto">{{ __('Cancel') }}</a>
+                    <button class="btn btn-primary w-full sm:w-auto">{{ __('Transfer') }}</button>
                 </div>
             </div>
         </form>
