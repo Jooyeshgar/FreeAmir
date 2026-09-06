@@ -2,7 +2,7 @@
     <x-show-message-bags />
 
     <div class="card bg-base-100 shadow-xl">
-        <div class="card-body">
+        <div class="card-body p-4 sm:p-6">
 
             {{-- Filter bar --}}
             <form action="{{ route('employee-portal.payrolls') }}" method="GET" class="flex flex-wrap items-end gap-3">
@@ -19,7 +19,7 @@
             </form>
 
             <div class="overflow-x-auto">
-                <table class="table w-full mt-2">
+                <table class="table mt-2 min-w-max w-full">
                     <thead>
                         <tr>
                             <th>{{ __('Month') }}</th>
@@ -52,11 +52,11 @@
                                         {{ formatNumber($payroll->net_payment) }}
                                     </span>
                                 </td>
-                                <td>
-                                    <span class="badge {{ $payroll->statusBadgeClass() }} badge-sm">{{ $payroll->statusLabel() }}</span>
+                                <td class="whitespace-nowrap">
+                                    <span class="badge {{ $payroll->statusBadgeClass() }} badge-sm whitespace-nowrap">{{ $payroll->statusLabel() }}</span>
                                 </td>
-                                <td>
-                                    <a href="{{ route('employee-portal.payrolls.show', $payroll) }}" class="btn btn-xs btn-outline">
+                                <td class="whitespace-nowrap">
+                                    <a href="{{ route('employee-portal.payrolls.show', $payroll) }}" class="btn btn-xs btn-outline whitespace-nowrap">
                                         {{ __('View Detail') }}
                                     </a>
                                 </td>

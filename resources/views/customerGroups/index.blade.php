@@ -26,8 +26,8 @@
                 </div>
             </div>
 
-            <div class="p-4 sm:p-5">
-            <table class="table w-full overflow-auto">
+            <div class="overflow-x-auto p-4 sm:p-5">
+            <table class="table w-full min-w-max">
                 <thead>
                     <tr>
                         <th class="px-4 py-2">{{ __('Subject Code') }}</th>
@@ -68,17 +68,18 @@
                                 @endif
                             </td>
                             <td class="px-4 py-2">{{ $customerGroup->description }}</td>
-                            <td class="px-4 py-2">
-                                <a href="{{ route('customer-groups.show', $customerGroup) }}"
-                                    class="btn btn-sm btn-info">{{ __('View') }}</a>
-                                <a href="{{ route('customer-groups.edit', $customerGroup) }}"
-                                    class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                <form action="{{ route('customer-groups.destroy', $customerGroup) }}" method="POST"
-                                    class="inline-block">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                                </form>
+                            <td class="px-4 py-2 whitespace-nowrap">
+                                <div class="flex flex-nowrap items-center gap-2">
+                                    <a href="{{ route('customer-groups.show', $customerGroup) }}"
+                                        class="btn btn-sm btn-info">{{ __('View') }}</a>
+                                    <a href="{{ route('customer-groups.edit', $customerGroup) }}"
+                                        class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                    <form action="{{ route('customer-groups.destroy', $customerGroup) }}" method="POST">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                     @endforeach

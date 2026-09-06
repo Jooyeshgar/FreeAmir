@@ -48,66 +48,76 @@
                         <x-input name="search" value="{{ request('search') }}" class="w-full" placeholder="{{ __('Search for documents') }}" />
                     </div>
                     <div class="col-span-6 sm:col-span-3 lg:col-span-1 flex gap-2">
-                        <button type="submit" class="btn btn-primary w-full">{{ __('Search') }}</button>
+                        <button type="submit" class="btn btn-sm btn-primary w-full">{{ __('Search') }}</button>
                     </div>
                     <div class="col-span-6 sm:col-span-3 lg:col-span-1 flex gap-2">
-                        <a href="{{ route('transactions.index') }}" class="btn btn-outline w-full">{{ __('Clear') }}</a>
+                        <a href="{{ route('transactions.index') }}" class="btn btn-sm btn-outline w-full">{{ __('Reset') }}</a>
                     </div>
                 </div>
             </form>
-            <table class="table w-full mt-4 overflow-auto">
-                <thead>
-                    <th class="p-2 w-12">{{ __('Date') }}</th>
-                    <th class="p-2 w-16">{{ __('Doc Number') }}</th>
-                    <th class="p-2">{{ __('Subject Code') }}</th>
-                    <th class="p-2">{{ __('Subject') }}</th>
-                    <th class="p-2">{{ __('Description') }}</th>
-                    <th class="p-2 w-24">{{ __('Debit') }}</th>
-                    <th class="p-2 w-24">{{ __('Credit') }}</th>
-                    <th class="p-2 w-24">{{ __('Balance') }}</th>
-                    <th class="p-2 w-32">{{ __('Action') }}</th>
-                </thead>
-                <tbody>
-                    @if ($openingBalance != 0)
+
+            <div class="overflow-auto">
+                <table class="table w-full mt-4">
+                    <thead>
+                        <th class="p-2 w-12">{{ __('Date') }}</th>
+                        <th class="p-2 w-16">{{ __('Doc Number') }}</th>
+                        <th class="p-2">{{ __('Subject Code') }}</th>
+                        <th class="p-2">{{ __('Subject') }}</th>
+                        <th class="p-2">{{ __('Description') }}</th>
+                        <th class="p-2 w-24">{{ __('Debit') }}</th>
+                        <th class="p-2 w-24">{{ __('Credit') }}</th>
+                        <th class="p-2 w-24">{{ __('Balance') }}</th>
+                        <th class="p-2 w-32">{{ __('Action') }}</th>
+                    </thead>
+                    <tbody>
+                        @if ($openingBalance != 0)
+                            <tr>
+                                <td colspan="4"></td>
+                                <td class="p-2">{{ __('Opening Balance') }}</td>
+                                <td></td>
+                                <td></td>
+                                <td class="p-2">
+                                    {{ formatNumber(abs($openingBalance)) }} {{ $openingBalance >= 0 ? __('Cre') : __('Deb') }}
+                                </td>
+                                <td class="p-2"></td>
+                            </tr>
+                        @endif
+                        @foreach ($transactions as $transaction)
+                            <tr class="{{ $transaction->document->approved_at ? '' : 'text-base-content/40' }}">
+                                <td class="p-2">{{ formatDate($transaction->document->date) }}</td>
+                                <td class="p-2">
+                                    <a href="{{ route('documents.show', $transaction->document->id) }}" class="text-info hover:underline">
+                                        {{ formatDocumentNumber($transaction->document->number) }}
+                                    </a>
+                                </td>
+                                <td class="p-2">
+                                    {{ $transaction->subject?->formattedCode() }}
+                                </td>
+                                <td class="p-2">
+                                    {{ $transaction->subject?->name }}
+                                </td>
+                                <td class="p-2">{{ $transaction->desc }}</td>
+                                <td class="p-2 {{ $transaction->document->approved_at ? 'text-error' : 'text-error/50' }}">{{ $transaction->debit }}</td>
+                                <td class="p-2 {{ $transaction->document->approved_at ? 'text-success' : 'text-success/50' }}">{{ $transaction->credit }}</td>
+                                <td class="p-2 whitespace-nowrap">
+                                    {{ formatNumber(abs($transaction->balance)) }} {{ $transaction->balance >= 0 ? __('Cre') : __('Deb') }}
+                                </td>
+                                <td class="p-2">
+                                    <a href="{{ route('transactions.show', $transaction->id) }}" class="btn btn-sm btn-info">{{ __('View') }}</a>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                    <tfoot>
                         <tr>
-                            <td colspan="4"></td>
-                            <td class="p-2">{{ __('Opening Balance') }}</td>
-                            <td></td>
-                            <td></td>
-                            <td class="p-2">
-                                {{ formatNumber(abs($openingBalance)) }} {{ $openingBalance >= 0 ? __('Cre') : __('Deb') }}
-                            </td>
-                            <td class="p-2"></td>
-                        </tr>
-                    @endif
-                    @foreach ($transactions as $transaction)
-                        <tr class="{{ $transaction->document->approved_at ? '' : 'text-base-content/40' }}">
-                            <td class="p-2">{{ formatDate($transaction->document->date) }}</td>
-                            <td class="p-2">
-                                <a href="{{ route('documents.show', $transaction->document->id) }}" class="text-info hover:underline">
-                                    {{ formatDocumentNumber($transaction->document->number) }}
-                                </a>
-                            </td>
-                            <td class="p-2">
-                                {{ $transaction->subject?->formattedCode() }}
-                            </td>
-                            <td class="p-2">
-                                {{ $transaction->subject?->name }}
-                            </td>
-                            <td class="p-2">{{ $transaction->desc }}</td>
-                            <td class="p-2 {{ $transaction->document->approved_at ? 'text-error' : 'text-error/50' }}">{{ $transaction->debit }}</td>
-                            <td class="p-2 {{ $transaction->document->approved_at ? 'text-success' : 'text-success/50' }}">{{ $transaction->credit }}</td>
-                            <td class="p-2 whitespace-nowrap">
-                                {{ formatNumber(abs($transaction->balance)) }} {{ $transaction->balance >= 0 ? __('Cre') : __('Deb') }}
-                            </td>
-                            <td class="p-2">
-                                <a href="{{ route('transactions.show', $transaction->id) }}" class="btn btn-sm btn-info">{{ __('View') }}</a>
+                            <td class="items-center p-2" colspan="9">
+                                {{ $transactions->appends(request()->query())->links() }}
                             </td>
                         </tr>
-                    @endforeach
-                </tbody>
-            </table>
-            {{ $transactions->appends(request()->query())->links() }}
+                    </tfoot>
+                </table>
+            </div>
+            
         </div>
     </div>
 </x-app-layout>

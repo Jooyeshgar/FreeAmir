@@ -26,67 +26,63 @@
                 </div>
             </div>
 
-            <div class="p-4 sm:p-5">
-            <table class="table w-full overflow-auto">
-                <thead>
-                    <tr>
-                        <th class="px-4 py-2">{{ __('SSTID') }}</th>
-                        <th class="px-4 py-2">{{ __('Name') }}</th>
-                        <th class="px-4 py-2">{{ __('VAT') }}</th>
-                        <th class="px-4 py-2">{{ __('Products') }}</th>
-                        <th class="px-4 py-2">{{ __('Inventory Subject') }}</th>
-                        <th class="px-4 py-2">{{ __('Income Subject') }}</th>
-                        <th class="px-4 py-2">{{ __('Return Sales Subject') }}</th>
-                        <th class="px-4 py-2">{{ __('COGS Subject') }}</th>
-                        <th class="px-4 py-2">{{ __('Action') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-
-                    @foreach ($productGroups as $productGroup)
+            <div class="overflow-x-auto p-4">
+                <table class="table">
+                    <thead>
                         <tr>
-                            <td class="px-4 py-2">{{ $productGroup->sstid }}</td>
-                            <td class="px-4 py-2">
-                                <a href="{{ route('products.index', ['group_name' => $productGroup->name]) }}"
-                                    class="text-blue-600 hover:underline">
-                                    {{ $productGroup->name }}
-                                </a>
-                            </td>
-                            <td class="px-4 py-2">{{ formatNumber($productGroup->vat) }}%</td>
-                            <td class="px-4 py-2">{{ formatNumber($productGroup->products_count ?? $productGroup->products()->count()) }}</td>
-                            <td class="px-4 py-2"><a
-                                    href="{{ route('transactions.index', ['subject_id' => $productGroup->inventorySubject]) }}">{{ $productGroup->inventorySubject?->name }}</a>
-                            </td>
-                            <td class="px-4 py-2"><a
-                                    href="{{ route('transactions.index', ['subject_id' => $productGroup->incomeSubject]) }}">{{ $productGroup->incomeSubject?->name }}</a>
-                            </td>
-                            <td class="px-4 py-2"><a
-                                    href="{{ route('transactions.index', ['subject_id' => $productGroup->salesReturnsSubject]) }}">{{ $productGroup->salesReturnsSubject?->name }}</a>
-                            </td>
-                            <td class="px-4 py-2"><a
-                                    href="{{ route('transactions.index', ['subject_id' => $productGroup->cogsSubject]) }}">{{ $productGroup->cogsSubject?->name }}</a>
-                            </td>
-                            <td class="px-4 py-2">
-                                <a href="{{ route('product-groups.show', $productGroup) }}"
-                                    class="btn btn-sm btn-info">{{ __('View') }}</a>
-                                <a href="{{ route('product-groups.edit', $productGroup) }}"
-                                    class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                @if ($productGroup->delete_blocking_reason)
-                                    <span class="tooltip" data-tip="{{ $productGroup->delete_blocking_reason }}">
-                                        <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled title="{{ $productGroup->delete_blocking_reason }}">{{ __('Delete') }}</button>
-                                    </span>
-                                @else
-                                    <form action="{{ route('product-groups.destroy', $productGroup) }}" method="POST" class="inline-block">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                                    </form>
-                                @endif
-                            </td>
+                            <th class="px-4 py-2">{{ __('SSTID') }}</th>
+                            <th class="px-4 py-2">{{ __('Name') }}</th>
+                            <th class="px-4 py-2">{{ __('VAT') }}</th>
+                            <th class="px-4 py-2">{{ __('Products') }}</th>
+                            <th class="px-4 py-2">{{ __('Inventory Subject') }}</th>
+                            <th class="px-4 py-2">{{ __('Income Subject') }}</th>
+                            <th class="px-4 py-2">{{ __('Return Sales Subject') }}</th>
+                            <th class="px-4 py-2">{{ __('COGS Subject') }}</th>
+                            <th class="px-4 py-2">{{ __('Action') }}</th>
                         </tr>
-                    @endforeach
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+
+                        @foreach ($productGroups as $productGroup)
+                            <tr>
+                                <td class="px-4 py-2">{{ $productGroup->sstid }}</td>
+                                <td class="px-4 py-2">
+                                    <a href="{{ route('products.index', ['group_name' => $productGroup->name]) }}"
+                                        class="text-blue-600 hover:underline">
+                                        {{ $productGroup->name }}
+                                    </a>
+                                </td>
+                                <td class="px-4 py-2">{{ formatNumber($productGroup->vat) }}%</td>
+                                <td class="px-4 py-2">{{ formatNumber($productGroup->products_count ?? $productGroup->products()->count()) }}</td>
+                                <td class="px-4 py-2"><a
+                                        href="{{ route('transactions.index', ['subject_id' => $productGroup->inventorySubject]) }}">{{ $productGroup->inventorySubject?->name }}</a>
+                                </td>
+                                <td class="px-4 py-2"><a
+                                        href="{{ route('transactions.index', ['subject_id' => $productGroup->incomeSubject]) }}">{{ $productGroup->incomeSubject?->name }}</a>
+                                </td>
+                                <td class="px-4 py-2"><a
+                                        href="{{ route('transactions.index', ['subject_id' => $productGroup->salesReturnsSubject]) }}">{{ $productGroup->salesReturnsSubject?->name }}</a>
+                                </td>
+                                <td class="px-4 py-2"><a
+                                        href="{{ route('transactions.index', ['subject_id' => $productGroup->cogsSubject]) }}">{{ $productGroup->cogsSubject?->name }}</a>
+                                </td>
+                                <td class="px-4 py-2 inline-flex gap-2 whitespace-nowrap">
+                                    <a href="{{ route('product-groups.show', $productGroup) }}" class="btn btn-sm btn-info">{{ __('View') }}</a>
+                                    <a href="{{ route('product-groups.edit', $productGroup) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                    @if ($productGroup->delete_blocking_reason)
+                                        <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed">{{ __('Delete') }}</button>
+                                    @else
+                                        <form action="{{ route('product-groups.destroy', $productGroup) }}" method="POST">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                        </form>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
 
             {{-- Pagination --}}

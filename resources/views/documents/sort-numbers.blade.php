@@ -23,7 +23,7 @@
 
             <div>
                 <h3 class="text-lg font-semibold mb-3">{{ __('Document Statistics') }}</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <x-stat-card :title="__('Total Documents')" :value="formatNumber($statistics['total_documents_count'])" />
                     <x-stat-card :title="__('Automatic Documents')" :value="formatNumber($statistics['automatic_documents_count'])" />
                     <x-stat-card :title="__('Manual Documents')" :value="formatNumber($statistics['manual_documents_count'])" />
@@ -47,7 +47,7 @@
             </div>
 
             <div class="card bg-base-100">
-                <div class="card-body p-6">
+                <div class="card-body p-0 md:p-6">
                     <h3 class="text-lg font-semibold text-gray-500">{{ __('Sort Progress') }}</h3>
                     <div class="bg-gray-200 rounded-full overflow-hidden relative h-5">
                         <div class="bg-blue-600 transition-all duration-300 h-5" :style="`width: ${progress.percent}%`"></div>
