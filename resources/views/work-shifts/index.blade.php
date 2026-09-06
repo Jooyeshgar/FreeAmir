@@ -3,9 +3,9 @@
 
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <div class="flex items-center justify-between gap-3">
+            <div class="w-full flex flex-wrap items-center justify-between gap-3">
                 <form action="{{ route('attendance.work-shifts.index') }}" method="GET" class="flex items-center gap-2">
-                    <div class="w-60 max-w-full [&_.input]:input-sm">
+                    <div class="[&_.input]:input-sm">
                         <x-input type="text" name="search" value="{{ $search }}" placeholder="{{ __('Filter by name') }}" />
                     </div>    
                     <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
@@ -20,65 +20,66 @@
                 @endcan
             </div>
 
-            <table class="table w-full mt-4 overflow-auto">
-                <thead>
-                    <tr>
-                        <th>{{ __('Name') }}</th>
-                        <th>{{ __('Start Time') }}</th>
-                        <th>{{ __('End Time') }}</th>
-                        <th>{{ __('Break (min)') }}</th>
-                        <th>{{ __('Float') }}</th>
-                        <th>{{ __('Thursday Status') }}</th>
-                        <th>{{ __('Paid Leave (minutes)') }}</th>
-                        <th>{{ __('Active') }}</th>
-                        <th>{{ __('Action') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($workShifts as $workShift)
+            <div class="overflow-auto">
+                <table class="table w-full mt-4">
+                    <thead>
                         <tr>
-                            <td>{{ $workShift->name }}</td>
-                            <td>{{ substr($workShift->start_time, 0, 5) }}</td>
-                            <td>{{ substr($workShift->end_time, 0, 5) }}</td>
-                            <td>{{ $workShift->break }}</td>
-                            <td>{{ $workShift->float }}</td>
-                            <td>{{ $workShift->thursday_status?->label() }}</td>
-                            <td>{{ formatNumber($workShift->paid_leave) }}</td>
-                            <td>
-                                @if ($workShift->is_active)
-                                    <span class="badge badge-success">{{ __('Active') }}</span>
-                                @else
-                                    <span class="badge badge-error">{{ __('Inactive') }}</span>
-                                @endif
-                            </td>
-                            <td class="flex gap-2">
-                                @can('attendance.work-shifts.edit')
-                                    <a href="{{ route('attendance.work-shifts.edit', $workShift) }}" class="btn btn-sm btn-info">
-                                        {{ __('Edit') }}
-                                    </a>
-                                @endcan
-                                @can('attendance.work-shifts.delete')
-                                    <form action="{{ route('attendance.work-shifts.destroy', $workShift) }}" method="POST" class="inline-block mb-0"
-                                        onsubmit="return confirm('{{ __('Are you sure?') }}')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-error">
-                                            {{ __('Delete') }}
-                                        </button>
-                                    </form>
-                                @endcan
-                            </td>
+                            <th>{{ __('Name') }}</th>
+                            <th>{{ __('Start Time') }}</th>
+                            <th>{{ __('End Time') }}</th>
+                            <th>{{ __('Break (min)') }}</th>
+                            <th>{{ __('Float') }}</th>
+                            <th>{{ __('Thursday Status') }}</th>
+                            <th>{{ __('Paid Leave (minutes)') }}</th>
+                            <th>{{ __('Active') }}</th>
+                            <th>{{ __('Action') }}</th>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="9" class="text-center py-6 text-gray-400">
-                                {{ __('No work shifts found.') }}
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-
+                    </thead>
+                    <tbody>
+                        @forelse ($workShifts as $workShift)
+                            <tr>
+                                <td>{{ $workShift->name }}</td>
+                                <td>{{ substr($workShift->start_time, 0, 5) }}</td>
+                                <td>{{ substr($workShift->end_time, 0, 5) }}</td>
+                                <td>{{ $workShift->break }}</td>
+                                <td>{{ $workShift->float }}</td>
+                                <td>{{ $workShift->thursday_status?->label() }}</td>
+                                <td>{{ formatNumber($workShift->paid_leave) }}</td>
+                                <td>
+                                    @if ($workShift->is_active)
+                                        <span class="badge badge-success">{{ __('Active') }}</span>
+                                    @else
+                                        <span class="badge badge-error">{{ __('Inactive') }}</span>
+                                    @endif
+                                </td>
+                                <td class="flex gap-2">
+                                    @can('attendance.work-shifts.edit')
+                                        <a href="{{ route('attendance.work-shifts.edit', $workShift) }}" class="btn btn-sm btn-info">
+                                            {{ __('Edit') }}
+                                        </a>
+                                    @endcan
+                                    @can('attendance.work-shifts.delete')
+                                        <form action="{{ route('attendance.work-shifts.destroy', $workShift) }}" method="POST" class="inline-block mb-0"
+                                            onsubmit="return confirm('{{ __('Are you sure?') }}')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-error">
+                                                {{ __('Delete') }}
+                                            </button>
+                                        </form>
+                                    @endcan
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="9" class="text-center py-6 text-gray-400">
+                                    {{ __('No work shifts found.') }}
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
             <div class="mt-4">
                 {{ $workShifts->withQueryString()->links() }}
             </div>

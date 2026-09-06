@@ -9,7 +9,7 @@
 
     <form id="ledger-report-form" action="{{ route('reports.result') }}" method="get">
         <x-card>
-            <div class="flex gap-4" x-data="{
+            <div class="flex flex-wrap gap-4" x-data="{
                 selectedName: '',
                 selectedCode: '',
                 selectedId: '',
@@ -99,7 +99,7 @@
                     this.applySubject(this.findByCode(this.selectedCode));
                 }
             }">
-                <div class="w-1/3">
+                <div class="sm:w-full md:w-1/3">
                     <x-input name="code_input" id="code_input" placeholder="{{ __('Subject Code') }}" title="{{ __('Subject Code') }}"
                         x-bind:value="$store.utils.formatCode(selectedCode)"
                         @input="
@@ -118,7 +118,7 @@
                         ">
                     </x-input>
                 </div>
-                <x-subject-select class="w-2/3" :subjects="$subjects" title="{{ __('Subject name') }}" placeholder="{{ __('Select a subject') }}"
+                <x-subject-select class="sm:w-full md:w-2/3" :subjects="$subjects" title="{{ __('Subject name') }}" placeholder="{{ __('Select a subject') }}"
                     x-bind:selected_id="selectedId" x-bind:selected_name="selectedName" x-bind:selected_code="selectedCode"
                     @selected="
                         selectedName = $event.detail.name;

@@ -1,6 +1,8 @@
 
-<div class="card-actions flex items-center gap-3">
-    <a href="{{ route('invoices.create', ['invoice_type' => 'return_sell']) }}" class="btn btn-primary">{{ __('Create return sell invoice') }}</a>
+<div class="card-actions flex flex-col items-stretch gap-3 lg:flex-row lg:items-start">
+    <div>
+        <a href="{{ route('invoices.create', ['invoice_type' => 'return_sell']) }}" class="btn btn-primary">{{ __('Create return sell invoice') }}</a>
+    </div>
     @include('invoices.index.partials.search-form', [
         'invoiceType' => 'return_sell',
         'isSellWorkflow' => false,

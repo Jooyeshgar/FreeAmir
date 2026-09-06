@@ -19,42 +19,40 @@
         </x-card>
 
         <div class="card-body">
-            <div class="card-body">
-                <div class="card-title">{{ __('Edit Config') }}</div>
-                <x-show-message-bags />
-                <div class="card-body">
-                    <table class="table w-full mt-4 overflow-auto">
-                        <thead>
+            <div class="card-title">{{ __('Edit Config') }}</div>
+            <x-show-message-bags />
+            <div class="card-body overflow-auto">
+                <table class="table w-full mt-4">
+                    <thead>
+                        <tr>
+                            <th class="px-4 py-2">{{ __('Subject') }}</th>
+                            <th class="px-4 py-2">{{ __('Code') }}</th>
+                            <th class="px-4 py-2">{{ __('Value') }}</th>
+                            <th class="px-4 py-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($configsTitle as $configTitle)
+                            @php
+                                $subject = $subjects->where('id', config('amir.' . strtolower($configTitle['value'])))->first();
+                            @endphp
                             <tr>
-                                <th class="px-4 py-2">{{ __('Subject') }}</th>
-                                <th class="px-4 py-2">{{ __('Code') }}</th>
-                                <th class="px-4 py-2">{{ __('Value') }}</th>
-                                <th class="px-4 py-2"></th>
+                                <td class="px-4 py-2">{{ $configTitle['label'] ?? '' }}</td>
+                                <td class="px-4 py-2">
+                                    {{ $subject?->formattedCode() ?? '' }}
+                                </td>
+                                <td class="px-4 py-2">
+                                    {{ $subject?->fullname() ?? __('N/A') }}
+                                </td>
+                                <td class="px-4 py-2">
+                                    @can('configs.edit')
+                                        <a href="{{ route('configs.edit', strtolower($configTitle['value'])) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                    @endcan
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @foreach ($configsTitle as $configTitle)
-                                @php
-                                    $subject = $subjects->where('id', config('amir.' . strtolower($configTitle['value'])))->first();
-                                @endphp
-                                <tr>
-                                    <td class="px-4 py-2">{{ $configTitle['label'] ?? '' }}</td>
-                                    <td class="px-4 py-2">
-                                        {{ $subject?->formattedCode() ?? '' }}
-                                    </td>
-                                    <td class="px-4 py-2">
-                                        {{ $subject?->fullname() ?? __('N/A') }}
-                                    </td>
-                                    <td class="px-4 py-2">
-                                        @can('configs.edit')
-                                            <a href="{{ route('configs.edit', strtolower($configTitle['value'])) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                        @endcan
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>

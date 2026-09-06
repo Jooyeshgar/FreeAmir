@@ -20,57 +20,58 @@
                 @endcan
             </div>
 
-            <table class="table w-full mt-4 overflow-auto">
-                <thead>
-                    <tr>
-                        <th>{{ __('Name') }}</th>
-                        <th>{{ __('Code') }}</th>
-                        <th>{{ __('Work Site') }}</th>
-                        <th>{{ __('Active') }}</th>
-                        <th>{{ __('Action') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($contracts as $contract)
+            <div class="overflow-auto">
+                <table class="table w-full mt-4">
+                    <thead>
                         <tr>
-                            <td>{{ $contract->name }}</td>
-                            <td>{{ $contract->code }}</td>
-                            <td>{{ $contract->workSites?->name ?? '-' }}</td>
-                            <td>
-                                @if ($contract->is_active)
-                                    <span class="badge badge-success">{{ __('Yes') }}</span>
-                                @else
-                                    <span class="badge badge-ghost">{{ __('No') }}</span>
-                                @endif
-                            </td>
-                            <td class="flex gap-2">
-                                @can('salary.work-site-contracts.edit')
-                                    <a href="{{ route('salary.work-site-contracts.edit', $contract) }}" class="btn btn-sm btn-info">
-                                        {{ __('Edit') }}
-                                    </a>
-                                @endcan
-                                @can('salary.work-site-contracts.delete')
-                                    <form action="{{ route('salary.work-site-contracts.destroy', $contract) }}" method="POST" class="inline-block"
-                                        onsubmit="return confirm('{{ __('Are you sure?') }}')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-error">
-                                            {{ __('Delete') }}
-                                        </button>
-                                    </form>
-                                @endcan
-                            </td>
+                            <th>{{ __('Name') }}</th>
+                            <th>{{ __('Code') }}</th>
+                            <th>{{ __('Work Site') }}</th>
+                            <th>{{ __('Active') }}</th>
+                            <th>{{ __('Action') }}</th>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="5" class="text-center py-4 text-gray-500">
-                                {{ __('No work site contracts found.') }}
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-
+                    </thead>
+                    <tbody>
+                        @forelse ($contracts as $contract)
+                            <tr>
+                                <td>{{ $contract->name }}</td>
+                                <td>{{ $contract->code }}</td>
+                                <td>{{ $contract->workSites?->name ?? '-' }}</td>
+                                <td>
+                                    @if ($contract->is_active)
+                                        <span class="badge badge-success">{{ __('Yes') }}</span>
+                                    @else
+                                        <span class="badge badge-ghost">{{ __('No') }}</span>
+                                    @endif
+                                </td>
+                                <td class="flex gap-2">
+                                    @can('salary.work-site-contracts.edit')
+                                        <a href="{{ route('salary.work-site-contracts.edit', $contract) }}" class="btn btn-sm btn-info">
+                                            {{ __('Edit') }}
+                                        </a>
+                                    @endcan
+                                    @can('salary.work-site-contracts.delete')
+                                        <form action="{{ route('salary.work-site-contracts.destroy', $contract) }}" method="POST" class="inline-block"
+                                            onsubmit="return confirm('{{ __('Are you sure?') }}')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-error">
+                                                {{ __('Delete') }}
+                                            </button>
+                                        </form>
+                                    @endcan
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-gray-500">
+                                    {{ __('No work site contracts found.') }}
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
             <div class="mt-4">
                 {{ $contracts->withQueryString()->links() }}
             </div>

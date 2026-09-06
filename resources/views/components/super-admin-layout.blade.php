@@ -71,7 +71,7 @@
 </head>
 
 <body
-    class="admin-shell min-h-screen overflow-x-hidden bg-[#f5f7f6] text-[#172033] antialiased dark:bg-slate-950 dark:text-slate-100"
+    class="admin-shell min-h-screen bg-[#f5f7f6] text-[#172033] antialiased dark:bg-slate-950 dark:text-slate-100"
     dir="{{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }}">
     <div x-data="{ sidebarOpen: false }" @keydown.escape.window="sidebarOpen = false">
         <div x-cloak x-show="sidebarOpen" x-transition.opacity

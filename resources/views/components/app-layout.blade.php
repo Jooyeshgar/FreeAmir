@@ -21,7 +21,7 @@
 
 </head>
 
-<body class="relative min-h-screen overflow-x-hidden bg-base-200 text-base-content">
+<body class="relative min-h-screen bg-base-200 text-base-content">
 
     <x-header />
 
