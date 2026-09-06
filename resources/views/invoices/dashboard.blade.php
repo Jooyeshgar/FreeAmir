@@ -20,13 +20,13 @@
                 <form action="{{ route('invoices.dashboard') }}" method="GET" class="grid w-full max-w-md grid-cols-2 gap-2 sm:grid-cols-3 xl:justify-self-end">
                     <div class="w-full [&_.input]:input-sm">
                         <x-text-input data-jdp title="{{ __('Start date') }}" input_name="start_date"
-                            placeholder="{{ __('Start date') }}" readonly
+                            placeholder="{{ __('Start date') }}" readonly label_class="text-sm"
                             input_value="{{ old('start_date') ?? convertToJalali($filters['start_date'], true) }}"
                             label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
                     </div>
                     <div class="w-full [&_.input]:input-sm">
                         <x-text-input data-jdp title="{{ __('End date') }}" input_name="end_date"
-                            placeholder="{{ __('End date') }}" readonly
+                            placeholder="{{ __('End date') }}" readonly label_class="text-sm"
                             input_value="{{ old('end_date') ?? convertToJalali($filters['end_date'], true) }}"
                             label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
                     </div>
