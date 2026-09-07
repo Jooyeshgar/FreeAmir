@@ -193,6 +193,9 @@ class AuthLifecycleTest extends TestCase
 
         $workspace->assertOk();
         $workspace->assertSee(route('management.dashboard'), false);
+        $workspace->assertSee('id="workspace-drawer"', false);
+        $workspace->assertSee('class="drawer-side z-50 xl:hidden"', false);
+        $workspace->assertSee('w-[min(18rem,calc(100vw-1rem))]', false);
         $workspace->assertDontSee(route('roles.index'), false);
         $workspace->assertDontSee(route('permissions.index'), false);
         $this->assertSame($company->id, config('active-company-id'));
@@ -223,6 +226,9 @@ class AuthLifecycleTest extends TestCase
         }
 
         $management = $this->get(route('management.dashboard'));
+        $management->assertSee('class="drawer md:drawer-open"', false);
+        $management->assertSee('id="management-drawer"', false);
+        $management->assertSee('class="drawer-side z-50"', false);
         $management->assertOk();
         $management->assertSee(route('home'), false);
 

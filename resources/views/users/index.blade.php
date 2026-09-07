@@ -1,20 +1,20 @@
 <x-platform-layout :title="__('Users')">
     <x-show-message-bags />
 
-    <div class="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+    <div class="mb-6 px-2 flex flex-col justify-between gap-4 sm:flex-row sm:items-end mt-2">
         <div>
             <p class="text-xs font-bold uppercase tracking-[0.16em] text-violet-600 dark:text-violet-400">{{ __('Identity and access') }}</p>
             <h2 class="mt-1 text-2xl font-bold tracking-tight">{{ __('Platform users') }}</h2>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ __('Manage accounts, company assignments, and access roles.') }}</p>
         </div>
         @can('users.create')
-            <a href="{{ route('users.create') }}" class="btn btn-primary gap-2 rounded-xl shadow-lg shadow-primary/15"><span class="text-lg leading-none">+</span>{{ __('Add New User') }}</a>
+            <a href="{{ route('users.create') }}" class="btn btn-primary w-1/2 md:w-auto gap-2 rounded-xl shadow-lg shadow-primary/15"><span class="text-lg leading-none">+</span>{{ __('Add New User') }}</a>
         @endcan
     </div>
 
     <section class="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div class="flex flex-col justify-between gap-2 border-b border-slate-200/80 p-3 dark:border-slate-800 sm:flex-row sm:items-center">
-            <form action="{{ route('users.index') }}" method="GET" class="flex w-full min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto pb-1 sm:flex-1">
+            <form action="{{ route('users.index') }}" method="GET" class="flex flex-wrap w-full min-w-0 flex-nowrap items-center gap-1.5 overflow-x-auto pb-1 sm:flex-1">
                 <label class="input input-bordered flex h-9 w-[21rem] max-w-full shrink-0 items-center gap-1.5 rounded-lg bg-slate-50 text-sm dark:bg-slate-950/50 sm:w-[22.5rem]">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m21 21-4.35-4.35M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" /></svg>
                     <input type="search" name="search" value="{{ request('search') }}" class="grow" placeholder="{{ __('Search name or email') }}">
@@ -52,8 +52,8 @@
                                 </div>
                             </td>
                             <td><div class="flex max-w-64 flex-wrap gap-1">@forelse ($user->roles as $role)<span class="badge badge-ghost badge-sm">{{ $role->name }}</span>@empty<span class="text-xs text-slate-400">{{ __('No role') }}</span>@endforelse</div></td>
-                            <td><span class="badge badge-ghost">{{ localizeNumber(number_format($user->companies_count)) }}</span></td>
-                            <td><span @class(['badge', 'badge-success badge-outline' => $user->hasVerifiedEmail(), 'badge-warning badge-outline' => ! $user->hasVerifiedEmail()])>{{ $user->hasVerifiedEmail() ? __('Verified') : __('Pending') }}</span></td>
+                            <td><span class="badge badge-sm lg:badge-md badge-ghost">{{ localizeNumber(number_format($user->companies_count)) }}</span></td>
+                            <td><span @class(['badge badge-sm lg:badge-md', 'badge-success badge-outline' => $user->hasVerifiedEmail(), 'badge-warning badge-outline' => ! $user->hasVerifiedEmail()])>{{ $user->hasVerifiedEmail() ? __('Verified') : __('Pending') }}</span></td>
                             <td>
                                 <div class="flex justify-end gap-1">
                                     @can('users.edit')<a href="{{ route('users.edit', $user) }}" class="btn btn-ghost btn-sm rounded-lg">{{ __('Edit') }}</a>@endcan
@@ -66,12 +66,12 @@
                                     @if (auth()->user()->canImpersonateUser($user))
                                         <form action="{{ route('users.impersonate', $user) }}" method="post" onsubmit="return confirm('{{ __('Are you sure you want to impersonate this user?') }}')">
                                             @csrf
-                                            <button type="submit" class="btn btn-ghost btn-sm rounded-lg text-violet-600 dark:text-violet-400">{{ __('Impersonate') }}</button>
+                                            <button type="submit" class="whitespace-nowrap btn btn-ghost btn-sm rounded-lg text-violet-600 dark:text-violet-400">{{ __('Impersonate') }}</button>
                                         </form>
                                     @else
                                         @php($impersonationUnavailableReason = (int) $user->companies_count === 0 ? __('User has no company') : __('Impersonation is not available for this user.'))
-                                        <span class="tooltip" data-tip="{{ $impersonationUnavailableReason }}">
-                                            <button type="button" disabled aria-disabled="true" title="{{ $impersonationUnavailableReason }}" class="btn btn-ghost btn-sm btn-disabled cursor-not-allowed rounded-lg">{{ __('Impersonate') }}</button>
+                                        <span class="lg:tooltip" data-tip="{{ $impersonationUnavailableReason }}">
+                                            <button type="button" disabled aria-disabled="true" title="{{ $impersonationUnavailableReason }}" class="whitespace-nowrap btn btn-ghost btn-sm btn-disabled cursor-not-allowed rounded-lg">{{ __('Impersonate') }}</button>
                                         </span>
                                     @endif
                                     @cannot('access-super-admin-panel')
