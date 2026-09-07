@@ -67,24 +67,26 @@
                                         <span class="badge badge-ghost">{{ __('No') }}</span>
                                     @endif
                                 </td>
-                                <td class="flex gap-2">
-                                    @can('salary.payroll-elements.edit')
-                                        <a href="{{ route('salary.payroll-elements.edit', $element) }}" class="btn btn-sm btn-info">
-                                            {{ __('Edit') }}
-                                        </a>
-                                    @endcan
-                                    @can('salary.payroll-elements.delete')
-                                        @unless ($element->is_system_locked)
-                                            <form action="{{ route('salary.payroll-elements.destroy', $element) }}" method="POST" class="inline-block"
-                                                onsubmit="return confirm('{{ __('Are you sure?') }}')">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-error">
-                                                    {{ __('Delete') }}
-                                                </button>
-                                            </form>
-                                        @endunless
-                                    @endcan
+                                <td>
+                                    <div class="inline-flex gap-2">
+                                        @can('salary.payroll-elements.edit')
+                                            <a href="{{ route('salary.payroll-elements.edit', $element) }}" class="btn btn-sm btn-info">
+                                                {{ __('Edit') }}
+                                            </a>
+                                        @endcan
+                                        @can('salary.payroll-elements.delete')
+                                            @unless ($element->is_system_locked)
+                                                <form action="{{ route('salary.payroll-elements.destroy', $element) }}" method="POST" class="inline-block"
+                                                    onsubmit="return confirm('{{ __('Are you sure?') }}')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-error">
+                                                        {{ __('Delete') }}
+                                                    </button>
+                                                </form>
+                                            @endunless
+                                        @endcan
+                                    </div>
                                 </td>
                             </tr>
                         @empty

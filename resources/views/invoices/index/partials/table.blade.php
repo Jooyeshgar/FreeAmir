@@ -1,4 +1,4 @@
-<div class="overflow-x-auto">
+<div class="overflow-x-auto lg:overflow-x-hidden">
     <table class="table w-full">
         <thead>
             <tr>
@@ -39,7 +39,7 @@
                     <td class="px-4 py-2">
                         <a href="{{ route('customers.show', $invoice->customer) }}">{{ $invoice->customer->name ?? '' }}</a>
                         <br>
-                        <span class="text-xs {{ $isVoided ? 'text-gray-400' : 'text-gray-500' }}">{{ $invoice->title ?? '' }}</span>
+                        <span class="text-xs hidden lg:inline {{ $isVoided ? 'text-gray-400' : 'text-gray-500' }}">{{ $invoice->title ?? '' }}</span>
                     </td>
                     <td class="px-4 py-2">
                         @if ($invoice->document_id)
@@ -75,13 +75,13 @@
 
                         @can('invoices.approve')
                             @if ($isSellWorkflow && ($invoice->status->isPreInvoice() || $invoice->status->isRejected()))
-                                <form action="{{ route('invoices.change-status', [$invoice, 'ready_to_approve']) }}" method="POST" class="inline-block">
+                                <form action="{{ route('invoices.change-status', [$invoice, 'ready_to_approve']) }}" method="POST">
                                     @csrf
                                     <button type="submit" class="btn btn-sm btn-success">{{ __('Issue') }}</button>
                                 </form>
                             @endif
                             @if ($isSellWorkflow && $invoice->status->isPreInvoice())
-                                <form action="{{ route('invoices.change-status', [$invoice, 'rejected']) }}" method="POST" class="inline-block">
+                                <form action="{{ route('invoices.change-status', [$invoice, 'rejected']) }}" method="POST">
                                     @csrf
                                     <button type="submit" class="btn btn-sm btn-error">{{ __('Reject') }}</button>
                                 </form>
@@ -120,7 +120,7 @@
                         @endif
 
                         @if (!$deleteDisabled)
-                            <form action="{{ route('invoices.destroy', $invoice) }}" method="POST" class="inline-block">
+                            <form action="{{ route('invoices.destroy', $invoice) }}" method="POST">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
