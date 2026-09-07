@@ -8,7 +8,7 @@
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ __('Manage accounts, company assignments, and access roles.') }}</p>
         </div>
         @can('users.create')
-            <a href="{{ route('users.create') }}" class="btn btn-primary gap-2 rounded-xl shadow-lg shadow-primary/15"><span class="text-lg leading-none">+</span>{{ __('Add New User') }}</a>
+            <a href="{{ route('users.create') }}" class="btn btn-primary w-1/2 md:w-auto gap-2 rounded-xl shadow-lg shadow-primary/15"><span class="text-lg leading-none">+</span>{{ __('Add New User') }}</a>
         @endcan
     </div>
 
@@ -70,7 +70,7 @@
                                         </form>
                                     @else
                                         @php($impersonationUnavailableReason = (int) $user->companies_count === 0 ? __('User has no company') : __('Impersonation is not available for this user.'))
-                                        <span class="tooltip" data-tip="{{ $impersonationUnavailableReason }}">
+                                        <span class="lg:tooltip" data-tip="{{ $impersonationUnavailableReason }}">
                                             <button type="button" disabled aria-disabled="true" title="{{ $impersonationUnavailableReason }}" class="btn btn-ghost btn-sm btn-disabled cursor-not-allowed rounded-lg">{{ __('Impersonate') }}</button>
                                         </span>
                                     @endif
