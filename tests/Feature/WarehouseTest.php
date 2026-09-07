@@ -161,15 +161,17 @@ class WarehouseTest extends TestCase
             'quantity' => 3,
             'unit_cost' => 200,
             'transferred_by' => $this->user->id,
-            'transferred_at' => now()->toDateString(),
+            'transferred_at' => Carbon::yesterday()->toDateString(),
         ]);
 
         $this->get(route('warehouses.transfer-history', [
-            'product_id' => $product->id,
+            'product_name' => 'History',
             'date_from' => formatDate(Carbon::yesterday()),
             'date_to' => formatDate(Carbon::yesterday()),
         ]))->assertOk()->assertViewHas('transfers', fn ($transfers) => $transfers->total() === 1)
-            ->assertSee('History Product')->assertSee('History Source');
+            ->assertSee('name="product_name"', false)
+            ->assertSee('History Product')->assertSee('History Source')
+            ->assertDontSee('Other Product');
     }
 
     public function test_transfer_records_the_transferring_user_and_appears_in_history(): void

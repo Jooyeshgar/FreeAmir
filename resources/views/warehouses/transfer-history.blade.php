@@ -1,33 +1,27 @@
 <x-app-layout :title="__('Transfer History')">
     <x-show-message-bags />
 
-    <div class="flex flex-wrap items-center justify-between gap-4 px-1 pb-5">
+    <div class="flex flex-col gap-4 px-1 pb-5 sm:flex-row sm:items-center sm:justify-between">
         <div class="min-w-48">
             <h1 class="text-xl font-bold text-base-content">{{ __('Transfer History') }}</h1>
             <p class="mt-0.5 text-sm text-base-content/50">{{ __('Review product transfers between warehouses') }}</p>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2">
-            <a href="{{ route('warehouses.transfer') }}" class="btn btn-sm btn-primary">{{ __('Transfer Product') }}</a>
-            <a href="{{ route('warehouses.index') }}" class="btn btn-sm btn-outline">{{ __('Warehouses') }}</a>
+        <div class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
+            <a href="{{ route('warehouses.transfer') }}" class="btn btn-sm btn-primary w-full sm:w-auto">{{ __('Transfer Product') }}</a>
+            <a href="{{ route('warehouses.index') }}" class="btn btn-sm btn-outline w-full sm:w-auto">{{ __('Warehouses') }}</a>
         </div>
     </div>
 
     <div class="card mx-1 mb-6 border border-base-200 bg-base-100 shadow-sm">
         <div class="card-body p-0">
-            <div class="border-b border-base-200 px-5 py-4">
-                <form action="{{ route('warehouses.transfer-history') }}" method="GET" class="flex flex-wrap items-end gap-3">
-                    <label class="w-56 max-w-full">
-                        <span class="label-text text-sm">{{ __('Product') }}</span>
-                        <select name="product_id" class="select select-bordered select-sm mt-1 w-full">
-                            <option value="">{{ __('All') }}</option>
-                            @foreach ($products as $product)
-                                <option value="{{ $product->id }}" @selected((string) request('product_id') === (string) $product->id)>{{ $product->name }}</option>
-                            @endforeach
-                        </select>
-                    </label>
+            <div class="border-b border-base-200 px-4 py-4 sm:px-5">
+                <form action="{{ route('warehouses.transfer-history') }}" method="GET" class="grid grid-cols-1 items-end gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                    <div class="relative w-full [&_.input]:input-sm">
+                        <x-input type="text" name="product_name" value="{{ request('product_name') }}" title="{{ __('Product') }}" placeholder="{{ __('Product Name') }}" />
+                    </div>
 
-                    <label class="w-48 max-w-full">
+                    <label>
                         <span class="label-text text-sm">{{ __('From warehouse') }}</span>
                         <select name="from_warehouse_id" class="select select-bordered select-sm mt-1 w-full">
                             <option value="">{{ __('All') }}</option>
@@ -37,7 +31,7 @@
                         </select>
                     </label>
 
-                    <label class="w-48 max-w-full">
+                    <label>
                         <span class="label-text text-sm">{{ __('To warehouse') }}</span>
                         <select name="to_warehouse_id" class="select select-bordered select-sm mt-1 w-full">
                             <option value="">{{ __('All') }}</option>
@@ -47,26 +41,28 @@
                         </select>
                     </label>
 
-                    <div class="w-32 max-w-full [&_.input]:input-sm">
+                    <div class="[&_.input]:input-sm">
                         <x-date-picker name="date_from" id="date_from" title="{{ __('From Date') }}" :value="request('date_from')" />
                     </div>
 
-                    <div class="w-32 max-w-full [&_.input]:input-sm">
+                    <div class="[&_.input]:input-sm">
                         <x-date-picker name="date_to" id="date_to" title="{{ __('To Date') }}" :value="request('date_to')" />
                     </div>
 
-                    <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
-                    <a href="{{ route('warehouses.transfer-history') }}" class="btn btn-sm btn-ghost">{{ __('Reset') }}</a>
+                    <div class="w-full sm:w-auto">
+                        <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
+                        <a href="{{ route('warehouses.transfer-history') }}" class="btn btn-sm btn-ghost">{{ __('Reset') }}</a>
+                    </div>
                 </form>
             </div>
 
-            <div class="flex items-center gap-3 px-5 py-4">
+            <div class="flex flex-wrap items-center gap-3 px-4 py-4 sm:px-5">
                 <h2 class="text-base font-bold text-base-content">{{ __('Transfer History') }}</h2>
                 <span class="badge badge-ghost">{{ localizeNumber($transfers->total()) }} {{ __('records') }}</span>
             </div>
 
             <div class="overflow-x-auto">
-                <table class="table">
+                <table class="table min-w-[64rem]">
                     <thead>
                         <tr>
                             <th>{{ __('Date') }}</th>

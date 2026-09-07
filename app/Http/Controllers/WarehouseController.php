@@ -139,6 +139,10 @@ class WarehouseController extends Controller
     {
         $query = WarehouseTransfer::query()->with(['product', 'fromWarehouse', 'toWarehouse', 'transferor'])->latest('transferred_at')->latest('id');
 
+        if ($request->filled('product_name')) {
+            $query->whereHas('product', fn ($productQuery) => $productQuery->where('name', 'like', '%'.$request->input('product_name').'%'));
+        }
+
         if ($request->filled('product_id')) {
             $query->where('product_id', $request->input('product_id'));
         }
@@ -164,7 +168,6 @@ class WarehouseController extends Controller
         return view('warehouses.transfer-history', [
             'transfers' => $transfers,
             'warehouses' => Warehouse::orderBy('name')->get(),
-            'products' => Product::orderBy('name')->get(),
         ]);
     }
 
