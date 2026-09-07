@@ -1,11 +1,11 @@
 <header class="sticky top-0 z-30 w-full border-b border-base-content/8 bg-base-100/90 backdrop-blur-md">
     <div class="navbar w-full max-w-full min-h-14 items-center justify-between gap-2 px-3 min-[1430px]:mx-auto min-[1430px]:w-[1430px]">
         <div class="flex shrink-0 items-center gap-1" dir="ltr">
-            <button type="button" @click="mobileMenuOpen = true" class="btn btn-ghost btn-square btn-xs h-7 w-7 xl:hidden" aria-label="{{ __('Menu') }}" aria-controls="workspace-mobile-menu" :aria-expanded="mobileMenuOpen.toString()">
+            <label for="workspace-drawer" class="drawer-button btn btn-ghost btn-square btn-xs h-7 w-7 xl:hidden" aria-label="{{ __('Menu') }}" aria-controls="workspace-mobile-menu">
                 <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 6.5h16M4 12h16M4 17.5h16" />
                 </svg>
-            </button>
+            </label>
             <a href="/" class="flex shrink-0 items-center rounded-lg p-1 transition-colors hover:bg-base-200" aria-label="{{ config('app.name') }}">
                 <img src="/images/logo.png" alt="Logo" class="h-9 w-9 object-contain">
             </a>
@@ -99,26 +99,6 @@
             </ul>
         </nav>
     </div>
-
-    <div x-cloak x-show="mobileMenuOpen" x-transition.opacity @click="mobileMenuOpen = false"></div>
-    <aside id="workspace-mobile-menu" dir="{{ app()->isLocale('fa') ? 'rtl' : 'ltr' }}" x-cloak x-show="mobileMenuOpen" x-transition:enter="transition-transform duration-200" x-transition:enter-start="ltr:-translate-x-full rtl:translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition-transform duration-200" x-transition:leave-start="translate-x-0" x-transition:leave-end="ltr:-translate-x-full rtl:translate-x-full" @click.stop
-        class="fixed inset-x-0 top-16 z-[1000] flex h-[calc(100dvh-3.5rem)] max-h-[calc(100dvh-3.5rem)] w-[min(22rem,100vw)] ltr:left-0 rtl:right-0 flex-col overflow-y-auto overscroll-contain bg-base-100 p-3 shadow-2xl max-md:inset-0 max-md:h-dvh max-md:max-h-dvh max-md:w-screen xl:hidden"
-        aria-label="{{ __('Main navigation') }}">
-        <div class="flex min-h-8 items-center justify-between border-b border-base-content/10 pb-2">
-            <span class="font-semibold text-sm md:text-base">{{ __(config('app.name')) }}</span>
-            <button type="button" @click="mobileMenuOpen = false" class="btn btn-ghost btn-square btn-xs h-7 w-7" aria-label="{{ __('Close') }}">
-                <span aria-hidden="true" class="text-lg">&times;</span>
-            </button>
-        </div>
-        @can('access-super-admin-panel')
-            <a href="{{ route('management.dashboard') }}" @click="mobileMenuOpen = false" class="btn btn-ghost mt-3 w-full justify-start text-sm font-medium">
-                {{ __('Admin panel') }}
-            </a>
-        @endcan
-        <ul @click="if ($event.target.closest('a')) mobileMenuOpen = false" class="app-mobile-menu menu mt-2 w-full gap-1 text-sm border-t border-base-content/10" data-main-menu>
-            <x-menu />
-        </ul>
-    </aside>
 
     <x-impersonation-banner within-sticky-header />
 </header>
