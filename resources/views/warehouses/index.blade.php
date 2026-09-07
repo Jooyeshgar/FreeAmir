@@ -74,7 +74,7 @@
                                         };
                                     @endphp
                                     @if ($deleteDisabledReason)
-                                        <span class="tooltip" data-tip="{{ $deleteDisabledReason }}">
+                                        <span class="lg:tooltip" data-tip="{{ $deleteDisabledReason }}">
                                             <button type="button" class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled title="{{ $deleteDisabledReason }}">{{ __('Delete') }}</button>
                                         </span>
                                     @else
