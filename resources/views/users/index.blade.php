@@ -66,12 +66,12 @@
                                     @if (auth()->user()->canImpersonateUser($user))
                                         <form action="{{ route('users.impersonate', $user) }}" method="post" onsubmit="return confirm('{{ __('Are you sure you want to impersonate this user?') }}')">
                                             @csrf
-                                            <button type="submit" class="btn btn-ghost btn-sm rounded-lg text-violet-600 dark:text-violet-400">{{ __('Impersonate') }}</button>
+                                            <button type="submit" class="whitespace-nowrap btn btn-ghost btn-sm rounded-lg text-violet-600 dark:text-violet-400">{{ __('Impersonate') }}</button>
                                         </form>
                                     @else
                                         @php($impersonationUnavailableReason = (int) $user->companies_count === 0 ? __('User has no company') : __('Impersonation is not available for this user.'))
                                         <span class="lg:tooltip" data-tip="{{ $impersonationUnavailableReason }}">
-                                            <button type="button" disabled aria-disabled="true" title="{{ $impersonationUnavailableReason }}" class="btn btn-ghost btn-sm btn-disabled cursor-not-allowed rounded-lg">{{ __('Impersonate') }}</button>
+                                            <button type="button" disabled aria-disabled="true" title="{{ $impersonationUnavailableReason }}" class="whitespace-nowrap btn btn-ghost btn-sm btn-disabled cursor-not-allowed rounded-lg">{{ __('Impersonate') }}</button>
                                         </span>
                                     @endif
                                     @cannot('access-super-admin-panel')
