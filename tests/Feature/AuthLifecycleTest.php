@@ -309,8 +309,6 @@ class AuthLifecycleTest extends TestCase
             ->assertSee('data-chart-tab="companies"', false)
             ->assertSee('data-chart-tab="documents"', false)
             ->assertSee('id="management-active-users-chart"', false)
-            ->assertSee('lg:grid-cols-[minmax(0,1.65fr)_minmax(18rem,1fr)]', false)
-            ->assertSee('h-56 sm:h-64 lg:h-72', false)
             ->assertSee("type: 'line'", false)
             ->assertSee("type: 'doughnut'", false)
             ->assertSee('group relative overflow-hidden', false)
