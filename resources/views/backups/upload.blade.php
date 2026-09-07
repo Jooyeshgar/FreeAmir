@@ -23,7 +23,7 @@
                         <x-file-input name="file" title="{{ __('File') }} ({{ __('zip') }})" accept=".zip" />
                     </div>
                 </div>
-                <div class="card-actions justify-end">
+                <div class="card-actions justify-end mt-2 md:mt-0">
                     <button type="submit" class="btn btn-primary"> {{ __('Upload') }} </button>
                 </div>
             </form>
