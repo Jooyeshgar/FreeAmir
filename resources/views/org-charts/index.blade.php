@@ -42,7 +42,7 @@
                                 </td>
                                 <td>{{ $orgChart->parent?->title ?? '-' }}</td>
                                 <td>{{ $orgChart->description ?? '-' }}</td>
-                                <td class="gap-2">
+                                <td>
                                     <div class="inline-flex gap-2">
                                         @can('hr.org-charts.edit')
                                             <a href="{{ route('hr.org-charts.edit', $orgChart) }}" class="btn btn-sm btn-info">

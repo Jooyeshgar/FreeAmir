@@ -66,18 +66,20 @@
                                 <td class="px-4 py-2"><a
                                         href="{{ route('transactions.index', ['subject_id' => $productGroup->cogsSubject]) }}">{{ $productGroup->cogsSubject?->name }}</a>
                                 </td>
-                                <td class="px-4 py-2 inline-flex gap-2 whitespace-nowrap">
-                                    <a href="{{ route('product-groups.show', $productGroup) }}" class="btn btn-sm btn-info">{{ __('View') }}</a>
-                                    <a href="{{ route('product-groups.edit', $productGroup) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                    @if ($productGroup->delete_blocking_reason)
-                                        <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed">{{ __('Delete') }}</button>
-                                    @else
-                                        <form action="{{ route('product-groups.destroy', $productGroup) }}" method="POST">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                                        </form>
-                                    @endif
+                                <td class="px-4 py-2">
+                                    <div class="inline-flex gap-2 whitespace-nowrap">
+                                        <a href="{{ route('product-groups.show', $productGroup) }}" class="btn btn-sm btn-info">{{ __('View') }}</a>
+                                        <a href="{{ route('product-groups.edit', $productGroup) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                        @if ($productGroup->delete_blocking_reason)
+                                            <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed">{{ __('Delete') }}</button>
+                                        @else
+                                            <form action="{{ route('product-groups.destroy', $productGroup) }}" method="POST">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                            </form>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach

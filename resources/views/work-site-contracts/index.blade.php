@@ -44,22 +44,24 @@
                                         <span class="badge badge-ghost">{{ __('No') }}</span>
                                     @endif
                                 </td>
-                                <td class="flex gap-2">
-                                    @can('salary.work-site-contracts.edit')
-                                        <a href="{{ route('salary.work-site-contracts.edit', $contract) }}" class="btn btn-sm btn-info">
-                                            {{ __('Edit') }}
-                                        </a>
-                                    @endcan
-                                    @can('salary.work-site-contracts.delete')
-                                        <form action="{{ route('salary.work-site-contracts.destroy', $contract) }}" method="POST" class="inline-block"
-                                            onsubmit="return confirm('{{ __('Are you sure?') }}')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-error">
-                                                {{ __('Delete') }}
-                                            </button>
-                                        </form>
-                                    @endcan
+                                <td>
+                                    <div class="inline-flex gap-2">
+                                        @can('salary.work-site-contracts.edit')
+                                            <a href="{{ route('salary.work-site-contracts.edit', $contract) }}" class="btn btn-sm btn-info">
+                                                {{ __('Edit') }}
+                                            </a>
+                                        @endcan
+                                        @can('salary.work-site-contracts.delete')
+                                            <form action="{{ route('salary.work-site-contracts.destroy', $contract) }}" method="POST" class="inline-block"
+                                                onsubmit="return confirm('{{ __('Are you sure?') }}')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-error">
+                                                    {{ __('Delete') }}
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    </div>
                                 </td>
                             </tr>
                         @empty

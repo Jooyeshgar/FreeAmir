@@ -52,22 +52,24 @@
                                         <span class="badge badge-error">{{ __('Inactive') }}</span>
                                     @endif
                                 </td>
-                                <td class="flex gap-2">
-                                    @can('attendance.work-shifts.edit')
-                                        <a href="{{ route('attendance.work-shifts.edit', $workShift) }}" class="btn btn-sm btn-info">
-                                            {{ __('Edit') }}
-                                        </a>
-                                    @endcan
-                                    @can('attendance.work-shifts.delete')
-                                        <form action="{{ route('attendance.work-shifts.destroy', $workShift) }}" method="POST" class="inline-block mb-0"
-                                            onsubmit="return confirm('{{ __('Are you sure?') }}')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-error">
-                                                {{ __('Delete') }}
-                                            </button>
-                                        </form>
-                                    @endcan
+                                <td>
+                                    <div class="inline-flex gap-2">
+                                        @can('attendance.work-shifts.edit')
+                                            <a href="{{ route('attendance.work-shifts.edit', $workShift) }}" class="btn btn-sm btn-info">
+                                                {{ __('Edit') }}
+                                            </a>
+                                        @endcan
+                                        @can('attendance.work-shifts.delete')
+                                            <form action="{{ route('attendance.work-shifts.destroy', $workShift) }}" method="POST" class="inline-block mb-0"
+                                                onsubmit="return confirm('{{ __('Are you sure?') }}')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-error">
+                                                    {{ __('Delete') }}
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    </div>
                                 </td>
                             </tr>
                         @empty
