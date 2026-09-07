@@ -79,10 +79,19 @@ class CompanyOverviewService
 
     public function getSellAmountPerProducts()
     {
+        return $this->getInvoiceItemAmountsByType(InvoiceType::SELL);
+    }
+
+    public function getBuyAmountPerProducts()
+    {
+        return $this->getInvoiceItemAmountsByType(InvoiceType::BUY);
+    }
+
+    private function getInvoiceItemAmountsByType(InvoiceType $invoiceType)
+    {
         $baseQuery = InvoiceItem::query()
-            ->whereHas('invoice', fn ($q) => $q->where('invoice_type', InvoiceType::SELL)
-                ->whereIn('status', InvoiceStatus::approvedOrSettled())
-            )
+            ->whereHas('invoice', fn ($q) => $q->where('invoice_type', $invoiceType)
+                ->whereIn('status', InvoiceStatus::approvedOrSettled()))
             ->with('itemable')
             ->selectRaw('itemable_type, itemable_id, SUM(amount) as total_amount')
             ->groupBy('itemable_type', 'itemable_id');

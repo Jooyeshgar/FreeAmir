@@ -68,18 +68,18 @@
 <x-app-layout :title="__('Warehouse Dashboard')">
     <x-show-message-bags />
 
-    <main class="mt-8 space-y-4">
+    <main class="warehouse-dashboard mt-8 space-y-4">
         <section class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div>
-                <h1 class="text-2xl font-bold text-base-content">{{ __('Warehouse Dashboard') }}</h1>
-                <p class="mt-1 text-sm text-base-content/60">
+                <h1 class="text-2xl font-bold text-base-content min-[1440px]:text-3xl">{{ __('Warehouse Dashboard') }}</h1>
+                <p class="mt-1 text-sm text-base-content/60 min-[1440px]:text-base">
                     {{ __('Inventory, movement, and performance KPIs - :period', ['period' => $periodLabel]) }}
                 </p>
             </div>
 
             <form action="{{ route('warehouse.dashboard') }}" method="GET" class="flex flex-wrap items-end gap-2">
                 <label class="form-control w-40">
-                    <span class="label-text mb-1 text-xs">{{ __('Time Period') }}</span>
+                    <span class="label-text mb-1 text-xs min-[1440px]:text-sm">{{ __('Time Period') }}</span>
                     <select name="period" class="select select-sm select-bordered">
                         @foreach ($periodOptions as $value => $label)
                             <option value="{{ $value }}" @selected($period === $value)>{{ $label }}</option>
@@ -88,7 +88,7 @@
                 </label>
 
                 <label class="form-control w-56">
-                    <span class="label-text mb-1 text-xs">{{ __('Product Category') }}</span>
+                    <span class="label-text mb-1 text-xs min-[1440px]:text-sm">{{ __('Product Category') }}</span>
                     <select name="category_id" class="select select-sm select-bordered">
                         <option value="">{{ __('All Categories') }}</option>
                         @foreach ($productGroups as $group)
@@ -98,7 +98,7 @@
                 </label>
 
                 <label class="form-control w-44">
-                    <span class="label-text mb-1 text-xs">{{ __('Inventory Status') }}</span>
+                    <span class="label-text mb-1 text-xs min-[1440px]:text-sm">{{ __('Inventory Status') }}</span>
                     <select name="status" class="select select-sm select-bordered">
                         <option value="">{{ __('All') }}</option>
                         @foreach ($statusOptions as $value => $label)
@@ -122,11 +122,11 @@
             @endforeach
         </section>
 
-        <section class="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <section class="grid grid-cols-1 gap-4 md:grid-cols-3">
             <article class="card border border-base-300 bg-base-100/90 shadow-sm">
                 <div class="card-body">
-                    <h2 class="card-title text-base">{{ __('Inventory Value by Category') }}</h2>
-                    <p class="text-xs text-base-content/55">{{ __('Share of total stock value (at average cost)') }}</p>
+                    <h2 class="card-title text-base min-[1440px]:text-lg">{{ __('Inventory Value by Category') }}</h2>
+                    <p class="text-xs text-base-content/55 min-[1440px]:text-sm">{{ __('Share of total stock value (at average cost)') }}</p>
                     <div class="mt-3 h-64">
                         <canvas id="inventoryValueChart" class="h-full w-full"></canvas>
                     </div>
@@ -135,8 +135,8 @@
 
             <article class="card border border-base-300 bg-base-100/90 shadow-sm">
                 <div class="card-body">
-                    <h2 class="card-title text-base">{{ __('Turnover Ratio by Category') }}</h2>
-                    <p class="text-xs text-base-content/55">{{ __('Period COGS divided by current inventory value') }}</p>
+                    <h2 class="card-title text-base min-[1440px]:text-lg">{{ __('Turnover Ratio by Category') }}</h2>
+                    <p class="text-xs text-base-content/55 min-[1440px]:text-sm">{{ __('Period COGS divided by current inventory value') }}</p>
                     <div class="mt-3 h-64">
                         <canvas id="turnoverChart" class="h-full w-full"></canvas>
                     </div>
@@ -145,8 +145,8 @@
 
             <article class="card border border-base-300 bg-base-100/90 shadow-sm">
                 <div class="card-body">
-                    <h2 class="card-title text-base">{{ __('Items per Category') }}</h2>
-                    <p class="text-xs text-base-content/55">{{ __('How many distinct products live in each category') }}</p>
+                    <h2 class="card-title text-base min-[1440px]:text-lg">{{ __('Items per Category') }}</h2>
+                    <p class="text-xs text-base-content/55 min-[1440px]:text-sm">{{ __('How many distinct products live in each category') }}</p>
                     <div class="mt-3 h-64">
                         <canvas id="itemsPerCategoryChart" class="h-full w-full"></canvas>
                     </div>
@@ -154,13 +154,13 @@
             </article>
         </section>
 
-        <section class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(20rem,0.8fr)]">
+        <section class="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(16rem,0.8fr)]">
             <article class="card border border-base-300 bg-base-100/90 shadow-sm">
                 <div class="card-body">
                     <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                            <h2 class="card-title text-base">{{ __('Inbound / Outbound Trend') }}</h2>
-                            <p class="text-xs text-base-content/55">{{ __('Monthly approved warehouse movement') }}</p>
+                            <h2 class="card-title text-base min-[1440px]:text-lg">{{ __('Inbound / Outbound Trend') }}</h2>
+                            <p class="text-xs text-base-content/55 min-[1440px]:text-sm">{{ __('Monthly approved warehouse movement') }}</p>
                         </div>
                     </div>
                     <div class="mt-3 h-72">
@@ -171,8 +171,8 @@
 
             <article class="card border border-base-300 bg-base-100/90 shadow-sm">
                 <div class="card-body">
-                    <h2 class="card-title text-base">{{ __('Alerts & Reminders') }}</h2>
-                    <p class="text-xs text-base-content/55">{{ __('Items that need attention') }}</p>
+                    <h2 class="card-title text-base min-[1440px]:text-lg">{{ __('Alerts & Reminders') }}</h2>
+                    <p class="text-xs text-base-content/55 min-[1440px]:text-sm">{{ __('Items that need attention') }}</p>
                     <div class="mt-3 space-y-3">
                         @foreach ($alerts as $alert)
                             @php
@@ -191,8 +191,8 @@
                                     </svg>
                                 </span>
                                 <div class="min-w-0 flex-1">
-                                    <div class="truncate text-sm font-semibold">{{ $alert['title'] }}</div>
-                                    <div class="truncate text-xs text-base-content/55">{{ $alert['description'] }}</div>
+                                    <div class="truncate text-sm font-semibold min-[1440px]:text-base">{{ $alert['title'] }}</div>
+                                    <div class="truncate text-xs text-base-content/55 min-[1440px]:text-sm">{{ $alert['description'] }}</div>
                                 </div>
                             </div>
                         @endforeach
@@ -228,7 +228,7 @@
                         @endcan
                     </div>
                     <div class="overflow-x-auto">
-                        <table class="table table-sm">
+                        <table class="table text-sm">
                             <thead>
                                 <tr>
                                     <th>{{ __('Code') }}</th>
@@ -282,7 +282,7 @@
                         @endcan
                     </div>
                     <div class="overflow-x-auto">
-                        <table class="table table-sm">
+                        <table class="table text-sm">
                             <thead>
                                 <tr>
                                     <th>{{ __('Code') }}</th>

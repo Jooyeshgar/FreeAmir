@@ -1,4 +1,4 @@
-<article class="card border border-base-300 bg-base-100/90 shadow-sm">
+<article class="company-overview-chart card min-w-0 border border-base-300 bg-base-100/90 shadow-sm">
     <div class="card-body p-4">
         <div class="flex items-start justify-between gap-2">
             <div>
@@ -13,7 +13,7 @@
             @endcan
         </div>
 
-        <div class="mt-3 space-y-2 text-sm">
+        <div class="mt-3 space-y-2 text-sm sm:text-xs">
             <div
                 class="flex items-center justify-between border-b border-base-300 pb-2 text-xs font-semibold text-base-content/55">
                 <span>{{ __('Bank Name') }}</span>
