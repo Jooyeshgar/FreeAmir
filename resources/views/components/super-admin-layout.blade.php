@@ -73,87 +73,19 @@
 <body
     class="admin-shell p-2 min-h-screen overflow-x-hidden bg-[#f5f7f6] text-[#172033] antialiased dark:bg-slate-950 dark:text-slate-100"
     dir="{{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }}">
-    <div x-data="{ sidebarOpen: false }" x-effect="document.body.classList.toggle('overflow-hidden', sidebarOpen)"
-        @keydown.escape.window="if (sidebarOpen) { sidebarOpen = false; $refs.sidebarToggle.focus() }">
-        <div x-cloak x-show="sidebarOpen" x-transition.opacity
-            class="fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-sm md:hidden"
-            @click="sidebarOpen = false; $refs.sidebarToggle.focus()"></div>
-
-        <aside id="management-sidebar" aria-label="{{ __('Super-Admin navigation') }}"
-            :aria-hidden="!sidebarOpen && window.innerWidth < 768" :inert="!sidebarOpen && window.innerWidth < 768"
-            :class="sidebarOpen ? 'translate-x-0' : '{{ $isRtl ? 'translate-x-full' : '-translate-x-full' }}'"
-            class="fixed inset-y-0 {{ $isRtl ? 'right-0' : 'left-0' }} z-50 flex w-[min(18rem,calc(100vw-1rem))] max-w-full flex-col overflow-y-auto bg-[#15263b] text-slate-300 shadow-2xl transition-transform duration-300 md:w-56 md:translate-x-0 lg:w-72">
-            <div class="grid-paper pointer-events-none absolute inset-0 opacity-70"></div>
-            <div class="relative flex h-20 items-center gap-3 border-b border-white/10 mr-1">
-                <a href="{{ route('management.dashboard') }}" class="flex min-w-0 flex-1 items-center gap-3 mt-2">
-                    <span
-                        class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#16a394] shadow-lg shadow-emerald-950/30">
-                        <img src="/images/logo.png" alt="" class="h-7 w-7 object-contain brightness-0 invert">
-                    </span>
-                    <span class="min-w-0">
-                        <strong
-                            class="block truncate text-xl font-extrabold text-white">{{ __(config('app.name')) }}</strong>
-                        <span class="mt-0.5 block text-[11px] text-slate-400">{{ __('Super-Admin Panel') }}</span>
-                    </span>
-                </a>
-                <button type="button"
-                    class="grid h-9 w-9 place-items-center rounded-lg text-slate-400 hover:bg-white/10 md:hidden"
-                    @click="sidebarOpen=false; $refs.sidebarToggle.focus()" aria-controls="management-sidebar"
-                    aria-label="{{ __('Close') }}"><svg class="h-5 w-5" fill="none" stroke="currentColor"
-                        viewBox="0 0 24 24">
-                        <path stroke-linecap="round" d="m6 6 12 12M18 6 6 18" />
-                    </svg></button>
-            </div>
-            <nav class="scrollbar relative flex-1 px-4" aria-label="{{ __('Super-Admin navigation') }}">
-                <ul class="space-y-1.5 mt-2">
-                    @foreach ($navigation as [$label, $url, $active, $icon])
-                        <li><a href="{{ $url }}" @click="sidebarOpen=false" @class([
-                            'relative mb-1 flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm font-medium transition before:absolute before:-start-4 before:h-7 before:w-1 before:rounded-e-full',
-                            'bg-white/10 text-white before:bg-[#16a394]' => $active,
-                            'text-slate-400 before:bg-transparent hover:bg-white/5 hover:text-white' => !$active,
-                        ])
-                                @if ($active) aria-current="page" @endif>
-                                <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"
-                                        d="{{ $icon }}" />
-                                </svg><span>{{ $label }}</span>
-                            </a></li>
-                    @endforeach
-                </ul>
-            </nav>
-            <div class="relative m-4 rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div class="mb-3 flex items-center justify-between text-xs"><span
-                        class="text-slate-400">{{ __('Service health') }}</span><span
-                        class="flex items-center gap-1.5 text-emerald-300"><i
-                            class="h-2 w-2 rounded-full bg-emerald-400"></i>{{ __('Stable') }}</span></div>
-                <a href="{{ $hasCurrentWorkspace ? route('home') : route('management.dashboard') }}"
-                    class="flex items-center gap-3 border-t border-white/10 pt-3 transition">
-                    <span
-                        class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/10 text-sm font-bold text-white">{{ mb_strtoupper(mb_substr($user->name, 0, 1)) }}</span>
-                    <span class="min-w-0 flex-1"><strong
-                            class="block truncate text-xs text-white">{{ $user->name }}</strong><span
-                            class="mt-1 block text-[10px] text-slate-500">{{ __('Go to workspace') }}</span></span>
-                    <svg class="h-4 w-4 text-slate-500 rtl:rotate-180" fill="none" stroke="currentColor"
-                        viewBox="0 0 24 24">
-                        <path stroke-linecap="round" d="m9 18 6-6-6-6" />
-                    </svg>
-                </a>
-            </div>
-        </aside>
-
-        <div
-            class="min-h-screen {{ $isRtl ? 'md:pr-56 lg:pr-72' : 'md:pl-56 lg:pl-72' }}">
+    <div class="drawer md:drawer-open">
+        <input id="management-drawer" type="checkbox" class="drawer-toggle">
+        <div class="drawer-content min-h-screen">
             <header
                 class="sticky top-0 z-30 border-b border-slate-200/80 bg-[#f5f7f6]/90 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/90">
                 <div class="flex h-14 items-center gap-1.5 px-2 sm:h-16 sm:gap-2 sm:px-4 lg:h-20 lg:px-6 xl:px-8">
-                    <button type="button"
-                        class="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200 text-slate-600 sm:h-9 sm:w-9 sm:rounded-xl md:hidden dark:border-slate-700"
-                        x-ref="sidebarToggle" @click="sidebarOpen=true" aria-controls="management-sidebar"
-                        :aria-expanded="sidebarOpen" aria-label="{{ __('Menu') }}"><svg class="h-4 w-4 sm:h-5 sm:w-5"
+                    <label for="management-drawer"
+                        class="drawer-button grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200 text-slate-600 sm:h-9 sm:w-9 sm:rounded-xl md:hidden dark:border-slate-700"
+                        aria-controls="management-sidebar" aria-label="{{ __('Menu') }}"><svg class="h-4 w-4 sm:h-5 sm:w-5"
                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16" />
                         </svg>
-                    </button>
+                    </label>
                     <div class="min-w-0 flex-1 md:w-48 md:flex-none">
                         <p class="text-[8px] text-slate-400 sm:text-[9px] lg:text-[10px]">{{ __('Management') }} /
                             {{ $title }}</p>
@@ -235,6 +167,56 @@
                 <span>{{ __(config('app.name')) }} · {{ __('Version') }}
                     {{ localizeNumber(config('app.version')) }}</span><span>{{ __('Super-Admin Panel') }}</span>
             </footer>
+        </div>
+        <div class="drawer-side z-50">
+            <label for="management-drawer" aria-label="{{ __('Close') }}" class="drawer-overlay"></label>
+            <aside id="management-sidebar" class="relative flex min-h-full w-[min(18rem,calc(100vw-1rem))] flex-col overflow-y-auto bg-[#15263b] text-slate-300 shadow-2xl md:w-56 lg:w-72" aria-label="{{ __('Super-Admin navigation') }}">
+                <div class="grid-paper pointer-events-none absolute inset-0 opacity-70"></div>
+                <div class="relative flex h-20 items-center gap-3 border-b border-white/10 mr-1">
+                    <a href="{{ route('management.dashboard') }}" class="flex min-w-0 flex-1 items-center gap-3 mt-2">
+                        <span class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#16a394] shadow-lg shadow-emerald-950/30">
+                            <img src="/images/logo.png" alt="" class="h-7 w-7 object-contain brightness-0 invert">
+                        </span>
+                        <span class="min-w-0">
+                            <strong class="block truncate text-xl font-extrabold text-white">{{ __(config('app.name')) }}</strong>
+                            <span class="mt-0.5 block text-[11px] text-slate-400">{{ __('Super-Admin Panel') }}</span>
+                        </span>
+                    </a>
+                    <label for="management-drawer" class="grid h-9 w-9 place-items-center rounded-lg text-slate-400 hover:bg-white/10 md:hidden" aria-controls="management-sidebar" aria-label="{{ __('Close') }}">
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" d="m6 6 12 12M18 6 6 18" />
+                        </svg>
+                    </label>
+                </div>
+                <nav class="scrollbar relative flex-1 px-4" aria-label="{{ __('Super-Admin navigation') }}">
+                    <ul class="space-y-1.5 mt-2">
+                        @foreach ($navigation as [$label, $url, $active, $icon])
+                            <li><a href="{{ $url }}" @class([
+                                'relative mb-1 flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm font-medium transition before:absolute before:-start-4 before:h-7 before:w-1 before:rounded-e-full',
+                                'bg-white/10 text-white before:bg-[#16a394]' => $active,
+                                'text-slate-400 before:bg-transparent hover:bg-white/5 hover:text-white' => !$active,
+                            ]) @if ($active) aria-current="page" @endif>
+                                    <svg class="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" d="{{ $icon }}" />
+                                    </svg><span>{{ $label }}</span>
+                                </a></li>
+                        @endforeach
+                    </ul>
+                </nav>
+                <div class="relative m-4 rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div class="mb-3 flex items-center justify-between text-xs">
+                        <span class="text-slate-400">{{ __('Service health') }}</span>
+                        <span class="flex items-center gap-1.5 text-emerald-300"><i class="h-2 w-2 rounded-full bg-emerald-400"></i>{{ __('Stable') }}</span>
+                    </div>
+                    <a href="{{ $hasCurrentWorkspace ? route('home') : route('management.dashboard') }}" class="flex items-center gap-3 border-t border-white/10 pt-3 transition">
+                        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/10 text-sm font-bold text-white">{{ mb_strtoupper(mb_substr($user->name, 0, 1)) }}</span>
+                        <span class="min-w-0 flex-1"><strong class="block truncate text-xs text-white">{{ $user->name }}</strong><span class="mt-1 block text-[10px] text-slate-500">{{ __('Go to workspace') }}</span></span>
+                        <svg class="h-4 w-4 text-slate-500 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" d="m9 18 6-6-6-6" />
+                        </svg>
+                    </a>
+                </div>
+            </aside>
         </div>
     </div>
     @stack('scripts')
