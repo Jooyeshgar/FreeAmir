@@ -442,10 +442,10 @@
                                                 method="post">
                                                 @csrf
                                                 <button
-                                                    class="text-[10px] text-violet-600">{{ __('Impersonate') }}</button>
+                                                    class="text-[10px] whitespace-nowrap text-violet-600">{{ __('Impersonate') }}</button>
                                             </form>
                                         @else
-                                            <span class="text-[10px] text-slate-300"
+                                            <span class="text-[10px] whitespace-nowrap text-slate-300"
                                                 title="{{ (int) $recentUser->companies_count === 0 ? __('User has no company') : __('Impersonation is not available for this user.') }}">
                                                 {{ (int) $recentUser->companies_count === 0 ? __('User has no company') : __('Impersonate') }}
                                             </span>
