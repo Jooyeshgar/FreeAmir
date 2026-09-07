@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\Service;
 use App\Models\ServiceGroup;
 use App\Models\User;
+use App\Models\Warehouse;
 use App\Services\InvoiceService;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -34,6 +35,7 @@ class InvoiceFactory extends Factory
             'date' => $this->faker->dateTimeBetween(now()->startOfYear(), now()->endOfYear()),
             'invoice_type' => $invoiceType,
             'customer_id' => $customer->id,
+            'warehouse_id' => Warehouse::withoutGlobalScopes()->where('company_id', getActiveCompany())->inRandomOrder()->value('id'),
             'creator_id' => $creator->id,
             'subtraction' => 0,
             'status' => $this->faker->randomElement([InvoiceStatus::APPROVED, InvoiceStatus::UNAPPROVED]),

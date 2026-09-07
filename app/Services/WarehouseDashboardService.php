@@ -9,6 +9,8 @@ use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Transaction;
+use App\Models\Warehouse;
+use App\Models\WarehouseProductStock;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -576,19 +578,26 @@ class WarehouseDashboardService
             ->with(['productGroup:id,name', 'incomeSubject:id', 'cogsSubject:id', 'inventorySubject:id', 'salesReturnsSubject:id'])
             ->get();
 
+        $warehouses = Warehouse::query()->orderBy('name')->get();
+        $warehouseStocks = WarehouseProductStock::query()
+            ->whereIn('product_id', $products->pluck('id'))
+            ->get()
+            ->groupBy('product_id');
+
         [$fyStart, $now] = $this->fiscalYearToDate();
         $movement = $this->fiscalYearMovement($fyStart, $now, $products->pluck('id')->all());
         $subjectTotals = $this->subjectTransactionTotals($products);
         $needsLastCost = in_array('last_item_cost', $columns, true);
 
-        $rows = $products->map(function (Product $p) use ($movement, $subjectTotals, $needsLastCost) {
+        $rows = $products->map(function (Product $p) use ($movement, $subjectTotals, $needsLastCost, $warehouses, $warehouseStocks) {
             $m = $movement[$p->id] ?? ['in' => 0.0, 'out' => 0.0];
             $revenue = abs($subjectTotals[$p->income_subject_id] ?? 0.0);
             $cogs = abs($subjectTotals[$p->cogs_subject_id] ?? 0.0);
             $inventory = abs($subjectTotals[$p->inventory_subject_id] ?? 0.0);
             $salesReturn = abs($subjectTotals[$p->sales_returns_subject_id] ?? 0.0);
 
-            return [
+            $row = [
+                'id' => $p->id,
                 'name' => $p->name,
                 'inbound' => $m['in'],
                 'outbound' => $m['out'],
@@ -604,11 +613,20 @@ class WarehouseDashboardService
                 'inventory_account' => $inventory,
                 'sales_return_account' => $salesReturn,
             ];
+
+            foreach ($warehouses as $warehouse) {
+                $row['warehouse_'.$warehouse->id] = (float) ($warehouseStocks->get($p->id)?->firstWhere('warehouse_id', $warehouse->id)?->quantity ?? 0);
+            }
+
+            return $row;
         })->values();
 
         $data = [
             'columns' => $columns,
-            'columnLabels' => $this->columnLabels(),
+            'columnLabels' => [
+                ...$this->columnLabels(),
+                ...$warehouses->mapWithKeys(fn (Warehouse $warehouse) => ['warehouse_'.$warehouse->id => $warehouse->name])->all(),
+            ],
             'rows' => $rows,
             'filterSummary' => $this->reportFilterSummary($name, $groupName, $minQuantity, $needOrder, $fyStart, $now),
             'company' => Company::find(getActiveCompany()),
@@ -617,7 +635,7 @@ class WarehouseDashboardService
             'generatedAtTime' => toEnglish(jdate('H:i', $now->timestamp)),
         ];
 
-        $layout = $this->reportColumnLayout($data['columns']);
+        $layout = $this->reportColumnLayout($data['columns'], $warehouses->pluck('id')->all());
         $data = array_merge($data, $layout);
         $totals = $this->reportTotals($data['rows'], $layout['numeric']);
         $data['totalRow'] = $this->reportTotalRow($layout['visible'], $totals, $layout['addDesc']);
@@ -625,7 +643,7 @@ class WarehouseDashboardService
         return $data;
     }
 
-    private function reportColumnLayout(array $columns): array
+    private function reportColumnLayout(array $columns, array $warehouseIds = []): array
     {
         $order = [
             'name', 'code', 'category', 'inbound', 'outbound', 'stock',
@@ -643,6 +661,10 @@ class WarehouseDashboardService
             $order,
             fn ($c) => in_array($c, $fixed, true) || in_array($c, $columns, true),
         ));
+
+        $warehouseColumns = array_map(fn (int $id) => 'warehouse_'.$id, $warehouseIds);
+        $visible = array_merge($visible, $warehouseColumns);
+        $numeric = array_merge($numeric, $warehouseColumns);
 
         $count = count($visible);
         $totalTriggerColumns = ['sales_profit', 'revenue_account', 'cogs_account', 'inventory_account', 'sales_return_account'];
@@ -711,13 +733,19 @@ class WarehouseDashboardService
 
     private function normalizeColumns(array $raw): array
     {
+        $available = [...self::OPTIONAL_COLUMNS, ...$this->warehouseColumnKeys()];
         if (! isset($raw['cols_submitted'])) {
-            return self::OPTIONAL_COLUMNS;
+            return $available;
         }
 
         $requested = (array) ($raw['columns'] ?? []);
 
-        return array_values(array_intersect(self::OPTIONAL_COLUMNS, $requested));
+        return array_values(array_intersect($available, $requested));
+    }
+
+    private function warehouseColumnKeys(): array
+    {
+        return Warehouse::query()->orderBy('name')->pluck('id')->map(fn (int $id) => 'warehouse_'.$id)->all();
     }
 
     private function columnLabels(): array

@@ -6,6 +6,7 @@ use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
@@ -86,5 +87,15 @@ class Product extends Model
     public function inventorySubject(): BelongsTo
     {
         return $this->belongsTo(Subject::class, 'inventory_subject_id');
+    }
+
+    public function warehouses(): BelongsToMany
+    {
+        return $this->belongsToMany(Warehouse::class, 'warehouse_product_stocks')->withPivot(['quantity', 'average_cost'])->withTimestamps();
+    }
+
+    public function warehouseStocks(): HasMany
+    {
+        return $this->hasMany(WarehouseProductStock::class);
     }
 }

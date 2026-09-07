@@ -33,6 +33,7 @@ class Invoice extends Model
         'title',
         'returned_invoice_id',
         'company_id',
+        'warehouse_id',
         'taxID',
     ];
 
@@ -65,6 +66,11 @@ class Invoice extends Model
     public function company()
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class);
     }
 
     public function items()

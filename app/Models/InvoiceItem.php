@@ -34,4 +34,5 @@ class InvoiceItem extends Model
     {
         return $this->morphTo();
     }
+
 }

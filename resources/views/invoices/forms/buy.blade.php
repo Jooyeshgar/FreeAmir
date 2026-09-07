@@ -38,6 +38,7 @@
                 <x-input x-bind:value="customer_id" name="customer_id" hidden />
             </div>
         </div>
+        @include('invoices.forms.warehouse-select')
         <x-input id="invoice_type" name="invoice_type" value="buy" hidden />
         <div class="flex w-1/3">
             <x-text-input input_name="title" title="{{ __('Invoice Name') }}"

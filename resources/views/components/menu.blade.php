@@ -23,12 +23,15 @@
         </details>
     </li>
 @endcan
-@canany(['invoices.index', 'invoices.inactive', 'customers.create', 'ancillary-costs.index',
+@canany(['invoices.dashboard', 'invoices.index', 'invoices.inactive', 'customers.create', 'ancillary-costs.index',
     'invoices.moadian-histories.index'])
     <li>
         <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('Invoices') }}</summary>
             <ul class="{{ $topDropdownContentClass }}">
+                @can('invoices.dashboard')
+                    <li><a href="{{ route('invoices.dashboard') }}">{{ __('Invoice Dashboard') }}</a></li>
+                @endcan
                 @can('invoices.index')
                     <li>
                         <details>
@@ -149,13 +152,16 @@
     </li>
 @endcanany
 
-@canany(['warehouse.dashboard', 'products.index', 'product-groups.index', 'services.index', 'service-groups.index'])
+@canany(['warehouse.dashboard', 'warehouses.index', 'products.index', 'product-groups.index', 'services.index', 'service-groups.index'])
     <li>
         <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
             <summary>{{ __('Warehouse') }}</summary>
             <ul class="{{ $topDropdownContentClass }}">
                 @can('warehouse.dashboard')
                     <li><a href="{{ route('warehouse.dashboard') }}">{{ __('Warehouse Dashboard') }}</a></li>
+                @endcan
+                @can('warehouses.index')
+                    <li><a href="{{ route('warehouses.index') }}">{{ __('Warehouses') }}</a></li>
                 @endcan
                 @can('products.index')
                     <li><a href="{{ route('products.index') }}">{{ __('Products') }}</a></li>

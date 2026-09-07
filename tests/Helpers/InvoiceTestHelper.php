@@ -6,6 +6,9 @@ use App\Enums\InvoiceType;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
+use App\Models\ProductGroup;
+use App\Models\Warehouse;
+use App\Models\WarehouseProductStock;
 use App\Services\InvoiceService;
 use Exception;
 
@@ -13,14 +16,26 @@ trait InvoiceTestHelper
 {
     private function createProduct(array $overrides = []): Product
     {
-        $group = \App\Models\ProductGroup::withoutGlobalScopes()
+        $group = ProductGroup::withoutGlobalScopes()
             ->where('company_id', $this->companyId)
             ->firstOrFail();
 
-        return Product::factory()
+        $warehouse = Warehouse::withoutGlobalScopes()->firstOrCreate(
+            ['company_id' => $this->companyId, 'code' => 'MAIN'],
+            ['name' => 'انبار اصلی']
+        );
+
+        $product = Product::factory()
             ->withGroup($group)
             ->withSubjects()
             ->create(array_merge(['company_id' => $this->companyId], $overrides));
+
+        WarehouseProductStock::firstOrCreate(
+            ['warehouse_id' => $warehouse->id, 'product_id' => $product->id],
+            ['quantity' => (float) $product->quantity, 'average_cost' => (float) $product->average_cost]
+        );
+
+        return $product;
     }
 
     private function productItem(Product $product, int $qty, float $unit): array
@@ -28,6 +43,7 @@ trait InvoiceTestHelper
         return [
             'itemable_type' => 'product',
             'itemable_id' => $product->id,
+            'warehouse_id' => $product->warehouseStocks()->orderBy('warehouse_id')->value('warehouse_id'),
             'quantity' => $qty,
             'unit' => $unit,
             'unit_discount' => 0,
@@ -44,6 +60,8 @@ trait InvoiceTestHelper
         ?int $returnedInvoiceId = null
     ): array|Exception {
         $number ??= ++$this->nextInvoiceNumber;
+        $productItem = collect($items)->firstWhere('itemable_type', 'product');
+        $warehouseId = $productItem['warehouse_id'] ?? null;
         if ($returnedInvoiceId) {
             $this->validateInvoiceItemsQuantity($returnedInvoiceId, $items);
         }
@@ -55,6 +73,7 @@ trait InvoiceTestHelper
                 'date' => $date ?? now()->toDateString(),
                 'invoice_type' => $type,
                 'customer_id' => $this->customer->id,
+                'warehouse_id' => $warehouseId,
                 'document_number' => $number,
                 'number' => $number,
                 'returned_invoice_id' => $returnedInvoiceId,
