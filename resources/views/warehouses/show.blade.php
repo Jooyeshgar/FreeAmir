@@ -1,5 +1,5 @@
 <x-app-layout :title="$warehouse->name">
-    <div class="mb-6 flex flex-col gap-4 rounded-2xl bg-gradient-to-br from-primary/10 via-base-100 to-secondary/10 p-4 shadow-sm ring-1 ring-base-200 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
+    <div class="mb-6 flex gap-4 rounded-2xl bg-gradient-to-br from-primary/10 via-base-100 to-secondary/10 p-4 shadow-sm ring-1 ring-base-200 flex-row items-center justify-between">
         <div class="min-w-0">
             <h1 class="break-words text-xl font-black tracking-tight sm:text-2xl">{{ $warehouse->name }}</h1>
             <div class="mt-2 flex flex-wrap items-center gap-2 text-sm text-base-content/60">
@@ -8,7 +8,7 @@
             </div>
         </div>
         <div class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
-            <a class="btn btn-sm btn-primary w-full lg:btn-md sm:w-auto" href="{{ route('warehouses.edit', $warehouse) }}">{{ __('Edit') }}</a>
+            <a class="btn btn-sm btn-primary w-full sm:w-auto" href="{{ route('warehouses.edit', $warehouse) }}">{{ __('Edit') }}</a>
             @php
                 $deleteDisabledReason = match (true) {
                     $warehouseCount <= 1 => __('At least one warehouse must remain.'),
@@ -18,17 +18,17 @@
                 };
             @endphp
             @if ($deleteDisabledReason)
-                <span class="tooltip" data-tip="{{ $deleteDisabledReason }}">
-                    <button type="button" class="btn btn-sm btn-error btn-disabled w-full cursor-not-allowed lg:btn-md sm:w-auto" title="{{ $deleteDisabledReason }}">{{ __('Delete') }}</button>
+                <span class="lg:tooltip" data-tip="{{ $deleteDisabledReason }}">
+                    <button type="button" class="btn btn-sm btn-error btn-disabled w-full cursor-not-allowed sm:w-auto" title="{{ $deleteDisabledReason }}">{{ __('Delete') }}</button>
                 </span>
             @else
                 <form method="POST" action="{{ route('warehouses.destroy', $warehouse) }}">
                     @csrf
                     @method('DELETE')
-                    <button type="submit" class="btn btn-sm btn-error w-full lg:btn-md sm:w-auto">{{ __('Delete') }}</button>
+                    <button type="submit" class="btn btn-sm btn-error w-full sm:w-auto">{{ __('Delete') }}</button>
                 </form>
             @endif
-            <a href="{{ route('warehouses.index') }}" class="btn btn-sm col-span-2 w-full lg:btn-md sm:w-auto">
+            <a href="{{ route('warehouses.index') }}" class="btn btn-sm col-span-2 w-full sm:w-auto">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
