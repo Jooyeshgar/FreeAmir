@@ -263,8 +263,8 @@
                 </div>
 
                 <div class="modal-action">
-                    <button type="button" class="btn" onclick="document.getElementById('add-comment-modal').close()">{{ __('cancel') }}</button>
-                    <button type="submit" class="btn btn-primary">{{ __('Create') }}</button>
+                    <button type="button" class="btn btn-sm md:btn-sm lg:btn-md" onclick="document.getElementById('add-comment-modal').close()">{{ __('cancel') }}</button>
+                    <button type="submit" class="btn btn-sm md:btn-sm lg:btn-md btn-primary">{{ __('Create') }}</button>
                 </div>
             </form>
         </div>

@@ -84,7 +84,7 @@
             <div class="py-2" id="comment-modal-rating"></div>
             <p class="py-4 whitespace-pre-line break-words" id="comment-modal-body"></p>
             <div class="modal-action">
-                <button class="btn" id="comment-modal-close">{{ __('Close') }}</button>
+                <button class="btn btn-sm md:btn-sm lg:btn-md" id="comment-modal-close">{{ __('Close') }}</button>
             </div>
         </div>
         <form method="dialog" class="modal-backdrop">
