@@ -424,7 +424,7 @@
                                 <td>{{ localizeNumber($recentUser->companies_count) }}</td>
                                 <td><span
                                         @class([
-                                            'rounded-full px-2.5 py-1 text-[10px]',
+                                            'badge badge-sm md:badge-md',
                                             'bg-emerald-50 text-emerald-600' => $recentUser->hasVerifiedEmail(),
                                             'bg-amber-50 text-amber-600' => !$recentUser->hasVerifiedEmail(),
                                         ])>{{ $recentUser->hasVerifiedEmail() ? __('Verified') : __('Pending') }}</span>
@@ -434,7 +434,7 @@
                                         @unless ($recentUser->hasVerifiedEmail())
                                             <form action="{{ route('users.verify', $recentUser) }}" method="post">
                                                 @csrf
-                                                <button class="text-[10px] text-emerald-600">{{ __('Verify') }}</button>
+                                                <button class="btn btn-sm md:btn-sm text-emerald-600">{{ __('Verify') }}</button>
                                             </form>
                                         @endunless
                                         @if (auth()->user()->canImpersonateUser($recentUser))
@@ -442,16 +442,16 @@
                                                 method="post">
                                                 @csrf
                                                 <button
-                                                    class="text-[10px] whitespace-nowrap text-violet-600">{{ __('Impersonate') }}</button>
+                                                    class="btn btn-sm md:btn-sm whitespace-nowrap text-violet-600">{{ __('Impersonate') }}</button>
                                             </form>
                                         @else
-                                            <span class="text-[10px] whitespace-nowrap text-slate-300"
+                                            <span class="btn btn-sm md:btn-sm whitespace-nowrap text-slate-300"
                                                 title="{{ (int) $recentUser->companies_count === 0 ? __('User has no company') : __('Impersonation is not available for this user.') }}">
                                                 {{ (int) $recentUser->companies_count === 0 ? __('User has no company') : __('Impersonate') }}
                                             </span>
                                         @endif
                                         <a href="{{ route('users.edit', $recentUser) }}"
-                                            class="text-[10px] text-[#16a394]">{{ __('Edit') }}</a>
+                                            class="btn btn-sm md:btn-sm text-[#16a394]">{{ __('Edit') }}</a>
                                     </div>
                                 </td>
                             </tr>
