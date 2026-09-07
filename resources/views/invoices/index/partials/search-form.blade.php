@@ -1,4 +1,4 @@
-<div class="flex w-full items-start gap-2 mb-2">
+<div class="flex w-full min-w-0 flex-col items-stretch gap-2 mb-2 lg:flex-row lg:items-start">
     <form action="{{ route('invoices.index') }}" method="GET" class="min-w-0 flex-1">
         <div class="hidden">
             <x-input name="invoice_type" value="{{ $invoiceType }}" />
@@ -6,21 +6,21 @@
                 <x-input name="service_buy" value="{{ request('service_buy') }}" />
             @endif
         </div>
-        <div class="flex gap-2">
-            <div class="[&_.input]:input-sm w-30">
+        <div class="grid grid-cols-2 gap-2 md:grid-cols-3 lg:flex lg:flex-wrap">
+            <div class="min-w-0 [&_.input]:input-sm lg:w-30">
                 <x-input name="number" value="{{ request('number') }}" placeholder="{{ __('Invoice Number') }}" />
             </div>
-            <div class="[&_.input]:input-sm w-70">
+            <div class="col-span-2 min-w-0 [&_.input]:input-sm md:col-span-1 lg:w-70">
                 <x-input name="text" value="{{ request('text') }}" placeholder="{{ __('Search by customer name or transaction description') }}" />
             </div>
-            <div class="[&_.input]:input-sm w-30">
+            <div class="min-w-0 [&_.input]:input-sm lg:w-30">
                 <x-date-picker name="start_date" class="w-full" placeholder="{{ __('Start date') }}" value="{{ request('start_date') }}"></x-date-picker>
             </div>
-            <div class="[&_.input]:input-sm w-30">
+            <div class="min-w-0 [&_.input]:input-sm lg:w-30">
                 <x-date-picker name="end_date" class="w-full" placeholder="{{ __('End date') }}" value="{{ request('end_date') }}"></x-date-picker>
             </div>
-            <div>
-                <select name="status" id="status" class="select select-sm w-30">
+            <div class="min-w-0">
+                <select name="status" id="status" class="select select-sm w-full lg:w-30">
                     <option value="all">{{ __('All Invoices') }}</option>
                     @foreach (\App\Enums\InvoiceStatus::cases() as $status)
                         @if ($isSellWorkflow ? $status->isPending() : ($status->isReadyToApprove() || $status->isPreInvoice() || $status->isRejected()))
@@ -33,8 +33,8 @@
                 </select>
             </div>
             @if ($showMoadian)
-                <div>
-                    <select name="moadian_status" id="moadian_status" class="select select-sm w-30">
+                <div class="min-w-0">
+                    <select name="moadian_status" id="moadian_status" class="select select-sm w-full lg:w-30">
                         <option value="">{{ __('Moadian Status') }}</option>
                         @foreach (\App\Enums\MoadianStatus::cases() as $moadianStatusOption)
                             <option value="{{ $moadianStatusOption->value }}" @selected(request('moadian_status') === $moadianStatusOption->value)>
@@ -52,7 +52,7 @@
             </div>
         </div>
     </form>
-    <div class="shrink-0">
+    <div class="shrink-0 self-end">
         <x-export-delivery-choice id="invoices-export-delivery" export="invoices_csv" :filters="request()->except('page')" />
     </div>
 </div>

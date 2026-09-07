@@ -20,56 +20,60 @@
                 @endcan
             </div>
 
-            <table class="table w-full mt-4 overflow-auto">
-                <thead>
-                    <tr>
-                        <th>{{ __('Title') }}</th>
-                        <th>{{ __('Parent') }}</th>
-                        <th>{{ __('Description') }}</th>
-                        <th>{{ __('Action') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($orgCharts as $orgChart)
+            <div class="overflow-auto">
+                <table class="table w-full mt-4">
+                    <thead>
                         <tr>
-                            <td>
-                                @can('hr.org-charts.show')
-                                    <a href="{{ route('hr.org-charts.show', $orgChart) }}">{{ $orgChart->title }}</a>
-                                @else
-                                    {{ $orgChart->title }}
-                                @endcan
-                            </td>
-                            <td>{{ $orgChart->parent?->title ?? '-' }}</td>
-                            <td>{{ $orgChart->description ?? '-' }}</td>
-                            <td class="flex gap-2">
-                                @can('hr.org-charts.edit')
-                                    <a href="{{ route('hr.org-charts.edit', $orgChart) }}" class="btn btn-sm btn-info">
-                                        {{ __('Edit') }}
-                                    </a>
-                                @endcan
-                                @can('hr.org-charts.delete')
-                                    <form action="{{ route('hr.org-charts.destroy', $orgChart) }}" method="POST" class="inline-block"
-                                        onsubmit="return confirm('{{ __('Are you sure?') }}')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-error">
-                                            {{ __('Delete') }}
-                                        </button>
-                                    </form>
-                                @endcan
-                            </td>
+                            <th>{{ __('Title') }}</th>
+                            <th>{{ __('Parent') }}</th>
+                            <th>{{ __('Description') }}</th>
+                            <th>{{ __('Action') }}</th>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="4" class="text-center py-4 text-gray-500">
-                                {{ __('No organization chart nodes found.') }}
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @forelse ($orgCharts as $orgChart)
+                            <tr>
+                                <td>
+                                    @can('hr.org-charts.show')
+                                        <a href="{{ route('hr.org-charts.show', $orgChart) }}">{{ $orgChart->title }}</a>
+                                    @else
+                                        {{ $orgChart->title }}
+                                    @endcan
+                                </td>
+                                <td>{{ $orgChart->parent?->title ?? '-' }}</td>
+                                <td>{{ $orgChart->description ?? '-' }}</td>
+                                <td>
+                                    <div class="inline-flex gap-2">
+                                        @can('hr.org-charts.edit')
+                                            <a href="{{ route('hr.org-charts.edit', $orgChart) }}" class="btn btn-sm btn-info">
+                                                {{ __('Edit') }}
+                                            </a>
+                                        @endcan
+                                        @can('hr.org-charts.delete')
+                                            <form action="{{ route('hr.org-charts.destroy', $orgChart) }}" method="POST"
+                                                onsubmit="return confirm('{{ __('Are you sure?') }}')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-error">
+                                                    {{ __('Delete') }}
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-gray-500">
+                                    {{ __('No organization chart nodes found.') }}
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
 
-            {!! $orgCharts->withQueryString()->links() !!}
+                {!! $orgCharts->withQueryString()->links() !!}
+            </div>
         </div>
     </div>
 </x-app-layout>

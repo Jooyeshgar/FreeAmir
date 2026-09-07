@@ -21,83 +21,87 @@
 
             <div class="card-actions">
                 @can('salary.payroll-elements.create')
-                    <a href="{{ route('salary.payroll-elements.create') }}" class="btn btn-primary">
+                    <a href="{{ route('salary.payroll-elements.create') }}" class="btn btn-sm btn-primary">
                         {{ __('Create Payroll Element') }}
                     </a>
                 @endcan
             </div>
 
-            <table class="table w-full mt-4 overflow-auto">
-                <thead>
-                    <tr>
-                        <th>{{ __('Title') }}</th>
-                        <th>{{ __('System Code') }}</th>
-                        <th>{{ __('Category') }}</th>
-                        <th>{{ __('Calculation Type') }}</th>
-                        <th>{{ __('Default Amount') }}</th>
-                        <th>{{ __('Is Taxable') }}</th>
-                        <th>{{ __('Is Insurable') }}</th>
-                        <th>{{ __('Action') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($payrollElements as $element)
+            <div class="overflow-auto">
+                <table class="table w-full mt-4">
+                    <thead>
                         <tr>
-                            <td>{{ $element->title }}</td>
-                            <td>{{ $element->system_code?->valueName() }}</td>
-                            <td>
-                                <span class="badge {{ $element->category?->isEarning() ? 'badge-success' : 'badge-error' }}">
-                                    {{ $element->category?->label() }}
-                                </span>
-                            </td>
-                            <td>{{ $element->calc_type?->label() }}</td>
-                            <td>{{ $element->default_amount !== null ? formatNumber($element->default_amount) : '-' }}</td>
-                            <td>
-                                @if ($element->is_taxable)
-                                    <span class="badge badge-warning">{{ __('Yes') }}</span>
-                                @else
-                                    <span class="badge badge-ghost">{{ __('No') }}</span>
-                                @endif
-                            </td>
-                            <td>
-                                @if ($element->is_insurable)
-                                    <span class="badge badge-info">{{ __('Yes') }}</span>
-                                @else
-                                    <span class="badge badge-ghost">{{ __('No') }}</span>
-                                @endif
-                            </td>
-                            <td class="flex gap-2">
-                                @can('salary.payroll-elements.edit')
-                                    <a href="{{ route('salary.payroll-elements.edit', $element) }}" class="btn btn-sm btn-info">
-                                        {{ __('Edit') }}
-                                    </a>
-                                @endcan
-                                @can('salary.payroll-elements.delete')
-                                    @unless ($element->is_system_locked)
-                                        <form action="{{ route('salary.payroll-elements.destroy', $element) }}" method="POST" class="inline-block"
-                                            onsubmit="return confirm('{{ __('Are you sure?') }}')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-error">
-                                                {{ __('Delete') }}
-                                            </button>
-                                        </form>
-                                    @endunless
-                                @endcan
-                            </td>
+                            <th>{{ __('Title') }}</th>
+                            <th>{{ __('System Code') }}</th>
+                            <th>{{ __('Category') }}</th>
+                            <th>{{ __('Calculation Type') }}</th>
+                            <th>{{ __('Default Amount') }}</th>
+                            <th>{{ __('Is Taxable') }}</th>
+                            <th>{{ __('Is Insurable') }}</th>
+                            <th>{{ __('Action') }}</th>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="8" class="text-center py-4 text-gray-500">
-                                {{ __('No payroll elements found.') }}
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @forelse ($payrollElements as $element)
+                            <tr>
+                                <td>{{ $element->title }}</td>
+                                <td>{{ $element->system_code?->valueName() }}</td>
+                                <td>
+                                    <span class="badge {{ $element->category?->isEarning() ? 'badge-success' : 'badge-error' }}">
+                                        {{ $element->category?->label() }}
+                                    </span>
+                                </td>
+                                <td>{{ $element->calc_type?->label() }}</td>
+                                <td>{{ $element->default_amount !== null ? formatNumber($element->default_amount) : '-' }}</td>
+                                <td>
+                                    @if ($element->is_taxable)
+                                        <span class="badge badge-warning">{{ __('Yes') }}</span>
+                                    @else
+                                        <span class="badge badge-ghost">{{ __('No') }}</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if ($element->is_insurable)
+                                        <span class="badge badge-info">{{ __('Yes') }}</span>
+                                    @else
+                                        <span class="badge badge-ghost">{{ __('No') }}</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <div class="inline-flex gap-2">
+                                        @can('salary.payroll-elements.edit')
+                                            <a href="{{ route('salary.payroll-elements.edit', $element) }}" class="btn btn-sm btn-info">
+                                                {{ __('Edit') }}
+                                            </a>
+                                        @endcan
+                                        @can('salary.payroll-elements.delete')
+                                            @unless ($element->is_system_locked)
+                                                <form action="{{ route('salary.payroll-elements.destroy', $element) }}" method="POST" class="inline-block"
+                                                    onsubmit="return confirm('{{ __('Are you sure?') }}')">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-error">
+                                                        {{ __('Delete') }}
+                                                    </button>
+                                                </form>
+                                            @endunless
+                                        @endcan
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-gray-500">
+                                    {{ __('No payroll elements found.') }}
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
 
-            <div class="mt-4">
-                {{ $payrollElements->withQueryString()->links() }}
+                <div class="mt-4">
+                    {{ $payrollElements->withQueryString()->links() }}
+                </div>
             </div>
         </div>
     </div>

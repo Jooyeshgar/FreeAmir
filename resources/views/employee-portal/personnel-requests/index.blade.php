@@ -1,13 +1,13 @@
 <x-app-layout :title="__('My Requests')">
     <div class="card bg-base-100 shadow-xl">
-        <div class="card-body">
+        <div class="card-body p-4 sm:p-6">
             <x-show-message-bags />
 
             {{-- Tabs --}}
-            <div role="tablist" class=" flex justify-around tabs tabs-lifted tabs-lg mb-4">
+            <div role="tablist" class="flex justify-around tabs tabs-lifted tabs-lg">
 
                 <a role="tab" href="{{ route('employee-portal.personnel-requests.index', array_merge(request()->except('tab', 'page'), ['tab' => 'leaves'])) }}"
-                    class="tab {{ $tab === 'leaves' ? 'tab-active' : '' }}">
+                    class="tab min-h-10 whitespace-nowrap md:flex-1 {{ $tab === 'leaves' ? 'tab-active' : '' }}">
                     {{ __('Leaves') }}
                     @if ($pendingCounts['leaves'] > 0)
                         <span class="badge badge-warning badge-sm ms-1">{{ $pendingCounts['leaves'] }}</span>
@@ -15,7 +15,7 @@
                 </a>
 
                 <a role="tab" href="{{ route('employee-portal.personnel-requests.index', array_merge(request()->except('tab', 'page'), ['tab' => 'missions'])) }}"
-                    class="tab {{ $tab === 'missions' ? 'tab-active' : '' }}">
+                    class="tab min-h-10 whitespace-nowrap md:flex-1 {{ $tab === 'missions' ? 'tab-active' : '' }}">
                     {{ __('Missions') }}
                     @if ($pendingCounts['missions'] > 0)
                         <span class="badge badge-warning badge-sm ms-1">{{ $pendingCounts['missions'] }}</span>
@@ -23,7 +23,7 @@
                 </a>
 
                 <a role="tab" href="{{ route('employee-portal.personnel-requests.index', array_merge(request()->except('tab', 'page'), ['tab' => 'work_orders'])) }}"
-                    class="tab {{ $tab === 'work_orders' ? 'tab-active' : '' }}">
+                    class="tab min-h-10 whitespace-nowrap md:flex-1 {{ $tab === 'work_orders' ? 'tab-active' : '' }}">
                     {{ __('Work Orders') }}
                     @if ($pendingCounts['work_orders'] > 0)
                         <span class="badge badge-warning badge-sm ms-1">{{ $pendingCounts['work_orders'] }}</span>
@@ -31,7 +31,7 @@
                 </a>
 
                 <a role="tab" href="{{ route('employee-portal.personnel-requests.index', array_merge(request()->except('tab', 'page'), ['tab' => 'other'])) }}"
-                    class="tab {{ $tab === 'other' ? 'tab-active' : '' }}">
+                    class="tab min-h-10 whitespace-nowrap md:flex-1 {{ $tab === 'other' ? 'tab-active' : '' }}">
                     {{ __('Other') }}
                     @if ($pendingCounts['other'] > 0)
                         <span class="badge badge-warning badge-sm ms-1">{{ $pendingCounts['other'] }}</span>
@@ -50,7 +50,7 @@
             </div>
 
             <div class="overflow-x-auto">
-                <table class="table w-full">
+                <table class="table min-w-[54rem] w-full">
                     <thead>
                         <tr>
                             <th>{{ __('Type') }}</th>
@@ -68,7 +68,7 @@
                                 <td>{{ $req->request_type->label() }}</td>
                                 <td dir="ltr">{{ formatDateTime($req->start_date) }}</td>
                                 <td dir="ltr">{{ formatDateTime($req->end_date) }}</td>
-                                <td>
+                                <td class="whitespace-nowrap">
                                     @if ($req->start_date && $req->end_date)
                                         @php
                                             $totalMinutes = $req->start_date->diffInMinutes($req->end_date);
@@ -82,31 +82,33 @@
                                 </td>
                                 <td>
                                     @if ($req->status?->isApproved())
-                                        <span class="badge badge-success badge-sm">{{ __('Approved') }}</span>
+                                        <span class="badge badge-success badge-sm whitespace-nowrap">{{ __('Approved') }}</span>
                                     @elseif ($req->status?->isRejected())
-                                        <span class="badge badge-error badge-sm">{{ __('Rejected') }}</span>
+                                        <span class="badge badge-error badge-sm whitespace-nowrap">{{ __('Rejected') }}</span>
                                     @else
-                                        <span class="badge badge-warning badge-sm">{{ __('Pending') }}</span>
+                                        <span class="badge badge-warning badge-sm whitespace-nowrap">{{ __('Pending') }}</span>
                                     @endif
                                 </td>
                                 <td class="max-w-xs truncate" title="{{ $req->reason }}">
                                     {{ $req->reason ?? '—' }}
                                 </td>
-                                <td>
-                                    @if ($req->status?->isPending())
-                                        <a href="{{ route('employee-portal.personnel-requests.edit', ['tab' => $tab, 'personnel_request' => $req->id]) }}" class="btn btn-sm btn-info">
-                                            {{ __('Edit') }}
-                                        </a>
-                                        <form action="{{ route('employee-portal.personnel-requests.destroy', ['tab' => $tab, 'personnel_request' => $req->id]) }}" method="POST" class="inline-block"
-                                            onsubmit="return confirm('{{ __('Are you sure?') }}')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                                        </form>
-                                    @else
-                                        <button class="btn btn-sm btn-disabled">{{ __('Edit') }}</button>
-                                        <button class="btn btn-sm btn-disabled">{{ __('Delete') }}</button>
-                                    @endif
+                                <td class="whitespace-nowrap">
+                                    <div class="flex flex-nowrap items-center gap-2">
+                                        @if ($req->status?->isPending())
+                                            <a href="{{ route('employee-portal.personnel-requests.edit', ['tab' => $tab, 'personnel_request' => $req->id]) }}" class="btn btn-sm btn-info">
+                                                {{ __('Edit') }}
+                                            </a>
+                                            <form action="{{ route('employee-portal.personnel-requests.destroy', ['tab' => $tab, 'personnel_request' => $req->id]) }}" method="POST" class="inline-block"
+                                                onsubmit="return confirm('{{ __('Are you sure?') }}')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                            </form>
+                                        @else
+                                            <button class="btn btn-sm btn-disabled">{{ __('Edit') }}</button>
+                                            <button class="btn btn-sm btn-disabled">{{ __('Delete') }}</button>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @empty

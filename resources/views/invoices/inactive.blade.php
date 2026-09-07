@@ -2,10 +2,11 @@
     <x-show-message-bags />
 
     <div class="card bg-base-100 shadow-xl">
-        <div class="card-body">
+        <div class="card-body p-4 sm:p-6">
             <form method="POST" action="{{ route('invoices.inactive.approve') }}">
                 @csrf
-                <table class="table w-full mt-2 overflow-auto">
+                <div class="overflow-x-auto">
+                <table class="table mt-2 min-w-[42rem] w-full">
                     <thead>
                         <tr>
                             <th>{{ __('Type') }}</th>
@@ -54,6 +55,7 @@
                         @endforeach
                     </tbody>
                 </table>
+                </div>
 
                 <div class="flex justify-end mt-4 gap-3">
                     <button type="submit" class="btn btn-primary btn-sm gap-2">
@@ -67,6 +69,7 @@
                         {{ $invoices->withQueryString()->links() }}
                     </div>
                 @endif
+            </form>
         </div>
     </div>
 

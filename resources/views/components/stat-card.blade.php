@@ -44,7 +44,7 @@
     $iconSvg = $icons[$icon] ?? null;
 @endphp
 
-<div class="p-3 rounded-xl border {{ $currentColor['border'] }} bg-white/90 shadow-sm shadow-slate-200/60 flex items-center justify-between transition-colors dark:bg-slate-800/80 dark:shadow-none dark:ring-1 dark:ring-white/5">
+<div class="h-full p-3 rounded-xl border {{ $currentColor['border'] }} bg-white/90 shadow-sm shadow-slate-200/60 flex items-center justify-between transition-colors dark:bg-slate-800/80 dark:shadow-none dark:ring-1 dark:ring-white/5">
     <div class="flex flex-col justify-center flex-grow pl-4">
         <span class="text-slate-500 dark:text-slate-300 font-medium text-sm mb-1">{{ $title }}</span>
 

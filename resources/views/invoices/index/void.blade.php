@@ -1,4 +1,4 @@
-<div class="card-actions flex items-center gap-3">
+<div class="card-actions flex flex-col items-stretch gap-3 lg:flex-row lg:items-start">
     @include('invoices.index.partials.search-form', [
         'invoiceType' => 'void',
         'isSellWorkflow' => false,

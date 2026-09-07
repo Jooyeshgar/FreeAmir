@@ -20,62 +20,65 @@
                 @endcan
             </div>
 
-            <table class="table w-full mt-4 overflow-auto">
-                <thead>
-                    <tr>
-                        <th>{{ __('Name') }}</th>
-                        <th>{{ __('Code') }}</th>
-                        <th>{{ __('Phone') }}</th>
-                        <th>{{ __('Active') }}</th>
-                        <th>{{ __('Action') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($workSites as $workSite)
+            <div class="overflow-auto">
+                <table class="table w-full mt-4">
+                    <thead>
                         <tr>
-                            <td>{{ $workSite->name }}</td>
-                            <td>{{ $workSite->code }}</td>
-                            <td>{{ $workSite->phone ?? '-' }}</td>
-                            <td>
-                                @if ($workSite->is_active)
-                                    <span class="badge badge-success">{{ __('Yes') }}</span>
-                                @else
-                                    <span class="badge badge-ghost">{{ __('No') }}</span>
-                                @endif
-                            </td>
-                            <td class="flex gap-2">
-                                @can('salary.work-sites.edit')
-                                    <a href="{{ route('salary.work-sites.edit', $workSite) }}" class="btn btn-sm btn-info">
-                                        {{ __('Edit') }}
-                                    </a>
-                                @endcan
-                                @can('salary.work-sites.index')
-                                    <a href="{{ route('salary.work-site-contracts.index', ['work_site_id' => $workSite->id]) }}" class="btn btn-sm btn-ghost">
-                                        {{ __('Contracts') }}
-                                    </a>
-                                @endcan
-                                @can('salary.work-sites.delete')
-                                    <form action="{{ route('salary.work-sites.destroy', $workSite) }}" method="POST" class="inline-block"
-                                        onsubmit="return confirm('{{ __('All of the employees in this work site will be removed. Are you sure?') }}')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-error">
-                                            {{ __('Delete') }}
-                                        </button>
-                                    </form>
-                                @endcan
-                            </td>
+                            <th>{{ __('Name') }}</th>
+                            <th>{{ __('Code') }}</th>
+                            <th>{{ __('Phone') }}</th>
+                            <th>{{ __('Active') }}</th>
+                            <th>{{ __('Action') }}</th>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="5" class="text-center py-4 text-gray-500">
-                                {{ __('No work sites found.') }}
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-
+                    </thead>
+                    <tbody>
+                        @forelse ($workSites as $workSite)
+                            <tr>
+                                <td>{{ $workSite->name }}</td>
+                                <td>{{ $workSite->code }}</td>
+                                <td>{{ $workSite->phone ?? '-' }}</td>
+                                <td>
+                                    @if ($workSite->is_active)
+                                        <span class="badge badge-success">{{ __('Yes') }}</span>
+                                    @else
+                                        <span class="badge badge-ghost">{{ __('No') }}</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    <div class="inline-flex gap-2">
+                                        @can('salary.work-sites.edit')
+                                            <a href="{{ route('salary.work-sites.edit', $workSite) }}" class="btn btn-sm btn-info">
+                                                {{ __('Edit') }}
+                                            </a>
+                                        @endcan
+                                        @can('salary.work-sites.index')
+                                            <a href="{{ route('salary.work-site-contracts.index', ['work_site_id' => $workSite->id]) }}" class="btn btn-sm btn-ghost">
+                                                {{ __('Contracts') }}
+                                            </a>
+                                        @endcan
+                                        @can('salary.work-sites.delete')
+                                            <form action="{{ route('salary.work-sites.destroy', $workSite) }}" method="POST" class="inline-block"
+                                                onsubmit="return confirm('{{ __('All of the employees in this work site will be removed. Are you sure?') }}')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-error">
+                                                    {{ __('Delete') }}
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-gray-500">
+                                    {{ __('No work sites found.') }}
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
             <div class="mt-4">
                 {{ $workSites->withQueryString()->links() }}
             </div>
