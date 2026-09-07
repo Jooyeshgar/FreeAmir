@@ -930,9 +930,9 @@
                                     <textarea name="description" class="textarea textarea-bordered w-full" rows="2"></textarea>
                                 </div>
                                 <div class="modal-action">
-                                    <button type="submit" class="btn btn-primary">{{ __('Save') }}</button>
-                                    <button type="button" class="btn"
-                                        onclick="payment_modal.close()">{{ __('Cancel') }}</button>
+                                    <button type="button" class="btn btn-sm md:btn-sm lg:btn-md"
+                                        onclick="payment_modal.close()">{{ __('Cancel') }}</button>    
+                                    <button type="submit" class="btn btn-sm md:btn-sm lg:btn-md btn-primary">{{ __('Save') }}</button>
                                 </div>
                             </form>
                         </div>
@@ -944,7 +944,7 @@
                         @can('invoices.payments.store-cheque')
                             <dialog id="cheque_payment_modal" class="modal">
                                 <div class="modal-box max-w-3xl">
-                                    <div class="flex items-center justify-between gap-3 mb-4">
+                                    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
                                         <div>
                                             <h3 class="text-lg font-bold">{{ __('Pay invoice by cheque') }}</h3>
                                             <p class="text-sm opacity-70">{{ $chequeDirection->label() }} - {{ $invoice->customer?->name }}</p>
@@ -1026,8 +1026,8 @@
                                             <textarea name="description" class="textarea textarea-bordered w-full" rows="2"></textarea>
                                         </div>
                                         <div class="modal-action">
-                                            <button type="button" class="btn" onclick="cheque_payment_modal.close()">{{ __('Cancel') }}</button>
-                                            <button type="submit" class="btn btn-secondary">{{ __('Register cheque and pay') }}</button>
+                                            <button type="button" class="btn btn-sm md:btn-sm lg:btn-md" onclick="cheque_payment_modal.close()">{{ __('Cancel') }}</button>
+                                            <button type="submit" class="btn btn-sm md:btn-sm lg:btn-md btn-secondary">{{ __('Register cheque and pay') }}</button>
                                         </div>
                                     </form>
                                 </div>
@@ -1328,8 +1328,8 @@
                         </div>
                         <div class="modal-action">
                             <button type="button" onclick="document.getElementById('inv-transfer-modal').close()"
-                                class="btn">{{ __('Cancel') }}</button>
-                            <button type="submit" class="btn btn-primary gap-2">{{ __('Transfer') }}</button>
+                                class="btn btn-sm md:btn-sm lg:btn-md">{{ __('Cancel') }}</button>
+                            <button type="submit" class="btn btn-sm md:btn-sm lg:btn-md btn-primary gap-2">{{ __('Transfer') }}</button>
                         </div>
                     </form>
                 </div>

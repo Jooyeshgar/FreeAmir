@@ -43,7 +43,7 @@
                 @endforeach
             @endunless
             <div class="modal-action">
-                <button type="button" class="btn btn-ghost" onclick="document.getElementById('{{ $id }}').close()">{{ __('Cancel') }}</button>
+                <button type="button" class="btn btn-sm md:btn-sm lg:btn-md btn-ghost" onclick="document.getElementById('{{ $id }}').close()">{{ __('Cancel') }}</button>
                 <button type="submit"
                     @if ($form)
                         form="{{ $form }}" name="_token" value="{{ csrf_token() }}"
@@ -51,7 +51,7 @@
                     @else
                         name="delivery" value="download"
                     @endif
-                    formnovalidate class="btn btn-primary">
+                    formnovalidate class="btn btn-sm md:btn-sm lg:btn-md btn-primary">
                     {{ __('Download') }}
                 </button>
                 <button type="submit"
@@ -61,7 +61,7 @@
                     @else
                         name="delivery" value="email"
                     @endif
-                    class="btn btn-secondary">
+                    class="btn btn-sm md:btn-sm lg:btn-md btn-secondary">
                     {{ __('Send to email') }}
                 </button>
             </div>

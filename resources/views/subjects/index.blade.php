@@ -180,8 +180,8 @@
                         </div>
 
                         <div class="modal-action">
-                            <button type="button" onclick="document.getElementById('transferModal').close()" class="btn">{{ __('Cancel') }}</button>
-                            <button type="submit" class="btn btn-primary">{{ __('Transfer Transactions') }}</button>
+                            <button type="button" onclick="document.getElementById('transferModal').close()" class="btn btn-sm md:btn-sm lg:btn-md ">{{ __('Cancel') }}</button>
+                            <button type="submit" class="btn btn-sm md:btn-sm lg:btn-md btn-primary">{{ __('Transfer Transactions') }}</button>
                         </div>
                     </form>
                 </div>

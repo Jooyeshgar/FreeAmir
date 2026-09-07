@@ -415,8 +415,8 @@
                             </select>
                         </div>
                         <div class="modal-action">
-                            <button type="button" onclick="document.getElementById('doc-transfer-modal').close()" class="btn">{{ __('Cancel') }}</button>
-                            <button type="submit" class="btn btn-primary gap-2">{{ __('Transfer') }}</button>
+                            <button type="button" onclick="document.getElementById('doc-transfer-modal').close()" class="btn btn-sm md:btn-sm lg:btn-md">{{ __('Cancel') }}</button>
+                            <button type="submit" class="btn btn-sm md:btn-sm lg:btn-md btn-primary gap-2">{{ __('Transfer') }}</button>
                         </div>
                     </form>
                 </div>
