@@ -86,7 +86,7 @@
 
             {{-- Table --}}
             @if ($documents->count())
-            <div class="overflow-x-auto">
+            <div class="overflow-x-auto lg:overflow-x-hidden">
             <table class="table min-w-[72rem] w-full">
                 <thead>
                     <tr>

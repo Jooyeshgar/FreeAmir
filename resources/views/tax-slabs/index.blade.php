@@ -32,22 +32,24 @@
                                 <td>{{ formatNumber($incomeFrom) }}</td>
                                 <td>{{ $taxSlab->income_to !== null ? formatNumber($taxSlab->income_to) : '∞' }}</td>
                                 <td>{{ $taxSlab->tax_rate }}</td>
-                                <td class="flex gap-2">
-                                    @can('salary.tax-slabs.edit')
-                                        <a href="{{ route('salary.tax-slabs.edit', $taxSlab) }}" class="btn btn-sm btn-info">
-                                            {{ __('Edit') }}
-                                        </a>
-                                    @endcan
-                                    @can('salary.tax-slabs.delete')
-                                        <form action="{{ route('salary.tax-slabs.destroy', $taxSlab) }}" method="POST" class="inline-block"
-                                            onsubmit="return confirm('{{ __('Are you sure?') }}')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-error">
-                                                {{ __('Delete') }}
-                                            </button>
-                                        </form>
-                                    @endcan
+                                <td>
+                                    <div class="inline-flex gap-2">
+                                        @can('salary.tax-slabs.edit')
+                                            <a href="{{ route('salary.tax-slabs.edit', $taxSlab) }}" class="btn btn-sm btn-info">
+                                                {{ __('Edit') }}
+                                            </a>
+                                        @endcan
+                                        @can('salary.tax-slabs.delete')
+                                            <form action="{{ route('salary.tax-slabs.destroy', $taxSlab) }}" method="POST" class="inline-block"
+                                                onsubmit="return confirm('{{ __('Are you sure?') }}')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-error">
+                                                    {{ __('Delete') }}
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    </div>
                                 </td>
                             </tr>
                             @php

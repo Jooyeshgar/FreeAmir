@@ -57,22 +57,24 @@
                                         <span class="badge badge-error">{{ __('Inactive') }}</span>
                                     @endif
                                 </td>
-                                <td class="flex gap-2">
-                                    @can('hr.organization-units.edit')
-                                        <a href="{{ route('hr.organization-units.edit', $organizationUnit) }}" class="btn btn-sm btn-info">
-                                            {{ __('Edit') }}
-                                        </a>
-                                    @endcan
-                                    @can('hr.organization-units.destroy')
-                                        <form action="{{ route('hr.organization-units.destroy', $organizationUnit) }}" method="POST" class="inline-block"
-                                            onsubmit="return confirm('{{ __('Are you sure?') }}')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-error">
-                                                {{ __('Delete') }}
-                                            </button>
-                                        </form>
-                                    @endcan
+                                <td>
+                                    <div class="inline-flex gap-2">
+                                        @can('hr.organization-units.edit')
+                                            <a href="{{ route('hr.organization-units.edit', $organizationUnit) }}" class="btn btn-sm btn-info">
+                                                {{ __('Edit') }}
+                                            </a>
+                                        @endcan
+                                        @can('hr.organization-units.destroy')
+                                            <form action="{{ route('hr.organization-units.destroy', $organizationUnit) }}" method="POST" class="inline-block"
+                                                onsubmit="return confirm('{{ __('Are you sure?') }}')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-error">
+                                                    {{ __('Delete') }}
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    </div>
                                 </td>
                             </tr>
                         @empty

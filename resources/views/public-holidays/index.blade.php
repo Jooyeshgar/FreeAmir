@@ -34,22 +34,24 @@
                             <tr>
                                 <td>{{ formatDate($publicHoliday->date) }}</td>
                                 <td>{{ $publicHoliday->name }}</td>
-                                <td class="flex gap-2">
-                                    @can('salary.public-holidays.edit')
-                                        <a href="{{ route('salary.public-holidays.edit', $publicHoliday) }}" class="btn btn-sm btn-info">
-                                            {{ __('Edit') }}
-                                        </a>
-                                    @endcan
-                                    @can('salary.public-holidays.delete')
-                                        <form action="{{ route('salary.public-holidays.destroy', $publicHoliday) }}" method="POST" class="inline-block"
-                                            onsubmit="return confirm('{{ __('Are you sure?') }}')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-error">
-                                                {{ __('Delete') }}
-                                            </button>
-                                        </form>
-                                    @endcan
+                                <td>
+                                    <div class="inline-flex gap-2">
+                                        @can('salary.public-holidays.edit')
+                                            <a href="{{ route('salary.public-holidays.edit', $publicHoliday) }}" class="btn btn-sm btn-info">
+                                                {{ __('Edit') }}
+                                            </a>
+                                        @endcan
+                                        @can('salary.public-holidays.delete')
+                                            <form action="{{ route('salary.public-holidays.destroy', $publicHoliday) }}" method="POST" class="inline-block"
+                                                onsubmit="return confirm('{{ __('Are you sure?') }}')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-error">
+                                                    {{ __('Delete') }}
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    </div>
                                 </td>
                             </tr>
                         @empty
