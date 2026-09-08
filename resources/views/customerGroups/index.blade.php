@@ -47,13 +47,13 @@
                                     href="{{ route('transactions.index', ['subject_id' => $customerGroup->subject_id]) }}">{{ $customerGroup->subject?->formattedCode() }}</a>
                             </td>
                             <td class="px-4 py-2">
-                                <a href="{{ route('customers.index', ['group_name' => $customerGroup->name]) }}"
+                                <a href="{{ route('customers.index', ['group_id' => $customerGroup->id]) }}"
                                     class="text-blue-600 hover:underline">
                                     {{ $customerGroup->name }}
                                 </a>
                             </td>
                             <td class="px-4 py-2">
-                                <a href="{{ route('customers.index', ['group_name' => $customerGroup->name]) }}"
+                                <a href="{{ route('customers.index', ['group_id' => $customerGroup->id]) }}"
                                     class="hover:underline">
                                     {{ localizeNumber($customerGroup->customers_count) }}
                                 </a>
