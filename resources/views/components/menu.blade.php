@@ -61,6 +61,9 @@
                             <summary>{{ __('Purchases') }}</summary>
                             <ul>
                                 <li><a
+                                        href="{{ route('invoices.index', ['invoice_type' => 'beginning_inventory']) }}">{{ __('Beginning Inventory') }}</a>
+                                </li>
+                                <li><a
                                         href="{{ route('invoices.index', ['invoice_type' => 'buy']) }}">{{ __('Buy List') }}</a>
                                 </li>
                                 <li><a

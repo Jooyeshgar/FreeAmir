@@ -1,6 +1,7 @@
 <x-card class="rounded-2xl w-full" class_body="p-4">
     <div class="flex gap-2 items-center justify-start">
-        <div class="flex w-1/4">
+        @unless ($isBeginningInventory)
+            <div class="flex w-1/4">
 
             @php
                 $initialCustomerId = old('customer_id', $invoice->customer_id ?? null);
@@ -37,9 +38,10 @@
 
                 <x-input x-bind:value="customer_id" name="customer_id" hidden />
             </div>
-        </div>
+            </div>
+        @endunless
         @include('invoices.forms.warehouse-select')
-        <x-input id="invoice_type" name="invoice_type" value="buy" hidden />
+        <x-input id="invoice_type" name="invoice_type" value="{{ $isBeginningInventory ? 'beginning_inventory' : 'buy' }}" hidden />
         <div class="flex w-1/3">
             <x-text-input input_name="title" title="{{ __('Invoice Name') }}"
                 input_value="{{ old('title') ?? ($invoice->title ?? '') }}" placeholder="{{ __('Invoice Name') }}"
@@ -63,12 +65,14 @@
             x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(invoice_number));">
         </x-text-input>
  
-        <x-text-input x-data="{ document_number: '{{ formatDocumentNumber($invoice->document?->number ?? $previousDocumentNumber + 1) }}' }"
-            title="{{ __('current document number') }}" x-model.number="document_number" x-bind:name="'document_number'"
-            placeholder="{{ __('current document number') }}" label_text_class="text-gray-500 text-nowrap"
-            x-on:input="document_number = $store.utils.convertToEnglish($event.target.value);"
-            x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(document_number));">
-        </x-text-input>
+        @unless ($isBeginningInventory)
+            <x-text-input x-data="{ document_number: '{{ formatDocumentNumber($invoice->document?->number ?? $previousDocumentNumber + 1) }}' }"
+                title="{{ __('current document number') }}" x-model.number="document_number" x-bind:name="'document_number'"
+                placeholder="{{ __('current document number') }}" label_text_class="text-gray-500 text-nowrap"
+                x-on:input="document_number = $store.utils.convertToEnglish($event.target.value);"
+                x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(document_number));">
+            </x-text-input>
+        @endunless
 
         <x-text-input data-jdp title="{{ __('date') }}" input_name="date" placeholder="{{ __('date') }}" readonly
             input_value="{{ old('date') ?? convertToJalali($invoice->date ?? now(), true) }}"
@@ -95,12 +99,18 @@
                 </div>
             </div>
         </div>
-        <div class="text-sm flex-1 min-w-80 text-center text-gray-500 pt-3">{{ __('description') }}</div>
+        @unless ($isBeginningInventory)
+            <div class="text-sm flex-1 min-w-80 text-center text-gray-500 pt-3">{{ __('description') }}</div>
+        @endunless
         <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">{{ __('Quantity') }}</div>
-        <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">{{ __('OFF') }}</div>
-        <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">{{ $invoice->exists ? __('VAT') : __('VAT') . ' (%)' }}</div>
+        @unless ($isBeginningInventory)
+            <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">{{ __('OFF') }}</div>
+            <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">{{ $invoice->exists ? __('VAT') : __('VAT') . ' (%)' }}</div>
+        @endunless
         <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">{{ __('Unit') }}</div>
-        <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">{{ __('Total') }}</div>
+        @unless ($isBeginningInventory)
+            <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">{{ __('Total') }}</div>
+        @endunless
     </div>
     <div class="min-h-96">
         <div id="transactions" x-data="{ activeTab: {{ $total }} }">
@@ -142,13 +152,15 @@
                         <x-input name="" x-bind:name="'transactions[' + index + '][service_id]'" x-bind:value="transaction.service_id || ''" hidden />
                         <x-input name="" x-bind:name="'transactions[' + index + '][item_id]'" x-bind:value="transaction.item_id || ''" hidden />
                     </div>
-                    <div class="flex-1 w-[200px]">
+                    @unless ($isBeginningInventory)
+                        <div class="flex-1 w-[200px]">
                         <x-text-input x-bind:value="transaction.desc" placeholder="{{ __('description') }}"
                             x-bind:name="'transactions[' + index + '][desc]'" label_text_class="text-gray-500"
                             label_class="w-full" input_class="border-white"
                             x-bind:disabled="!transaction.product_id">
                         </x-text-input>
-                    </div>
+                        </div>
+                    @endunless
                     <div class="flex-1 min-w-24 max-w-32">
                         <x-text-input placeholder="{{ localizeNumber('0') }}" x-model.number="transaction.quantity"
                             x-bind:name="'transactions[' + index + '][quantity]'"
@@ -158,23 +170,27 @@
                             x-effect="$el.value = $store.utils.localizeNumber(($store.utils.cleanupNumber(transaction.quantity).split('.')[0]) || '')">
                         </x-text-input>
                     </div>
-                    <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input placeholder="{{ localizeNumber('0') }}" x-model.number="transaction.off"
-                            x-bind:name="'transactions[' + index + '][off]'" x-bind:disabled="!transaction.product_id"
-                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
-                            x-on:input="transaction.off = $store.utils.convertToEnglish($event.target.value)"
-                            x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(transaction.off))">
-                        </x-text-input>
-                    </div>
-
-                    <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input placeholder="{{ localizeNumber('0') }}" x-model.number="transaction.vat"
-                            x-bind:name="'transactions[' + index + '][vat]'" x-bind:disabled="!transaction.product_id"
-                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
-                            x-on:input="transaction.vat = $store.utils.convertToEnglish($event.target.value)"
-                            x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(transaction.vat))">
-                        </x-text-input>
-                    </div>
+                    @unless ($isBeginningInventory)
+                        <div class="flex-1 min-w-24 max-w-32">
+                            <x-text-input placeholder="{{ localizeNumber('0') }}" x-model.number="transaction.off"
+                                x-bind:name="'transactions[' + index + '][off]'" x-bind:disabled="!transaction.product_id"
+                                label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
+                                x-on:input="transaction.off = $store.utils.convertToEnglish($event.target.value)"
+                                x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(transaction.off))">
+                            </x-text-input>
+                        </div>
+                        <div class="flex-1 min-w-24 max-w-32">
+                            <x-text-input placeholder="{{ localizeNumber('0') }}" x-model.number="transaction.vat"
+                                x-bind:name="'transactions[' + index + '][vat]'" x-bind:disabled="!transaction.product_id"
+                                label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
+                                x-on:input="transaction.vat = $store.utils.convertToEnglish($event.target.value)"
+                                x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(transaction.vat))">
+                            </x-text-input>
+                        </div>
+                    @else
+                        <x-input name="" x-bind:name="'transactions[' + index + '][off]'" value="0" hidden />
+                        <x-input name="" x-bind:name="'transactions[' + index + '][vat]'" value="0" hidden />
+                    @endunless
 
                     <div class="flex-1 min-w-24 max-w-32">
                         <x-text-input placeholder="{{ localizeNumber('0') }}" x-model.number="transaction.unit"
@@ -186,13 +202,17 @@
                         </x-text-input>
                     </div>
 
-                    <div class="flex-1 min-w-32 max-w-32">
+                    @unless ($isBeginningInventory)
+                        <div class="flex-1 min-w-32 max-w-32">
                         <x-text-input x-bind:value="calcTotal(transaction)"
                             x-bind:name="'transactions[' + index + '][total]'"
                             placeholder="{{ localizeNumber('0') }}" label_text_class="text-gray-500"
                             label_class="w-full" input_class="border-white" readonly>
                         </x-text-input>
-                    </div>
+                        </div>
+                    @else
+                        <x-input name="" x-bind:name="'transactions[' + index + '][total]'" x-bind:value="calcTotal(transaction)" hidden />
+                    @endunless
                 </div>
             </template>
         </div>
@@ -208,7 +228,8 @@
     </div>
     <hr style="">
     <div class="flex flex-row justify-between" x-data="{ subtractionsInput: '{{ old('subtraction') ?? ($invoice->subtraction ?? 0) }}' }">
-        <div class="flex justify-start px-4 gap-4 py-3 rounded-b-2xl">
+        @unless ($isBeginningInventory)
+            <div class="flex justify-start px-4 gap-4 py-3 rounded-b-2xl">
             <x-text-input placeholder="{{ localizeNumber('0') }}" label_text_class="text-gray-500"
                 label_class="w-full" input_name="subtraction" title="{{ __('Subtractions') }}"
                 input_value="{{ old('subtraction') ?? ($invoice->subtraction ?? 0) }}" input_class="locale-number"
@@ -216,7 +237,10 @@
                 @input="subtractionsInput = $store.utils.cleanupNumber($event.target.value)"
                 x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(subtractionsInput))">
             </x-text-input>
-        </div>
+            </div>
+        @else
+            <x-input name="subtraction" value="0" hidden />
+        @endunless
         <div class="flex justify-end px-4 gap-4 py-3 rounded-b-2xl">
             <div
                 class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 dark:border-slate-700 dark:shadow-none shadow-sm rounded-xl border border-gray-200">
@@ -225,7 +249,8 @@
                     x-text="$store.utils.localizeNumber($store.utils.cleanupNumber(String(transactions.reduce((sum, t) => sum + (Number($store.utils.convertToEnglish(t.quantity)) || 0), 0))))">{{ localizeNumber('0') }}</span>
             </div>
 
-            <div
+            @unless ($isBeginningInventory)
+                <div
                 class="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 dark:border-slate-700 dark:shadow-none shadow-sm rounded-xl border border-gray-200">
                 <span
                     class="text-sm font-medium text-gray-500 dark:text-slate-300">{{ __('Total Sum') }}({{ config('amir.currency') ?? __('Rial') }}):
@@ -237,7 +262,8 @@
                     ).toLocaleString())">
                     {{ localizeNumber('0') }}
                 </span>
-            </div>
+                </div>
+            @endunless
         </div>
     </div>
 
@@ -250,15 +276,17 @@
 </x-card>
 
 <div class="mt-4 flex gap-2 justify-end">
-    <a href="{{ route('invoices.index', ['invoice_type' => 'buy']) }}" type="submit"
+    <a href="{{ route('invoices.index', ['invoice_type' => $isBeginningInventory ? 'beginning_inventory' : 'buy']) }}" type="submit"
         class="btn btn-default rounded-md dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-600">{{ __('cancel') }}</a>
     <button id="submitForm" type="submit" class="btn text-white btn-primary rounded-md">{{ __('save') }}
     </button>
 
-    @can('invoices.approve')
+    @if (! $isBeginningInventory)
+        @can('invoices.approve')
         <button id="submitFormAndApprove" type="submit" name="approve" value="1"
             class="btn text-white btn-primary rounded-md">{{ __('save and approve') }}</button>
-    @endcan
+        @endcan
+    @endif
 </div>
 
 @pushOnce('scripts')

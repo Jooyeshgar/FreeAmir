@@ -299,7 +299,10 @@ class ProductService
             }
 
             $invoices = Invoice::withoutGlobalScopes()
-                ->whereIn('status', InvoiceStatus::approvedOrSettled())
+                ->where(function ($query) {
+                    $query->whereIn('status', InvoiceStatus::approvedOrSettled())
+                        ->orWhere('is_beginning_inventory', true);
+                })
                 ->whereHas('items', function ($query) use ($product) {
                     $query->where('itemable_type', Product::class)->where('itemable_id', $product->id);
                 })

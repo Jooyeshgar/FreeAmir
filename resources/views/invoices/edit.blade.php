@@ -1,11 +1,13 @@
-<x-app-layout title="{{ __('Edit Invoice') }} #{{ formatDocumentNumber($invoice->number) }}">
+<x-app-layout title="{{ $isBeginningInventory ? __('Edit Beginning Inventory') : __('Edit Invoice') }} #{{ formatDocumentNumber($invoice->number) }}">
     <div>
         <form action="{{ route('invoices.update', $invoice) }}" method="POST">
             @csrf
             @method('PUT')
             <div class="card-body">
                 <h2 class="card-title">
-                    @if ($isReturnServiceBuy)
+                    @if ($isBeginningInventory)
+                        {{ __('Edit Beginning Inventory') }}
+                    @elseif ($isReturnServiceBuy)
                         {{ __('Edit') . ' ' . __('Return Service Buy Invoice') }}
                     @else
                         {{ __('Edit') . ' ' . ($isServiceBuy ? __('Service Buy Invoice') : ($isReturnServiceBuy ? __('Return Service Buy Invoice') : $invoice_type->label())) }}
@@ -19,7 +21,9 @@
                     @break
 
                     @case('buy')
-                        @if ($isServiceBuy)
+                        @if ($isBeginningInventory)
+                            @include('invoices.forms.buy')
+                        @elseif ($isServiceBuy)
                             @include('invoices.forms.buy_service')
                         @else
                             @include('invoices.forms.buy')

@@ -35,6 +35,10 @@ class InvoiceService
         $date = $invoiceData['date'] ?? now()->toDateString();
         $items = self::assignWarehouseToItems($items, $invoiceData['warehouse_id'] ?? null);
 
+        if ($invoiceData['is_beginning_inventory'] ?? false) {
+            return self::createBeginningInventory($user, $invoiceData, $items, $date);
+        }
+
         $transactionBuilder = new InvoiceTransactionBuilder($items, $invoiceData);
         $buildResult = $transactionBuilder->build();
 
@@ -95,6 +99,32 @@ class InvoiceService
         ];
     }
 
+    private static function createBeginningInventory(User $user, array $invoiceData, array $items, string $date): array
+    {
+        $invoice = DB::transaction(function () use ($user, $invoiceData, $items, $date) {
+            $invoice = Invoice::create([
+                ...$invoiceData,
+                'invoice_type' => InvoiceType::BUY,
+                'is_beginning_inventory' => true,
+                'customer_id' => null,
+                'document_id' => null,
+                'status' => null,
+                'creator_id' => $user->id,
+                'date' => $date,
+                'subtraction' => 0,
+                'vat' => 0,
+                'amount' => collect($items)->sum(fn (array $item) => (float) ($item['quantity'] ?? 0) * (float) ($item['unit'] ?? 0)),
+            ]);
+
+            ProductService::addProductsQuantities($items, InvoiceType::BUY);
+            self::syncInvoiceItems($invoice, $items, false);
+
+            return $invoice->refresh();
+        });
+
+        return ['document' => null, 'invoice' => $invoice];
+    }
+
     private static function createInvoiceWithoutApproval(User $user, array $invoiceData, array $items, array $buildResult, string $date)
     {
         $createdInvoice = null;
@@ -126,6 +156,11 @@ class InvoiceService
     public static function updateInvoice(int $invoiceId, array $invoiceData, array $items = [], bool $approved = false): array
     {
         $invoice = Invoice::findOrFail($invoiceId);
+
+        if ($invoice->is_beginning_inventory) {
+            return self::updateBeginningInventory($invoice, $invoiceData, $items);
+        }
+
         $wasApproved = $invoice->status->isApprovedOrSettled();
         $oldItems = $wasApproved ? $invoice->items->toArray() : [];
 
@@ -239,6 +274,34 @@ class InvoiceService
         return $invoice;
     }
 
+    private static function updateBeginningInventory(Invoice $invoice, array $invoiceData, array $items): array
+    {
+        $items = self::assignWarehouseToItems($items, $invoiceData['warehouse_id'] ?? null);
+
+        DB::transaction(function () use ($invoice, $invoiceData, $items) {
+            ProductService::subProductsQuantities($invoice->items->toArray(), InvoiceType::BUY);
+
+            $invoice->update([
+                'title' => $invoiceData['title'] ?? null,
+                'date' => $invoiceData['date'],
+                'number' => $invoiceData['number'],
+                'warehouse_id' => $invoiceData['warehouse_id'],
+                'description' => $invoiceData['description'] ?? null,
+                'customer_id' => null,
+                'document_id' => null,
+                'status' => null,
+                'subtraction' => 0,
+                'vat' => 0,
+                'amount' => collect($items)->sum(fn (array $item) => (float) ($item['quantity'] ?? 0) * (float) ($item['unit'] ?? 0)),
+            ]);
+
+            ProductService::addProductsQuantities($items, InvoiceType::BUY);
+            self::syncInvoiceItems($invoice, $items, false);
+        });
+
+        return ['document' => null, 'invoice' => $invoice->refresh()];
+    }
+
     public static function syncCOGAfterForInvoiceItems(Invoice $invoice)
     {
         if (! in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::SELL, InvoiceType::RETURN_BUY], true)) {
@@ -272,6 +335,10 @@ class InvoiceService
         DB::transaction(function () use ($invoiceId) {
             $invoice = Invoice::findOrFail($invoiceId);
 
+            if ($invoice->is_beginning_inventory) {
+                ProductService::subProductsQuantities($invoice->items->toArray(), InvoiceType::BUY);
+            }
+
             $chequeIds = $invoice->payments()->whereNotNull('cheque_id')->pluck('cheque_id')->unique();
             Cheque::whereIn('id', $chequeIds)->each(fn (Cheque $cheque) => app(ChequeService::class)->delete($cheque));
 
@@ -288,10 +355,10 @@ class InvoiceService
             'date' => $invoiceData['date'],
             'invoice_type' => $invoiceData['invoice_type'],
             'number' => isset($invoiceData['number']) ? (int) $invoiceData['number'] : null,
-            'customer_id' => $invoiceData['customer_id'],
+            'customer_id' => $invoiceData['customer_id'] ?? null,
             'warehouse_id' => $invoiceData['warehouse_id'],
             'returned_invoice_id' => $invoiceData['returned_invoice_id'] ?? null,
-            'document_number' => $invoiceData['document_number'],
+            'document_number' => $invoiceData['document_number'] ?? null,
             'description' => $invoiceData['description'] ?? null,
             'subtraction' => floatval($invoiceData['subtraction'] ?? 0),
             'permanent' => isset($invoiceData['permanent']) ? (int) $invoiceData['permanent'] : 0,
@@ -335,7 +402,7 @@ class InvoiceService
      *                        - vat_is_value   (optional bool – if true, vat is an absolute amount)
      *                        - description    (optional)
      */
-    private static function syncInvoiceItems(Invoice $invoice, array $items): void
+    private static function syncInvoiceItems(Invoice $invoice, array $items, bool $refreshCostAfterDeletion = true): void
     {
         $itemId = [];
 
@@ -405,13 +472,19 @@ class InvoiceService
             $itemId[] = $invoiceItem->id;
         }
 
-        CostOfGoodsService::refreshProductCOGAfterItemsDeletion($invoice, $itemId);
+        if ($refreshCostAfterDeletion) {
+            CostOfGoodsService::refreshProductCOGAfterItemsDeletion($invoice, $itemId);
+        }
 
         app(ActivityLogService::class)->deleteModels($invoice->items()->whereNotIn('id', $itemId)->getQuery());
     }
 
     public function changeInvoiceStatus(Invoice $invoice, string $status): void
     {
+        if ($invoice->is_beginning_inventory) {
+            throw ValidationException::withMessages(['status' => __('Beginning inventory has no status workflow.')]);
+        }
+
         DB::transaction(function () use ($invoice, $status) {
             match ($status) {
                 'ready_to_approve' => $invoice->update(['status' => InvoiceStatus::READY_TO_APPROVE]),
@@ -1007,14 +1080,17 @@ class InvoiceService
      */
     public static function extractInvoiceData(array $validated): array
     {
+        $isBeginningInventory = $validated['invoice_type'] === 'beginning_inventory';
+
         return [
             'title' => $validated['title'],
             'date' => $validated['date'],
-            'invoice_type' => InvoiceType::fromName($validated['invoice_type']),
-            'customer_id' => $validated['customer_id'],
+            'invoice_type' => $isBeginningInventory ? InvoiceType::BUY : InvoiceType::fromName($validated['invoice_type']),
+            'is_beginning_inventory' => $isBeginningInventory,
+            'customer_id' => $validated['customer_id'] ?? null,
             'warehouse_id' => $validated['warehouse_id'],
             'returned_invoice_id' => $validated['returned_invoice_id'] ?? null,
-            'document_number' => $validated['document_number'],
+            'document_number' => $validated['document_number'] ?? null,
             'number' => $validated['invoice_number'],
             'subtraction' => $validated['subtractions'] ?? 0,
             'invoice_id' => $validated['invoice_id'] ?? null,
