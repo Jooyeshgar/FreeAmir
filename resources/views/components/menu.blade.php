@@ -107,7 +107,7 @@
         </details>
     </li>
 @endcanany
-@canany(['reports.documents', 'reports.journal', 'reports.ledger', 'reports.sub-ledger', 'reports.trial-balance',
+@canany(['reports.documents', 'reports.journal', 'reports.ledger', 'reports.sub-ledger', 'reports.trial-balance', 'commercial-ledgers.index',
     'reports.cost-income', 'budgets.index', 'reports.company-overview'])
     <li>
         <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
@@ -121,6 +121,9 @@
                 @endcan
                 @can('budgets.index')
                     <li><a href="{{ route('budgets.index') }}">{{ __('Monthly Income and Expense Workbench') }}</a></li>
+                @endcan
+                @can('commercial-ledgers.index')
+                    <li><a href="{{ route('commercial-ledgers.index') }}">{{ __('Commercial Ledgers') }}</a></li>
                 @endcan
                 @canany(['reports.documents', 'reports.journal', 'reports.ledger', 'reports.sub-ledger',
                     'reports.trial-balance'])
