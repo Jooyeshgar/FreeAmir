@@ -16,8 +16,13 @@ class StoreCustomerRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        $subjectCode = $this->input('subject_code');
+
         $this->merge([
             'rep_via_email' => $this->has('rep_via_email'),
+            'subject_code' => filled($subjectCode)
+                ? preg_replace('/[\s\/]+/u', '', toEnglish((string) $subjectCode))
+                : null,
         ]);
     }
 
@@ -60,6 +65,7 @@ class StoreCustomerRequest extends FormRequest
             'responsible' => 'nullable|string|max:50',
             'connector' => 'nullable|string|max:50',
             'group_id' => 'required|exists:customer_groups,id|integer',
+            'subject_code' => ['nullable', 'string', 'max:20', 'regex:/^[0-9]+$/'],
             'desc' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
             'rep_via_email' => 'boolean',
             'acc_name_1' => 'nullable|string|max:50|regex:/^[\w\d\s]*$/u',

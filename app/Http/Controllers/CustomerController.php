@@ -108,9 +108,16 @@ class CustomerController extends Controller
     {
         $validatedData = $request->validated();
 
-        $this->service->create($validatedData);
+        $customer = $this->service->create($validatedData);
 
-        return redirect()->route('customers.index')->with('success', __('Customer created successfully.'));
+        $message = $customer->subject && $customer->subject->name !== $customer->name
+            ? __('Customer created successfully and customer ":customer" was linked to subject ":subject" successfully.', [
+                'customer' => $customer->name,
+                'subject' => $customer->subject->name,
+            ])
+            : __('Customer created successfully.');
+
+        return redirect()->route('customers.index')->with('success', $message);
     }
 
     public function edit(Customer $customer)

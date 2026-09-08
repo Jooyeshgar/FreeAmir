@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
@@ -66,6 +67,10 @@ class CustomerTest extends TestCase
         $response->assertStatus(200);
         $response->assertViewIs('customers.create');
         $response->assertViewHas('groups');
+        $this->assertMatchesRegularExpression(
+            '/<input(?=[^>]*name="subject_code")(?![^>]*\bdisabled\b)[^>]*>/',
+            $response->getContent()
+        );
     }
 
     public function test_it_can_create_a_customer_with_valid_data()
@@ -112,6 +117,130 @@ class CustomerTest extends TestCase
         $customer = Customer::where('name', 'John Doe')->first();
         $this->assertNotNull($customer->subject);
         $this->assertEquals('John Doe', $customer->subject->name);
+    }
+
+    public function test_it_can_create_a_customer_with_an_explicit_subject_code(): void
+    {
+        $subjectCode = $this->customerGroup->subject->code.'987';
+
+        $response = $this->actingAs($this->user)->post(route('customers.store'), [
+            'name' => 'Coded Customer',
+            'group_id' => $this->customerGroup->id,
+            'subject_code' => formatCode($subjectCode),
+            'type' => 'individual',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertRedirect(route('customers.index'));
+
+        $customer = Customer::where('name', 'Coded Customer')->firstOrFail();
+
+        $this->assertSame($subjectCode, $customer->subject->code);
+        $this->assertSame($customer->subject->id, $customer->subject_id);
+    }
+
+    public function test_it_reuses_an_existing_subject_code_and_reports_different_names(): void
+    {
+        $subject = Subject::factory()
+            ->withParent($this->customerGroup->subject)
+            ->create([
+                'company_id' => $this->companyId,
+                'name' => 'Existing Account',
+            ]);
+        $subjectCount = Subject::withoutGlobalScopes()->count();
+
+        $response = $this->actingAs($this->user)->post(route('customers.store'), [
+            'name' => 'Linked Customer',
+            'group_id' => $this->customerGroup->id,
+            'subject_code' => formatCode($subject->code),
+            'type' => 'individual',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertSessionHas('success', __('Customer created successfully and customer ":customer" was linked to subject ":subject" successfully.', [
+            'customer' => 'Linked Customer',
+            'subject' => 'Existing Account',
+        ]));
+
+        $customer = Customer::where('name', 'Linked Customer')->firstOrFail();
+
+        $this->assertSame($subject->id, $customer->subject_id);
+        $this->assertSame($subject->id, $customer->subject->id);
+        $this->assertSame('Existing Account', $customer->subject->name);
+        $this->assertSame($subjectCount, Subject::withoutGlobalScopes()->count());
+    }
+
+    public function test_it_does_not_reassign_a_subject_that_belongs_to_another_customer(): void
+    {
+        $response = $this->actingAs($this->user)->post(route('customers.store'), [
+            'name' => 'Conflicting Customer',
+            'group_id' => $this->customerGroup->id,
+            'subject_code' => formatCode($this->customer->subject->code),
+            'type' => 'individual',
+        ]);
+
+        $response->assertSessionHasErrors('subject_code');
+        $this->assertDatabaseMissing('customers', ['name' => 'Conflicting Customer']);
+        $this->assertSame($this->customer->id, $this->customer->subject->subjectable_id);
+    }
+
+    public function test_it_uses_the_standard_success_message_when_customer_and_existing_subject_names_match(): void
+    {
+        $subject = Subject::factory()
+            ->withParent($this->customerGroup->subject)
+            ->create([
+                'company_id' => $this->companyId,
+                'name' => 'Matching Name',
+            ]);
+        $subjectCount = Subject::withoutGlobalScopes()->count();
+
+        $response = $this->actingAs($this->user)->post(route('customers.store'), [
+            'name' => 'Matching Name',
+            'group_id' => $this->customerGroup->id,
+            'subject_code' => formatCode($subject->code),
+            'type' => 'individual',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertSessionHas('success', __('Customer created successfully.'));
+
+        $customer = Customer::where('name', 'Matching Name')->firstOrFail();
+
+        $this->assertSame($subject->id, $customer->subject_id);
+        $this->assertSame($subjectCount, Subject::withoutGlobalScopes()->count());
+    }
+
+    public function test_it_rejects_a_non_numeric_subject_code(): void
+    {
+        $response = $this->actingAs($this->user)->post(route('customers.store'), [
+            'name' => 'Invalid Code Customer',
+            'group_id' => $this->customerGroup->id,
+            'subject_code' => '001/A01',
+            'type' => 'individual',
+        ]);
+
+        $response->assertSessionHasErrors('subject_code');
+        $this->assertDatabaseMissing('customers', ['name' => 'Invalid Code Customer']);
+    }
+
+    public function test_it_rejects_a_subject_code_outside_the_selected_customer_group(): void
+    {
+        $otherGroup = CustomerGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
+        $foreignGroupCode = $otherGroup->subject->code.'777';
+
+        $response = $this->actingAs($this->user)->post(route('customers.store'), [
+            'name' => 'Wrong Group Customer',
+            'group_id' => $this->customerGroup->id,
+            'subject_code' => formatCode($foreignGroupCode),
+            'type' => 'individual',
+        ]);
+
+        $response->assertSessionHasErrors('subject_code');
+        $this->assertDatabaseMissing('customers', ['name' => 'Wrong Group Customer']);
+        $this->assertDatabaseMissing('subjects', [
+            'company_id' => $this->companyId,
+            'code' => $foreignGroupCode,
+        ]);
     }
 
     public function test_change_subject_name_on_changing_customer_name()
@@ -371,6 +500,10 @@ class CustomerTest extends TestCase
         $response->assertViewIs('customers.edit');
         $response->assertViewHas('customer');
         $response->assertViewHas('groups');
+        $this->assertMatchesRegularExpression(
+            '/<input(?=[^>]*name="subject_code")(?=[^>]*value="'.preg_quote(substr($this->customer->subject->code, -3), '/').'\")(?![^>]*\bdisabled\b)[^>]*>/',
+            $response->getContent()
+        );
     }
 
     public function test_it_can_update_a_customer()
@@ -393,6 +526,113 @@ class CustomerTest extends TestCase
             'name' => 'Updated Name',
             'email' => 'updated@example.com',
         ]);
+    }
+
+    public function test_it_can_update_a_customer_with_its_current_subject_code_without_creating_a_subject(): void
+    {
+        $subject = $this->customer->subject;
+        $subjectName = $subject->name;
+        $subjectCount = Subject::withoutGlobalScopes()->count();
+
+        $response = $this->actingAs($this->user)->put(route('customers.update', $this->customer), [
+            'name' => 'Renamed Customer',
+            'group_id' => $this->customerGroup->id,
+            'subject_code' => formatCode($subject->code),
+            'type' => 'individual',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertSessionHas('success', __('Customer updated successfully.'));
+
+        $this->customer->refresh();
+        $subject->refresh();
+
+        $this->assertSame($subject->id, $this->customer->subject_id);
+        $this->assertSame($subjectName, $subject->name);
+        $this->assertSame($subjectCount, Subject::withoutGlobalScopes()->count());
+    }
+
+    public function test_it_can_link_an_existing_subject_when_updating_a_customer(): void
+    {
+        $oldSubject = $this->customer->subject;
+        $newSubject = Subject::factory()
+            ->withParent($this->customerGroup->subject)
+            ->create([
+                'company_id' => $this->companyId,
+                'name' => 'Shared Account Name',
+            ]);
+
+        $response = $this->actingAs($this->user)->put(route('customers.update', $this->customer), [
+            'name' => 'Updated Customer Name',
+            'group_id' => $this->customerGroup->id,
+            'subject_code' => formatCode($newSubject->code),
+            'type' => 'individual',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertSessionHas('success', __('Customer updated successfully.'));
+
+        $this->customer->refresh();
+        $oldSubject->refresh();
+        $newSubject->refresh();
+
+        $this->assertSame($newSubject->id, $this->customer->subject_id);
+        $this->assertSame($newSubject->id, $this->customer->subject->id);
+        $this->assertSame('Shared Account Name', $newSubject->name);
+        $this->assertNull($oldSubject->subjectable_type);
+        $this->assertNull($oldSubject->subjectable_id);
+    }
+
+    public function test_it_can_change_to_an_unused_subject_code_without_creating_another_subject(): void
+    {
+        $subject = $this->customer->subject;
+        $newCode = $this->customerGroup->subject->code.'986';
+        $subjectCount = Subject::withoutGlobalScopes()->count();
+
+        $response = $this->actingAs($this->user)->put(route('customers.update', $this->customer), [
+            'name' => 'Stable Customer',
+            'group_id' => $this->customerGroup->id,
+            'subject_code' => formatCode($newCode),
+            'type' => 'individual',
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $response->assertSessionHas('success', __('Customer updated successfully.'));
+
+        $this->customer->refresh();
+        $subject->refresh();
+
+        $this->assertSame($subject->id, $this->customer->subject_id);
+        $this->assertSame($newCode, $subject->code);
+        $this->assertSame($subjectCount, Subject::withoutGlobalScopes()->count());
+    }
+
+    public function test_update_rolls_back_when_the_subject_code_belongs_to_another_customer(): void
+    {
+        $originalName = $this->customer->name;
+        $originalSubject = $this->customer->subject;
+        $otherCustomer = Customer::factory()
+            ->withGroup($this->customerGroup)
+            ->withSubject()
+            ->create(['company_id' => $this->companyId]);
+
+        $response = $this->actingAs($this->user)->put(route('customers.update', $this->customer), [
+            'name' => 'Name Must Roll Back',
+            'group_id' => $this->customerGroup->id,
+            'subject_code' => formatCode($otherCustomer->subject->code),
+            'type' => 'individual',
+        ]);
+
+        $response->assertSessionHasErrors('subject_code');
+
+        $this->customer->refresh();
+        $originalSubject->refresh();
+        $otherCustomer->subject->refresh();
+
+        $this->assertSame($originalName, $this->customer->name);
+        $this->assertSame($originalSubject->id, $this->customer->subject_id);
+        $this->assertSame($this->customer->id, $originalSubject->subjectable_id);
+        $this->assertSame($otherCustomer->id, $otherCustomer->subject->subjectable_id);
     }
 
     public function test_it_can_delete_a_customer()

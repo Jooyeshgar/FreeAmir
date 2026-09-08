@@ -18,9 +18,8 @@
                     <x-input title="{{ __('Name') }}" name="name" placeholder="{{ __('Name') }}" :value="old('name', $customer->name ?? '')" />
                 </div>
                 <div>
-                    <x-input title="{{ __('Accounting code') }}"
-                        title2="{!! isset($customer) && $customer->subject ? '<a href=' . route('subjects.edit', $customer->subject) . '>' . __('Edit') . '</a>' : '' !!}"
-                        name="accounting_code" disabled placeholder="{{ __('Accounting code') }}" :value="isset($customer) && $customer->subject ? $customer->subject->formattedCode() : ''" />
+                    <x-input title="{{ __('Subject Code') }}" name="subject_code" placeholder="{{ __('Subject Code') }}"
+                        :value="old('subject_code', $customer?->subject ? substr($customer->subject->code, -3) : '')" />
                 </div>
 
             </div>
