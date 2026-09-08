@@ -29,7 +29,7 @@
                     @break
 
                     @case('beginning_inventory')
-                        @include('invoices.forms.buy')
+                        @include('invoices.forms.beginning_inventory')
                     @break
 
                     @case('return_sell')

@@ -12,6 +12,7 @@ enum InvoiceType: int
     case RETURN_BUY = 3;
     case RETURN_SELL = 4;
     case VOID = 5;
+    case BEGINNING_INVENTORY = 6;
 
     public function label(): string
     {
@@ -21,6 +22,7 @@ enum InvoiceType: int
             self::RETURN_BUY => Lang::get('Return from Buy'),
             self::RETURN_SELL => Lang::get('Return from Sell'),
             self::VOID => Lang::get('Void'),
+            self::BEGINNING_INVENTORY => Lang::get('Beginning Inventory'),
         };
     }
 
@@ -32,6 +34,7 @@ enum InvoiceType: int
             self::RETURN_BUY => 'return_buy',
             self::RETURN_SELL => 'return_sell',
             self::VOID => 'void',
+            self::BEGINNING_INVENTORY => 'beginning_inventory',
         };
     }
 
@@ -47,12 +50,17 @@ enum InvoiceType: int
 
     public function isBuy(): bool
     {
-        return in_array($this, [self::BUY, self::RETURN_BUY]);
+        return in_array($this, [self::BUY, self::RETURN_BUY, self::BEGINNING_INVENTORY]);
     }
 
     public function isReturn(): bool
     {
         return in_array($this, [self::RETURN_BUY, self::RETURN_SELL]);
+    }
+
+    public function isBeginningInventory(): bool
+    {
+        return $this === self::BEGINNING_INVENTORY;
     }
 
     public static function options(): array

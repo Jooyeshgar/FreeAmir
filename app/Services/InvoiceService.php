@@ -35,7 +35,7 @@ class InvoiceService
         $date = $invoiceData['date'] ?? now()->toDateString();
         $items = self::assignWarehouseToItems($items, $invoiceData['warehouse_id'] ?? null);
 
-        if ($invoiceData['is_beginning_inventory'] ?? false) {
+        if ($invoiceData['invoice_type'] === InvoiceType::BEGINNING_INVENTORY) {
             return self::createBeginningInventory($user, $invoiceData, $items, $date);
         }
 
@@ -102,10 +102,15 @@ class InvoiceService
     private static function createBeginningInventory(User $user, array $invoiceData, array $items, string $date): array
     {
         $invoice = DB::transaction(function () use ($user, $invoiceData, $items, $date) {
+            if (Invoice::where('invoice_type', InvoiceType::BEGINNING_INVENTORY)->lockForUpdate()->exists()) {
+                throw ValidationException::withMessages([
+                    'invoice_type' => __('A beginning inventory already exists for this fiscal year.'),
+                ]);
+            }
+
             $invoice = Invoice::create([
                 ...$invoiceData,
-                'invoice_type' => InvoiceType::BUY,
-                'is_beginning_inventory' => true,
+                'invoice_type' => InvoiceType::BEGINNING_INVENTORY,
                 'customer_id' => null,
                 'document_id' => null,
                 'status' => null,
@@ -116,7 +121,7 @@ class InvoiceService
                 'amount' => collect($items)->sum(fn (array $item) => (float) ($item['quantity'] ?? 0) * (float) ($item['unit'] ?? 0)),
             ]);
 
-            ProductService::addProductsQuantities($items, InvoiceType::BUY);
+            ProductService::addProductsQuantities($items, InvoiceType::BEGINNING_INVENTORY);
             self::syncInvoiceItems($invoice, $items, false);
 
             return $invoice->refresh();
@@ -157,7 +162,7 @@ class InvoiceService
     {
         $invoice = Invoice::findOrFail($invoiceId);
 
-        if ($invoice->is_beginning_inventory) {
+        if ($invoice->invoice_type->isBeginningInventory()) {
             return self::updateBeginningInventory($invoice, $invoiceData, $items);
         }
 
@@ -279,7 +284,7 @@ class InvoiceService
         $items = self::assignWarehouseToItems($items, $invoiceData['warehouse_id'] ?? null);
 
         DB::transaction(function () use ($invoice, $invoiceData, $items) {
-            ProductService::subProductsQuantities($invoice->items->toArray(), InvoiceType::BUY);
+            ProductService::subProductsQuantities($invoice->items->toArray(), InvoiceType::BEGINNING_INVENTORY);
 
             $invoice->update([
                 'title' => $invoiceData['title'] ?? null,
@@ -295,7 +300,7 @@ class InvoiceService
                 'amount' => collect($items)->sum(fn (array $item) => (float) ($item['quantity'] ?? 0) * (float) ($item['unit'] ?? 0)),
             ]);
 
-            ProductService::addProductsQuantities($items, InvoiceType::BUY);
+            ProductService::addProductsQuantities($items, InvoiceType::BEGINNING_INVENTORY);
             self::syncInvoiceItems($invoice, $items, false);
         });
 
@@ -335,8 +340,8 @@ class InvoiceService
         DB::transaction(function () use ($invoiceId) {
             $invoice = Invoice::findOrFail($invoiceId);
 
-            if ($invoice->is_beginning_inventory) {
-                ProductService::subProductsQuantities($invoice->items->toArray(), InvoiceType::BUY);
+            if ($invoice->invoice_type->isBeginningInventory()) {
+                ProductService::subProductsQuantities($invoice->items->toArray(), InvoiceType::BEGINNING_INVENTORY);
             }
 
             $chequeIds = $invoice->payments()->whereNotNull('cheque_id')->pluck('cheque_id')->unique();
@@ -481,7 +486,7 @@ class InvoiceService
 
     public function changeInvoiceStatus(Invoice $invoice, string $status): void
     {
-        if ($invoice->is_beginning_inventory) {
+        if ($invoice->invoice_type->isBeginningInventory()) {
             throw ValidationException::withMessages(['status' => __('Beginning inventory has no status workflow.')]);
         }
 
@@ -613,6 +618,9 @@ class InvoiceService
 
     public static function getChangeStatusValidation(Invoice $invoice): InvoiceStatusDecision
     {
+        if ($invoice->status === null) {
+            return self::statuslessInvoiceDecision();
+        }
 
         $productIds = self::getProductIdsFromInvoice($invoice);
 
@@ -861,11 +869,23 @@ class InvoiceService
 
     public static function getChangeStatusDecision(Invoice $invoice, $nextStatus): InvoiceStatusDecision
     {
+        if ($invoice->status === null) {
+            return self::statuslessInvoiceDecision();
+        }
+
         $productIds = self::getProductIdsFromInvoice($invoice);
 
         $nextStatus = $nextStatus instanceof InvoiceStatus ? $nextStatus : InvoiceStatus::fromName($nextStatus);
 
         return self::decideInvoiceStatusChange($invoice, $productIds, $nextStatus);
+    }
+
+    private static function statuslessInvoiceDecision(): InvoiceStatusDecision
+    {
+        $decision = new InvoiceStatusDecision;
+        $decision->addMessage('error', __('Beginning inventory has no status workflow.'));
+
+        return $decision;
     }
 
     public static function notAllowedInvoiceForAncillaryCosts(Invoice $invoice, array $productIds): array
@@ -1080,13 +1100,10 @@ class InvoiceService
      */
     public static function extractInvoiceData(array $validated): array
     {
-        $isBeginningInventory = $validated['invoice_type'] === 'beginning_inventory';
-
         return [
             'title' => $validated['title'],
             'date' => $validated['date'],
-            'invoice_type' => $isBeginningInventory ? InvoiceType::BUY : InvoiceType::fromName($validated['invoice_type']),
-            'is_beginning_inventory' => $isBeginningInventory,
+            'invoice_type' => InvoiceType::fromName($validated['invoice_type']),
             'customer_id' => $validated['customer_id'] ?? null,
             'warehouse_id' => $validated['warehouse_id'],
             'returned_invoice_id' => $validated['returned_invoice_id'] ?? null,

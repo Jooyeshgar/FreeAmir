@@ -227,7 +227,7 @@ class StoreInvoiceRequest extends FormRequest
                 }
             }
 
-            if (! in_array($invoiceType, ['sell', 'buy', 'return_sell', 'return_buy', 'beginning_inventory'])) {
+            if (! in_array($invoiceType, InvoiceType::valueNames(), true)) {
                 return;
             }
 
@@ -324,7 +324,7 @@ class StoreInvoiceRequest extends FormRequest
             'description' => 'nullable|string',
             'date' => 'required|date',
 
-            'invoice_type' => ['required', Rule::in([...InvoiceType::valueNames(), 'beginning_inventory'])],
+            'invoice_type' => ['required', Rule::in(InvoiceType::valueNames())],
             'customer_id' => Rule::when(! $isBeginningInventory, ['required', 'exists:customers,id', 'integer'], ['nullable']),
             'invoice_id' => Rule::when($invoice !== null, ['required', 'integer', 'exists:invoices,id']),
             'include_last_years_invoices' => 'nullable|boolean',
@@ -343,10 +343,9 @@ class StoreInvoiceRequest extends FormRequest
                 'required',
                 'integer',
                 Rule::unique('invoices', 'number')
-                    ->where(function ($query) use ($isBeginningInventory) {
+                    ->where(function ($query) {
                         return $query->where('company_id', getActiveCompany())
-                            ->where('invoice_type', $isBeginningInventory ? InvoiceType::BUY : InvoiceType::fromName($this->input('invoice_type')))
-                            ->where('is_beginning_inventory', $isBeginningInventory);
+                            ->where('invoice_type', InvoiceType::fromName($this->input('invoice_type')));
                     })
                     ->ignore($isEditing ? $invoice->id : null),
             ],

@@ -51,24 +51,24 @@ class InvoiceController extends Controller
      */
     public function index(Request $request)
     {
-        $isBeginningInventory = $request->invoice_type === 'beginning_inventory';
         $invoiceType = InvoiceType::tryFromName($request->invoice_type);
+
+        if ($invoiceType === InvoiceType::BEGINNING_INVENTORY) {
+            return redirect()->route('invoices.create', ['invoice_type' => $invoiceType->valueName()]);
+        }
+
         $status = InvoiceStatus::tryFromName($request->status);
 
         $builder = Invoice::with(['customer', 'document', 'voidInvoice', 'payments'])
             ->orderByDesc('date')
             ->orderByDesc('number');
 
-        if ($isBeginningInventory) {
-            $builder->with(['warehouse', 'items']);
-        }
-
         $builder->when(in_array($invoiceType, [InvoiceType::SELL, InvoiceType::VOID], true),
             fn ($q) => $q->with('latestMoadianHistory')
         );
 
         $isServiceBuy = $this->isServiceBuyFilterActive($request, $invoiceType);
-        $this->applyInvoiceFilters($builder, $request, $invoiceType, $isServiceBuy, $isBeginningInventory);
+        $this->applyInvoiceFilters($builder, $request, $invoiceType, $isServiceBuy);
 
         $statsBuilder = $builder->clone();
 
@@ -79,9 +79,7 @@ class InvoiceController extends Controller
         $statusCounts = $statsBuilder->reorder()->toBase()->select('status', DB::raw('count(*) as total'))->groupBy('status')->pluck('total', 'status');
 
         $invoices->transform(function ($invoice) {
-            if (! $invoice->is_beginning_inventory) {
-                $invoice->changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
-            }
+            $invoice->changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
 
             return $invoice;
         });
@@ -95,7 +93,7 @@ class InvoiceController extends Controller
         $invoices->totalProductsQuantity = $itemTotals[Product::class] ?? 0;
         $invoices->totalServicesQuantity = $itemTotals[Service::class] ?? 0;
 
-        return view('invoices.index', compact('invoices', 'statusCounts', 'isBeginningInventory') + ['service_buy' => $isServiceBuy]);
+        return view('invoices.index', compact('invoices') + ['statusCounts' => $statusCounts, 'service_buy' => $isServiceBuy]);
     }
 
     public function export(Request $request, ReportExportService $reportExportService): StreamedResponse
@@ -108,12 +106,10 @@ class InvoiceController extends Controller
         return in_array($invoiceType, [InvoiceType::BUY, InvoiceType::RETURN_BUY], true) && $request->boolean('service_buy');
     }
 
-    private function applyInvoiceFilters(Builder $builder, Request $request, ?InvoiceType $invoiceType, bool $isServiceBuy, bool $isBeginningInventory): void
+    private function applyInvoiceFilters(Builder $builder, Request $request, ?InvoiceType $invoiceType, bool $isServiceBuy): void
     {
-        if ($isBeginningInventory) {
-            $builder->where('invoice_type', InvoiceType::BUY)->where('is_beginning_inventory', true);
-        } elseif ($invoiceType !== null) {
-            $builder->where('invoice_type', $invoiceType)->where('is_beginning_inventory', false);
+        if ($invoiceType !== null) {
+            $builder->where('invoice_type', $invoiceType);
         }
 
         $builder->when($request->filled('number'),
@@ -167,6 +163,14 @@ class InvoiceController extends Controller
     public function create(Request $request)
     {
         $isBeginningInventory = $request->invoice_type === 'beginning_inventory';
+
+        if ($isBeginningInventory) {
+            $beginningInventory = Invoice::where('invoice_type', InvoiceType::BEGINNING_INVENTORY)->first();
+
+            if ($beginningInventory) {
+                return redirect()->route('invoices.edit', $beginningInventory);
+            }
+        }
 
         if (! $isBeginningInventory && empty(config('amir.inventory'))) {
             return redirect()->route('configs.index')->with('error', __('Inventory Subject is not configured. Please set it in configurations.'));
@@ -264,9 +268,8 @@ class InvoiceController extends Controller
             }
         }
 
-        $numberType = $isBeginningInventory ? InvoiceType::BUY : InvoiceType::fromName($invoice_type);
-        $previousInvoiceNumber = floor(Invoice::where('invoice_type', $numberType)
-            ->where('is_beginning_inventory', $isBeginningInventory)->max('number') ?? 0);
+        $numberType = InvoiceType::fromName($invoice_type);
+        $previousInvoiceNumber = floor(Invoice::where('invoice_type', $numberType)->max('number') ?? 0);
 
         $warehouses = Warehouse::get();
 
@@ -285,7 +288,7 @@ class InvoiceController extends Controller
         $items = InvoiceService::mapTransactionsToItems($validated['transactions']);
 
         $approved = false;
-        if (! $invoiceData['is_beginning_inventory'] && $request->has('approve')) {
+        if (! $invoiceData['invoice_type']->isBeginningInventory() && $request->has('approve')) {
             $approved = true;
             auth()->user()->can('invoices.approve');
         }
@@ -296,17 +299,17 @@ class InvoiceController extends Controller
 
         $isServiceBuy = in_array($result['invoice']->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_BUY]) && $result['invoice']->items->where('itemable_type', Product::class)->isEmpty();
 
-        return redirect()
-            ->route('invoices.index', ['invoice_type' => $result['invoice']->is_beginning_inventory ? 'beginning_inventory' : $result['invoice']->invoice_type->valueName(), 'service_buy' => $isServiceBuy ? '1' : null])
-            ->with($msgType, $msg);
+        $redirect = $result['invoice']->invoice_type->isBeginningInventory()
+            ? redirect()->route('home')
+            : redirect()->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type->valueName(), 'service_buy' => $isServiceBuy ? '1' : null]);
+
+        return $redirect->with($msgType, $msg);
     }
 
     public function show(Invoice $invoice, PaymentService $paymentService, ChequeService $chequeService)
     {
-        if ($invoice->is_beginning_inventory) {
-            $invoice->load(['warehouse', 'items.itemable']);
-
-            return view('invoices.show-beginning-inventory', compact('invoice'));
+        if ($invoice->invoice_type->isBeginningInventory()) {
+            return redirect()->route('invoices.edit', $invoice);
         }
 
         $changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
@@ -355,8 +358,8 @@ class InvoiceController extends Controller
 
     public function print(Invoice $invoice, ReportExportService $reportExportService)
     {
-        if ($invoice->is_beginning_inventory) {
-            return redirect()->route('invoices.show', $invoice);
+        if ($invoice->invoice_type->isBeginningInventory()) {
+            return redirect()->route('invoices.edit', $invoice);
         }
 
         $invoice->load('customer', 'items');
@@ -422,7 +425,7 @@ class InvoiceController extends Controller
         $total = $transactions->count();
 
         $invoice_type = $invoice->invoice_type;
-        $isBeginningInventory = $invoice->is_beginning_inventory;
+        $isBeginningInventory = $invoice->invoice_type->isBeginningInventory();
         $isReturnInvoice = in_array($invoice_type, [InvoiceType::RETURN_BUY, InvoiceType::RETURN_SELL], true);
 
         $isServiceBuy = $invoice->invoice_type === InvoiceType::BUY && $invoice->items->where('itemable_type', Product::class)->isEmpty();
@@ -461,12 +464,12 @@ class InvoiceController extends Controller
         $invoiceData = InvoiceService::extractInvoiceData($validated);
         $items = InvoiceService::mapTransactionsToItems($validated['transactions'], true);
 
-        if (! $invoice->is_beginning_inventory && $invoice->ancillaryCosts()->exists() && $invoice->ancillaryCosts->every(fn ($ac) => $ac->status->isApproved())) {
+        if (! $invoice->invoice_type->isBeginningInventory() && $invoice->ancillaryCosts()->exists() && $invoice->ancillaryCosts->every(fn ($ac) => $ac->status->isApproved())) {
             return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->valueName()])->with('error', __('Invoice has associated approved ancillary costs and cannot be edited.'));
         }
 
         $approved = false;
-        if (! $invoice->is_beginning_inventory && $request->has('approve')) {
+        if (! $invoice->invoice_type->isBeginningInventory() && $request->has('approve')) {
             $approved = true;
             auth()->user()->can('invoices.approve');
         }
@@ -477,26 +480,33 @@ class InvoiceController extends Controller
 
         $isServiceBuy = in_array($result['invoice']->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_BUY]) && $result['invoice']->items->where('itemable_type', Product::class)->isEmpty();
 
-        return redirect()
-            ->route('invoices.index', ['invoice_type' => $result['invoice']->is_beginning_inventory ? 'beginning_inventory' : $result['invoice']->invoice_type->valueName(), 'service_buy' => $isServiceBuy ? '1' : null])
-            ->with($msgType, $msg);
+        $redirect = $result['invoice']->invoice_type->isBeginningInventory()
+            ? redirect()->route('invoices.edit', $result['invoice'])
+            : redirect()->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type->valueName(), 'service_buy' => $isServiceBuy ? '1' : null]);
+
+        return $redirect->with($msgType, $msg);
     }
 
     public function destroy(Invoice $invoice)
     {
-        $indexType = $invoice->is_beginning_inventory ? 'beginning_inventory' : $invoice->invoice_type->valueName();
+        $isBeginningInventory = $invoice->invoice_type->isBeginningInventory();
+        $indexType = $invoice->invoice_type->valueName();
 
-        if (! $invoice->is_beginning_inventory && $invoice->status->isApprovedOrSettled()) {
+        if (! $isBeginningInventory && $invoice->status->isApprovedOrSettled()) {
             return redirect()->route('invoices.index', ['invoice_type' => $indexType])->with('error', __('Only unapproved and unpaided invoices can be deleted.'));
         }
 
-        if (! $invoice->is_beginning_inventory && $invoice->ancillaryCosts()->exists() && $invoice->ancillaryCosts->every(fn ($ac) => $ac->status->isApproved())) {
+        if (! $isBeginningInventory && $invoice->ancillaryCosts()->exists() && $invoice->ancillaryCosts->every(fn ($ac) => $ac->status->isApproved())) {
             return redirect()->route('invoices.index', ['invoice_type' => $indexType])->with('error', __('Invoice has associated approved ancillary costs and cannot be deleted.'));
         }
 
         InvoiceService::deleteInvoice($invoice->id);
 
-        return redirect()->route('invoices.index', ['invoice_type' => $indexType])->with('info', __('Invoice deleted successfully.'));
+        $redirect = $isBeginningInventory
+            ? redirect()->route('invoices.create', ['invoice_type' => $indexType])
+            : redirect()->route('invoices.index', ['invoice_type' => $indexType]);
+
+        return $redirect->with('info', __('Invoice deleted successfully.'));
     }
 
     private function invoiceMessage(array $result, string $action = 'created', bool $approved = false)
@@ -706,6 +716,10 @@ class InvoiceController extends Controller
         if (! in_array($status, $allowedStatuses)) {
             return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->valueName()])
                 ->with('error', __('Invalid status action.'));
+        }
+
+        if ($invoice->status === null) {
+            return redirect()->back()->with('error', __('Beginning inventory has no status workflow.'));
         }
 
         if ($invoice->status->isPartiallyPaid() || $invoice->status->isPaid()) {

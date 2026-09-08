@@ -16,6 +16,7 @@ use App\Services\InvoiceService;
 use App\Services\ProductService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class BeginningInventoryTest extends TestCase
@@ -40,6 +41,10 @@ class BeginningInventoryTest extends TestCase
         $this->company = Company::factory()->create();
         config(['active-company-id' => $this->company->id]);
         $this->actingAs($this->user);
+        $this->user->givePermissionTo([
+            Permission::firstOrCreate(['name' => 'invoices.store']),
+            Permission::firstOrCreate(['name' => 'products.show']),
+        ]);
 
         $this->mainWarehouse = $this->warehouse('Main');
         $this->otherWarehouse = $this->warehouse('Other');
@@ -55,8 +60,7 @@ class BeginningInventoryTest extends TestCase
 
         $invoice = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900);
 
-        $this->assertTrue($invoice->is_beginning_inventory);
-        $this->assertSame(InvoiceType::BUY, $invoice->invoice_type);
+        $this->assertSame(InvoiceType::BEGINNING_INVENTORY, $invoice->invoice_type);
         $this->assertNull($invoice->status);
         $this->assertNull($invoice->customer_id);
         $this->assertNull($invoice->document_id);
@@ -135,6 +139,55 @@ class BeginningInventoryTest extends TestCase
         $this->assertSame('product', $request->validated('transactions.0.item_type'));
     }
 
+    public function test_store_redirects_beginning_inventory_to_home(): void
+    {
+        $response = $this->post(route('invoices.store'), [
+            'title' => 'Beginning inventory',
+            'date' => convertToJalali(now(), true),
+            'invoice_type' => 'beginning_inventory',
+            'invoice_number' => 1,
+            'warehouse_id' => $this->mainWarehouse->id,
+            'transactions' => [[
+                'item_id' => 'product-'.$this->product->id,
+                'quantity' => 5,
+                'unit' => 900,
+                'total' => 4500,
+            ]],
+        ]);
+
+        $response->assertRedirect(route('home'));
+    }
+
+    public function test_product_page_renders_beginning_inventory_without_a_status_or_customer(): void
+    {
+        $invoice = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900);
+
+        $response = $this->get(route('products.show', $this->product));
+
+        $response->assertOk();
+        $response->assertSee(route('invoices.show', $invoice), false);
+        $response->assertSee(formatNumber(5), false);
+        $response->assertSee('bg-success/10 hover:bg-success/20', false);
+        $response->assertSee('badge badge-success gap-2', false);
+    }
+
+    public function test_status_change_decisions_reject_beginning_inventory_without_throwing(): void
+    {
+        $invoice = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900);
+
+        $automaticDecision = InvoiceService::getChangeStatusValidation($invoice);
+        $explicitDecision = InvoiceService::getChangeStatusDecision($invoice, 'approved');
+
+        $this->assertFalse($automaticDecision->canProceed);
+        $this->assertTrue($automaticDecision->hasErrors());
+        $this->assertFalse($explicitDecision->canProceed);
+        $this->assertTrue($explicitDecision->hasErrors());
+        $this->assertSame(
+            __('Beginning inventory has no status workflow.'),
+            $automaticDecision->messages->first()->text
+        );
+    }
+
     private function createBeginningInventory(Product $product, float $quantity, Warehouse $warehouse, float $unit): Invoice
     {
         $result = InvoiceService::createInvoice(
@@ -152,8 +205,7 @@ class BeginningInventoryTest extends TestCase
         return [
             'title' => 'Beginning inventory',
             'date' => now()->toDateString(),
-            'invoice_type' => InvoiceType::BUY,
-            'is_beginning_inventory' => true,
+            'invoice_type' => InvoiceType::BEGINNING_INVENTORY,
             'customer_id' => null,
             'warehouse_id' => $warehouse->id,
             'document_number' => null,

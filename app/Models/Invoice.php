@@ -35,7 +35,6 @@ class Invoice extends Model
         'company_id',
         'warehouse_id',
         'taxID',
-        'is_beginning_inventory',
     ];
 
     protected $casts = [
@@ -44,7 +43,6 @@ class Invoice extends Model
         'date' => 'date',
         'ship_date' => 'date',
         'active' => 'boolean',
-        'is_beginning_inventory' => 'boolean',
     ];
 
     public static function booted(): void

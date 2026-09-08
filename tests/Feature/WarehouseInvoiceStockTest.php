@@ -154,8 +154,7 @@ class WarehouseInvoiceStockTest extends TestCase
 
         $invoice = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900);
 
-        $this->assertTrue($invoice->is_beginning_inventory);
-        $this->assertSame(InvoiceType::BUY, $invoice->invoice_type);
+        $this->assertSame(InvoiceType::BEGINNING_INVENTORY, $invoice->invoice_type);
         $this->assertNull($invoice->status);
         $this->assertNull($invoice->customer_id);
         $this->assertNull($invoice->document_id);
@@ -573,8 +572,7 @@ class WarehouseInvoiceStockTest extends TestCase
         return [
             'title' => 'Beginning inventory',
             'date' => now()->toDateString(),
-            'invoice_type' => InvoiceType::BUY,
-            'is_beginning_inventory' => true,
+            'invoice_type' => InvoiceType::BEGINNING_INVENTORY,
             'customer_id' => null,
             'warehouse_id' => $warehouse->id,
             'document_number' => null,

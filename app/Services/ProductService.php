@@ -82,10 +82,10 @@ class ProductService
                 $product,
                 self::resolveWarehouseId($invoiceItem, $product),
                 (float) $invoiceItem['quantity'],
-                in_array($invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL], true) || $invoice_type->isVoid()
+                in_array($invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::BEGINNING_INVENTORY], true) || $invoice_type->isVoid()
             );
 
-            if ($invoice_type === InvoiceType::BUY || $invoice_type === InvoiceType::RETURN_SELL || $invoice_type->isVoid()) {
+            if (in_array($invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::BEGINNING_INVENTORY], true) || $invoice_type->isVoid()) {
                 $product->quantity += $invoiceItem['quantity'];
             } elseif ($invoice_type === InvoiceType::SELL || $invoice_type === InvoiceType::RETURN_BUY) {
                 $product->quantity -= $invoiceItem['quantity'];
@@ -112,11 +112,11 @@ class ProductService
                 $product,
                 self::resolveWarehouseId($invoiceItem, $product),
                 (float) $invoiceItem['quantity'],
-                in_array($invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL], true) || $invoice_type->isVoid(),
+                in_array($invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::BEGINNING_INVENTORY], true) || $invoice_type->isVoid(),
                 true
             );
 
-            if ($invoice_type === InvoiceType::BUY || $invoice_type === InvoiceType::RETURN_SELL || $invoice_type->isVoid()) {
+            if (in_array($invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::BEGINNING_INVENTORY], true) || $invoice_type->isVoid()) {
                 $product->quantity -= $invoiceItem['quantity'];
             } elseif ($invoice_type === InvoiceType::SELL || $invoice_type === InvoiceType::RETURN_BUY) {
                 $product->quantity += $invoiceItem['quantity'];
@@ -301,7 +301,7 @@ class ProductService
             $invoices = Invoice::withoutGlobalScopes()
                 ->where(function ($query) {
                     $query->whereIn('status', InvoiceStatus::approvedOrSettled())
-                        ->orWhere('is_beginning_inventory', true);
+                        ->orWhere('invoice_type', InvoiceType::BEGINNING_INVENTORY);
                 })
                 ->whereHas('items', function ($query) use ($product) {
                     $query->where('itemable_type', Product::class)->where('itemable_id', $product->id);
@@ -326,7 +326,7 @@ class ProductService
                     $item->save();
 
                     $sign = match ($invoice->invoice_type) {
-                        InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID => 1,
+                        InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID, InvoiceType::BEGINNING_INVENTORY => 1,
                         InvoiceType::SELL, InvoiceType::RETURN_BUY => -1,
                     };
 

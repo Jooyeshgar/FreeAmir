@@ -21,13 +21,15 @@
                     @break
 
                     @case('buy')
-                        @if ($isBeginningInventory)
-                            @include('invoices.forms.buy')
-                        @elseif ($isServiceBuy)
+                        @if ($isServiceBuy)
                             @include('invoices.forms.buy_service')
                         @else
                             @include('invoices.forms.buy')
                         @endif
+                    @break
+
+                    @case('beginning_inventory')
+                        @include('invoices.forms.beginning_inventory')
                     @break
 
                     @case('return_sell')
