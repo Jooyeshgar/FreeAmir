@@ -157,6 +157,13 @@ class InvoiceService
     public static function updateInvoice(int $invoiceId, array $invoiceData, array $items = [], bool $approved = false): array
     {
         $invoice = Invoice::findOrFail($invoiceId);
+        $requestedInvoiceType = InvoiceType::tryFromName($invoiceData['invoice_type'] ?? null);
+
+        if ($requestedInvoiceType !== $invoice->invoice_type) {
+            throw ValidationException::withMessages([
+                'invoice_type' => __('The invoice type cannot be changed.'),
+            ]);
+        }
 
         if ($invoice->invoice_type->isBeginningInventory()) {
             return self::updateBeginningInventory($invoice, $invoiceData, $items);

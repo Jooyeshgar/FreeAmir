@@ -31,7 +31,7 @@ class StoreInvoiceRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
-        $isBeginningInventory = $this->input('invoice_type') === 'beginning_inventory';
+        $isBeginningInventory = $this->effectiveInvoiceType() === InvoiceType::BEGINNING_INVENTORY->valueName();
 
         // Normalize top-level scalars
         $this->merge([
@@ -53,14 +53,14 @@ class StoreInvoiceRequest extends FormRequest
             $this->merge(['returned_invoice_id' => null]);
         }
 
-        if (! $isBeginningInventory && str_contains($this->input('document_number'), '/')) {
+        if (! $isBeginningInventory && $this->filled('document_number')) {
+            $documentNumber = str_replace('/', '.', $this->input('document_number'));
+
             $this->merge([
-                'document_number' => convertToFloat(str_replace('/', '.', $this->input('document_number'))),
+                'document_number' => convertToFloat($documentNumber),
             ]);
         } elseif (! $isBeginningInventory) {
-            $this->merge([
-                'document_number' => convertToFloat($this->input('document_number')),
-            ]);
+            $this->merge(['document_number' => null]);
         }
 
         // Normalize transactions numeric fields and ids
@@ -79,7 +79,7 @@ class StoreInvoiceRequest extends FormRequest
                     ];
                 });
 
-            $invoiceType = $this->input('invoice_type');
+            $invoiceType = $this->effectiveInvoiceType();
             if (in_array($invoiceType, ['return_sell', 'return_buy'])) {
                 $transactions = $transactions->filter(fn ($t) => ($t['quantity'] ?? 0) > 0);
             }
@@ -95,7 +95,7 @@ class StoreInvoiceRequest extends FormRequest
     {
         $validator->after(function ($validator) {
             $transactions = $this->input('transactions', []);
-            $invoiceType = $this->input('invoice_type');
+            $invoiceType = $this->effectiveInvoiceType();
             $inputDate = $this->input('date');
             $invoice = $this->route('invoice');
             $isApproved = $this->has('approve');
@@ -316,15 +316,16 @@ class StoreInvoiceRequest extends FormRequest
     {
         $invoice = $this->route('invoice');
         $isEditing = $invoice !== null;
-        $isReturnInvoice = in_array($this->input('invoice_type'), [InvoiceType::RETURN_BUY->valueName(), InvoiceType::RETURN_SELL->valueName()], true);
-        $isBeginningInventory = $this->input('invoice_type') === 'beginning_inventory';
+        $invoiceType = $this->effectiveInvoiceType();
+        $isReturnInvoice = in_array($invoiceType, [InvoiceType::RETURN_BUY->valueName(), InvoiceType::RETURN_SELL->valueName()], true);
+        $isBeginningInventory = $invoiceType === InvoiceType::BEGINNING_INVENTORY->valueName();
 
         $rules = [
             'title' => 'nullable|string|min:2|max:255',
             'description' => 'nullable|string',
             'date' => 'required|date',
 
-            'invoice_type' => ['required', Rule::in(InvoiceType::valueNames())],
+            'invoice_type' => ['required', Rule::in($isEditing ? [$invoiceType] : InvoiceType::valueNames())],
             'customer_id' => Rule::when(! $isBeginningInventory, ['required', 'exists:customers,id', 'integer'], ['nullable']),
             'invoice_id' => Rule::when($invoice !== null, ['required', 'integer', 'exists:invoices,id']),
             'include_last_years_invoices' => 'nullable|boolean',
@@ -345,7 +346,7 @@ class StoreInvoiceRequest extends FormRequest
                 Rule::unique('invoices', 'number')
                     ->where(function ($query) {
                         return $query->where('company_id', getActiveCompany())
-                            ->where('invoice_type', InvoiceType::fromName($this->input('invoice_type')));
+                            ->where('invoice_type', InvoiceType::fromName($this->effectiveInvoiceType()));
                     })
                     ->ignore($isEditing ? $invoice->id : null),
             ],
@@ -390,5 +391,12 @@ class StoreInvoiceRequest extends FormRequest
         ];
 
         return $rules;
+    }
+
+    private function effectiveInvoiceType(): ?string
+    {
+        $invoice = $this->route('invoice');
+
+        return $invoice instanceof Invoice ? $invoice->invoice_type->valueName() : $this->input('invoice_type');
     }
 }

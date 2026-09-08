@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\Company;
+use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\Product;
@@ -46,6 +48,7 @@ class BeginningInventoryTest extends TestCase
             Permission::firstOrCreate(['name' => 'invoices.edit']),
             Permission::firstOrCreate(['name' => 'invoices.index']),
             Permission::firstOrCreate(['name' => 'invoices.store']),
+            Permission::firstOrCreate(['name' => 'invoices.update']),
             Permission::firstOrCreate(['name' => 'invoices.destroy']),
             Permission::firstOrCreate(['name' => 'products.show']),
         ]);
@@ -218,6 +221,92 @@ class BeginningInventoryTest extends TestCase
         $this->assertSame('product', $request->validated('transactions.0.item_type'));
     }
 
+    public function test_normal_invoice_update_rejects_tampered_beginning_inventory_type(): void
+    {
+        $customer = Customer::create([
+            'name' => 'Customer',
+            'company_id' => $this->company->id,
+        ]);
+        $invoice = Invoice::create([
+            'number' => 10,
+            'date' => now()->toDateString(),
+            'invoice_type' => InvoiceType::SELL,
+            'status' => InvoiceStatus::PENDING,
+            'customer_id' => $customer->id,
+            'creator_id' => $this->user->id,
+            'warehouse_id' => $this->mainWarehouse->id,
+            'subtraction' => 0,
+            'vat' => 0,
+            'amount' => 500,
+            'title' => 'Sell invoice',
+        ]);
+
+        $response = $this->from(route('invoices.edit', $invoice))
+            ->put(route('invoices.update', $invoice), [
+                'title' => 'Tampered invoice',
+                'date' => convertToJalali(now(), true),
+                'invoice_type' => 'beginning_inventory',
+                'invoice_id' => $invoice->id,
+                'invoice_number' => 11,
+                'warehouse_id' => $this->otherWarehouse->id,
+                'transactions' => [[
+                    'item_id' => 'product-'.$this->product->id,
+                    'quantity' => 5,
+                    'unit' => 100,
+                    'total' => 500,
+                ]],
+            ]);
+
+        $response->assertRedirect(route('invoices.edit', $invoice));
+        $response->assertSessionHasErrors(['invoice_type', 'customer_id', 'document_number']);
+        $invoice->refresh();
+        $this->assertSame(InvoiceType::SELL, $invoice->invoice_type);
+        $this->assertSame(InvoiceStatus::PENDING, $invoice->status);
+        $this->assertSame($customer->id, $invoice->customer_id);
+        $this->assertSame($this->mainWarehouse->id, $invoice->warehouse_id);
+        $this->assertQuantity($this->product, $this->mainWarehouse, 2);
+        $this->assertServiceRejectsInvoiceTypeChange($invoice, InvoiceType::BEGINNING_INVENTORY);
+    }
+
+    public function test_beginning_inventory_update_rejects_tampered_normal_type(): void
+    {
+        $customer = Customer::create([
+            'name' => 'Customer',
+            'company_id' => $this->company->id,
+        ]);
+        $invoice = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900);
+
+        $response = $this->from(route('invoices.edit', $invoice))
+            ->put(route('invoices.update', $invoice), [
+                'title' => 'Tampered beginning inventory',
+                'date' => convertToJalali(now(), true),
+                'invoice_type' => 'sell',
+                'invoice_id' => $invoice->id,
+                'invoice_number' => 2,
+                'customer_id' => $customer->id,
+                'document_number' => 20,
+                'warehouse_id' => $this->otherWarehouse->id,
+                'transactions' => [[
+                    'item_id' => 'product-'.$this->product->id,
+                    'quantity' => 3,
+                    'unit' => 100,
+                    'off' => 0,
+                    'vat' => 0,
+                    'total' => 300,
+                ]],
+            ]);
+
+        $response->assertRedirect(route('invoices.edit', $invoice));
+        $response->assertSessionHasErrors(['invoice_type']);
+        $invoice->refresh();
+        $this->assertSame(InvoiceType::BEGINNING_INVENTORY, $invoice->invoice_type);
+        $this->assertNull($invoice->status);
+        $this->assertNull($invoice->customer_id);
+        $this->assertSame($this->mainWarehouse->id, $invoice->warehouse_id);
+        $this->assertQuantity($this->product, $this->mainWarehouse, 7);
+        $this->assertServiceRejectsInvoiceTypeChange($invoice, InvoiceType::SELL);
+    }
+
     public function test_store_redirects_beginning_inventory_to_index(): void
     {
         $response = $this->post(route('invoices.store'), [
@@ -331,6 +420,19 @@ class BeginningInventoryTest extends TestCase
             'number' => $number,
             'description' => 'Initial stock',
         ];
+    }
+
+    private function assertServiceRejectsInvoiceTypeChange(Invoice $invoice, InvoiceType $invoiceType): void
+    {
+        try {
+            InvoiceService::updateInvoice($invoice->id, ['invoice_type' => $invoiceType]);
+            $this->fail('The invoice type was changed through InvoiceService.');
+        } catch (ValidationException $exception) {
+            $this->assertSame(
+                __('The invoice type cannot be changed.'),
+                $exception->errors()['invoice_type'][0]
+            );
+        }
     }
 
     private function item(Product $product, float $quantity, float $unit): array
