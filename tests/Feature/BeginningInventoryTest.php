@@ -100,7 +100,7 @@ class BeginningInventoryTest extends TestCase
             'parent_id' => null,
             'code' => '100',
             'name' => 'Inventory test subject',
-            'type' => 'both',
+            'type' => 3,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
