@@ -17,6 +17,7 @@ use App\Models\WarehouseProductStock;
 use App\Services\InvoiceService;
 use App\Services\ProductService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -77,6 +78,56 @@ class BeginningInventoryTest extends TestCase
         $this->assertEqualsWithDelta(125, (float) $this->product->fresh()->average_cost, 0.001);
         $this->assertEqualsWithDelta(175, $this->stockCost($this->product, $this->mainWarehouse), 0.001);
         $this->assertEqualsWithDelta(900, (float) $invoice->items->first()->unit_price, 0.001);
+    }
+
+    public function test_create_records_the_preexisting_quantity_for_product_history(): void
+    {
+        $invoice = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900);
+
+        $this->assertEqualsWithDelta(2, (float) $invoice->items->first()->quantity_at, 0.001);
+
+        $this->get(route('products.show', $this->product))->assertOk()->assertSee(formatNumber(7), false);
+    }
+
+    public function test_approved_buy_includes_beginning_inventory_at_the_existing_average_cost(): void
+    {
+        $product = $this->product('P-2', 100);
+        $this->setStock($product, $this->mainWarehouse, 0, 100);
+        $this->createBeginningInventory($product, 5, $this->mainWarehouse, 900);
+
+        $subjectId = DB::table('subjects')->insertGetId([
+            'company_id' => $this->company->id,
+            'parent_id' => null,
+            'code' => '100',
+            'name' => 'Inventory test subject',
+            'type' => 'both',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $product->update(['inventory_subject_id' => $subjectId]);
+        $customer = Customer::create([
+            'name' => 'Supplier',
+            'company_id' => $this->company->id,
+            'subject_id' => $subjectId,
+        ]);
+
+        $buy = InvoiceService::createInvoice($this->user, [
+            'title' => 'Later buy',
+            'date' => now()->toDateString(),
+            'invoice_type' => InvoiceType::BUY,
+            'customer_id' => $customer->id,
+            'warehouse_id' => $this->mainWarehouse->id,
+            'document_number' => 2,
+            'number' => 2,
+        ], [$this->item($product, 5, 200)], true)['invoice'];
+
+        $this->assertEqualsWithDelta(150, (float) $product->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(150, $this->stockCost($product, $this->mainWarehouse), 0.001);
+
+        (new InvoiceService)->changeInvoiceStatus($buy->fresh(), 'unapproved');
+
+        $this->assertEqualsWithDelta(100, (float) $product->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(100, $this->stockCost($product, $this->mainWarehouse), 0.001);
     }
 
     public function test_edit_reverses_old_stock_and_applies_replacement_without_changing_costs(): void

@@ -407,7 +407,7 @@ class InvoiceService
      * adjusted the product's stock level, so `$product->quantity` reflects the post-invoice state.
      * To recover the pre-invoice stock level (quantity_at) we reverse the effect:
      *
-     *   - BUY / RETURN_SELL (stock was increased by this invoice):
+     *   - BUY / RETURN_SELL / BEGINNING_INVENTORY (stock was increased by this invoice):
      *       quantity_at = product.quantity − item.quantity
      *
      *   - SELL / RETURN_BUY (stock was decreased by this invoice):
@@ -460,7 +460,7 @@ class InvoiceService
             $quantityAt = 0;
             if ($product) {
                 $invoiceType = $invoice->invoice_type;
-                if (in_array($invoiceType, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID], true)) {
+                if (in_array($invoiceType, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID, InvoiceType::BEGINNING_INVENTORY], true)) {
                     $quantityAt = max(0, $product->quantity - $quantity);
                 } elseif (in_array($invoiceType, [InvoiceType::SELL, InvoiceType::RETURN_BUY], true)) {
                     $quantityAt = $product->quantity + $quantity;
