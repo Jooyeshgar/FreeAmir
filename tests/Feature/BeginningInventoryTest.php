@@ -42,7 +42,11 @@ class BeginningInventoryTest extends TestCase
         config(['active-company-id' => $this->company->id]);
         $this->actingAs($this->user);
         $this->user->givePermissionTo([
+            Permission::firstOrCreate(['name' => 'invoices.create']),
+            Permission::firstOrCreate(['name' => 'invoices.edit']),
+            Permission::firstOrCreate(['name' => 'invoices.index']),
             Permission::firstOrCreate(['name' => 'invoices.store']),
+            Permission::firstOrCreate(['name' => 'invoices.destroy']),
             Permission::firstOrCreate(['name' => 'products.show']),
         ]);
 
@@ -94,6 +98,81 @@ class BeginningInventoryTest extends TestCase
         $this->assertNull($invoice->fresh()->document_id);
     }
 
+    public function test_multiple_beginning_inventory_records_can_initialize_different_warehouses(): void
+    {
+        $first = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900);
+        $second = InvoiceService::createInvoice(
+            $this->user,
+            $this->invoiceData($this->otherWarehouse, 2),
+            [$this->item($this->product, 3, 800)],
+            true
+        )['invoice'];
+
+        $this->assertNotSame($first->id, $second->id);
+        $this->assertEqualsWithDelta(10, (float) $this->product->fresh()->quantity, 0.001);
+        $this->assertEqualsWithDelta(7, (float) WarehouseProductStock::query()
+            ->where('product_id', $this->product->id)
+            ->where('warehouse_id', $this->mainWarehouse->id)
+            ->value('quantity'), 0.001);
+        $this->assertEqualsWithDelta(3, (float) WarehouseProductStock::query()
+            ->where('product_id', $this->product->id)
+            ->where('warehouse_id', $this->otherWarehouse->id)
+            ->value('quantity'), 0.001);
+
+        $this->get(route('invoices.create', ['invoice_type' => 'beginning_inventory']))->assertOk();
+    }
+
+    public function test_only_one_beginning_inventory_record_is_allowed_per_warehouse(): void
+    {
+        $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900);
+
+        try {
+            InvoiceService::createInvoice(
+                $this->user,
+                $this->invoiceData($this->mainWarehouse, 2),
+                [$this->item($this->product, 3, 800)],
+                true
+            );
+            $this->fail('A second beginning inventory was created for the same warehouse.');
+        } catch (ValidationException $exception) {
+            $this->assertSame(
+                __('A beginning inventory already exists for the selected warehouse.'),
+                $exception->errors()['warehouse_id'][0]
+            );
+        }
+    }
+
+    public function test_edit_applies_net_delta_after_later_stock_consumes_opening_quantity(): void
+    {
+        $invoice = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900);
+        ProductService::addProductsQuantities([
+            [...$this->item($this->product, 7, 900), 'warehouse_id' => $this->mainWarehouse->id],
+        ], InvoiceType::SELL);
+
+        InvoiceService::updateInvoice(
+            $invoice->id,
+            $this->invoiceData($this->mainWarehouse, 1),
+            [$this->item($this->product, 5, 950)],
+            true
+        );
+
+        $this->assertQuantity($this->product, $this->mainWarehouse, 0);
+        $this->assertEqualsWithDelta(950, (float) $invoice->fresh()->items->first()->unit_price, 0.001);
+    }
+
+    public function test_delete_removes_its_contribution_after_later_stock_consumes_opening_quantity(): void
+    {
+        $invoice = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900);
+        ProductService::addProductsQuantities([
+            [...$this->item($this->product, 7, 900), 'warehouse_id' => $this->mainWarehouse->id],
+        ], InvoiceType::SELL);
+
+        InvoiceService::deleteInvoice($invoice->id);
+
+        $this->assertDatabaseMissing('invoices', ['id' => $invoice->id]);
+        $this->assertQuantity($this->product, $this->mainWarehouse, -5);
+    }
+
     public function test_recalculation_includes_beginning_inventory_and_delete_reverses_it(): void
     {
         $invoice = $this->createBeginningInventory($this->product, 6, $this->mainWarehouse, 900);
@@ -139,7 +218,7 @@ class BeginningInventoryTest extends TestCase
         $this->assertSame('product', $request->validated('transactions.0.item_type'));
     }
 
-    public function test_store_redirects_beginning_inventory_to_home(): void
+    public function test_store_redirects_beginning_inventory_to_index(): void
     {
         $response = $this->post(route('invoices.store'), [
             'title' => 'Beginning inventory',
@@ -155,7 +234,47 @@ class BeginningInventoryTest extends TestCase
             ]],
         ]);
 
-        $response->assertRedirect(route('home'));
+        $response->assertRedirect(route('invoices.index', ['invoice_type' => 'beginning_inventory']));
+    }
+
+    public function test_index_lists_beginning_inventories_with_edit_and_delete_actions(): void
+    {
+        $first = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900);
+        $second = InvoiceService::createInvoice(
+            $this->user,
+            $this->invoiceData($this->otherWarehouse, 2),
+            [$this->item($this->product, 3, 800)],
+            true
+        )['invoice'];
+
+        $response = $this->get(route('invoices.index', ['invoice_type' => 'beginning_inventory']));
+
+        $response->assertOk();
+        $response->assertSee($this->mainWarehouse->name);
+        $response->assertSee($this->otherWarehouse->name);
+        $response->assertSee(route('invoices.edit', $first), false);
+        $response->assertSee(route('invoices.edit', $second), false);
+        $response->assertSee('id="delete-beginning-inventory-'.$first->id.'"', false);
+        $response->assertSee('id="delete-beginning-inventory-'.$second->id.'"', false);
+        $response->assertSee(__('Are you sure?'));
+    }
+
+    public function test_edit_form_shows_permission_gated_delete_action_with_confirmation(): void
+    {
+        $invoice = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900);
+
+        $response = $this->get(route('invoices.edit', $invoice));
+
+        $response->assertOk();
+        $response->assertSee('id="delete-beginning-inventory-form"', false);
+        $response->assertSee(__('Are you sure?'));
+        $response->assertSee(__('Delete'));
+
+        $this->user->revokePermissionTo('invoices.destroy');
+
+        $this->get(route('invoices.edit', $invoice))
+            ->assertOk()
+            ->assertDontSee('id="delete-beginning-inventory-form"', false);
     }
 
     public function test_product_page_renders_beginning_inventory_without_a_status_or_customer(): void

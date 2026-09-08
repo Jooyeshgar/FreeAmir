@@ -53,15 +53,15 @@ class InvoiceController extends Controller
     {
         $invoiceType = InvoiceType::tryFromName($request->invoice_type);
 
-        if ($invoiceType === InvoiceType::BEGINNING_INVENTORY) {
-            return redirect()->route('invoices.create', ['invoice_type' => $invoiceType->valueName()]);
-        }
-
         $status = InvoiceStatus::tryFromName($request->status);
 
         $builder = Invoice::with(['customer', 'document', 'voidInvoice', 'payments'])
             ->orderByDesc('date')
             ->orderByDesc('number');
+
+        if ($invoiceType === InvoiceType::BEGINNING_INVENTORY) {
+            $builder->with(['warehouse', 'items']);
+        }
 
         $builder->when(in_array($invoiceType, [InvoiceType::SELL, InvoiceType::VOID], true),
             fn ($q) => $q->with('latestMoadianHistory')
@@ -78,8 +78,10 @@ class InvoiceController extends Controller
 
         $statusCounts = $statsBuilder->reorder()->toBase()->select('status', DB::raw('count(*) as total'))->groupBy('status')->pluck('total', 'status');
 
-        $invoices->transform(function ($invoice) {
-            $invoice->changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
+        $invoices->transform(function ($invoice) use ($invoiceType) {
+            if ($invoiceType !== InvoiceType::BEGINNING_INVENTORY) {
+                $invoice->changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
+            }
 
             return $invoice;
         });
@@ -163,14 +165,6 @@ class InvoiceController extends Controller
     public function create(Request $request)
     {
         $isBeginningInventory = $request->invoice_type === 'beginning_inventory';
-
-        if ($isBeginningInventory) {
-            $beginningInventory = Invoice::where('invoice_type', InvoiceType::BEGINNING_INVENTORY)->first();
-
-            if ($beginningInventory) {
-                return redirect()->route('invoices.edit', $beginningInventory);
-            }
-        }
 
         if (! $isBeginningInventory && empty(config('amir.inventory'))) {
             return redirect()->route('configs.index')->with('error', __('Inventory Subject is not configured. Please set it in configurations.'));
@@ -300,7 +294,7 @@ class InvoiceController extends Controller
         $isServiceBuy = in_array($result['invoice']->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_BUY]) && $result['invoice']->items->where('itemable_type', Product::class)->isEmpty();
 
         $redirect = $result['invoice']->invoice_type->isBeginningInventory()
-            ? redirect()->route('home')
+            ? redirect()->route('invoices.index', ['invoice_type' => 'beginning_inventory'])
             : redirect()->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type->valueName(), 'service_buy' => $isServiceBuy ? '1' : null]);
 
         return $redirect->with($msgType, $msg);
@@ -481,7 +475,7 @@ class InvoiceController extends Controller
         $isServiceBuy = in_array($result['invoice']->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_BUY]) && $result['invoice']->items->where('itemable_type', Product::class)->isEmpty();
 
         $redirect = $result['invoice']->invoice_type->isBeginningInventory()
-            ? redirect()->route('invoices.edit', $result['invoice'])
+            ? redirect()->route('invoices.index', ['invoice_type' => 'beginning_inventory'])
             : redirect()->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type->valueName(), 'service_buy' => $isServiceBuy ? '1' : null]);
 
         return $redirect->with($msgType, $msg);
@@ -503,7 +497,7 @@ class InvoiceController extends Controller
         InvoiceService::deleteInvoice($invoice->id);
 
         $redirect = $isBeginningInventory
-            ? redirect()->route('invoices.create', ['invoice_type' => $indexType])
+            ? redirect()->route('invoices.index', ['invoice_type' => $indexType])
             : redirect()->route('invoices.index', ['invoice_type' => $indexType]);
 
         return $redirect->with('info', __('Invoice deleted successfully.'));

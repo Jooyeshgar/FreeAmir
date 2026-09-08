@@ -102,11 +102,7 @@ class InvoiceService
     private static function createBeginningInventory(User $user, array $invoiceData, array $items, string $date): array
     {
         $invoice = DB::transaction(function () use ($user, $invoiceData, $items, $date) {
-            if (Invoice::where('invoice_type', InvoiceType::BEGINNING_INVENTORY)->lockForUpdate()->exists()) {
-                throw ValidationException::withMessages([
-                    'invoice_type' => __('A beginning inventory already exists for this fiscal year.'),
-                ]);
-            }
+            self::assertBeginningInventoryWarehouseAvailable($invoiceData['warehouse_id']);
 
             $invoice = Invoice::create([
                 ...$invoiceData,
@@ -121,7 +117,7 @@ class InvoiceService
                 'amount' => collect($items)->sum(fn (array $item) => (float) ($item['quantity'] ?? 0) * (float) ($item['unit'] ?? 0)),
             ]);
 
-            ProductService::addProductsQuantities($items, InvoiceType::BEGINNING_INVENTORY);
+            ProductService::applyBeginningInventoryDelta([], $items);
             self::syncInvoiceItems($invoice, $items, false);
 
             return $invoice->refresh();
@@ -284,7 +280,11 @@ class InvoiceService
         $items = self::assignWarehouseToItems($items, $invoiceData['warehouse_id'] ?? null);
 
         DB::transaction(function () use ($invoice, $invoiceData, $items) {
-            ProductService::subProductsQuantities($invoice->items->toArray(), InvoiceType::BEGINNING_INVENTORY);
+            self::assertBeginningInventoryWarehouseAvailable($invoiceData['warehouse_id'], $invoice->id);
+
+            $oldItems = self::assignWarehouseToItems($invoice->items->toArray(), $invoice->warehouse_id);
+
+            ProductService::applyBeginningInventoryDelta($oldItems, $items);
 
             $invoice->update([
                 'title' => $invoiceData['title'] ?? null,
@@ -300,11 +300,25 @@ class InvoiceService
                 'amount' => collect($items)->sum(fn (array $item) => (float) ($item['quantity'] ?? 0) * (float) ($item['unit'] ?? 0)),
             ]);
 
-            ProductService::addProductsQuantities($items, InvoiceType::BEGINNING_INVENTORY);
             self::syncInvoiceItems($invoice, $items, false);
         });
 
         return ['document' => null, 'invoice' => $invoice->refresh()];
+    }
+
+    private static function assertBeginningInventoryWarehouseAvailable(int $warehouseId, ?int $exceptInvoiceId = null): void
+    {
+        $exists = Invoice::where('invoice_type', InvoiceType::BEGINNING_INVENTORY)
+            ->where('warehouse_id', $warehouseId)
+            ->when($exceptInvoiceId, fn ($query) => $query->whereKeyNot($exceptInvoiceId))
+            ->lockForUpdate()
+            ->exists();
+
+        if ($exists) {
+            throw ValidationException::withMessages([
+                'warehouse_id' => __('A beginning inventory already exists for the selected warehouse.'),
+            ]);
+        }
     }
 
     public static function syncCOGAfterForInvoiceItems(Invoice $invoice)
@@ -341,7 +355,8 @@ class InvoiceService
             $invoice = Invoice::findOrFail($invoiceId);
 
             if ($invoice->invoice_type->isBeginningInventory()) {
-                ProductService::subProductsQuantities($invoice->items->toArray(), InvoiceType::BEGINNING_INVENTORY);
+                $oldItems = self::assignWarehouseToItems($invoice->items->toArray(), $invoice->warehouse_id);
+                ProductService::applyBeginningInventoryDelta($oldItems, []);
             }
 
             $chequeIds = $invoice->payments()->whereNotNull('cheque_id')->pluck('cheque_id')->unique();

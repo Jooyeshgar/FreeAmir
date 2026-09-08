@@ -79,7 +79,7 @@
                         </details>
                     </li>
                     <li><a
-                            href="{{ route('invoices.create', ['invoice_type' => 'beginning_inventory']) }}">{{ __('Beginning Inventory') }}</a>
+                            href="{{ route('invoices.index', ['invoice_type' => 'beginning_inventory']) }}">{{ __('Beginning Inventory') }}</a>
                     </li>
                 @endcanany
                 @can('invoices.inactive')

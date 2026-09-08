@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('invoices', function (Blueprint $table) {
-            $table->unsignedTinyInteger('status')->nullable()->default(null)->change();
+            $table->unsignedTinyInteger('status')->nullable()->default(InvoiceStatus::PENDING->value)->change();
             $table->foreignId('customer_id')->nullable()->change();
         });
     }

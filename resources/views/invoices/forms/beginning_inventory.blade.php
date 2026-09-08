@@ -178,7 +178,14 @@
 </x-card>
 
 <div class="flex gap-2 justify-end">
-    <a href="{{ route('home') }}" type="submit" class="btn btn-sm lg:btn-md btn-default rounded-md dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-600">{{ __('cancel') }}</a>
+    <a href="{{ route('invoices.index', ['invoice_type' => 'beginning_inventory']) }}" type="submit" class="btn btn-sm lg:btn-md btn-default rounded-md dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-600">{{ __('cancel') }}</a>
+    @if ($invoice->exists)
+        @can('invoices.destroy')
+            <button type="submit" form="delete-beginning-inventory-form"
+                class="btn btn-sm lg:btn-md btn-error rounded-md"
+                onclick="return confirm('{{ __('Are you sure?') }}')">{{ __('Delete') }}</button>
+        @endcan
+    @endif
     <button id="submitForm" type="submit" class="btn btn-sm lg:btn-md text-white btn-primary rounded-md">{{ __('save') }}</button>
 </div>
 

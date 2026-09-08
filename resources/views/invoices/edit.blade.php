@@ -45,6 +45,14 @@
                 @endswitch
             </div>
         </form>
+        @if ($isBeginningInventory)
+            @can('invoices.destroy')
+                <form id="delete-beginning-inventory-form" action="{{ route('invoices.destroy', $invoice) }}" method="POST">
+                    @csrf
+                    @method('DELETE')
+                </form>
+            @endcan
+        @endif
     </div>
 
     @pushOnce('scripts')
