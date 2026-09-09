@@ -2473,7 +2473,8 @@ class FiscalYearService
                 }
 
                 $oldCustomerId = $invoiceData['customer_id'] ?? null;
-                if ($oldCustomerId === null || ! isset($customerMapping[$oldCustomerId])) {
+                $isBeginningInventory = InvoiceType::tryFromName($invoiceData['invoice_type'] ?? null)?->isBeginningInventory() ?? false;
+                if (! $isBeginningInventory && ($oldCustomerId === null || ! isset($customerMapping[$oldCustomerId]))) {
                     throw new \RuntimeException(__('Customer ID :customer_id has no imported mapping.', [
                         'customer_id' => $oldCustomerId ?? 'N/A',
                     ]));
@@ -2486,7 +2487,7 @@ class FiscalYearService
                 ]);
                 $newInvoice = new Invoice;
                 $newInvoice->fill(collect($invoiceData)->except(['id', 'customer_id', 'document_id', 'warehouse_id'])->toArray());
-                $newInvoice->customer_id = $customerMapping[$oldCustomerId];
+                $newInvoice->customer_id = $isBeginningInventory ? null : $customerMapping[$oldCustomerId];
                 $newInvoice->document_id = $oldDocumentId ? ($documentMapping[$oldDocumentId] ?? null) : null;
                 $newInvoice->company_id = $targetYearId;
                 $newInvoice->warehouse_id = $warehouseMapping[$invoiceData['warehouse_id'] ?? null] ?? null;

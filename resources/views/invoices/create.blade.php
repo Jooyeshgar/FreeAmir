@@ -1,10 +1,12 @@
-<x-app-layout :title="$isServiceBuy ? __('Create') . ' ' . __('Service Buy Invoice') : __('Create Invoice')">
+<x-app-layout :title="$isBeginningInventory ? __('Create Beginning Inventory') : ($isServiceBuy ? __('Create') . ' ' . __('Service Buy Invoice') : __('Create Invoice'))">
     <div>
         <form action="{{ route('invoices.store') }}" method="POST">
             @csrf
             <div class="card-body">
                 <h2 class="card-title">
-                    @if ($isReturnServiceBuy)
+                    @if ($isBeginningInventory)
+                        {{ __('Add Beginning Inventory') }}
+                    @elseif ($isReturnServiceBuy)
                         {{ __('Add') . ' ' . __('Return Service Buy Invoice') }}
                     @else
                         {{ __('Add') . ' ' . ($isServiceBuy ? __('Service Buy Invoice') : __($invoice_type)) }}
@@ -24,6 +26,10 @@
                         @else
                             @include('invoices.forms.buy')
                         @endif
+                    @break
+
+                    @case('beginning_inventory')
+                        @include('invoices.forms.beginning_inventory')
                     @break
 
                     @case('return_sell')

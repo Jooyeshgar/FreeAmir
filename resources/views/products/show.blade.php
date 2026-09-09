@@ -130,13 +130,25 @@
                     </thead>
                     <tbody>
                         @forelse ($historyItems as $item)
-                            <tr class="hover:bg-base-300 {{ !$item->invoice->status->isApprovedOrSettled() ? 'opacity-50' : '' }}">
+                            @php
+                                $isBeginningInventory = $item->invoice->invoice_type->isBeginningInventory();
+                                $isInventoryApplied = $isBeginningInventory || $item->invoice->status?->isApprovedOrSettled();
+                            @endphp
+                            <tr @class([
+                                'hover:bg-base-300' => ! $isBeginningInventory,
+                                'bg-success/10 hover:bg-success/20' => $isBeginningInventory,
+                                'opacity-50' => ! $isInventoryApplied,
+                            ])>
                                 <td class="px-4 py-3">{{ formatDate($item->invoice->date) }}</td>
                                 <td class="px-4 py-3">
                                     <a href="{{ route('invoices.show', $item->invoice_id) }}" class="link">{{ formatDocumentNumber($item->invoice->number) }}</a>
                                 </td>
                                 <td class="px-4 py-3">
-                                    <a href="{{ route('customers.show', $item->invoice->customer_id) }}">{{ $item->invoice->customer->name }}</a>
+                                    @if ($item->invoice->customer)
+                                        <a href="{{ route('customers.show', $item->invoice->customer) }}">{{ $item->invoice->customer->name }}</a>
+                                    @else
+                                        <span class="text-gray-400">-</span>
+                                    @endif
                                 </td>
                                 <td class="px-4 py-3">
                                     @if ($item->invoice->warehouse)
@@ -147,7 +159,7 @@
                                 </td>
 
                                 <td class="px-4 py-3 text-center">
-                                    @if ($item->invoice->invoice_type === \App\Enums\InvoiceType::BUY)
+                                    @if (in_array($item->invoice->invoice_type, [\App\Enums\InvoiceType::BUY, \App\Enums\InvoiceType::BEGINNING_INVENTORY], true))
                                         <a href="{{ route('invoices.show', $item->invoice_id) }}"
                                             class="badge badge-success gap-2 hover:badge-success hover:brightness-110 transition-all">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -212,10 +224,10 @@
                                 </td>
 
                                 <td class="px-4 py-3 text-center">
-                                    @if ($item->invoice->status->isApprovedOrSettled())
+                                    @if ($isInventoryApplied)
                                         @php
                                             $invoiceType = $item->invoice->invoice_type;
-                                            $quantityAfter = in_array($invoiceType, [\App\Enums\InvoiceType::BUY, \App\Enums\InvoiceType::RETURN_SELL, \App\Enums\InvoiceType::VOID], true)
+                                            $quantityAfter = in_array($invoiceType, [\App\Enums\InvoiceType::BUY, \App\Enums\InvoiceType::RETURN_SELL, \App\Enums\InvoiceType::VOID, \App\Enums\InvoiceType::BEGINNING_INVENTORY], true)
                                                 ? $item->quantity_at + $item->quantity
                                                 : $item->quantity_at - $item->quantity;
                                         @endphp

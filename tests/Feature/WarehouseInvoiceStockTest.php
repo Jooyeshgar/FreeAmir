@@ -9,12 +9,14 @@ use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Service;
 use App\Models\ServiceGroup;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Models\WarehouseProductStock;
@@ -141,6 +143,87 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->assertEqualsWithDelta(11, $quantity, 0.001);
         $this->assertStock($this->mainWarehouse, 7);
         $this->assertStock($this->emptyWarehouse, 4);
+    }
+
+    public function test_approved_beginning_inventory_adds_stock_updates_cost_and_creates_accounting(): void
+    {
+        $this->setStock($this->mainWarehouse, 2, 175);
+        $this->product->update(['quantity' => 2, 'average_cost' => 125]);
+        $documentCount = Document::count();
+        $transactionCount = Transaction::count();
+
+        $invoice = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900);
+
+        $this->assertSame(InvoiceType::BEGINNING_INVENTORY, $invoice->invoice_type);
+        $this->assertSame(InvoiceStatus::APPROVED, $invoice->status);
+        $this->assertNull($invoice->customer_id);
+        $this->assertNotNull($invoice->document_id);
+        $this->assertSame($documentCount + 1, Document::count());
+        $this->assertSame($transactionCount + 2, Transaction::count());
+        $this->assertDatabaseHas('transactions', [
+            'document_id' => $invoice->document_id,
+            'subject_id' => (int) config('amir.beginning_inventory'),
+            'value' => 4500,
+        ]);
+        $this->assertEqualsWithDelta(7, (float) $this->product->fresh()->quantity, 0.001);
+        $this->assertStock($this->mainWarehouse, 7);
+        $this->assertEqualsWithDelta(678.571, (float) $this->product->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(692.86, $this->stockAverageCost($this->mainWarehouse, $this->product), 0.001);
+        $this->assertEqualsWithDelta(900, (float) $invoice->items->first()->unit_price, 0.001);
+    }
+
+    public function test_editing_beginning_inventory_reverses_old_product_and_warehouse_before_applying_replacement(): void
+    {
+        $secondGroup = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->company->id]);
+        $secondProduct = Product::factory()->withGroup($secondGroup)->withSubjects()->create([
+            'company_id' => $this->company->id,
+            'quantity' => 0,
+            'average_cost' => 240,
+        ]);
+        $this->setStock($this->emptyWarehouse, 0, 260, $secondProduct);
+        $invoice = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900);
+
+        InvoiceService::updateInvoice(
+            $invoice->id,
+            $this->beginningInventoryData($this->emptyWarehouse, 910),
+            [[
+                'itemable_type' => 'product',
+                'itemable_id' => $secondProduct->id,
+                'quantity' => 3,
+                'unit' => 800,
+                'unit_discount' => 0,
+                'vat' => 0,
+            ]],
+            true
+        );
+
+        $this->assertEqualsWithDelta(0, (float) $this->product->fresh()->quantity, 0.001);
+        $this->assertStock($this->mainWarehouse, 0);
+        $this->assertEqualsWithDelta(3, (float) $secondProduct->fresh()->quantity, 0.001);
+        $this->assertStockForProduct($this->emptyWarehouse, $secondProduct, 3);
+        $this->assertEqualsWithDelta(0, (float) $this->product->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(800, (float) $secondProduct->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(800, $this->stockAverageCost($this->emptyWarehouse, $secondProduct), 0.001);
+        $this->assertSame(InvoiceStatus::APPROVED, $invoice->fresh()->status);
+        $this->assertNotNull($invoice->fresh()->document_id);
+    }
+
+    public function test_deleting_and_recalculating_beginning_inventory_preserve_its_quantity_lifecycle(): void
+    {
+        $invoice = $this->createBeginningInventory($this->product, 6, $this->mainWarehouse, 900);
+        WarehouseProductStock::query()->update(['quantity' => 0]);
+        $this->product->update(['quantity' => 0]);
+
+        $this->assertEqualsWithDelta(6, ProductService::recalculateQuantity($this->product->fresh()), 0.001);
+        $this->assertStock($this->mainWarehouse, 6);
+
+        (new InvoiceService)->changeInvoiceStatus($invoice->fresh(), 'unapproved');
+        InvoiceService::deleteInvoice($invoice->id);
+
+        $this->assertDatabaseMissing('invoices', ['id' => $invoice->id]);
+        $this->assertEqualsWithDelta(0, (float) $this->product->fresh()->quantity, 0.001);
+        $this->assertStock($this->mainWarehouse, 0);
+        $this->assertEqualsWithDelta(0, (float) $this->product->fresh()->average_cost, 0.001);
     }
 
     public function test_fiscal_year_import_remaps_invoice_warehouse(): void
@@ -471,6 +554,39 @@ class WarehouseInvoiceStockTest extends TestCase
         return Invoice::withoutGlobalScopes()->with('items')->findOrFail($result['invoice']->id);
     }
 
+    private function createBeginningInventory(Product $product, float $quantity, Warehouse $warehouse, float $unit): Invoice
+    {
+        $result = InvoiceService::createInvoice(
+            $this->user,
+            $this->beginningInventoryData($warehouse),
+            [[
+                'itemable_type' => 'product',
+                'itemable_id' => $product->id,
+                'quantity' => $quantity,
+                'unit' => $unit,
+                'unit_discount' => 0,
+                'vat' => 0,
+            ]],
+            true
+        );
+
+        return Invoice::withoutGlobalScopes()->with('items')->findOrFail($result['invoice']->id);
+    }
+
+    private function beginningInventoryData(Warehouse $warehouse, ?int $number = null): array
+    {
+        return [
+            'title' => 'Beginning inventory',
+            'date' => now()->toDateString(),
+            'invoice_type' => InvoiceType::BEGINNING_INVENTORY,
+            'customer_id' => null,
+            'warehouse_id' => $warehouse->id,
+            'document_number' => null,
+            'number' => $number ?? ++$this->nextInvoiceNumber,
+            'description' => 'Initial stock',
+        ];
+    }
+
     private function invoiceData(InvoiceType $type, Warehouse $warehouse, ?Invoice $returnedInvoice = null): array
     {
         $number = ++$this->nextInvoiceNumber;
@@ -576,10 +692,12 @@ class WarehouseInvoiceStockTest extends TestCase
         ]);
     }
 
-    private function setStock(Warehouse $warehouse, float $quantity, float $averageCost = 100): void
+    private function setStock(Warehouse $warehouse, float $quantity, float $averageCost = 100, ?Product $product = null): void
     {
+        $product ??= $this->product;
+
         WarehouseProductStock::updateOrCreate(
-            ['warehouse_id' => $warehouse->id, 'product_id' => $this->product->id],
+            ['warehouse_id' => $warehouse->id, 'product_id' => $product->id],
             ['quantity' => $quantity, 'average_cost' => $averageCost]
         );
     }
@@ -608,5 +726,23 @@ class WarehouseInvoiceStockTest extends TestCase
             ->value('quantity');
 
         $this->assertEqualsWithDelta($quantity, (float) $actual, 0.001);
+    }
+
+    private function assertStockForProduct(Warehouse $warehouse, Product $product, float $quantity): void
+    {
+        $actual = WarehouseProductStock::query()
+            ->where('warehouse_id', $warehouse->id)
+            ->where('product_id', $product->id)
+            ->value('quantity');
+
+        $this->assertEqualsWithDelta($quantity, (float) $actual, 0.001);
+    }
+
+    private function stockAverageCost(Warehouse $warehouse, Product $product): float
+    {
+        return (float) WarehouseProductStock::query()
+            ->where('warehouse_id', $warehouse->id)
+            ->where('product_id', $product->id)
+            ->value('average_cost');
     }
 }

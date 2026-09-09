@@ -82,10 +82,10 @@ class ProductService
                 $product,
                 self::resolveWarehouseId($invoiceItem, $product),
                 (float) $invoiceItem['quantity'],
-                in_array($invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL], true) || $invoice_type->isVoid()
+                in_array($invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::BEGINNING_INVENTORY], true) || $invoice_type->isVoid()
             );
 
-            if ($invoice_type === InvoiceType::BUY || $invoice_type === InvoiceType::RETURN_SELL || $invoice_type->isVoid()) {
+            if (in_array($invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::BEGINNING_INVENTORY], true) || $invoice_type->isVoid()) {
                 $product->quantity += $invoiceItem['quantity'];
             } elseif ($invoice_type === InvoiceType::SELL || $invoice_type === InvoiceType::RETURN_BUY) {
                 $product->quantity -= $invoiceItem['quantity'];
@@ -112,11 +112,11 @@ class ProductService
                 $product,
                 self::resolveWarehouseId($invoiceItem, $product),
                 (float) $invoiceItem['quantity'],
-                in_array($invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL], true) || $invoice_type->isVoid(),
+                in_array($invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::BEGINNING_INVENTORY], true) || $invoice_type->isVoid(),
                 true
             );
 
-            if ($invoice_type === InvoiceType::BUY || $invoice_type === InvoiceType::RETURN_SELL || $invoice_type->isVoid()) {
+            if (in_array($invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::BEGINNING_INVENTORY], true) || $invoice_type->isVoid()) {
                 $product->quantity -= $invoiceItem['quantity'];
             } elseif ($invoice_type === InvoiceType::SELL || $invoice_type === InvoiceType::RETURN_BUY) {
                 $product->quantity += $invoiceItem['quantity'];
@@ -237,7 +237,7 @@ class ProductService
             $incomingUnitCost = self::invoiceItemIncomingUnitCost($invoice, $invoiceItem);
 
             if ($invoice->status->isApprovedOrSettled()) {
-                if (in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID], true)) {
+                if (in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID, InvoiceType::BEGINNING_INVENTORY], true)) {
                     $quantityBefore = max(0.0, $stockQuantity - $quantity);
                     $stock->average_cost = $stockQuantity > 0
                         ? (($quantityBefore * (float) $stock->average_cost) + ($quantity * $incomingUnitCost)) / $stockQuantity
@@ -245,7 +245,7 @@ class ProductService
                 } elseif ($stockQuantity <= 0) {
                     $stock->average_cost = 0;
                 }
-            } elseif (in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID], true)) {
+            } elseif (in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID, InvoiceType::BEGINNING_INVENTORY], true)) {
                 $quantityBeforeReversal = $stockQuantity + $quantity;
                 $remainingValue = ($quantityBeforeReversal * (float) $stock->average_cost) - ($quantity * $incomingUnitCost);
                 $stock->average_cost = $stockQuantity > 0 ? max(0.0, $remainingValue / $stockQuantity) : 0;
@@ -299,7 +299,9 @@ class ProductService
             }
 
             $invoices = Invoice::withoutGlobalScopes()
-                ->whereIn('status', InvoiceStatus::approvedOrSettled())
+                ->where(function ($query) {
+                    $query->whereIn('status', InvoiceStatus::approvedOrSettled());
+                })
                 ->whereHas('items', function ($query) use ($product) {
                     $query->where('itemable_type', Product::class)->where('itemable_id', $product->id);
                 })
@@ -323,7 +325,7 @@ class ProductService
                     $item->save();
 
                     $sign = match ($invoice->invoice_type) {
-                        InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID => 1,
+                        InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID, InvoiceType::BEGINNING_INVENTORY => 1,
                         InvoiceType::SELL, InvoiceType::RETURN_BUY => -1,
                     };
 
