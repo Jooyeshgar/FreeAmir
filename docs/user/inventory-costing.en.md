@@ -62,6 +62,12 @@ New average =
 
 If a direct ancillary purchase cost is recorded, that cost increases inventory value and raises the average unit cost.
 
+## Beginning inventory
+
+Record beginning inventory for each product with its actual quantity and unit cost. On approval, Amir adds the quantity to the product and selected warehouse and calculates moving average cost from the recorded value. Later sales use that average for COGS.
+
+Beginning inventory uses the same incoming-stock cost flow as a purchase. You can enter it after earlier purchases or sales, including with a fiscal-year-start date. On approval, Amir combines it with the current stock quantity and value without rewriting earlier invoices. It keeps quantity and average cost separate for each warehouse. Beginning inventory has no customer, and its invoice number follows the normal sequence for its own invoice type.
+
 ## Numeric Example
 
 Suppose item A is purchased like this:

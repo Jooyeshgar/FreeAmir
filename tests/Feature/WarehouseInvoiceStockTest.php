@@ -162,7 +162,7 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->assertSame($transactionCount, Transaction::count());
         $this->assertEqualsWithDelta(7, (float) $this->product->fresh()->quantity, 0.001);
         $this->assertStock($this->mainWarehouse, 7);
-        $this->assertEqualsWithDelta(900, (float) $this->product->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(678.571, (float) $this->product->fresh()->average_cost, 0.001);
         $this->assertEqualsWithDelta(692.857, $this->stockAverageCost($this->mainWarehouse, $this->product), 0.001);
         $this->assertEqualsWithDelta(900, (float) $invoice->items->first()->unit_price, 0.001);
     }

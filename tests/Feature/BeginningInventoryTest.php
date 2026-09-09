@@ -112,6 +112,49 @@ class BeginningInventoryTest extends TestCase
         $this->assertEqualsWithDelta(300, $this->stockCost($product, $this->otherWarehouse), 0.001);
     }
 
+    public function test_backdated_beginning_inventory_added_after_buys_and_a_sale_uses_the_current_cost_flow_per_warehouse(): void
+    {
+        $inventorySubjectId = $this->subject('019001', 'Inventory');
+        $cogsSubjectId = $this->subject('070001', 'COGS');
+        $incomeSubjectId = $this->subject('050003', 'Sales revenue');
+        $counterpartySubjectId = $this->subject('012001', 'Counterparty');
+        $product = $this->product('LATE-OPENING', 0);
+        $product->update([
+            'inventory_subject_id' => $inventorySubjectId,
+            'cogs_subject_id' => $cogsSubjectId,
+            'income_subject_id' => $incomeSubjectId,
+        ]);
+        $this->setStock($product, $this->mainWarehouse, 0, 0);
+        $this->setStock($product, $this->otherWarehouse, 0, 0);
+        $counterparty = Customer::create([
+            'name' => 'Counterparty',
+            'company_id' => $this->company->id,
+            'subject_id' => $counterpartySubjectId,
+        ]);
+
+        $this->createApprovedInvoice($product, $counterparty, InvoiceType::BUY, $this->mainWarehouse, 10, 100, 1, '2026-01-01');
+        $this->createApprovedInvoice($product, $counterparty, InvoiceType::BUY, $this->otherWarehouse, 5, 300, 2, '2026-01-02');
+        $this->createApprovedInvoice($product, $counterparty, InvoiceType::SELL, $this->mainWarehouse, 4, 500, 1, '2026-01-03');
+
+        $mainOpening = $this->createBeginningInventory($product, 2, $this->mainWarehouse, 200, true, 7, '2025-12-31');
+        $otherOpening = $this->createBeginningInventory($product, 3, $this->otherWarehouse, 400, true, 8, '2025-12-31');
+
+        $this->assertEqualsWithDelta(8, (float) WarehouseProductStock::query()
+            ->where('product_id', $product->id)
+            ->where('warehouse_id', $this->mainWarehouse->id)
+            ->value('quantity'), 0.001);
+        $this->assertEqualsWithDelta(8, (float) WarehouseProductStock::query()
+            ->where('product_id', $product->id)
+            ->where('warehouse_id', $this->otherWarehouse->id)
+            ->value('quantity'), 0.001);
+        $this->assertEqualsWithDelta(125, $this->stockCost($product, $this->mainWarehouse), 0.001);
+        $this->assertEqualsWithDelta(337.5, $this->stockCost($product, $this->otherWarehouse), 0.001);
+        $this->assertEqualsWithDelta(16, (float) $product->fresh()->quantity, 0.001);
+        $this->assertEqualsWithDelta(214.59, (float) $product->fresh()->average_cost, 0.01);
+        $this->assertEqualsWithDelta(171.80, (float) $mainOpening->items->first()->fresh()->cog_after, 0.01);
+        $this->assertEqualsWithDelta(214.59, (float) $otherOpening->items->first()->fresh()->cog_after, 0.01);
+    }
+
     public function test_later_buy_with_equal_number_uses_approved_beginning_inventory_snapshot(): void
     {
         $this->assertLaterBuyCost(1, 1);
@@ -304,6 +347,25 @@ class BeginningInventoryTest extends TestCase
         return Invoice::withoutGlobalScopes()->with('items')->findOrFail($result['invoice']->id);
     }
 
+    private function createApprovedInvoice(Product $product, Customer $customer, InvoiceType $type, Warehouse $warehouse, float $quantity, float $unit, int $number, string $date): Invoice
+    {
+        $invoice = InvoiceService::createInvoice($this->user, [
+            'title' => $type->label(),
+            'date' => $date,
+            'invoice_type' => $type,
+            'customer_id' => $customer->id,
+            'warehouse_id' => $warehouse->id,
+            'document_number' => $number,
+            'number' => $number,
+        ], [$this->item($product, $quantity, $unit)], true)['invoice'];
+
+        if ($type === InvoiceType::SELL) {
+            (new InvoiceService)->changeInvoiceStatus($invoice, 'approved');
+        }
+
+        return $invoice->fresh('items');
+    }
+
     private function invoiceData(Warehouse $warehouse, int $number): array
     {
         return [
@@ -347,6 +409,21 @@ class BeginningInventoryTest extends TestCase
             'vat' => 0,
             'average_cost' => $averageCost,
             'company_id' => $this->company->id,
+        ]);
+    }
+
+    private function subject(string $code, string $name): int
+    {
+        return DB::table('subjects')->insertGetId([
+            'company_id' => $this->company->id,
+            'parent_id' => null,
+            'code' => $code,
+            'name' => $name,
+            'type' => DB::getDriverName() === 'sqlite'
+                ? SubjectType::BOTH->valueName()
+                : SubjectType::BOTH->value,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
     }
 

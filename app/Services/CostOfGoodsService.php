@@ -38,6 +38,13 @@ class CostOfGoodsService
             }
 
             $product = $invoiceItem->itemable;
+
+            if ($invoice->invoice_type === InvoiceType::BEGINNING_INVENTORY) {
+                self::updateBeginningInventoryAverageCost($invoice, $invoiceItem, $product);
+
+                continue;
+            }
+
             $isReturnBuy = $invoice->invoice_type === InvoiceType::RETURN_BUY;
 
             if ($isReturnBuy && ! $invoice->status->isApprovedOrSettled()) {
@@ -74,6 +81,26 @@ class CostOfGoodsService
             $product->average_cost = $denominator > 0 ? ($totalCosts / $denominator) : 0;
             $product->save();
         }
+    }
+
+    private static function updateBeginningInventoryAverageCost(Invoice $invoice, InvoiceItem $invoiceItem, Product $product): void
+    {
+        $quantity = (float) $invoiceItem->quantity;
+        $baseCost = (float) $invoiceItem->amount - (float) ($invoiceItem->vat ?? 0);
+
+        if ($invoice->status->isApprovedOrSettled()) {
+            $quantityBefore = max(0.0, (float) $product->quantity - $quantity);
+            $quantityAfter = $quantityBefore + $quantity;
+            $valueAfter = ($quantityBefore * (float) $product->average_cost) + $baseCost;
+            $product->average_cost = $quantityAfter > 0 ? $valueAfter / $quantityAfter : 0;
+        } else {
+            $quantityBefore = max(0.0, (float) $product->quantity);
+            $quantityAfter = $quantityBefore + $quantity;
+            $valueBefore = ((float) $invoiceItem->cog_after * $quantityAfter) - $baseCost;
+            $product->average_cost = $quantityBefore > 0 ? max(0.0, $valueBefore / $quantityBefore) : 0;
+        }
+
+        $product->save();
     }
 
     private static function restoreAverageCostAfterUnapprovingReturnBuy(Invoice $invoice, InvoiceItem $invoiceItem, Product $product): void
