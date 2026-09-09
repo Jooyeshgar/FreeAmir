@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\AncillaryCostType;
 use App\Enums\BankAccountType;
 use App\Enums\ChequeType;
 use App\Enums\CustomerType;
@@ -10,6 +11,7 @@ use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Enums\PayrollStatus;
 use App\Enums\SubjectType;
+use App\Models\AncillaryCost;
 use App\Models\Bank;
 use App\Models\BankAccount;
 use App\Models\Cheque;
@@ -449,6 +451,82 @@ class BackupControllerTest extends TestCase
         $newCompany = FiscalYearService::importData($payload, ['name' => 'Restored Co', 'fiscal_year' => 1403]);
 
         $this->assertSame(1, Invoice::withoutGlobalScopes()->where('company_id', $newCompany->id)->count());
+    }
+
+    public function test_import_assigns_ancillary_costs_to_the_new_company(): void
+    {
+        $groupSubject = Subject::create([
+            'company_id' => $this->company->id,
+            'code' => '100',
+            'name' => 'Customer groups',
+            'parent_id' => null,
+            'type' => SubjectType::BOTH,
+        ]);
+        $customerSubject = Subject::create([
+            'company_id' => $this->company->id,
+            'code' => '100001',
+            'name' => 'Ancillary cost customer',
+            'parent_id' => $groupSubject->id,
+            'type' => SubjectType::BOTH,
+        ]);
+        $group = CustomerGroup::create([
+            'company_id' => $this->company->id,
+            'subject_id' => $groupSubject->id,
+            'name' => 'Ancillary cost customers',
+        ]);
+        $customer = Customer::create([
+            'company_id' => $this->company->id,
+            'group_id' => $group->id,
+            'subject_id' => $customerSubject->id,
+            'name' => 'Ancillary cost customer',
+            'type' => CustomerType::INDIVIDUAL,
+        ]);
+        $invoice = Invoice::create([
+            'company_id' => $this->company->id,
+            'number' => 24,
+            'date' => '2026-06-01',
+            'invoice_type' => InvoiceType::BUY,
+            'status' => InvoiceStatus::APPROVED,
+            'customer_id' => $customer->id,
+            'creator_id' => $this->user->id,
+            'subtraction' => 0,
+            'vat' => 0,
+            'amount' => 1247598000,
+        ]);
+        $sourceAncillaryCost = AncillaryCost::create([
+            'company_id' => $this->company->id,
+            'number' => 24,
+            'invoice_id' => $invoice->id,
+            'customer_id' => $customer->id,
+            'date' => '2026-06-01',
+            'type' => AncillaryCostType::Shipping,
+            'amount' => 1247598000,
+            'vat' => 113418000,
+            'status' => InvoiceStatus::APPROVED,
+        ]);
+
+        $payload = FiscalYearService::exportData($this->company->id, [
+            FiscalYearSection::SUBJECTS->value,
+            FiscalYearSection::CUSTOMERS->value,
+            FiscalYearSection::INVOICES->value,
+        ]);
+
+        $newCompany = FiscalYearService::importData($payload, [
+            'name' => 'Imported ancillary costs',
+            'fiscal_year' => 1406,
+        ]);
+
+        $importedAncillaryCost = AncillaryCost::withoutGlobalScopes()
+            ->where('company_id', $newCompany->id)
+            ->where('number', 24)
+            ->firstOrFail();
+
+        $this->assertSame($this->company->id, $sourceAncillaryCost->company_id);
+        $this->assertSame($newCompany->id, $importedAncillaryCost->company_id);
+        $this->assertSame(
+            $newCompany->id,
+            Invoice::withoutGlobalScopes()->findOrFail($importedAncillaryCost->invoice_id)->company_id
+        );
     }
 
     public function test_export_filename_replaces_spaces_with_hyphens(): void
