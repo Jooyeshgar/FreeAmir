@@ -93,7 +93,7 @@ class InvoiceController extends Controller
         $invoices->totalProductsQuantity = $itemTotals[Product::class] ?? 0;
         $invoices->totalServicesQuantity = $itemTotals[Service::class] ?? 0;
 
-        return view('invoices.index', compact('invoices') + ['statusCounts' => $statusCounts, 'service_buy' => $isServiceBuy]);
+        return view('invoices.index', ['invoices' => $invoices, 'statusCounts' => $statusCounts, 'service_buy' => $isServiceBuy]);
     }
 
     public function export(Request $request, ReportExportService $reportExportService): StreamedResponse
