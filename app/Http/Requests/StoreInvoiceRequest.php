@@ -31,13 +31,15 @@ class StoreInvoiceRequest extends FormRequest
      */
     protected function prepareForValidation(): void
     {
+        $isBeginningInventory = $this->effectiveInvoiceType() === InvoiceType::BEGINNING_INVENTORY->valueName();
+
         // Normalize top-level scalars
         $this->merge([
             'date' => convertToGregorian($this->input('date')),
             'invoice_id' => convertToInt($this->input('invoice_id')),
             'invoice_number' => convertToInt($this->input('invoice_number')),
             'subtractions' => convertToFloat($this->input('subtraction', 0)),
-            'customer_id' => convertToInt($this->input('customer_id')),
+            'customer_id' => $isBeginningInventory ? null : convertToInt($this->input('customer_id')),
             'warehouse_id' => convertToInt($this->input('warehouse_id')),
             'include_last_years_invoices' => $this->boolean('include_last_years_invoices'),
         ]);
@@ -51,14 +53,14 @@ class StoreInvoiceRequest extends FormRequest
             $this->merge(['returned_invoice_id' => null]);
         }
 
-        if (str_contains($this->input('document_number'), '/')) {
+        if (! $isBeginningInventory && $this->filled('document_number')) {
+            $documentNumber = str_replace('/', '.', $this->input('document_number'));
+
             $this->merge([
-                'document_number' => convertToFloat(str_replace('/', '.', $this->input('document_number'))),
+                'document_number' => convertToFloat($documentNumber),
             ]);
-        } else {
-            $this->merge([
-                'document_number' => convertToFloat($this->input('document_number')),
-            ]);
+        } elseif (! $isBeginningInventory) {
+            $this->merge(['document_number' => null]);
         }
 
         // Normalize transactions numeric fields and ids
@@ -77,7 +79,7 @@ class StoreInvoiceRequest extends FormRequest
                     ];
                 });
 
-            $invoiceType = $this->input('invoice_type');
+            $invoiceType = $this->effectiveInvoiceType();
             if (in_array($invoiceType, ['return_sell', 'return_buy'])) {
                 $transactions = $transactions->filter(fn ($t) => ($t['quantity'] ?? 0) > 0);
             }
@@ -93,7 +95,7 @@ class StoreInvoiceRequest extends FormRequest
     {
         $validator->after(function ($validator) {
             $transactions = $this->input('transactions', []);
-            $invoiceType = $this->input('invoice_type');
+            $invoiceType = $this->effectiveInvoiceType();
             $inputDate = $this->input('date');
             $invoice = $this->route('invoice');
             $isApproved = $this->has('approve');
@@ -225,7 +227,7 @@ class StoreInvoiceRequest extends FormRequest
                 }
             }
 
-            if (! in_array($invoiceType, ['sell', 'buy', 'return_sell', 'return_buy'])) {
+            if (! in_array($invoiceType, InvoiceType::valueNames(), true)) {
                 return;
             }
 
@@ -314,20 +316,23 @@ class StoreInvoiceRequest extends FormRequest
     {
         $invoice = $this->route('invoice');
         $isEditing = $invoice !== null;
-        $isReturnInvoice = in_array($this->input('invoice_type'), [InvoiceType::RETURN_BUY->valueName(), InvoiceType::RETURN_SELL->valueName()], true);
+        $invoiceType = $this->effectiveInvoiceType();
+        $isReturnInvoice = in_array($invoiceType, [InvoiceType::RETURN_BUY->valueName(), InvoiceType::RETURN_SELL->valueName()], true);
+        $isBeginningInventory = $invoiceType === InvoiceType::BEGINNING_INVENTORY->valueName();
 
         $rules = [
             'title' => 'nullable|string|min:2|max:255',
             'description' => 'nullable|string',
             'date' => 'required|date',
 
-            'invoice_type' => ['required', Rule::in(InvoiceType::valueNames())],
-            'customer_id' => 'required|exists:customers,id|integer',
+            'invoice_type' => ['required', Rule::in($isEditing ? [$invoiceType] : InvoiceType::valueNames())],
+            'customer_id' => Rule::when(! $isBeginningInventory, ['required', 'exists:customers,id', 'integer'], ['nullable']),
             'invoice_id' => Rule::when($invoice !== null, ['required', 'integer', 'exists:invoices,id']),
             'include_last_years_invoices' => 'nullable|boolean',
             'returned_invoice_id' => 'nullable|integer|exists:invoices,id',
             'document_number' => [
-                'required',
+                Rule::requiredIf(! $isBeginningInventory),
+                'nullable',
                 'decimal:0,2',
                 Rule::unique('documents', 'number')
                     ->where(function ($query) {
@@ -340,12 +345,13 @@ class StoreInvoiceRequest extends FormRequest
                 'integer',
                 Rule::unique('invoices', 'number')
                     ->where(function ($query) {
-                        return $query->where('company_id', getActiveCompany())->where('invoice_type', InvoiceType::fromName($this->input('invoice_type')));
+                        return $query->where('company_id', getActiveCompany())
+                            ->where('invoice_type', InvoiceType::fromName($this->effectiveInvoiceType()));
                     })
                     ->ignore($isEditing ? $invoice->id : null),
             ],
 
-            'subtractions' => 'nullable|numeric|min:0|max:'.self::DECIMAL_10_2_MAX,
+            'subtractions' => $isBeginningInventory ? 'nullable|in:0' : 'nullable|numeric|min:0|max:'.self::DECIMAL_10_2_MAX,
 
             'warehouse_id' => [
                 'required',
@@ -371,17 +377,26 @@ class StoreInvoiceRequest extends FormRequest
                 },
             ],
 
-            'transactions.*.item_type' => 'required|string|in:product,service',
-            'transactions.*.vat' => $isReturnInvoice || $isEditing
+            'transactions.*.item_type' => $isBeginningInventory ? 'required|string|in:product' : 'required|string|in:product,service',
+            'transactions.*.vat' => $isBeginningInventory
+                ? 'nullable|numeric|in:0'
+                : ($isReturnInvoice || $isEditing
                 ? 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX
-                : 'required|numeric|min:0|max:100',
+                : 'required|numeric|min:0|max:100'),
             'transactions.*.desc' => 'nullable|string|max:500',
             'transactions.*.quantity' => ($isReturnInvoice ? 'required|numeric|min:0|max:' : 'required|numeric|min:1|max:').self::DECIMAL_18_2_MAX,
-            'transactions.*.unit_discount' => 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX,
+            'transactions.*.unit_discount' => $isBeginningInventory ? 'nullable|numeric|in:0' : 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX,
             'transactions.*.unit' => 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX,
             'transactions.*.total' => 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX,
         ];
 
         return $rules;
+    }
+
+    private function effectiveInvoiceType(): ?string
+    {
+        $invoice = $this->route('invoice');
+
+        return $invoice instanceof Invoice ? $invoice->invoice_type->valueName() : $this->input('invoice_type');
     }
 }

@@ -11,6 +11,10 @@
                     @include('invoices.index.buy')
                 @break
 
+                @case('beginning_inventory')
+                    @include('invoices.index.beginning_inventory')
+                @break
+
                 @case('return_sell')
                     @include('invoices.index.return_sell')
                 @break

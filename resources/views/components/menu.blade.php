@@ -78,6 +78,9 @@
                             </ul>
                         </details>
                     </li>
+                    <li><a
+                            href="{{ route('invoices.index', ['invoice_type' => 'beginning_inventory']) }}">{{ __('Beginning Inventory') }}</a>
+                    </li>
                 @endcanany
                 @can('invoices.inactive')
                     <li><a href="{{ route('invoices.inactive') }}">{{ __('Activate Confirmed Invoices') }}</a></li>

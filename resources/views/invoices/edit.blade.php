@@ -1,11 +1,13 @@
-<x-app-layout title="{{ __('Edit Invoice') }} #{{ formatDocumentNumber($invoice->number) }}">
+<x-app-layout title="{{ $isBeginningInventory ? __('Edit Beginning Inventory') : __('Edit Invoice') }} #{{ formatDocumentNumber($invoice->number) }}">
     <div>
         <form action="{{ route('invoices.update', $invoice) }}" method="POST">
             @csrf
             @method('PUT')
             <div class="card-body">
                 <h2 class="card-title">
-                    @if ($isReturnServiceBuy)
+                    @if ($isBeginningInventory)
+                        {{ __('Edit Beginning Inventory') }}
+                    @elseif ($isReturnServiceBuy)
                         {{ __('Edit') . ' ' . __('Return Service Buy Invoice') }}
                     @else
                         {{ __('Edit') . ' ' . ($isServiceBuy ? __('Service Buy Invoice') : ($isReturnServiceBuy ? __('Return Service Buy Invoice') : $invoice_type->label())) }}
@@ -26,6 +28,10 @@
                         @endif
                     @break
 
+                    @case('beginning_inventory')
+                        @include('invoices.forms.beginning_inventory')
+                    @break
+
                     @case('return_sell')
                         @include('invoices.forms.return_sell')
                     @break
@@ -39,6 +45,14 @@
                 @endswitch
             </div>
         </form>
+        @if ($isBeginningInventory)
+            @can('invoices.destroy')
+                <form id="delete-beginning-inventory-form" action="{{ route('invoices.destroy', $invoice) }}" method="POST">
+                    @csrf
+                    @method('DELETE')
+                </form>
+            @endcan
+        @endif
     </div>
 
     @pushOnce('scripts')
