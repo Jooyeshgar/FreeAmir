@@ -5,9 +5,11 @@ namespace Tests\Feature;
 use App\Enums\PayrollStatus;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\MonthlyAttendance;
 use App\Models\Payroll;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -225,6 +227,41 @@ class PayrollWorkflowTest extends TestCase
 
         $response->assertRedirect(route('salary.payrolls.show', $payroll));
         $this->assertDatabaseHas('payrolls', ['id' => $payroll->id, 'status' => PayrollStatus::Paid->value]);
+    }
+
+    public function test_destroy_redirects_to_payroll_index_when_payroll_has_monthly_attendance(): void
+    {
+        $this->grant('salary.payrolls.destroy');
+        $attendance = MonthlyAttendance::factory()->create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'year' => 1405,
+            'month' => 1,
+        ]);
+        $payrollId = DB::table('payrolls')->insertGetId([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'monthly_attendance_id' => $attendance->id,
+            'year' => 1405,
+            'month' => 1,
+            'total_earnings' => 10_000_000,
+            'total_deductions' => 1_000_000,
+            'net_payment' => 9_000_000,
+            'employer_insurance' => 2_000_000,
+            'tax_base_amount' => 9_000_000,
+            'income_tax_amount' => 500_000,
+            'status' => 'draft',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $payroll = Payroll::withoutGlobalScopes()->findOrFail($payrollId);
+
+        $response = $this->delete(route('salary.payrolls.destroy', $payroll));
+
+        $response->assertRedirect(route('salary.payrolls.index'));
+        $response->assertSessionHas('success');
+        $this->assertDatabaseMissing('payrolls', ['id' => $payroll->id]);
+        $this->assertDatabaseHas('monthly_attendances', ['id' => $attendance->id]);
     }
 
     private function makePayroll(array $overrides = []): Payroll
