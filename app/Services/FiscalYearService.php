@@ -956,14 +956,17 @@ class FiscalYearService
     {
         foreach ($mapping as $id) {
             $model = match ($type) {
-                'invoice' => Invoice::find($id),
-                'ancillaryCost' => AncillaryCost::find($id),
+                'invoice' => Invoice::withoutGlobalScope(FiscalYearScope::class)->find($id),
+                'ancillaryCost' => AncillaryCost::withoutGlobalScope(FiscalYearScope::class)->find($id),
             };
             if ($model?->document_id === null) {
                 continue; // Not approved invoice or ancillary cost
             }
-            $document = Document::find($model->document_id);
-            if ($document->documentable_type !== get_class($model) && $document->documentable_id !== $id) {
+            $document = Document::withoutGlobalScope(FiscalYearScope::class)->find($model->document_id);
+            if ($document === null) {
+                continue;
+            }
+            if ($document->documentable_type !== $model->getMorphClass() || $document->documentable_id !== $id) {
                 $document->documentable()->associate($model);
                 if ($document->isDirty(['documentable_id', 'documentable_type'])) {
                     $document->save();
