@@ -294,17 +294,10 @@ class PayrollController extends Controller
      */
     public function destroy(Payroll $payroll): RedirectResponse
     {
-        $attendanceId = $payroll->monthly_attendance_id;
         $payroll->items()->delete();
         $payroll->delete();
 
-        if ($attendanceId) {
-            return redirect()->route('attendance.monthly-attendances.show', $attendanceId)
-                ->with('success', __('Payroll deleted successfully.'));
-        }
-
-        return redirect()->route('attendance.monthly-attendances.index')
-            ->with('success', __('Payroll deleted successfully.'));
+        return redirect()->route('salary.payrolls.index')->with('success', __('Payroll deleted successfully.'));
     }
 
     private function transition(Request $request, Payroll $payroll, PayrollStatus $toStatus, string $message): RedirectResponse
