@@ -2599,6 +2599,7 @@ class FiscalYearService
             $newAncillaryCost->invoice_id = $invoiceMapping[$oldInvoiceId];
             $newAncillaryCost->document_id = $oldDocumentId && isset($documentMapping[$oldDocumentId]) ? $documentMapping[$oldDocumentId] : null;
             $newAncillaryCost->customer_id = $customerMapping[$oldCustomerId];
+            $newAncillaryCost->company_id = $targetYearId;
             $newAncillaryCost->save();
 
             $mapping[$ancillaryCostData['id']] = $newAncillaryCost->id;
