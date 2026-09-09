@@ -250,7 +250,7 @@ class PayrollWorkflowTest extends TestCase
             'employer_insurance' => 2_000_000,
             'tax_base_amount' => 9_000_000,
             'income_tax_amount' => 500_000,
-            'status' => 'draft',
+            'status' => PayrollStatus::Draft->value,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
