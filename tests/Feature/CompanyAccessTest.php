@@ -6,9 +6,13 @@ use App\Enums\FiscalYearSection;
 use App\Models\Bank;
 use App\Models\BankAccount;
 use App\Models\Company;
+use App\Models\Document;
+use App\Models\DocumentFile;
 use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -90,6 +94,68 @@ class CompanyAccessTest extends TestCase
 
         $response = $this->actingAs($superAdmin)->withSession(['interface_mode' => 'management'])->get(route('companies.index'));
         $response->assertOk()->assertDontSee('data-testid="create-first-company"', false);
+    }
+
+    public function test_user_can_delete_an_accessible_company(): void
+    {
+        Storage::fake('public');
+        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'companies.destroy']));
+        config(['active-company-id' => $this->accessibleCompany->id]);
+        $document = Document::factory()->create(['company_id' => $this->accessibleCompany->id]);
+        $path = "documents/{$document->id}/attachment.pdf";
+        Storage::disk('public')->put($path, 'attachment');
+        DocumentFile::create([
+            'document_id' => $document->id,
+            'user_id' => $this->user->id,
+            'name' => 'attachment.pdf',
+            'path' => $path,
+        ]);
+
+        $response = $this->delete(route('companies.destroy', $this->accessibleCompany));
+
+        $response->assertRedirect(route('companies.index'));
+        $response->assertSessionHas('success', __('Company deleted successfully.'));
+        $this->assertDatabaseMissing('companies', ['id' => $this->accessibleCompany->id]);
+        $this->assertDatabaseMissing('company_user', ['company_id' => $this->accessibleCompany->id]);
+        Storage::disk('public')->assertMissing($path);
+    }
+
+    public function test_storage_cleanup_error_does_not_prevent_company_deletion(): void
+    {
+        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'companies.destroy']));
+        config(['active-company-id' => $this->accessibleCompany->id]);
+        $document = Document::factory()->create(['company_id' => $this->accessibleCompany->id]);
+        DocumentFile::create([
+            'document_id' => $document->id,
+            'user_id' => $this->user->id,
+            'name' => 'imported.json',
+            'path' => "documents/{$document->id}/imported.json",
+        ]);
+        Storage::shouldReceive('disk')->once()->with('public')->andThrow(new \RuntimeException('Storage unavailable'));
+
+        $response = $this->delete(route('companies.destroy', $this->accessibleCompany));
+
+        $response->assertRedirect(route('companies.index'));
+        $response->assertSessionHas('success', __('Company deleted successfully.'));
+        $this->assertDatabaseMissing('companies', ['id' => $this->accessibleCompany->id]);
+    }
+
+    public function test_company_deletion_shows_validation_exception(): void
+    {
+        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'companies.destroy']));
+        Company::deleting(function (): never {
+            throw ValidationException::withMessages([
+                'company' => ['Imported company data is invalid.'],
+            ]);
+        });
+
+        $response = $this->delete(route('companies.destroy', $this->accessibleCompany));
+
+        $response->assertRedirect(route('companies.index'));
+        $response->assertSessionHasErrors([
+            'company' => 'Imported company data is invalid.',
+        ]);
+        $this->assertDatabaseHas('companies', ['id' => $this->accessibleCompany->id]);
     }
 
     public function test_store_rejects_inaccessible_source_company(): void
