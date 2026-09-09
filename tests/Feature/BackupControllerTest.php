@@ -533,10 +533,11 @@ class BackupControllerTest extends TestCase
     public function test_document_relation_sync_ignores_active_company_scope(): void
     {
         $targetCompany = Company::factory()->create();
+        $usesLegacyEnumSchema = DB::connection()->getDriverName() === 'sqlite';
         $customerId = DB::table('customers')->insertGetId([
             'name' => 'Imported invoice customer',
             'company_id' => $this->company->id,
-            'type' => 'individual',
+            'type' => $usesLegacyEnumSchema ? CustomerType::INDIVIDUAL->valueName() : CustomerType::INDIVIDUAL->value,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -554,8 +555,8 @@ class BackupControllerTest extends TestCase
             'subtraction' => 0,
             'vat' => 0,
             'amount' => 100,
-            'invoice_type' => 'sell',
-            'status' => 'approved',
+            'invoice_type' => $usesLegacyEnumSchema ? InvoiceType::SELL->valueName() : InvoiceType::SELL->value,
+            'status' => $usesLegacyEnumSchema ? InvoiceStatus::APPROVED->valueName() : InvoiceStatus::APPROVED->value,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
