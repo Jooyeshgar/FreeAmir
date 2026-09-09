@@ -69,25 +69,37 @@
             </div>
 
             <div class="card-actions justify-end">
-                <a class="btn" href="{{ route('invoices.index', ['invoice_type' => 'beginning_inventory']) }}">{{ __('Back') }}</a>
+                <a class="btn btn-sm" href="{{ route('invoices.index', ['invoice_type' => 'beginning_inventory']) }}">{{ __('Back') }}</a>
                 @can('invoices.edit')
                     @unless ($invoice->status->isApprovedOrSettled())
-                        <a class="btn btn-primary" href="{{ route('invoices.edit', $invoice) }}">{{ __('Edit invoice') }}</a>
+                        <a class="btn btn-sm btn-primary" href="{{ route('invoices.edit', $invoice) }}">{{ __('Edit invoice') }}</a>
                     @endunless
                 @endcan
                 @can('invoices.approve')
                     @if ($changeStatusValidation->hasErrors())
-                        <a class="btn btn-accent" href="{{ route('invoices.conflicts', $invoice) }}">{{ __('Fix Conflict') }}</a>
+                        <a class="btn btn-sm btn-accent" href="{{ route('invoices.conflicts', $invoice) }}">{{ __('Fix Conflict') }}</a>
                     @else
                         <form action="{{ route('invoices.change-status', [$invoice, $invoice->status->isApprovedOrSettled() ? 'unapproved' : 'approved']) }}{{ $changeStatusValidation->hasWarning() ? '?confirm=1' : '' }}"
                             method="POST">
                             @csrf
-                            <button class="btn {{ $invoice->status->isApprovedOrSettled() ? 'btn-warning' : 'btn-success' }}" type="submit">
+                            <button class="btn btn-sm {{ $invoice->status->isApprovedOrSettled() ? 'btn-warning' : 'btn-success' }}" type="submit">
                                 {{ $invoice->status->isApprovedOrSettled() ? __('Unapprove') : __('Approve') }}
                             </button>
                         </form>
                     @endif
                 @endcan
+                @if ($invoice->document)
+                    @can('documents.show')
+                        <a href="{{ route('documents.show', $invoice->document) }}" class="btn btn-sm btn-secondary gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                                viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12h6m2 8H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2z" />
+                            </svg>
+                            {{ formatDocumentNumber($invoice->document->number) }}
+                        </a>
+                    @endcan
+                @endif
             </div>
         </div>
     </div>
