@@ -36,6 +36,7 @@ use App\Models\WorkSite;
 use App\Services\DocumentFileService;
 use App\Services\DocumentService;
 use App\Services\FiscalYearService;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -325,8 +326,6 @@ class BackupControllerTest extends TestCase
         $this->assertCount(1, $payload['payments']);
         $this->assertSame($sections, $payload['meta']['sections_exported']);
 
-        Cheque::withoutGlobalScope(FiscalYearScope::class)->whereKey($cheque->id)->delete();
-
         $newCompany = FiscalYearService::importData($payload, [
             'name' => 'Restored Cheques',
             'fiscal_year' => 1406,
@@ -358,6 +357,49 @@ class BackupControllerTest extends TestCase
         $this->assertSame(ChequeType::ISSUED, $restoredHistory->to_status);
         $this->assertSame($restoredCheque->id, $restoredPayment->cheque_id);
         $this->assertSame($newCompany->id, $restoredInvoice->company_id);
+        $this->assertNotNull(Cheque::withoutGlobalScope(FiscalYearScope::class)->find($cheque->id));
+    }
+
+    public function test_sayad_number_can_be_reused_in_another_company_only(): void
+    {
+        $otherCompany = Company::factory()->create();
+        $customerId = DB::table('customers')->insertGetId([
+            'company_id' => $this->company->id,
+            'name' => 'Source cheque customer',
+        ]);
+        $otherCustomerId = DB::table('customers')->insertGetId([
+            'company_id' => $otherCompany->id,
+            'name' => 'Imported cheque customer',
+        ]);
+        $cheque = [
+            'amount' => 1000,
+            'write_date' => '2026-09-01',
+            'due_date' => '2026-09-30',
+            'sayad_number' => '1234567890123456',
+            'direction' => ChequeType::RECEIVABLE->value,
+            'purpose' => ChequeType::SETTLEMENT->value,
+            'status' => ChequeType::REGISTERED->value,
+        ];
+
+        DB::table('cheques')->insert([
+            ...$cheque,
+            'company_id' => $this->company->id,
+            'customer_id' => $customerId,
+        ]);
+        DB::table('cheques')->insert([
+            ...$cheque,
+            'company_id' => $otherCompany->id,
+            'customer_id' => $otherCustomerId,
+        ]);
+
+        $this->assertSame(2, DB::table('cheques')->where('sayad_number', $cheque['sayad_number'])->count());
+
+        $this->expectException(UniqueConstraintViolationException::class);
+        DB::table('cheques')->insert([
+            ...$cheque,
+            'company_id' => $otherCompany->id,
+            'customer_id' => $otherCustomerId,
+        ]);
     }
 
     public function test_import_uploads_zip_and_creates_new_company(): void

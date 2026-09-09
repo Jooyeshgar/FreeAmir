@@ -62,7 +62,11 @@ class PaymentController extends Controller
             'due_date' => ['required', 'date', 'after_or_equal:issue_date'],
             'serial' => ['nullable', 'string', 'max:50'],
             'cheque_number' => ['nullable', 'string', 'max:50'],
-            'sayad_number' => ['required', 'regex:/^\d{16}$/', Rule::unique('cheques', 'sayad_number')],
+            'sayad_number' => [
+                'required',
+                'regex:/^\d{16}$/',
+                Rule::unique('cheques', 'sayad_number')->where('company_id', getActiveCompany()),
+            ],
             'bank_account_id' => [
                 Rule::requiredIf($direction === ChequeType::PAYABLE),
                 'nullable',
