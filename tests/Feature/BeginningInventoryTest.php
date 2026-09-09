@@ -269,7 +269,9 @@ class BeginningInventoryTest extends TestCase
             'parent_id' => null,
             'code' => '100',
             'name' => 'Inventory test subject',
-            'type' => SubjectType::BOTH->valueName(),
+            'type' => DB::getDriverName() === 'sqlite'
+                ? SubjectType::BOTH->valueName()
+                : SubjectType::BOTH->value,
             'created_at' => now(),
             'updated_at' => now(),
         ]);

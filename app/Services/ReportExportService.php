@@ -421,8 +421,7 @@ class ReportExportService
     private function applyInvoiceFilters(Builder $query, Request $request, ?InvoiceType $type): void
     {
         $serviceBuy = in_array($type, [InvoiceType::BUY, InvoiceType::RETURN_BUY], true) && $request->boolean('service_buy');
-        $query->when($type, fn ($q) => $q->where('invoice_type', $type))
-            ->when($request->filled('number'), fn ($q) => $q->where('number', $request->number));
+        $query->when($type, fn ($q) => $q->where('invoice_type', $type))->when($request->filled('number'), fn ($q) => $q->where('number', $request->number));
         $query->when($request->filled('start_date'), fn ($q) => $q->where('date', '>=', convertToGregorian($request->start_date)));
         $query->when($request->filled('end_date'), fn ($q) => $q->where('date', '<=', convertToGregorian($request->end_date)));
         $query->when($request->filled('text'), fn ($q) => $q->where(fn ($invoice) => $invoice
