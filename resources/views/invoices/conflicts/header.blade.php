@@ -6,9 +6,13 @@
     <x-stat-card :title="__('Date')" :value="isset($invoice->date) ? formatDate($invoice->date) : '-'" />
 
     <x-stat-card :title="__('Customer')">
-        <a href="{{ route('customers.show', $invoice->customer) }}" class="text-primary link link-hover">
-            {{ $invoice->customer->name }}
-        </a>
+        @if ($invoice->customer)
+            <a href="{{ route('customers.show', $invoice->customer) }}" class="text-primary link link-hover">
+                {{ $invoice->customer->name }}
+            </a>
+        @else
+            -
+        @endif
     </x-stat-card>
 
     <x-stat-card :title="__('Price')" :value="isset($invoice->amount) ? formatNumber($invoice->amount) : formatNumber(0)" />
