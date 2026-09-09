@@ -15,6 +15,8 @@ use App\Services\DocumentService;
 use App\Services\SubjectService;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
@@ -87,8 +89,67 @@ class ActivityLogTest extends TestCase
         $this->assertSame('post', $activity->action);
         $this->assertSame('locale', $activity->details->get('route'));
         $this->assertSame('POST', $activity->details->get('method'));
+        $this->assertSame('fa', $activity->details->get('request_input')['locale']);
         $this->assertSame('[REDACTED]', $activity->details->get('request_input')['password']);
         $this->assertStringNotContainsString('do-not-store-this', $activity->details->toJson());
+    }
+
+    public function test_large_json_upload_is_logged_as_metadata_after_its_temporary_file_is_removed(): void
+    {
+        $actor = User::factory()->create();
+        $contents = json_encode(['payload' => str_repeat('large-json-content', 100_000)], JSON_THROW_ON_ERROR);
+        $path = tempnam(sys_get_temp_dir(), 'activity-log-upload-');
+        file_put_contents($path, $contents);
+        $upload = new UploadedFile($path, 'large.json', 'application/json', null, true);
+
+        Route::post('/test/activity-log/upload', function (Request $request) {
+            unlink($request->file('payload')->getPathname());
+
+            return response()->noContent();
+        })->middleware('web');
+
+        $this->actingAs($actor)->post('/test/activity-log/upload', [
+            'description' => 'Keep this value',
+            'payload' => $upload,
+        ])->assertNoContent();
+
+        $activity = Activity::query()->where('source', 'request')->latest('id')->firstOrFail();
+        $requestInput = $activity->details->get('request_input');
+
+        $this->assertSame('Keep this value', $requestInput['description']);
+        $this->assertSame([
+            'file' => 'large.json',
+            'mime_type' => 'application/json',
+        ], $requestInput['payload']);
+        $this->assertStringNotContainsString('large-json-content', $activity->details->toJson());
+    }
+
+    public function test_nested_uploaded_files_are_logged_as_metadata(): void
+    {
+        $actor = User::factory()->create();
+
+        Route::post('/test/activity-log/nested-uploads', fn () => response()->noContent())->middleware('web');
+
+        $this->actingAs($actor)->post('/test/activity-log/nested-uploads', [
+            'documents' => [
+                'primary' => UploadedFile::fake()->create('primary.json', 2048, 'application/json'),
+                'supporting' => [
+                    UploadedFile::fake()->create('notes.txt', 1024, 'text/plain'),
+                ],
+            ],
+        ])->assertNoContent();
+
+        $requestInput = Activity::query()->where('source', 'request')->latest('id')->firstOrFail()->details->get('request_input');
+
+        $this->assertCount(2, $requestInput['documents']);
+        $this->assertSame([
+            'file' => 'primary.json',
+            'mime_type' => 'application/json',
+        ], $requestInput['documents']['primary']);
+        $this->assertSame([[
+            'file' => 'notes.txt',
+            'mime_type' => 'text/plain',
+        ]], $requestInput['documents']['supporting']);
     }
 
     public function test_a_write_request_stores_all_changed_models_in_one_database_row(): void

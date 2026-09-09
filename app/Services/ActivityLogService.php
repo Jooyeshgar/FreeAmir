@@ -565,7 +565,7 @@ class ActivityLogService
         }
 
         if ($value instanceof UploadedFile) {
-            return ['file' => $value->getClientOriginalName(), 'size' => $value->getSize()];
+            return ['file' => $value->getClientOriginalName(), 'mime_type' => $value->getClientMimeType()];
         }
 
         if (is_array($value)) {
