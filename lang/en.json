@@ -622,6 +622,7 @@
     "Company created successfully.": "Company created successfully.",
     "Company creation": "Company creation",
     "Company deleted successfully.": "Company deleted successfully.",
+    "Company deletion failed: :error": "Company deletion failed: :error",
     "Company initialization failed. No data was saved. Please try again.": "Company initialization failed. No data was saved. Please try again.",
     "Company logo": "Company logo",
     "Company name": "Company name",

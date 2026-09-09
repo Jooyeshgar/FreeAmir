@@ -21,12 +21,14 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Role;
 
 class CompanyController extends Controller
@@ -267,32 +269,64 @@ class CompanyController extends Controller
     {
         $this->ensureCompanyAccess($company);
 
+        $documentFilePaths = DocumentFile::withoutGlobalScopes()
+            ->whereIn('document_id', Document::withoutGlobalScopes()->where('company_id', $company->id)->select('id'))
+            ->pluck('path')
+            ->map(fn (string $path): string => Str::startsWith($path, 'storage/') ? Str::after($path, 'storage/') : $path)
+            ->filter()
+            ->values();
+        $keyPaths = collect([$company->certificate_path, $company->private_key_path])->filter()->values();
+
         try {
-            DB::transaction(function () use ($company) {
-                $documentIds = Document::withoutGlobalScopes()->where('company_id', $company->id)->pluck('id');
-
-                $disk = Storage::disk('public');
-                DocumentFile::withoutGlobalScopes()->whereIn('document_id', $documentIds)->pluck('path')->each(function (string $path) use ($disk) {
-                    $normalized = Str::startsWith($path, 'storage/') ? Str::after($path, 'storage/') : $path;
-                    if ($normalized && $disk->exists($normalized)) {
-                        $disk->delete($normalized);
-                    }
-                });
-
-                foreach ([$company->certificate_path, $company->private_key_path] as $keyPath) {
-                    if ($keyPath && Storage::exists($keyPath)) {
-                        Storage::delete($keyPath);
-                    }
-                }
-
-                $company->delete();
-            });
-
-            return redirect(route('companies.index'))
-                ->with('success', __('Company deleted successfully.'));
+            DB::transaction(fn () => $company->delete());
         } catch (\Throwable $e) {
+            Log::error('Company deletion failed.', [
+                'company_id' => $company->id,
+                'exception' => $e,
+            ]);
+
+            $errors = $e instanceof ValidationException
+                ? $e->errors()
+                : ['company' => [__('Company deletion failed: :error', ['error' => $e->getMessage()])]];
+
             return redirect(route('companies.index'))
-                ->with('error', __('An error occurred, try again.'));
+                ->withErrors($errors);
+        }
+
+        $this->deleteCompanyFiles($company->id, $documentFilePaths, $keyPaths);
+
+        return redirect(route('companies.index'))
+            ->with('success', __('Company deleted successfully.'));
+    }
+
+    private function deleteCompanyFiles(int $companyId, Collection $documentFilePaths, Collection $keyPaths): void
+    {
+        try {
+            $disk = Storage::disk('public');
+
+            foreach ($documentFilePaths as $path) {
+                if ($disk->exists($path)) {
+                    $disk->delete($path);
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Company document file cleanup failed after deletion.', [
+                'company_id' => $companyId,
+                'exception' => $e,
+            ]);
+        }
+
+        try {
+            foreach ($keyPaths as $path) {
+                if (Storage::exists($path)) {
+                    Storage::delete($path);
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('Company key file cleanup failed after deletion.', [
+                'company_id' => $companyId,
+                'exception' => $e,
+            ]);
         }
     }
 

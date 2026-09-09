@@ -618,6 +618,7 @@
     "Company created successfully.": "شرکت با موفقیت ایجاد شد.",
     "Company creation": "ساخت شرکت",
     "Company deleted successfully.": "شرکت با موفقیت حذف شد.",
+    "Company deletion failed: :error": "حذف شرکت ناموفق بود: :error",
     "Company initialization failed. No data was saved. Please try again.": "راه‌اندازی شرکت ناموفق بود. هیچ داده‌ای ذخیره نشد. دوباره تلاش کنید.",
     "Company logo": "لوگو شرکت",
     "Company name": "نام شرکت",
