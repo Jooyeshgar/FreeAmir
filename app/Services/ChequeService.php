@@ -377,7 +377,12 @@ class ChequeService
         if (! preg_match('/^\d{16}$/', (string) ($data['sayad_number'] ?? ''))) {
             throw ValidationException::withMessages(['sayad_number' => __('validation.regex', ['attribute' => __('16-digit Sayad number')])]);
         }
-        $duplicateSayad = Cheque::withoutGlobalScopes()->where('sayad_number', $data['sayad_number'])->when($except, fn ($query) => $query->where('id', '!=', $except->id))->exists();
+        $companyId = $except?->company_id ?? getActiveCompany();
+        $duplicateSayad = Cheque::withoutGlobalScopes()
+            ->where('company_id', $companyId)
+            ->where('sayad_number', $data['sayad_number'])
+            ->when($except, fn ($query) => $query->where('id', '!=', $except->id))
+            ->exists();
         if ($duplicateSayad) {
             throw ValidationException::withMessages(['sayad_number' => __('validation.unique', ['attribute' => __('16-digit Sayad number')])]);
         }

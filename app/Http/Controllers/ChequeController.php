@@ -178,7 +178,9 @@ class ChequeController extends Controller
                 'sayad_number' => [
                     'required',
                     'regex:/^\d{16}$/',
-                    Rule::unique('cheques', 'sayad_number')->ignore($cheque?->id),
+                    Rule::unique('cheques', 'sayad_number')
+                        ->where('company_id', getActiveCompany())
+                        ->ignore($cheque?->id),
                 ],
                 'cheque_number' => ['nullable', 'string', 'max:50'],
                 'customer_id' => ['required', Rule::exists('customers', 'id')->where('company_id', getActiveCompany())],
