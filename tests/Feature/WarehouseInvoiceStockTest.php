@@ -145,7 +145,7 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->assertStock($this->emptyWarehouse, 4);
     }
 
-    public function test_approved_beginning_inventory_adds_stock_and_updates_cost_without_accounting(): void
+    public function test_approved_beginning_inventory_adds_stock_updates_cost_and_creates_accounting(): void
     {
         $this->setStock($this->mainWarehouse, 2, 175);
         $this->product->update(['quantity' => 2, 'average_cost' => 125]);
@@ -157,13 +157,18 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->assertSame(InvoiceType::BEGINNING_INVENTORY, $invoice->invoice_type);
         $this->assertSame(InvoiceStatus::APPROVED, $invoice->status);
         $this->assertNull($invoice->customer_id);
-        $this->assertNull($invoice->document_id);
-        $this->assertSame($documentCount, Document::count());
-        $this->assertSame($transactionCount, Transaction::count());
+        $this->assertNotNull($invoice->document_id);
+        $this->assertSame($documentCount + 1, Document::count());
+        $this->assertSame($transactionCount + 2, Transaction::count());
+        $this->assertDatabaseHas('transactions', [
+            'document_id' => $invoice->document_id,
+            'subject_id' => (int) config('amir.beginning_inventory'),
+            'value' => 4500,
+        ]);
         $this->assertEqualsWithDelta(7, (float) $this->product->fresh()->quantity, 0.001);
         $this->assertStock($this->mainWarehouse, 7);
         $this->assertEqualsWithDelta(678.571, (float) $this->product->fresh()->average_cost, 0.001);
-        $this->assertEqualsWithDelta(692.857, $this->stockAverageCost($this->mainWarehouse, $this->product), 0.001);
+        $this->assertEqualsWithDelta(692.86, $this->stockAverageCost($this->mainWarehouse, $this->product), 0.001);
         $this->assertEqualsWithDelta(900, (float) $invoice->items->first()->unit_price, 0.001);
     }
 
@@ -200,7 +205,7 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->assertEqualsWithDelta(800, (float) $secondProduct->fresh()->average_cost, 0.001);
         $this->assertEqualsWithDelta(800, $this->stockAverageCost($this->emptyWarehouse, $secondProduct), 0.001);
         $this->assertSame(InvoiceStatus::APPROVED, $invoice->fresh()->status);
-        $this->assertNull($invoice->fresh()->document_id);
+        $this->assertNotNull($invoice->fresh()->document_id);
     }
 
     public function test_deleting_and_recalculating_beginning_inventory_preserve_its_quantity_lifecycle(): void

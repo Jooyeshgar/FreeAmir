@@ -26,6 +26,7 @@ trait SeederHelper
             ['type' => 3, 'category' => 1, 'key' => 'sales_returns', 'value' => '25', 'desc' => 'برگشت از فروش', 'company_id' => $companyId],
             ['type' => 2, 'category' => 1, 'key' => 'buy_discount', 'value' => '27', 'desc' => 'تخفیفات خرید', 'company_id' => $companyId],
             ['type' => 2, 'category' => 1, 'key' => 'sell_discount', 'value' => '28', 'desc' => 'تخفیفات فروش', 'company_id' => $companyId],
+            ['type' => 3, 'category' => 1, 'key' => 'beginning_inventory', 'value' => '29', 'desc' => 'تراز افتتاحیه', 'company_id' => $companyId],
         ];
 
         Config::upsert($configs, ['key', 'company_id'], ['value']);
@@ -66,6 +67,7 @@ trait SeederHelper
             ['id' => 26, 'code' => '066', 'name' => 'تخفیفات نقدی', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
             ['id' => 27, 'code' => '066001', 'name' => 'تخفیفات خرید', 'parent_id' => 26, 'type' => 2, 'company_id' => $companyId],
             ['id' => 28, 'code' => '066002', 'name' => 'تخفیفات فروش', 'parent_id' => 26, 'type' => 1, 'company_id' => $companyId],
+            ['id' => 29, 'code' => '067001', 'name' => 'تراز افتتاحیه', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
         ];
 
         DB::table('subjects')->upsert($subjectData, ['id'], ['code', 'name', 'parent_id', 'type', 'company_id']);

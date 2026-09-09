@@ -7,6 +7,8 @@ use App\Models\Customer;
 use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\Service;
+use App\Models\Subject;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Helper class to build document transactions from invoice data.
@@ -78,7 +80,7 @@ class InvoiceTransactionBuilder
 
         match ($this->invoiceType) {
             InvoiceType::SELL => $this->buildSellItemsTransactions(),
-            InvoiceType::BUY => $this->buildBuyItemsTransactions(),
+            InvoiceType::BUY, InvoiceType::BEGINNING_INVENTORY => $this->buildBuyItemsTransactions(),
             InvoiceType::RETURN_SELL => $this->buildReturnSellItemsTransactions(),
             InvoiceType::RETURN_BUY => $this->buildReturnBuyItemsTransactions(),
         };
@@ -482,15 +484,16 @@ class InvoiceTransactionBuilder
      */
     private function buildCustomerTransaction(): void
     {
-        $customerId = $this->invoiceData['customer_id'];
         $cashPayment = floatval($this->invoiceData['cash_payment'] ?? 0);
         $customerTotal = $this->totalAmount - $this->subtractions - $cashPayment + $this->totalVat;
 
-        $subjectId = Customer::find($customerId)->subject_id;
+        $subjectId = $this->invoiceType->isBeginningInventory()
+            ? $this->beginningInventorySubjectId()
+            : Customer::findOrFail($this->invoiceData['customer_id'])->subject_id;
 
         $value = match ($this->invoiceType) {
             InvoiceType::SELL => -$customerTotal,
-            InvoiceType::BUY => $customerTotal,
+            InvoiceType::BUY, InvoiceType::BEGINNING_INVENTORY => $customerTotal,
             InvoiceType::RETURN_SELL => $customerTotal,
             InvoiceType::RETURN_BUY => -$customerTotal,
         };
@@ -500,5 +503,21 @@ class InvoiceTransactionBuilder
             'desc' => __('Invoice').' '.$this->invoiceType->label().' '.__(' with number ').' '.formatNumber($this->invoiceData['number']),
             'value' => $value,
         ];
+    }
+
+    private function beginningInventorySubjectId(): int
+    {
+        $subjectId = (int) config('amir.beginning_inventory');
+        $subject = $subjectId
+            ? Subject::where('company_id', getActiveCompany())->find($subjectId)
+            : null;
+
+        if (! $subject) {
+            throw ValidationException::withMessages([
+                'beginning_inventory' => __('Beginning Inventory is not configured. Please set it in configurations.'),
+            ]);
+        }
+
+        return (int) $subject->id;
     }
 }

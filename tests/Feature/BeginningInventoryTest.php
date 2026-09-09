@@ -7,10 +7,12 @@ use App\Enums\InvoiceType;
 use App\Enums\SubjectType;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\Company;
+use App\Models\Config;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\Product;
+use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -37,6 +39,10 @@ class BeginningInventoryTest extends TestCase
 
     private Product $product;
 
+    private int $inventorySubjectId;
+
+    private int $beginningInventorySubjectId;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -49,6 +55,10 @@ class BeginningInventoryTest extends TestCase
         foreach (['create', 'edit', 'index', 'show', 'store', 'update', 'destroy', 'approve'] as $ability) {
             $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'invoices.'.$ability]));
         }
+
+        $this->inventorySubjectId = $this->subject('019001', 'Inventory');
+        $this->beginningInventorySubjectId = $this->subject('067001', 'Beginning inventory');
+        config(['amir.beginning_inventory' => (string) $this->beginningInventorySubjectId]);
 
         $this->mainWarehouse = $this->warehouse('Main');
         $this->otherWarehouse = $this->warehouse('Other');
@@ -73,7 +83,7 @@ class BeginningInventoryTest extends TestCase
         $this->assertEqualsWithDelta(175, $this->stockCost($this->product, $this->mainWarehouse), 0.001);
     }
 
-    public function test_approval_and_unapproval_apply_and_reverse_quantity_and_average_cost_without_a_document(): void
+    public function test_approval_creates_a_balanced_document_with_the_configured_subject_and_unapproval_reverses_it(): void
     {
         $product = $this->product('P-2', 0);
         $this->setStock($product, $this->mainWarehouse, 0, 0);
@@ -83,15 +93,31 @@ class BeginningInventoryTest extends TestCase
 
         $invoice->refresh();
         $this->assertSame(InvoiceStatus::APPROVED, $invoice->status);
-        $this->assertNull($invoice->document_id);
+        $this->assertNotNull($invoice->document_id);
+        $this->assertDatabaseHas('documents', ['id' => $invoice->document_id]);
+        $this->assertDatabaseHas('transactions', [
+            'document_id' => $invoice->document_id,
+            'subject_id' => $this->inventorySubjectId,
+            'value' => -500,
+        ]);
+        $this->assertDatabaseHas('transactions', [
+            'document_id' => $invoice->document_id,
+            'subject_id' => $this->beginningInventorySubjectId,
+            'value' => 500,
+        ]);
+        $this->assertEqualsWithDelta(0, (float) $invoice->document->transactions()->sum('value'), 0.001);
         $this->assertQuantity($product, $this->mainWarehouse, 5);
         $this->assertEqualsWithDelta(100, (float) $product->fresh()->average_cost, 0.001);
         $this->assertEqualsWithDelta(100, $this->stockCost($product, $this->mainWarehouse), 0.001);
         $this->assertEqualsWithDelta(100, (float) $invoice->items->first()->fresh()->cog_after, 0.001);
 
+        $documentId = $invoice->document_id;
         (new InvoiceService)->changeInvoiceStatus($invoice, 'unapproved');
 
         $this->assertSame(InvoiceStatus::UNAPPROVED, $invoice->fresh()->status);
+        $this->assertNull($invoice->fresh()->document_id);
+        $this->assertDatabaseMissing('documents', ['id' => $documentId]);
+        $this->assertDatabaseMissing('transactions', ['document_id' => $documentId]);
         $this->assertQuantity($product, $this->mainWarehouse, 0);
         $this->assertEqualsWithDelta(0, (float) $product->fresh()->average_cost, 0.001);
         $this->assertEqualsWithDelta(0, $this->stockCost($product, $this->mainWarehouse), 0.001);
@@ -103,9 +129,11 @@ class BeginningInventoryTest extends TestCase
         $this->setStock($product, $this->mainWarehouse, 0, 0);
         $this->setStock($product, $this->otherWarehouse, 0, 0);
 
-        $this->createBeginningInventory($product, 5, $this->mainWarehouse, 100, true, 1);
-        $this->createBeginningInventory($product, 5, $this->otherWarehouse, 300, true, 2);
+        $mainInventory = $this->createBeginningInventory($product, 5, $this->mainWarehouse, 100, true, 1);
+        $otherInventory = $this->createBeginningInventory($product, 5, $this->otherWarehouse, 300, true, 2);
 
+        $this->assertNotSame($mainInventory->document_id, $otherInventory->document_id);
+        $this->assertSame(2, Transaction::query()->where('subject_id', $this->beginningInventorySubjectId)->count());
         $this->assertEqualsWithDelta(10, (float) $product->fresh()->quantity, 0.001);
         $this->assertEqualsWithDelta(200, (float) $product->fresh()->average_cost, 0.001);
         $this->assertEqualsWithDelta(100, $this->stockCost($product, $this->mainWarehouse), 0.001);
@@ -192,7 +220,41 @@ class BeginningInventoryTest extends TestCase
         $this->assertEqualsWithDelta(800, (float) $replacement->fresh()->average_cost, 0.001);
         $this->assertEqualsWithDelta(800, $this->stockCost($replacement, $this->otherWarehouse), 0.001);
         $this->assertSame(InvoiceStatus::APPROVED, $invoice->fresh()->status);
+        $this->assertNotNull($invoice->fresh()->document_id);
+    }
+
+    public function test_approval_requires_the_beginning_inventory_subject_config(): void
+    {
+        config(['amir.beginning_inventory' => null]);
+        $invoice = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900, false);
+
+        try {
+            (new InvoiceService)->changeInvoiceStatus($invoice, 'approved');
+            $this->fail('Approval should fail when the beginning inventory subject is not configured.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('beginning_inventory', $exception->errors());
+        }
+
+        $this->assertSame(InvoiceStatus::PENDING, $invoice->fresh()->status);
         $this->assertNull($invoice->fresh()->document_id);
+        $this->assertQuantity($this->product, $this->mainWarehouse, 2);
+    }
+
+    public function test_migration_adds_the_beginning_inventory_config_for_existing_companies(): void
+    {
+        $migration = require database_path('migrations/2026_09_09_000001_add_beginning_inventory_subject_config.php');
+
+        $migration->up();
+
+        $this->assertDatabaseHas('configs', [
+            'company_id' => $this->company->id,
+            'key' => 'beginning_inventory',
+            'value' => (string) $this->beginningInventorySubjectId,
+        ]);
+        $this->assertSame('067001', Subject::withoutGlobalScopes()->findOrFail((int) Config::withoutGlobalScopes()
+            ->where('company_id', $this->company->id)
+            ->where('key', 'beginning_inventory')
+            ->value('value'))->code);
     }
 
     public function test_recalculation_only_includes_approved_beginning_inventory(): void
@@ -408,12 +470,22 @@ class BeginningInventoryTest extends TestCase
             'selling_price' => 0,
             'vat' => 0,
             'average_cost' => $averageCost,
+            'inventory_subject_id' => $this->inventorySubjectId,
             'company_id' => $this->company->id,
         ]);
     }
 
     private function subject(string $code, string $name): int
     {
+        $existingId = DB::table('subjects')
+            ->where('company_id', $this->company->id)
+            ->where('code', $code)
+            ->value('id');
+
+        if ($existingId) {
+            return (int) $existingId;
+        }
+
         return DB::table('subjects')->insertGetId([
             'company_id' => $this->company->id,
             'parent_id' => null,

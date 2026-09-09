@@ -128,7 +128,7 @@ class InvoiceService
             return $invoice->refresh();
         });
 
-        return ['document' => null, 'invoice' => $invoice];
+        return ['document' => $invoice->document, 'invoice' => $invoice];
     }
 
     private static function createInvoiceWithoutApproval(User $user, array $invoiceData, array $items, array $buildResult, string $date)
@@ -300,6 +300,11 @@ class InvoiceService
                 $invoice->status = InvoiceStatus::UNAPPROVED;
                 CostOfGoodsService::updateProductsAverageCost($invoice);
                 ProductService::updateWarehouseAverageCosts($invoice);
+
+                if ($invoice->document_id) {
+                    DocumentService::deleteDocument($invoice->document_id);
+                    $invoice->document_id = null;
+                }
             }
 
             $invoice->update([
@@ -325,7 +330,9 @@ class InvoiceService
             }
         });
 
-        return ['document' => null, 'invoice' => $invoice->refresh()];
+        $invoice->refresh();
+
+        return ['document' => $invoice->document, 'invoice' => $invoice];
     }
 
     private static function assertBeginningInventoryWarehouseAvailable(int $warehouseId, ?int $exceptInvoiceId = null): void
@@ -536,10 +543,8 @@ class InvoiceService
     private function approveInvoice(Invoice $invoice): void
     {
         $invoice->status = InvoiceStatus::APPROVED;
-        if (! $invoice->invoice_type->isBeginningInventory()) {
-            $createdDocument = self::createDocumentFromInvoiceItems(auth()->user(), $invoice);
-            $invoice->document_id = $createdDocument->id;
-        }
+        $createdDocument = self::createDocumentFromInvoiceItems(auth()->user(), $invoice);
+        $invoice->document_id = $createdDocument->id;
         $invoice->update();
         ProductService::addProductsQuantities($invoice->items->toArray(), $invoice->invoice_type);
         self::syncInvoiceItems($invoice, self::itemsFormatterForSyncingInvoiceItems($invoice));

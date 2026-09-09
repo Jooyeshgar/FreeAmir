@@ -52,7 +52,6 @@ class InvoiceController extends Controller
     public function index(Request $request)
     {
         $invoiceType = InvoiceType::tryFromName($request->invoice_type);
-
         $status = InvoiceStatus::tryFromName($request->status);
 
         $builder = Invoice::with(['customer', 'document', 'voidInvoice', 'payments'])
