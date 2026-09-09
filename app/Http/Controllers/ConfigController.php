@@ -7,6 +7,7 @@ use App\Models\Config;
 use App\Models\Subject;
 use App\Services\SubjectService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class ConfigController extends Controller
 {
@@ -26,6 +27,10 @@ class ConfigController extends Controller
 
     public function edit($key)
     {
+        $configTitle = ConfigTitle::tryFrom(strtoupper($key));
+        abort_unless($configTitle, 404);
+        $key = strtolower($configTitle->value);
+
         $config = Config::where('key', $key)->first();
 
         // If config doesn't exist, create a new instance (not saved yet)
@@ -36,7 +41,7 @@ class ConfigController extends Controller
             $config->value = 0;
             $config->type = '2';
             $config->category = '1';
-            $config->desc = ConfigTitle::from(strtoupper($key))->label();
+            $config->desc = $configTitle->label();
             $config->save();
         }
         $selectedSubjectId = (int) (config('amir.'.$config->key) ?: $config->value);
@@ -51,12 +56,12 @@ class ConfigController extends Controller
     {
         $validatedData = $request->validate([
             'code' => 'required|exists:subjects,code|numeric',
-            'key' => 'required|string',
+            'key' => ['required', 'string', Rule::in($this->supportedKeys())],
         ]);
 
         $subject_id = Subject::where('code', $validatedData['code'])->first()->id;
 
-        $config = Config::where('key', $validatedData['key'])->first();
+        $config = Config::where('key', $validatedData['key'])->firstOrFail();
 
         $config->value = (string) $subject_id;
         $config->update();
@@ -79,5 +84,10 @@ class ConfigController extends Controller
         }
 
         return (int) ($current?->id ?? $subject->id);
+    }
+
+    private function supportedKeys(): array
+    {
+        return array_map(fn (ConfigTitle $title) => strtolower($title->value), ConfigTitle::cases());
     }
 }
