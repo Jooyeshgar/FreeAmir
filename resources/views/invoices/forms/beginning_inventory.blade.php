@@ -179,7 +179,7 @@
 
 <div class="flex gap-2 justify-end">
     <a href="{{ route('invoices.index', ['invoice_type' => 'beginning_inventory']) }}" type="submit" class="btn btn-sm lg:btn-md btn-default rounded-md dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-600">{{ __('cancel') }}</a>
-    @if ($invoice->exists)
+    @if ($invoice->exists && ! $invoice->status->isApprovedOrSettled())
         @can('invoices.destroy')
             <button type="submit" form="delete-beginning-inventory-form"
                 class="btn btn-sm lg:btn-md btn-error rounded-md"
@@ -187,6 +187,10 @@
         @endcan
     @endif
     <button id="submitForm" type="submit" class="btn btn-sm lg:btn-md text-white btn-primary rounded-md">{{ __('save') }}</button>
+    @can('invoices.approve')
+        <button name="approve" value="1" type="submit"
+            class="btn btn-sm lg:btn-md btn-success rounded-md">{{ __('Save and Approve') }}</button>
+    @endcan
 </div>
 
 @pushOnce('scripts')

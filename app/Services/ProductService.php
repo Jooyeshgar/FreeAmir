@@ -126,80 +126,6 @@ class ProductService
         }
     }
 
-    /**
-     * Apply the net quantity change made by a beginning-inventory record. This deliberately permits a negative result.
-     * Later invoices may have consumed the opening stock, but editing or deleting the opening record must still remove that record's contribution.
-     */
-    public static function applyBeginningInventoryDelta(array $oldItems, array $newItems): void
-    {
-        $warehouseDeltas = [];
-        $productDeltas = [];
-
-        foreach ([[$oldItems, -1], [$newItems, 1]] as [$items, $direction]) {
-            foreach ($items as $item) {
-                if (! in_array($item['itemable_type'], [Product::class, 'product'], true)) {
-                    continue;
-                }
-
-                $productId = (int) $item['itemable_id'];
-                $warehouseId = isset($item['warehouse_id']) ? (int) $item['warehouse_id'] : null;
-                $quantityDelta = $direction * (float) $item['quantity'];
-
-                if (! $warehouseId) {
-                    throw ValidationException::withMessages([
-                        'warehouse_id' => __('The selected warehouse is invalid.'),
-                    ]);
-                }
-
-                $warehouseDeltas[$productId][$warehouseId] = ($warehouseDeltas[$productId][$warehouseId] ?? 0) + $quantityDelta;
-                $productDeltas[$productId] = ($productDeltas[$productId] ?? 0) + $quantityDelta;
-            }
-        }
-
-        ksort($warehouseDeltas);
-
-        foreach ($warehouseDeltas as $productId => $deltasByWarehouse) {
-            $product = Product::query()->lockForUpdate()->find($productId);
-
-            if (! $product) {
-                continue;
-            }
-
-            ksort($deltasByWarehouse);
-
-            foreach ($deltasByWarehouse as $warehouseId => $delta) {
-                if ($delta == 0.0) {
-                    continue;
-                }
-
-                $warehouse = Warehouse::findOrFail($warehouseId);
-
-                if ((int) $warehouse->company_id !== (int) $product->company_id) {
-                    throw ValidationException::withMessages([
-                        'warehouse_id' => __('The selected warehouse is invalid.'),
-                    ]);
-                }
-
-                WarehouseProductStock::firstOrCreate(
-                    ['product_id' => $product->id, 'warehouse_id' => $warehouse->id],
-                    ['quantity' => 0, 'average_cost' => $product->average_cost ?? 0]
-                );
-
-                $stock = WarehouseProductStock::query()
-                    ->where('product_id', $product->id)
-                    ->where('warehouse_id', $warehouse->id)
-                    ->lockForUpdate()
-                    ->firstOrFail();
-
-                $stock->quantity = (float) $stock->quantity + $delta;
-                $stock->save();
-            }
-
-            $product->quantity = (float) $product->quantity + $productDeltas[$productId];
-            $product->save();
-        }
-    }
-
     private static function adjustForInvoice(Product $product, ?int $warehouseId, float $quantity, bool $incoming, bool $reverse = false): void
     {
         $warehouse = $warehouseId ? Warehouse::findOrFail($warehouseId) : null;
@@ -311,7 +237,7 @@ class ProductService
             $incomingUnitCost = self::invoiceItemIncomingUnitCost($invoice, $invoiceItem);
 
             if ($invoice->status->isApprovedOrSettled()) {
-                if (in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID], true)) {
+                if (in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID, InvoiceType::BEGINNING_INVENTORY], true)) {
                     $quantityBefore = max(0.0, $stockQuantity - $quantity);
                     $stock->average_cost = $stockQuantity > 0
                         ? (($quantityBefore * (float) $stock->average_cost) + ($quantity * $incomingUnitCost)) / $stockQuantity
@@ -319,7 +245,7 @@ class ProductService
                 } elseif ($stockQuantity <= 0) {
                     $stock->average_cost = 0;
                 }
-            } elseif (in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID], true)) {
+            } elseif (in_array($invoice->invoice_type, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID, InvoiceType::BEGINNING_INVENTORY], true)) {
                 $quantityBeforeReversal = $stockQuantity + $quantity;
                 $remainingValue = ($quantityBeforeReversal * (float) $stock->average_cost) - ($quantity * $incomingUnitCost);
                 $stock->average_cost = $stockQuantity > 0 ? max(0.0, $remainingValue / $stockQuantity) : 0;
@@ -374,8 +300,7 @@ class ProductService
 
             $invoices = Invoice::withoutGlobalScopes()
                 ->where(function ($query) {
-                    $query->whereIn('status', InvoiceStatus::approvedOrSettled())
-                        ->orWhere('invoice_type', InvoiceType::BEGINNING_INVENTORY);
+                    $query->whereIn('status', InvoiceStatus::approvedOrSettled());
                 })
                 ->whereHas('items', function ($query) use ($product) {
                     $query->where('itemable_type', Product::class)->where('itemable_id', $product->id);

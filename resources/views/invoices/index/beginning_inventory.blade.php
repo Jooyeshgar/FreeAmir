@@ -20,6 +20,7 @@
                 <th>{{ __('Warehouse') }}</th>
                 <th>{{ __('Date') }}</th>
                 <th>{{ __('Quantity') }}</th>
+                <th>{{ __('Status') }}</th>
                 <th>{{ __('Action') }}</th>
             </tr>
         </thead>
@@ -31,25 +32,29 @@
                     <td>{{ $invoice->warehouse?->name }}</td>
                     <td>{{ $invoice->date ? formatDate($invoice->date) : '' }}</td>
                     <td>{{ formatNumber($invoice->items->sum('quantity')) }}</td>
+                    <td>{{ $invoice->status->label() }}</td>
                     <td>
                         <div class="inline-flex gap-2">
+                            <a href="{{ route('invoices.show', $invoice) }}" class="btn btn-sm btn-primary">{{ __('View') }}</a>
                             @can('invoices.edit')
                                 <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                             @endcan
                             @can('invoices.destroy')
+                                @unless ($invoice->status->isApprovedOrSettled())
                                 <form id="delete-beginning-inventory-{{ $invoice->id }}" action="{{ route('invoices.destroy', $invoice) }}" method="POST"
                                     onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
                                 </form>
+                                @endunless
                             @endcan
                         </div>
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" class="text-center">{{ __('No beginning inventory records found.') }}</td>
+                    <td colspan="7" class="text-center">{{ __('No beginning inventory records found.') }}</td>
                 </tr>
             @endforelse
         </tbody>

@@ -154,18 +154,12 @@ class CostOfGoodsService
     {
         $buildQuery = function (array $invoiceTypes) use ($invoice, $invoiceItem) {
             return Invoice::whereIn('invoice_type', $invoiceTypes)
-                ->where(function ($query) {
-                    $query->whereIn('status', InvoiceStatus::approvedOrSettled())
-                        ->orWhere(function ($beginningInventoryQuery) {
-                            $beginningInventoryQuery->where('invoice_type', InvoiceType::BEGINNING_INVENTORY)
-                                ->whereNull('status');
-                        });
-                })
+                ->whereIn('status', InvoiceStatus::approvedOrSettled())
                 ->where(function ($q) use ($invoice) {
                     $q->where('date', '<', $invoice->date)
                         ->orWhere(function ($q2) use ($invoice) {
                             $q2->where('date', $invoice->date)
-                                ->where('number', '<', $invoice->number);
+                                ->where('id', '<', $invoice->id);
                         });
                 })
                 ->whereHas('items', function ($query) use ($invoiceItem) {
@@ -300,22 +294,25 @@ class CostOfGoodsService
             InvoiceType::BUY => [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID, InvoiceType::BEGINNING_INVENTORY],
             InvoiceType::RETURN_SELL => [InvoiceType::RETURN_SELL, InvoiceType::BUY, InvoiceType::VOID, InvoiceType::BEGINNING_INVENTORY],
             InvoiceType::VOID => [InvoiceType::VOID, InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::BEGINNING_INVENTORY],
+            InvoiceType::BEGINNING_INVENTORY => [InvoiceType::BEGINNING_INVENTORY, InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID],
             InvoiceType::SELL => [InvoiceType::SELL, InvoiceType::RETURN_BUY],
             InvoiceType::RETURN_BUY => [InvoiceType::RETURN_BUY, InvoiceType::SELL],
             default => [],
         };
 
-        return Invoice::where('number', '<', $invoice->number)
-            ->where(function ($query) {
-                $query->whereIn('status', InvoiceStatus::approvedOrSettled())
-                    ->orWhere(function ($beginningInventoryQuery) {
-                        $beginningInventoryQuery->where('invoice_type', InvoiceType::BEGINNING_INVENTORY)
-                            ->whereNull('status');
+        return Invoice::whereIn('status', InvoiceStatus::approvedOrSettled())
+            ->where(function ($query) use ($invoice) {
+                $query->where('date', '<', $invoice->date)
+                    ->orWhere(function ($sameDateQuery) use ($invoice) {
+                        $sameDateQuery->where('date', $invoice->date)
+                            ->where('id', '<', $invoice->id);
                     });
             })
             ->whereIn('invoice_type', $allowedInvoiceTypes)
             ->whereHas('items', fn ($query) => $query->where('itemable_id', $productId)
                                                                             && $query->where('itemable_type', Product::class))
-            ->orderByDesc('number')->first();
+            ->orderByDesc('date')
+            ->orderByDesc('id')
+            ->first();
     }
 }

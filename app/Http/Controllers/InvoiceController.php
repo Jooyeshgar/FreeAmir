@@ -78,10 +78,8 @@ class InvoiceController extends Controller
 
         $statusCounts = $statsBuilder->reorder()->toBase()->select('status', DB::raw('count(*) as total'))->groupBy('status')->pluck('total', 'status');
 
-        $invoices->transform(function ($invoice) use ($invoiceType) {
-            if ($invoiceType !== InvoiceType::BEGINNING_INVENTORY) {
-                $invoice->changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
-            }
+        $invoices->transform(function ($invoice) {
+            $invoice->changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
 
             return $invoice;
         });
@@ -282,7 +280,7 @@ class InvoiceController extends Controller
         $items = InvoiceService::mapTransactionsToItems($validated['transactions']);
 
         $approved = false;
-        if (! $invoiceData['invoice_type']->isBeginningInventory() && $request->has('approve')) {
+        if ($request->has('approve')) {
             $approved = true;
             auth()->user()->can('invoices.approve');
         }
@@ -303,7 +301,10 @@ class InvoiceController extends Controller
     public function show(Invoice $invoice, PaymentService $paymentService, ChequeService $chequeService)
     {
         if ($invoice->invoice_type->isBeginningInventory()) {
-            return redirect()->route('invoices.edit', $invoice);
+            $invoice->load(['warehouse', 'items.itemable']);
+            $changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
+
+            return view('invoices.show.beginning_inventory', compact('invoice', 'changeStatusValidation'));
         }
 
         $changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
@@ -463,7 +464,7 @@ class InvoiceController extends Controller
         }
 
         $approved = false;
-        if (! $invoice->invoice_type->isBeginningInventory() && $request->has('approve')) {
+        if ($request->has('approve')) {
             $approved = true;
             auth()->user()->can('invoices.approve');
         }
@@ -486,7 +487,7 @@ class InvoiceController extends Controller
         $isBeginningInventory = $invoice->invoice_type->isBeginningInventory();
         $indexType = $invoice->invoice_type->valueName();
 
-        if (! $isBeginningInventory && $invoice->status->isApprovedOrSettled()) {
+        if ($invoice->status->isApprovedOrSettled()) {
             return redirect()->route('invoices.index', ['invoice_type' => $indexType])->with('error', __('Only unapproved and unpaided invoices can be deleted.'));
         }
 
@@ -512,7 +513,7 @@ class InvoiceController extends Controller
             ];
         }
 
-        $documentMissing = empty($result['document']);
+        $documentMissing = empty($result['document']) && ! $result['invoice']->invoice_type->isBeginningInventory();
 
         return [
             $documentMissing ? 'warning' : 'success',
@@ -710,10 +711,6 @@ class InvoiceController extends Controller
         if (! in_array($status, $allowedStatuses)) {
             return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->valueName()])
                 ->with('error', __('Invalid status action.'));
-        }
-
-        if ($invoice->status === null) {
-            return redirect()->back()->with('error', __('Beginning inventory has no status workflow.'));
         }
 
         if ($invoice->status->isPartiallyPaid() || $invoice->status->isPaid()) {
