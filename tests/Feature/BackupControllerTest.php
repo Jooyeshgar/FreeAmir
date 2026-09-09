@@ -38,6 +38,7 @@ use App\Services\DocumentService;
 use App\Services\FiscalYearService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Permission\Models\Permission;
@@ -527,6 +528,45 @@ class BackupControllerTest extends TestCase
             $newCompany->id,
             Invoice::withoutGlobalScopes()->findOrFail($importedAncillaryCost->invoice_id)->company_id
         );
+    }
+
+    public function test_document_relation_sync_ignores_active_company_scope(): void
+    {
+        $targetCompany = Company::factory()->create();
+        $usesLegacyEnumSchema = DB::connection()->getDriverName() === 'sqlite';
+        $customerId = DB::table('customers')->insertGetId([
+            'name' => 'Imported invoice customer',
+            'company_id' => $this->company->id,
+            'type' => $usesLegacyEnumSchema ? CustomerType::INDIVIDUAL->valueName() : CustomerType::INDIVIDUAL->value,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $document = Document::factory()->create([
+            'company_id' => $targetCompany->id,
+            'documentable_type' => Invoice::class,
+            'documentable_id' => 999,
+        ]);
+        $invoiceId = DB::table('invoices')->insertGetId([
+            'number' => 25,
+            'date' => '2026-06-02',
+            'customer_id' => $customerId,
+            'document_id' => $document->id,
+            'company_id' => $this->company->id,
+            'subtraction' => 0,
+            'vat' => 0,
+            'amount' => 100,
+            'invoice_type' => $usesLegacyEnumSchema ? InvoiceType::SELL->valueName() : InvoiceType::SELL->value,
+            'status' => $usesLegacyEnumSchema ? InvoiceStatus::APPROVED->valueName() : InvoiceStatus::APPROVED->value,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $method = new \ReflectionMethod(FiscalYearService::class, '_syncDocumentsRelation');
+        $method->invoke(null, [$invoiceId], 'invoice');
+
+        $document->refresh();
+        $this->assertSame(Invoice::class, $document->documentable_type);
+        $this->assertSame($invoiceId, $document->documentable_id);
     }
 
     public function test_export_filename_replaces_spaces_with_hyphens(): void
