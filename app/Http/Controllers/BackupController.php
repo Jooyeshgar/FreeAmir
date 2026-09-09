@@ -177,12 +177,14 @@ class BackupController extends Controller
             'name' => $validated['company_name'],
             'fiscal_year' => (int) $validated['fiscal_year'],
         ];
-        FiscalYearService::importData($importData, $newFiscalYearData);
+        try {
+            FiscalYearService::importData($importData, $newFiscalYearData);
+        } finally {
+            $zip->close();
 
-        $zip->close();
-
-        if ($zipPath && file_exists($zipPath)) {
-            @unlink($zipPath);
+            if ($zipPath && file_exists($zipPath)) {
+                @unlink($zipPath);
+            }
         }
 
         return redirect()->route('home')->with('success', __('Company backup file imported successfully.'));

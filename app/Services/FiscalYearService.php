@@ -80,6 +80,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\LazyCollection;
+use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class FiscalYearService
 {
@@ -268,7 +270,9 @@ class FiscalYearService
         );
 
         return DB::transaction(function () use ($importData, $newFiscalYearData, $sectionsToImport) {
-            DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+            if (DB::getDriverName() === 'mysql') {
+                DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+            }
             Model::unguard();
 
             $newFiscalYear = Company::create($newFiscalYearData);
@@ -497,13 +501,7 @@ class FiscalYearService
                     $warehouseMapping = $idMappings['warehouses'] ?? [];
 
                     if (isset($importData['invoices'])) {
-                        if (! empty($customerMapping)) {
-                            $idMappings['invoices'] = self::_importInvoices($importData['invoices'], $targetYearId, $documentMapping, $customerMapping, $warehouseMapping);
-                        } else {
-                            Log::warning('Skipping invoice import due to missing customer mapping.', [
-                                'target_year_id' => $targetYearId,
-                            ]);
-                        }
+                        $idMappings['invoices'] = self::_importInvoices($importData['invoices'], $targetYearId, $documentMapping, $customerMapping, $warehouseMapping);
                     }
 
                     if (isset($importData['invoice_items'])) {
@@ -719,17 +717,26 @@ class FiscalYearService
                 }
 
                 return $newFiscalYear;
-            } catch (Exception $e) {
+            } catch (Throwable $e) {
                 Log::error('Fiscal Year Import Failed: '.$e->getMessage(), [
                     'exception' => $e,
                     'new_fiscal_year_data' => $newFiscalYearData,
                     'import_data_keys' => array_keys($importData),
                 ]);
-                throw $e;
+
+                if ($e instanceof ValidationException) {
+                    throw $e;
+                }
+
+                throw ValidationException::withMessages([
+                    'import' => [__('Fiscal year import failed: :error', ['error' => $e->getMessage()])],
+                ]);
             } finally {
                 Cookie::expire('active-company-id');
                 Cookie::queue('active-company-id', $originalCompanyId);
-                DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+                if (DB::getDriverName() === 'mysql') {
+                    DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+                }
                 Model::reguard();
             }
         });
@@ -2457,73 +2464,97 @@ class FiscalYearService
     protected static function _importInvoices(array $invoicesData, int $targetYearId, array $documentMapping, array $customerMapping, array $warehouseMapping): array
     {
         $mapping = [];
+        $errors = [];
+
         foreach ($invoicesData as $invoiceData) {
-            if ($invoiceData['returned_invoice_id'] !== null) { // skip returned invoices in first loops
-                continue;
+            try {
+                if (($invoiceData['returned_invoice_id'] ?? null) !== null) { // skip returned invoices in first loops
+                    continue;
+                }
+
+                $oldCustomerId = $invoiceData['customer_id'] ?? null;
+                if ($oldCustomerId === null || ! isset($customerMapping[$oldCustomerId])) {
+                    throw new \RuntimeException(__('Customer ID :customer_id has no imported mapping.', [
+                        'customer_id' => $oldCustomerId ?? 'N/A',
+                    ]));
+                }
+                $oldDocumentId = $invoiceData['document_id'] ?? null;
+
+                $invoiceData = self::_normalizeEnumAttributes($invoiceData, [
+                    'invoice_type' => InvoiceType::class,
+                    'status' => InvoiceStatus::class,
+                ]);
+                $newInvoice = new Invoice;
+                $newInvoice->fill(collect($invoiceData)->except(['id', 'customer_id', 'document_id', 'warehouse_id'])->toArray());
+                $newInvoice->customer_id = $customerMapping[$oldCustomerId];
+                $newInvoice->document_id = $oldDocumentId ? ($documentMapping[$oldDocumentId] ?? null) : null;
+                $newInvoice->company_id = $targetYearId;
+                $newInvoice->warehouse_id = $warehouseMapping[$invoiceData['warehouse_id'] ?? null] ?? null;
+                $newInvoice->saveQuietly();
+
+                $mapping[$invoiceData['id']] = $newInvoice->id;
+            } catch (Throwable $e) {
+                $errors[] = self::_invoiceImportError($invoiceData, $e);
             }
-
-            $oldCustomerId = $invoiceData['customer_id'] ?? null;
-            if ($oldCustomerId === null || ! isset($customerMapping[$oldCustomerId])) {
-                Log::warning('Skipping invoice import due to missing customer mapping.', ['old_invoice_id' => $invoiceData['id'] ?? 'N/A', 'old_customer_id' => $oldCustomerId, 'target_year_id' => $targetYearId]);
-
-                continue;
-            }
-            $oldDocumentId = $invoiceData['document_id'] ?? null;
-
-            $invoiceData = self::_normalizeEnumAttributes($invoiceData, [
-                'invoice_type' => InvoiceType::class,
-                'status' => InvoiceStatus::class,
-            ]);
-            $newInvoice = new Invoice;
-            $newInvoice->fill(collect($invoiceData)->except(['id', 'customer_id', 'document_id', 'warehouse_id'])->toArray());
-            $newInvoice->customer_id = $customerMapping[$oldCustomerId];
-            $newInvoice->document_id = $oldDocumentId ? ($documentMapping[$oldDocumentId] ?? null) : null;
-            $newInvoice->company_id = $targetYearId;
-            $newInvoice->warehouse_id = $warehouseMapping[$invoiceData['warehouse_id'] ?? null] ?? null;
-            $newInvoice->saveQuietly();
-
-            $mapping[$invoiceData['id']] = $newInvoice->id;
         }
 
         foreach ($invoicesData as $invoiceData) {
-            if ($invoiceData['returned_invoice_id'] === null) { // this loop is for returned invoices
-                continue;
+            try {
+                if (($invoiceData['returned_invoice_id'] ?? null) === null) { // this loop is for returned invoices
+                    continue;
+                }
+                $oldDocumentId = $invoiceData['document_id'] ?? null;
+                $oldCustomerId = $invoiceData['customer_id'] ?? null;
+                $oldReturnedInvoiceId = $invoiceData['returned_invoice_id'];
+
+                if ($oldCustomerId === null || ! isset($customerMapping[$oldCustomerId])) {
+                    throw new \RuntimeException(__('Customer ID :customer_id has no imported mapping.', [
+                        'customer_id' => $oldCustomerId ?? 'N/A',
+                    ]));
+                }
+
+                if (! isset($mapping[$oldReturnedInvoiceId])) {
+                    Log::warning('Skipping returned invoice import due to missing related invoice mapping.', ['old_invoice_id' => $invoiceData['id'] ?? 'N/A', 'old_returned_invoice_id' => $oldReturnedInvoiceId, 'target_year_id' => $targetYearId]);
+
+                    continue;
+                }
+
+                $invoiceData = self::_normalizeEnumAttributes($invoiceData, [
+                    'invoice_type' => InvoiceType::class,
+                    'status' => InvoiceStatus::class,
+                ]);
+                $newInvoice = new Invoice;
+                $newInvoice->fill(collect($invoiceData)->except(['id', 'customer_id', 'document_id', 'returned_invoice_id', 'warehouse_id'])->toArray());
+                $newInvoice->customer_id = $customerMapping[$oldCustomerId];
+                $newInvoice->returned_invoice_id = $mapping[$oldReturnedInvoiceId];
+                $newInvoice->document_id = $oldDocumentId ? ($documentMapping[$oldDocumentId] ?? null) : null;
+                $newInvoice->company_id = $targetYearId;
+                $newInvoice->warehouse_id = $warehouseMapping[$invoiceData['warehouse_id'] ?? null] ?? null;
+                $newInvoice->saveQuietly();
+
+                $mapping[$invoiceData['id']] = $newInvoice->id;
+            } catch (Throwable $e) {
+                $errors[] = self::_invoiceImportError($invoiceData, $e);
             }
-            $oldDocumentId = $invoiceData['document_id'] ?? null;
-            $oldCustomerId = $invoiceData['customer_id'] ?? null;
-            $oldReturnedInvoiceId = $invoiceData['returned_invoice_id'];
+        }
 
-            if ($oldCustomerId === null || ! isset($customerMapping[$oldCustomerId])) {
-                Log::warning('Skipping invoice import due to missing customer mapping.', ['old_invoice_id' => $invoiceData['id'] ?? 'N/A', 'old_customer_id' => $oldCustomerId, 'target_year_id' => $targetYearId]);
-
-                continue;
-            }
-
-            if ($oldReturnedInvoiceId === null || ! isset($mapping[$oldReturnedInvoiceId])) {
-                Log::warning('Skipping returned invoice import due to missing related invoice mapping.', ['old_invoice_id' => $invoiceData['id'] ?? 'N/A', 'old_returned_invoice_id' => $oldReturnedInvoiceId, 'target_year_id' => $targetYearId]);
-
-                continue;
-            }
-
-            $invoiceData = self::_normalizeEnumAttributes($invoiceData, [
-                'invoice_type' => InvoiceType::class,
-                'status' => InvoiceStatus::class,
-            ]);
-            $newInvoice = new Invoice;
-            $newInvoice->fill(collect($invoiceData)->except(['id', 'customer_id', 'document_id', 'returned_invoice_id', 'warehouse_id'])->toArray());
-            $newInvoice->customer_id = $customerMapping[$oldCustomerId];
-            $newInvoice->returned_invoice_id = $mapping[$oldReturnedInvoiceId];
-            $newInvoice->document_id = $oldDocumentId ? ($documentMapping[$oldDocumentId] ?? null) : null;
-            $newInvoice->company_id = $targetYearId;
-            $newInvoice->warehouse_id = $warehouseMapping[$invoiceData['warehouse_id'] ?? null] ?? null;
-            $newInvoice->saveQuietly();
-
-            $mapping[$invoiceData['id']] = $newInvoice->id;
+        if ($errors !== []) {
+            throw ValidationException::withMessages(['import' => $errors]);
         }
 
         self::_syncDocumentsRelation($mapping, 'invoice');
 
         return $mapping;
+    }
+
+    private static function _invoiceImportError(array $invoiceData, Throwable $exception): string
+    {
+        return __('Invoice with ID :id, number :number, and document_id :document_id could not be imported: :error', [
+            'id' => $invoiceData['id'] ?? 'N/A',
+            'number' => $invoiceData['number'] ?? 'N/A',
+            'document_id' => $invoiceData['document_id'] ?? 'N/A',
+            'error' => $exception->getMessage(),
+        ]);
     }
 
     /**

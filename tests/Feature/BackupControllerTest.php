@@ -41,6 +41,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Tests\TestCase;
@@ -379,6 +380,52 @@ class BackupControllerTest extends TestCase
             'name' => 'Imported Company',
             'fiscal_year' => 1410,
         ]);
+    }
+
+    public function test_import_shows_all_invoice_errors_with_source_identifiers_and_rolls_back(): void
+    {
+        $payload = [
+            'invoices' => [
+                [
+                    'id' => 71,
+                    'number' => 'INV-71',
+                    'document_id' => 501,
+                    'customer_id' => 901,
+                    'returned_invoice_id' => null,
+                    'invoice_type' => InvoiceType::SELL,
+                    'status' => InvoiceStatus::UNAPPROVED,
+                ],
+                [
+                    'id' => 72,
+                    'number' => 'INV-72',
+                    'document_id' => 502,
+                    'customer_id' => 902,
+                    'returned_invoice_id' => null,
+                    'invoice_type' => InvoiceType::SELL,
+                    'status' => InvoiceStatus::UNAPPROVED,
+                ],
+            ],
+        ];
+
+        $response = $this->from(route('backups.upload'))->post(route('backups.import'), [
+            'file' => $this->makeZipUpload($payload),
+            'fiscal_year' => 1412,
+            'company_name' => 'Failed Invoice Import',
+        ]);
+
+        $response->assertRedirect(route('backups.upload'));
+        $response->assertSessionHasErrors();
+
+        $errors = session('errors')->getBag('default')->all();
+
+        $this->assertCount(2, $errors);
+        $this->assertStringContainsString('71', $errors[0]);
+        $this->assertStringContainsString('INV-71', $errors[0]);
+        $this->assertStringContainsString('501', $errors[0]);
+        $this->assertStringContainsString('72', $errors[1]);
+        $this->assertStringContainsString('INV-72', $errors[1]);
+        $this->assertStringContainsString('502', $errors[1]);
+        $this->assertDatabaseMissing('companies', ['name' => 'Failed Invoice Import']);
     }
 
     public function test_import_rejects_invalid_json_inside_zip_upload(): void
@@ -761,10 +808,12 @@ class BackupControllerTest extends TestCase
             ],
         ];
 
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessageMatches('/SHA-256 checksum mismatch/');
-
-        FiscalYearService::importData($payload, ['name' => 'Checksum Fail Co', 'fiscal_year' => 1407]);
+        try {
+            FiscalYearService::importData($payload, ['name' => 'Checksum Fail Co', 'fiscal_year' => 1407]);
+            $this->fail('Expected the checksum mismatch to produce a validation error.');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString('SHA-256 checksum mismatch', implode(' ', $e->errors()['import']));
+        }
     }
 
     public function test_import_base64_checksum_validates_on_correct_hash(): void
@@ -1003,10 +1052,12 @@ class BackupControllerTest extends TestCase
             ],
         ];
 
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessageMatches('/Invalid Base64/');
-
-        FiscalYearService::importData($payload, ['name' => 'Bad Base64 Co', 'fiscal_year' => 1411]);
+        try {
+            FiscalYearService::importData($payload, ['name' => 'Bad Base64 Co', 'fiscal_year' => 1411]);
+            $this->fail('Expected invalid Base64 data to produce a validation error.');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString('Invalid Base64', implode(' ', $e->errors()['import']));
+        }
     }
 
     public function test_export_excludes_document_files_when_only_document_files_selected(): void
