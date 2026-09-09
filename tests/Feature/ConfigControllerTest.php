@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\ConfigTitle;
+use App\Enums\SubjectType;
 use App\Models\Company;
 use App\Models\Config;
 use App\Models\User;
@@ -68,7 +69,7 @@ class ConfigControllerTest extends TestCase
             'company_id' => $this->company->id,
             'code' => '001',
             'name' => 'Cash subject',
-            'type' => 'both',
+            'type' => SubjectType::BOTH->value,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
