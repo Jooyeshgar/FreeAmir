@@ -65,7 +65,7 @@ class CommercialLedgerTest extends TestCase
         $response = $this->get(route('commercial-ledgers.index'));
 
         $response->assertOk()
-            ->assertSee('دفاتر تجاری')
+            ->assertSee('دفاتر الکترونیکی')
             ->assertSee('کد رهگیری پلمب دفتر')
             ->assertSee('اکسل (XLSX)')
             ->assertSee('CSV');
