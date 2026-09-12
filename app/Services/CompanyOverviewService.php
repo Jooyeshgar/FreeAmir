@@ -126,10 +126,10 @@ class CompanyOverviewService
 
     public function costsData()
     {
-        $wagesCostSubject = Subject::find(config('amir.wage'));
-        $wagesCost = 0;
-        if (! is_null($wagesCostSubject)) {
-            $wagesCost = $this->subjectService->sumSubject($wagesCostSubject);
+        $payrollCostSubject = Subject::find(config('amir.payroll'));
+        $payrollCost = 0;
+        if (! is_null($payrollCostSubject)) {
+            $payrollCost = $this->subjectService->sumSubject($payrollCostSubject);
         }
 
         $productCogSubjectIds = Product::pluck('cogs_subject_id')->all();
@@ -147,7 +147,7 @@ class CompanyOverviewService
             $servicesCogCost += $this->subjectService->sumSubject($serviceSubject);
         }
 
-        return [$wagesCost, $productsCogCost, $servicesCogCost];
+        return [$payrollCost, $productsCogCost, $servicesCogCost];
     }
 
     /**

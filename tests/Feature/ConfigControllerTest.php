@@ -47,9 +47,11 @@ class ConfigControllerTest extends TestCase
 
             return ! in_array('CASH', $keys, true)
                 && in_array('CASH_BOOK', $keys, true)
+                && in_array('PAYROLL', $keys, true)
                 && in_array('SALES_RETURNS', $keys, true)
                 && in_array('COST_OF_GOODS_SOLD', $keys, true)
-                && in_array('COGS_SERVICE', $keys, true);
+                && in_array('COGS_SERVICE', $keys, true)
+                && collect($titles)->firstWhere('value', 'PAYROLL')['label'] === 'حقوق و دستمزد';
         });
     }
 
@@ -113,6 +115,32 @@ class ConfigControllerTest extends TestCase
         $this->assertDatabaseHas('configs', [
             'company_id' => $this->company->id,
             'key' => 'cash_book',
+        ]);
+    }
+
+    public function test_migration_renames_stored_wage_config_to_payroll(): void
+    {
+        Config::create([
+            'company_id' => $this->company->id,
+            'key' => 'wage',
+            'value' => '42',
+            'desc' => 'حقوق پرسنل',
+            'type' => '3',
+            'category' => '1',
+        ]);
+
+        $migration = require database_path('migrations/2026_09_12_000001_rename_wage_config_to_payroll.php');
+        $migration->up();
+
+        $this->assertDatabaseMissing('configs', [
+            'company_id' => $this->company->id,
+            'key' => 'wage',
+        ]);
+        $this->assertDatabaseHas('configs', [
+            'company_id' => $this->company->id,
+            'key' => 'payroll',
+            'value' => '42',
+            'desc' => 'حقوق و دستمزد',
         ]);
     }
 
