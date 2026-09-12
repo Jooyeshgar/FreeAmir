@@ -68,8 +68,8 @@
                                         {{ mb_strtoupper(mb_substr($company->name, 0, 1)) }}
                                     </span>
                                     <div>
-                                        <p class="font-semibold text-slate-900 dark:text-white">{{ $company->name }}</p>
-                                    <p class="mt-0.5 max-w-56 truncate text-xs text-slate-500">{{ $company->address ? localizeNumber($company->address) : __('No address') }}</p>
+                                        <a href="{{ route('companies.show', $company) }}" class="font-semibold text-slate-900 transition hover:text-emerald-700 hover:underline dark:text-white dark:hover:text-emerald-300">{{ $company->name }}</a>
+                                        <p class="mt-0.5 max-w-56 truncate text-xs text-slate-500">{{ $company->address ? localizeNumber($company->address) : __('No address') }}</p>
                                     </div>
                                 </div>
                             </td>

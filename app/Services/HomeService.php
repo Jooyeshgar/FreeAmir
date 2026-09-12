@@ -125,6 +125,13 @@ class HomeService
                 ->selectRaw('SUM(CASE WHEN documents.created_at < ? THEN 1 ELSE 0 END) as previous_count', [$currentPeriodStart])
                 ->groupBy('companies.name')
                 ->get();
+            $overviewCompanyIds = Company::query()
+                ->whereIn('name', $usageByCompany->pluck('name'))
+                ->orderByDesc('fiscal_year')
+                ->orderByDesc('id')
+                ->get(['id', 'name'])
+                ->unique('name')
+                ->pluck('id', 'name');
             $topUsageCompanies = $usageByCompany
                 ->filter(fn ($company): bool => (int) $company->current_count > 0)
                 ->sortByDesc(fn ($company): int => (int) $company->current_count)
@@ -133,6 +140,7 @@ class HomeService
             $highestCompanyUsage = max(1, (int) $topUsageCompanies->max('current_count'));
             $topUsageCompanies = $topUsageCompanies->map(fn ($company): array => [
                 'name' => $company->name,
+                'id' => $overviewCompanyIds->get($company->name),
                 'documents' => (int) $company->current_count,
                 'percentage' => round(((int) $company->current_count / $highestCompanyUsage) * 100, 1),
             ]);
@@ -141,6 +149,7 @@ class HomeService
                     && (int) $company->current_count < (int) $company->previous_count)
                 ->map(fn ($company): array => [
                     'name' => $company->name,
+                    'id' => $overviewCompanyIds->get($company->name),
                     'current' => (int) $company->current_count,
                     'previous' => (int) $company->previous_count,
                     'drop' => round((((int) $company->previous_count - (int) $company->current_count) / (int) $company->previous_count) * 100, 1),
