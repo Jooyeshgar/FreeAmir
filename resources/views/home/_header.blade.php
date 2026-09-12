@@ -55,7 +55,10 @@
             </span>
 
             <div class="min-w-0 pt-0.5">
-                <h1 class="mt-1 text-xl font-black tracking-tight text-base-content sm:text-2xl">{{ __('Welcome back, :name', ['name' => auth()->user()->name]) }}</h1>
+                <div class="flex items-center gap-1">
+                    <h1 class="mt-1 text-xl font-black tracking-tight text-base-content sm:text-2xl">{{ __('Welcome back, :name', ['name' => auth()->user()->name]) }}</h1>
+                    <x-user-guide-link source="user/getting-started-fiscal-year.md" />
+                </div>
                 @php
                     $homeProfilesDesc = [
                         'platform' => __('Move between management and the active company workspace.'),

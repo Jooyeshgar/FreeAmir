@@ -4,7 +4,10 @@
     <div class="mb-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
         <div>
             <p class="text-xs font-bold uppercase tracking-[0.16em] text-emerald-600 dark:text-emerald-400">{{ __('Organization') }}</p>
-            <h2 class="mt-1 text-2xl font-bold tracking-tight">{{ __('Companies and fiscal years') }}</h2>
+            <div class="mt-1 flex items-center gap-1">
+                <h2 class="text-2xl font-bold tracking-tight">{{ __('Companies and fiscal years') }}</h2>
+                <x-user-guide-link source="user/getting-started-fiscal-year.md" />
+            </div>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ __('Manage every company record and its fiscal-year access.') }}</p>
         </div>
         @if ($canCreateFirstCompany)
