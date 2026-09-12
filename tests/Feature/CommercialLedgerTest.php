@@ -28,6 +28,8 @@ class CommercialLedgerTest extends TestCase
 
     private Subject $subsidiary;
 
+    private Subject $detailed;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -58,6 +60,12 @@ class CommercialLedgerTest extends TestCase
             'code' => '101001',
             'name' => 'بانک',
         ]);
+        $this->detailed = Subject::create([
+            'company_id' => $this->company->id,
+            'parent_id' => $this->subsidiary->id,
+            'code' => '101001001',
+            'name' => 'بانک ملت',
+        ]);
     }
 
     public function test_index_contains_history_grid_and_all_generation_options(): void
@@ -73,6 +81,14 @@ class CommercialLedgerTest extends TestCase
         foreach (CommercialLedgerType::cases() as $type) {
             $response->assertSee($type->label());
         }
+    }
+
+    public function test_ledger_types_use_numeric_values_and_accounting_level_terms(): void
+    {
+        $this->assertSame(range(1, 7), array_column(CommercialLedgerType::cases(), 'value'));
+        $this->assertStringContainsString('سطح معین', CommercialLedgerType::ALL_SUBSIDIARY->label());
+        $this->assertStringContainsString('سطح تفصیلی', CommercialLedgerType::ALL_DETAILED->label());
+        $this->assertStringContainsString('سطح کل', CommercialLedgerType::MONTHLY_GENERAL->label());
     }
 
     public function test_csv_generation_persists_history_and_exports_standard_columns(): void
@@ -129,14 +145,32 @@ class CommercialLedgerTest extends TestCase
         $this->assertCount(2, $voucherRows);
         $this->assertEquals(150, $voucherRows->first()['debit']);
 
-        $monthlyWithOpening = $service->rows($from, $to, CommercialLedgerType::MONTHLY_OPENING_GENERAL);
+        $monthlyWithOpening = $service->rows($from, $to, CommercialLedgerType::MONTHLY_OPENING_DETAILED);
         $this->assertCount(2, $monthlyWithOpening);
-        $this->assertSame('', $monthlyWithOpening->first()['subsidiary_code']);
+        $this->assertSame('101001', $monthlyWithOpening->first()['subsidiary_code']);
 
         $monthly = $service->rows($from, $to, CommercialLedgerType::MONTHLY_GENERAL);
         $this->assertCount(1, $monthly);
         $this->assertEquals(175, $monthly->first()['debit']);
         $this->assertEquals(10, $monthly->first()['credit']);
+    }
+
+    public function test_detailed_aggregation_keeps_detailed_accounts_separate(): void
+    {
+        $otherDetailed = Subject::create([
+            'company_id' => $this->company->id,
+            'parent_id' => $this->subsidiary->id,
+            'code' => '101001002',
+            'name' => 'بانک تجارت',
+        ]);
+        $this->createTransaction(3, '1403/01/10', -100, 'بانک ملت', $this->detailed);
+        $this->createTransaction(3, '1403/01/10', -200, 'بانک تجارت', $otherDetailed);
+        $service = app(CommercialLedgerService::class);
+        $from = jalali_to_gregorian_date('1403/01/01', '-', '/');
+        $to = jalali_to_gregorian_date('1403/12/29', '-', '/');
+
+        $this->assertCount(1, $service->rows($from, $to, CommercialLedgerType::VOUCHER_SUBSIDIARY));
+        $this->assertCount(2, $service->rows($from, $to, CommercialLedgerType::VOUCHER_DETAILED));
     }
 
     public function test_preview_download_delete_and_company_scope_are_enforced(): void
@@ -177,11 +211,11 @@ class CommercialLedgerTest extends TestCase
             'to_date' => '1403/12/29',
             'format' => $format,
             'seal_tracking_code' => 'PLM-1403-01',
-            'ledger_type' => CommercialLedgerType::ALL_SUBSIDIARY->value,
+            'ledger_type' => (string) CommercialLedgerType::ALL_SUBSIDIARY->value,
         ];
     }
 
-    private function createTransaction(int $documentNumber, string $jalaliDate, float $value, string $description): Transaction
+    private function createTransaction(int $documentNumber, string $jalaliDate, float $value, string $description, ?Subject $subject = null): Transaction
     {
         $document = Document::query()->firstOrCreate([
             'company_id' => $this->company->id,
@@ -194,7 +228,7 @@ class CommercialLedgerTest extends TestCase
 
         return Transaction::create([
             'document_id' => $document->id,
-            'subject_id' => $this->subsidiary->id,
+            'subject_id' => ($subject ?? $this->subsidiary)->id,
             'user_id' => $this->user->id,
             'desc' => $description,
             'value' => $value,

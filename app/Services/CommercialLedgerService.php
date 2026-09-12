@@ -32,7 +32,7 @@ class CommercialLedgerService
         $company = Company::query()->findOrFail(getActiveCompany());
         $fromDate = jalali_to_gregorian_date($data['from_date'], '-', '/');
         $toDate = jalali_to_gregorian_date($data['to_date'], '-', '/');
-        $type = CommercialLedgerType::from($data['ledger_type']);
+        $type = CommercialLedgerType::from((int) $data['ledger_type']);
         $rows = $this->rows($fromDate, $toDate, $type);
         $extension = $data['format'];
         $path = 'commercial-ledgers/'.$company->id.'/'.Str::uuid().'.'.$extension;
@@ -85,7 +85,7 @@ class CommercialLedgerService
                 'documents.title as document_title',
             ])
             ->get()
-            ->map(fn ($transaction) => $this->transactionRow($transaction, $subjects, $type->isGeneralLevel()));
+            ->map(fn ($transaction) => $this->transactionRow($transaction, $subjects, $type));
 
         if ($type->isVoucherAggregation()) {
             $transactions = $this->aggregate($transactions, fn (array $row): string => 'voucher|'.$row['document_id'].'|'.$row['account_key'], __('Voucher :number'));
@@ -125,7 +125,7 @@ class CommercialLedgerService
         );
     }
 
-    private function transactionRow(object $transaction, Collection $subjects, bool $generalLevel): array
+    private function transactionRow(object $transaction, Collection $subjects, CommercialLedgerType $type): array
     {
         $subject = $subjects->get($transaction->subject_id);
         $lineage = collect();
@@ -138,7 +138,9 @@ class CommercialLedgerService
         }
 
         $general = $lineage->first();
+        $generalLevel = $type->isGeneralLevel();
         $subsidiary = $generalLevel ? null : $lineage->get(1);
+        $account = $type->isDetailedLevel() ? $lineage->last() : ($subsidiary ?? $general);
         $value = $this->minorUnits((string) $transaction->value);
 
         return [
@@ -150,7 +152,7 @@ class CommercialLedgerService
             'general_title' => (string) ($general?->name ?? ''),
             'subsidiary_code' => (string) ($subsidiary?->code ?? ''),
             'subsidiary_title' => (string) ($subsidiary?->name ?? ''),
-            'account_key' => $generalLevel ? (string) ($general?->id ?? '') : (string) ($subsidiary?->id ?? $general?->id ?? ''),
+            'account_key' => (string) ($account?->id ?? ''),
             'description' => (string) ($transaction->desc ?: $transaction->document_title ?: ''),
             'document_title' => (string) ($transaction->document_title ?: ''),
             'debit_minor' => $value < 0 ? abs($value) : 0,

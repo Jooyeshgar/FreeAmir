@@ -16,7 +16,7 @@ return new class extends Migration
             $table->date('to_date');
             $table->string('format', 10);
             $table->string('seal_tracking_code', 100);
-            $table->string('ledger_type', 50);
+            $table->tinyInteger('ledger_type')->unsigned();
             $table->string('status', 30)->default('ready');
             $table->string('file_path');
             $table->unsignedInteger('row_count')->default(0);

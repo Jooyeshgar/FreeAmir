@@ -82,7 +82,7 @@
                     <label class="label" for="ledger_type">{{ __('Ledger Type / Aggregation Level') }}*</label>
                     <select id="ledger_type" name="ledger_type" class="select select-bordered w-full" required>
                         @foreach($ledgerTypes as $type)
-                            <option value="{{ $type->value }}" @selected(old('ledger_type', $ledgerTypes[0]->value) === $type->value)>{{ $type->label() }}</option>
+                            <option value="{{ $type->value }}" @selected((int) old('ledger_type', $ledgerTypes[0]->value) === $type->value)>{{ $type->label() }}</option>
                         @endforeach
                     </select>
                     @error('ledger_type')<span class="label text-xs text-error">{{ $message }}</span>@enderror
