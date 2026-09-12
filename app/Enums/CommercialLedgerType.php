@@ -5,48 +5,43 @@ namespace App\Enums;
 enum CommercialLedgerType: int
 {
     case ALL_SUBSIDIARY = 1;
-    case ALL_DETAILED = 2;
-    case VOUCHER_SUBSIDIARY = 3;
-    case VOUCHER_DETAILED = 4;
+    case ALL_GENERAL = 2;
+    case DOCUMENT_SUBSIDIARY = 3;
+    case DOCUMENT_GENERAL = 4;
     case MONTHLY_OPENING_SUBSIDIARY = 5;
-    case MONTHLY_OPENING_DETAILED = 6;
+    case MONTHLY_OPENING_GENERAL = 6;
     case MONTHLY_GENERAL = 7;
 
     public function label(): string
     {
         return match ($this) {
-            self::ALL_SUBSIDIARY => __('Commercial Ledger without aggregation (All Vouchers) - Subsidiary Account Level'),
-            self::ALL_DETAILED => __('Commercial Ledger without aggregation (All Vouchers) - Detailed Account Level'),
-            self::VOUCHER_SUBSIDIARY => __('Commercial Ledger with voucher-level aggregation - Subsidiary Account Level'),
-            self::VOUCHER_DETAILED => __('Commercial Ledger with voucher-level aggregation - Detailed Account Level'),
-            self::MONTHLY_OPENING_SUBSIDIARY => __('Monthly aggregation with opening voucher breakdown - Subsidiary Account Level'),
-            self::MONTHLY_OPENING_DETAILED => __('Monthly aggregation with opening voucher breakdown - Detailed Account Level'),
-            self::MONTHLY_GENERAL => __('Monthly aggregation without opening voucher breakdown - General Account Level'),
+            self::ALL_SUBSIDIARY => __('Commercial Ledger without aggregation (All Documents) - Subsidiary Account Level'),
+            self::ALL_GENERAL => __('Commercial Ledger without aggregation (All Documents) - General Account Level'),
+            self::DOCUMENT_SUBSIDIARY => __('Commercial Ledger with document-level aggregation - Subsidiary Account Level'),
+            self::DOCUMENT_GENERAL => __('Commercial Ledger with document-level aggregation - General Account Level'),
+            self::MONTHLY_OPENING_SUBSIDIARY => __('Monthly aggregation with opening document breakdown - Subsidiary Account Level'),
+            self::MONTHLY_OPENING_GENERAL => __('Monthly aggregation with opening document breakdown - General Account Level'),
+            self::MONTHLY_GENERAL => __('Monthly aggregation without opening document breakdown - General Account Level'),
         };
     }
 
     public function isGeneralLevel(): bool
     {
-        return $this === self::MONTHLY_GENERAL;
+        return in_array($this, [self::ALL_GENERAL, self::DOCUMENT_GENERAL, self::MONTHLY_OPENING_GENERAL, self::MONTHLY_GENERAL], true);
     }
 
-    public function isDetailedLevel(): bool
+    public function isDocumentAggregation(): bool
     {
-        return in_array($this, [self::ALL_DETAILED, self::VOUCHER_DETAILED, self::MONTHLY_OPENING_DETAILED], true);
-    }
-
-    public function isVoucherAggregation(): bool
-    {
-        return in_array($this, [self::VOUCHER_SUBSIDIARY, self::VOUCHER_DETAILED], true);
+        return in_array($this, [self::DOCUMENT_SUBSIDIARY, self::DOCUMENT_GENERAL], true);
     }
 
     public function isMonthlyAggregation(): bool
     {
-        return in_array($this, [self::MONTHLY_OPENING_SUBSIDIARY, self::MONTHLY_OPENING_DETAILED, self::MONTHLY_GENERAL], true);
+        return in_array($this, [self::MONTHLY_OPENING_SUBSIDIARY, self::MONTHLY_OPENING_GENERAL, self::MONTHLY_GENERAL], true);
     }
 
-    public function breaksDownOpeningVouchers(): bool
+    public function breaksDownOpeningDocuments(): bool
     {
-        return in_array($this, [self::MONTHLY_OPENING_SUBSIDIARY, self::MONTHLY_OPENING_DETAILED], true);
+        return in_array($this, [self::MONTHLY_OPENING_SUBSIDIARY, self::MONTHLY_OPENING_GENERAL], true);
     }
 }

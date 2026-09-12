@@ -16,15 +16,15 @@ use ZipArchive;
 class CommercialLedgerService
 {
     public const HEADERS = [
-        'Row Number',
+        'Index',
         'Date',
         'General Account Code',
         'General Account Title',
         'Subsidiary Account Code',
         'Subsidiary Account Title',
-        'Description / Narration',
-        'Debit Amount (IRR)',
-        'Credit Amount (IRR)',
+        'Description',
+        'Debit Amount',
+        'Credit Amount',
     ];
 
     public function generate(array $data, int $userId): CommercialLedgerExport
@@ -87,8 +87,8 @@ class CommercialLedgerService
             ->get()
             ->map(fn ($transaction) => $this->transactionRow($transaction, $subjects, $type));
 
-        if ($type->isVoucherAggregation()) {
-            $transactions = $this->aggregate($transactions, fn (array $row): string => 'voucher|'.$row['document_id'].'|'.$row['account_key'], __('Voucher :number'));
+        if ($type->isDocumentAggregation()) {
+            $transactions = $this->aggregate($transactions, fn (array $row): string => 'document|'.$row['document_id'].'|'.$row['account_key'], __('Document :number'));
         } elseif ($type->isMonthlyAggregation()) {
             $transactions = $this->aggregateMonthly($transactions, $type);
         }
@@ -137,10 +137,10 @@ class CommercialLedgerService
             $subject = $subject->parent_id ? $subjects->get($subject->parent_id) : null;
         }
 
-        $general = $lineage->first();
+        $general = $lineage->first(fn (Subject $subject): bool => $subject->isRoot() && strlen((string) $subject->code) === 3);
         $generalLevel = $type->isGeneralLevel();
-        $subsidiary = $generalLevel ? null : $lineage->get(1);
-        $account = $type->isDetailedLevel() ? $lineage->last() : ($subsidiary ?? $general);
+        $subsidiary = $generalLevel ? null : $lineage->first(fn (Subject $subject): bool => strlen((string) $subject->code) === 6);
+        $account = $generalLevel ? $general : ($subsidiary ?? $general);
         $value = $this->minorUnits((string) $transaction->value);
 
         return [
@@ -178,10 +178,10 @@ class CommercialLedgerService
         $opening = collect();
         $monthly = $rows;
 
-        if ($type->breaksDownOpeningVouchers()) {
+        if ($type->breaksDownOpeningDocuments()) {
             $opening = $rows->filter(fn (array $row): bool => in_array((int) $row['document_number'], [1, 2], true));
             $monthly = $rows->reject(fn (array $row): bool => in_array((int) $row['document_number'], [1, 2], true));
-            $opening = $this->aggregate($opening, fn (array $row): string => 'opening|'.$row['document_id'].'|'.$row['account_key'], __('Opening voucher :number'));
+            $opening = $this->aggregate($opening, fn (array $row): string => 'opening|'.$row['document_id'].'|'.$row['account_key'], __('Opening document :number'));
         }
 
         $monthly = $monthly->groupBy(function (array $row): string {

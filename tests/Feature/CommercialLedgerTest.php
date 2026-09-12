@@ -86,9 +86,12 @@ class CommercialLedgerTest extends TestCase
     public function test_ledger_types_use_numeric_values_and_accounting_level_terms(): void
     {
         $this->assertSame(range(1, 7), array_column(CommercialLedgerType::cases(), 'value'));
+        $this->assertTrue($this->general->isRoot());
+        $this->assertSame(3, strlen((string) $this->general->code));
+        $this->assertSame(6, strlen((string) $this->subsidiary->code));
         $this->assertStringContainsString('سطح معین', CommercialLedgerType::ALL_SUBSIDIARY->label());
-        $this->assertStringContainsString('سطح تفصیلی', CommercialLedgerType::ALL_DETAILED->label());
-        $this->assertStringContainsString('سطح کل', CommercialLedgerType::MONTHLY_GENERAL->label());
+        $this->assertStringContainsString('سطح کل', CommercialLedgerType::ALL_GENERAL->label());
+        $this->assertStringNotContainsString('سطح تفصیلی', collect(CommercialLedgerType::cases())->map->label()->implode(' '));
     }
 
     public function test_csv_generation_persists_history_and_exports_standard_columns(): void
@@ -130,47 +133,51 @@ class CommercialLedgerTest extends TestCase
         $this->assertStringContainsString('FF1F2937', $styles);
     }
 
-    public function test_aggregation_modes_group_rows_at_the_requested_level(): void
+    public function test_all_ledger_types_group_transactions_at_general_or_subsidiary_level(): void
     {
-        $this->createTransaction(1, '1403/01/01', -100, 'افتتاحیه یک');
-        $this->createTransaction(1, '1403/01/01', -50, 'افتتاحیه دو');
-        $this->createTransaction(3, '1403/01/10', -25, 'گردش یک');
-        $this->createTransaction(3, '1403/01/10', 10, 'گردش دو');
-        $service = app(CommercialLedgerService::class);
-        $from = jalali_to_gregorian_date('1403/01/01', '-', '/');
-        $to = jalali_to_gregorian_date('1403/12/29', '-', '/');
-
-        $this->assertCount(4, $service->rows($from, $to, CommercialLedgerType::ALL_SUBSIDIARY));
-        $voucherRows = $service->rows($from, $to, CommercialLedgerType::VOUCHER_SUBSIDIARY);
-        $this->assertCount(2, $voucherRows);
-        $this->assertEquals(150, $voucherRows->first()['debit']);
-
-        $monthlyWithOpening = $service->rows($from, $to, CommercialLedgerType::MONTHLY_OPENING_DETAILED);
-        $this->assertCount(2, $monthlyWithOpening);
-        $this->assertSame('101001', $monthlyWithOpening->first()['subsidiary_code']);
-
-        $monthly = $service->rows($from, $to, CommercialLedgerType::MONTHLY_GENERAL);
-        $this->assertCount(1, $monthly);
-        $this->assertEquals(175, $monthly->first()['debit']);
-        $this->assertEquals(10, $monthly->first()['credit']);
-    }
-
-    public function test_detailed_aggregation_keeps_detailed_accounts_separate(): void
-    {
+        $otherSubsidiary = Subject::create([
+            'company_id' => $this->company->id,
+            'parent_id' => $this->general->id,
+            'code' => '101002',
+            'name' => 'صندوق',
+        ]);
         $otherDetailed = Subject::create([
             'company_id' => $this->company->id,
-            'parent_id' => $this->subsidiary->id,
-            'code' => '101001002',
-            'name' => 'بانک تجارت',
+            'parent_id' => $otherSubsidiary->id,
+            'code' => '101002001',
+            'name' => 'صندوق مرکزی',
         ]);
-        $this->createTransaction(3, '1403/01/10', -100, 'بانک ملت', $this->detailed);
-        $this->createTransaction(3, '1403/01/10', -200, 'بانک تجارت', $otherDetailed);
+
+        $this->createTransaction(1, '1403/01/01', -100, 'افتتاحیه بانک یک', $this->detailed);
+        $this->createTransaction(1, '1403/01/01', -50, 'افتتاحیه بانک دو', $this->detailed);
+        $this->createTransaction(1, '1403/01/01', -200, 'افتتاحیه صندوق', $otherDetailed);
+        $this->createTransaction(3, '1403/01/10', -30, 'گردش بانک', $this->detailed);
+        $this->createTransaction(3, '1403/01/10', 10, 'برگشت بانک', $this->detailed);
+        $this->createTransaction(3, '1403/01/10', -40, 'گردش صندوق', $otherDetailed);
+        $this->createTransaction(4, '1403/01/20', -5, 'گردش دوم بانک', $this->detailed);
+
         $service = app(CommercialLedgerService::class);
         $from = jalali_to_gregorian_date('1403/01/01', '-', '/');
         $to = jalali_to_gregorian_date('1403/12/29', '-', '/');
 
-        $this->assertCount(1, $service->rows($from, $to, CommercialLedgerType::VOUCHER_SUBSIDIARY));
-        $this->assertCount(2, $service->rows($from, $to, CommercialLedgerType::VOUCHER_DETAILED));
+        $allSubsidiary = $service->rows($from, $to, CommercialLedgerType::ALL_SUBSIDIARY);
+        $this->assertCount(7, $allSubsidiary);
+        $this->assertEqualsCanonicalizing(['101001', '101002'], $allSubsidiary->pluck('subsidiary_code')->unique()->all());
+
+        $allGeneral = $service->rows($from, $to, CommercialLedgerType::ALL_GENERAL);
+        $this->assertCount(7, $allGeneral);
+        $this->assertSame(['101'], $allGeneral->pluck('general_code')->unique()->all());
+        $this->assertSame([''], $allGeneral->pluck('subsidiary_code')->unique()->all());
+
+        $this->assertCount(5, $service->rows($from, $to, CommercialLedgerType::DOCUMENT_SUBSIDIARY));
+        $this->assertCount(3, $service->rows($from, $to, CommercialLedgerType::DOCUMENT_GENERAL));
+        $this->assertCount(4, $service->rows($from, $to, CommercialLedgerType::MONTHLY_OPENING_SUBSIDIARY));
+        $this->assertCount(2, $service->rows($from, $to, CommercialLedgerType::MONTHLY_OPENING_GENERAL));
+
+        $monthlyGeneral = $service->rows($from, $to, CommercialLedgerType::MONTHLY_GENERAL);
+        $this->assertCount(1, $monthlyGeneral);
+        $this->assertEquals(425, $monthlyGeneral->first()['debit']);
+        $this->assertEquals(10, $monthlyGeneral->first()['credit']);
     }
 
     public function test_preview_download_delete_and_company_scope_are_enforced(): void

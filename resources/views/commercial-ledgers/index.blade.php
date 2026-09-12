@@ -1,8 +1,8 @@
 <x-app-layout :title="__('Commercial Ledgers')">
     <div class="flex flex-wrap items-center justify-between gap-3 py-3">
         <div>
-            <h1 class="text-2xl font-bold text-gray-600">{{ __('Commercial Ledgers') }}</h1>
-            <p class="mt-1 text-sm opacity-70">{{ __('Create and manage commercial ledger files for tax reporting.') }}</p>
+            <h1 class="text-xl font-bold text-base-content">{{ __('Commercial Ledgers') }}</h1>
+            <p class="text-sm text-base-content/50 mt-0.5">{{ __('Create and manage commercial ledger files for tax reporting.') }}</p>
         </div>
         <button type="button" class="btn btn-sm lg:btn-md btn-primary" onclick="document.getElementById('commercial-ledger-settings').showModal()">
             {{ __('Create Commercial Ledger') }}
@@ -13,7 +13,7 @@
 
     <x-card class_body="p-4">
         <div class="overflow-x-auto">
-            <table class="table table-zebra">
+            <table class="table">
                 <thead>
                     <tr>
                         <th>{{ __('File Type') }}</th>
@@ -28,20 +28,20 @@
                 <tbody>
                     @forelse($exports as $export)
                         <tr>
-                            <td><span class="badge badge-outline uppercase">{{ $export->format === 'xlsx' ? 'Excel' : 'CSV' }}</span></td>
+                            <td><span class="badge badge-sm badge-outline uppercase">{{ $export->format === 'xlsx' ? 'Excel' : 'CSV' }}</span></td>
                             <td>{{ formatDate($export->from_date) }}</td>
                             <td>{{ formatDate($export->to_date) }}</td>
                             <td>{{ $export->seal_tracking_code }}</td>
                             <td>{{ localizeNumber($export->company->fiscal_year) }}</td>
-                            <td><span class="badge badge-success badge-outline">{{ __('Ready to Send') }}</span></td>
+                            <td><span class="badge badge-sm badge-success badge-outline whitespace-nowrap">{{ __('Ready to Send') }}</span></td>
                             <td>
-                                <div class="flex flex-wrap gap-1">
-                                    <a class="btn btn-sm lg:btn-md btn-primary" href="{{ route('commercial-ledgers.download', $export) }}">{{ __('Download') }}</a>
-                                    <a class="btn btn-sm lg:btn-md" href="{{ route('commercial-ledgers.show', $export) }}">{{ __('Preview') }}</a>
+                                <div class="inline-flex gap-1">
+                                    <a class="btn btn-sm btn-primary" href="{{ route('commercial-ledgers.download', $export) }}">{{ __('Download') }}</a>
+                                    <a class="btn btn-sm" href="{{ route('commercial-ledgers.show', $export) }}">{{ __('Preview') }}</a>
                                     <form method="POST" action="{{ route('commercial-ledgers.destroy', $export) }}" onsubmit="return confirm('{{ __('Are you sure you want to delete this commercial ledger?') }}')">
                                         @csrf
                                         @method('DELETE')
-                                        <button class="btn btn-sm lg:btn-md btn-error btn-outline" type="submit">{{ __('Delete') }}</button>
+                                        <button class="btn btn-sm btn-error btn-outline" type="submit">{{ __('Delete') }}</button>
                                     </form>
                                 </div>
                             </td>

@@ -1,8 +1,8 @@
 <x-app-layout :title="__('Commercial Ledger Preview')">
     <div class="flex flex-wrap items-center justify-between gap-3 py-6">
         <div>
-            <h1 class="text-2xl font-bold text-gray-600">{{ __('Commercial Ledger Preview') }}</h1>
-            <p class="mt-1 text-sm opacity-70">
+            <h1 class="text-xl font-bold text-base-content">{{ __('Commercial Ledger Preview') }}</h1>
+            <p class="text-sm text-base-content/50 mt-0.5">
                 {{ formatDate($commercialLedger->from_date) }} {{ __('to') }} {{ formatDate($commercialLedger->to_date) }}
                 · {{ $commercialLedger->ledger_type->label() }}
             </p>
