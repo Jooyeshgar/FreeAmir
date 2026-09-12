@@ -9,18 +9,20 @@
 
 ## شروع پیشنهادی
 
-1. [مبانی حسابداری](../accounting-basics.md)
-2. [سال مالی چیست و چگونه ساخته می‌شود](../fiscal-year.md)
-3. [بهای تمام‌شده کالا و روش محاسبه در امیر](inventory-costing.md)
-4. [پیش‌بینی ماهانه درآمد و هزینه](monthly-income-expense-forecasting.md)
-5. [راهنمای حضور و غیاب](attendance/README.md)
-6. [راهنمای حقوق و دستمزد](salary/README.md)
-7. [برگشت از فروش و برگشت از خرید](../return-sell-return-buy.md)
+1. [شروع کار، شرکت فعال، میز کار و سال مالی](getting-started-fiscal-year.md)
+2. [مبانی حسابداری](../accounting-basics.md)
+3. [سال مالی چیست و چگونه ساخته می‌شود](../fiscal-year.md)
+4. [بهای تمام‌شده کالا و روش محاسبه در امیر](inventory-costing.md)
+5. [پیش‌بینی ماهانه درآمد و هزینه](monthly-income-expense-forecasting.md)
+6. [راهنمای حضور و غیاب](attendance/README.md)
+7. [راهنمای حقوق و دستمزد](salary/README.md)
+8. [برگشت از فروش و برگشت از خرید](../return-sell-return-buy.md)
 
 ## عملیات برنامه
 
 | فایل | موضوع |
 |---|---|
+| [getting-started-fiscal-year.md](getting-started-fiscal-year.md) | ورود و ایجاد اولین شرکت، انتخاب زمینه فعال، میز کار، ایجاد سال و همیار اختتامیه |
 | [attendance/README.md](attendance/README.md) | شیفت کاری، لاگ‌های حضور و غیاب، ورود اطلاعات، کارکرد ماهانه و تولید حقوق |
 | [salary/README.md](salary/README.md) | جدول مالیات، محل کار، عوامل حقوقی، احکام حقوقی و فیش حقوقی |
 

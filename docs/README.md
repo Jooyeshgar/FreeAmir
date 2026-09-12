@@ -22,6 +22,7 @@
 | مسیر | مخاطب | توضیح |
 |---|---|---|
 | [راهنمای استفاده کنندگان](user/README.md) | کاربران غیرتوسعه‌دهنده | عملیات روزمره، حضور و غیاب، حقوق و دستمزد، موجودی کالا و سال مالی |
+| [راهنمای شروع کار و سال مالی](user/getting-started-fiscal-year.md) | حسابداران و مدیران مالی | ایجاد شرکت، انتخاب سال فعال، میز کار و بستن سال مالی |
 | [مفاهیم حسابداری](accounting/README.md) | کاربران و توسعه‌دهندگان | مفاهیم حسابداری، بهای تمام‌شده، برگشت از خرید/فروش و سال مالی |
 | [راهنمای برنامه‌نویس](developer/README.md) | توسعه‌دهندگان | معماری پروژه، دیتابیس، تست و اسکریپت‌ها |
 | [راهنمای نصب](INSTALLATION.md) | مدیر سیستم و توسعه‌دهنده | نصب با Docker Compose، Docker تک‌دستوری یا نصب استاندارد |
@@ -35,6 +36,7 @@
 |---|---|---|
 | [INSTALLATION.md](INSTALLATION.md) / [INSTALLATION.en.md](INSTALLATION.en.md) | نصب | راهنمای نصب فارسی و انگلیسی |
 | [user/README.md](user/README.md) / [user/README.en.md](user/README.en.md) | کاربر عادی | فهرست ثانویه مستندات کاربردی و حسابداری |
+| [user/getting-started-fiscal-year.md](user/getting-started-fiscal-year.md) | شروع کار | شرکت و سال فعال، میز کار، ایجاد سال و عملیات اختتامیه |
 | [accounting/README.md](accounting/README.md) / [accounting/README.en.md](accounting/README.en.md) | حسابداری | فهرست مفاهیم حسابداری |
 | [developer/README.md](developer/README.md) / [developer/README.en.md](developer/README.en.md) | برنامه‌نویس | فهرست ثانویه مستندات فنی |
 | [user/attendance/README.md](user/attendance/README.md) / [user/attendance/README.en.md](user/attendance/README.en.md) | حضور و غیاب | راهنمای کار با شیفت، لاگ و کارکرد ماهانه |

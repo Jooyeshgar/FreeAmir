@@ -2,8 +2,11 @@
 
 # سال مالی در امیر
 
-**[English version](fiscal-year.en.md)**  
+**[English version](fiscal-year.en.md)**
+
 **[بازگشت به فهرست مستندات](README.md)**
+
+**[راهنمای عملی شروع کار و بستن سال مالی](user/getting-started-fiscal-year.md)**
 
 ## سال مالی چیست؟
 
