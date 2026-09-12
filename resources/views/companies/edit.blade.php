@@ -3,7 +3,10 @@
 
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <span class="card-title">{{ __('Edit Company') }}</span>
+            <div class="flex items-center gap-1">
+                <h1 class="card-title">{{ __('Edit Company') }}</h1>
+                <x-user-guide-link source="user/getting-started-fiscal-year.md" />
+            </div>
             <form action="{{ route('companies.update', $company->id) }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 @method('PATCH')

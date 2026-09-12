@@ -5,9 +5,12 @@
         <div class="card-header bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-800 dark:to-gray-700 px-6 py-4 rounded-t-2xl border-b-2 border-warning/30">
             <div class="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                    <h2 class="text-2xl font-bold text-gray-800 dark:text-white">
-                        {{ __('Year-End Closing Wizard') }}
-                    </h2>
+                    <div class="flex items-center gap-1">
+                        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">
+                            {{ __('Year-End Closing Wizard') }}
+                        </h2>
+                        <x-user-guide-link source="user/getting-started-fiscal-year.md" />
+                    </div>
                     <div class="flex flex-wrap gap-2 mt-2">
                         <span class="badge badge-lg badge-warning gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

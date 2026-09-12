@@ -2,10 +2,16 @@
     <x-show-message-bags />
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <div class="card-actions">
-                @can('companies.create')
-                    <a href="{{ route('companies.create') }}" class="btn btn-primary">{{ __('Create Company') }}</a>
-                @endcan
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-1">
+                    <h1 class="card-title">{{ __('Companies') }}</h1>
+                    <x-user-guide-link source="user/getting-started-fiscal-year.md" />
+                </div>
+                <div class="card-actions">
+                    @can('companies.create')
+                        <a href="{{ route('companies.create') }}" class="btn btn-primary">{{ __('Create Company') }}</a>
+                    @endcan
+                </div>
             </div>
             <table class="table w-full mt-4 overflow-auto">
                 <thead>

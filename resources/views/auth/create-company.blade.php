@@ -6,7 +6,10 @@
             <div class="card w-96 p-7 mt-16 bg-white">
                 <form method="POST" action="{{ route('registered-user.company.store') }}">
                     @csrf
-                    <h1 class="font-bold text-center">{{ __('Create your company') }}</h1>
+                    <div class="flex items-center justify-center gap-1">
+                        <h1 class="font-bold text-center">{{ __('Create your company') }}</h1>
+                        <x-user-guide-link source="user/getting-started-fiscal-year.md" />
+                    </div>
                     <p class="text-sm mt-2">{{ __('Your default accounting subjects will be created automatically.') }}</p>
                     <x-show-message-bags />
 
