@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Enums\InvoiceStatus;
+use App\Enums\InvoiceType;
 use App\Models\Activity;
 use App\Models\Company;
 use App\Models\Document;
@@ -173,8 +175,8 @@ class ManagementCompanyOverviewTest extends TestCase
             'subtraction' => 0,
             'vat' => 0,
             'amount' => 100,
-            'invoice_type' => 'sell',
-            'status' => 'approved',
+            'invoice_type' => InvoiceType::SELL->value,
+            'status' => InvoiceStatus::APPROVED->value,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
