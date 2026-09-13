@@ -101,6 +101,29 @@ class CompanyScopedSeedersTest extends TestCase
         $this->assertSame(0, $foreignConfigCount);
     }
 
+    public function test_payroll_config_uses_payroll_key_and_translation(): void
+    {
+        Company::factory()->create(['id' => 1]);
+        $this->seedCompany(1);
+
+        $payrollSubject = Subject::withoutGlobalScopes()
+            ->where('company_id', 1)
+            ->where('code', '040001')
+            ->firstOrFail();
+
+        $this->assertDatabaseHas('configs', [
+            'company_id' => 1,
+            'key' => 'payroll',
+            'value' => (string) $payrollSubject->id,
+            'desc' => 'حقوق و دستمزد',
+        ]);
+        $this->assertDatabaseMissing('configs', [
+            'company_id' => 1,
+            'key' => 'wage',
+        ]);
+        $this->assertSame((string) $payrollSubject->id, config('amir.payroll'));
+    }
+
     public function test_profit_and_loss_subjects_and_seeded_group_children_use_their_normal_balance_types(): void
     {
         Company::factory()->create(['id' => 1]);
