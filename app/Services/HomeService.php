@@ -193,7 +193,7 @@ class HomeService
 
         $statistics = app()->environment('testing')
             ? $statistics()
-            : Cache::remember('dashboard.super-admin-overview.v2.'.app()->getLocale(), now()->addMinutes(5), $statistics);
+            : Cache::remember('dashboard.super-admin-overview.v3.'.app()->getLocale(), now()->addMinutes(5), $statistics);
 
         $dashboard = $statistics + [
             'recentCompanies' => Company::query()
