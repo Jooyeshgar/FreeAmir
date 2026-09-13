@@ -38,6 +38,13 @@ class CostOfGoodsService
             }
 
             $product = $invoiceItem->itemable;
+
+            if ($invoice->invoice_type === InvoiceType::BEGINNING_INVENTORY) {
+                self::updateBeginningInventoryAverageCost($invoice, $invoiceItem, $product);
+
+                continue;
+            }
+
             $isReturnBuy = $invoice->invoice_type === InvoiceType::RETURN_BUY;
 
             if ($isReturnBuy && ! $invoice->status->isApprovedOrSettled()) {
@@ -74,6 +81,26 @@ class CostOfGoodsService
             $product->average_cost = $denominator > 0 ? ($totalCosts / $denominator) : 0;
             $product->save();
         }
+    }
+
+    private static function updateBeginningInventoryAverageCost(Invoice $invoice, InvoiceItem $invoiceItem, Product $product): void
+    {
+        $quantity = (float) $invoiceItem->quantity;
+        $baseCost = (float) $invoiceItem->amount - (float) ($invoiceItem->vat ?? 0);
+
+        if ($invoice->status->isApprovedOrSettled()) {
+            $quantityBefore = max(0.0, (float) $product->quantity - $quantity);
+            $quantityAfter = $quantityBefore + $quantity;
+            $valueAfter = ($quantityBefore * (float) $product->average_cost) + $baseCost;
+            $product->average_cost = $quantityAfter > 0 ? $valueAfter / $quantityAfter : 0;
+        } else {
+            $quantityBefore = max(0.0, (float) $product->quantity);
+            $quantityAfter = $quantityBefore + $quantity;
+            $valueBefore = ((float) $invoiceItem->cog_after * $quantityAfter) - $baseCost;
+            $product->average_cost = $quantityBefore > 0 ? max(0.0, $valueBefore / $quantityBefore) : 0;
+        }
+
+        $product->save();
     }
 
     private static function restoreAverageCostAfterUnapprovingReturnBuy(Invoice $invoice, InvoiceItem $invoiceItem, Product $product): void
@@ -131,6 +158,17 @@ class CostOfGoodsService
             return null;
         }
 
+        if ($previousInvoice->invoice_type === InvoiceType::BEGINNING_INVENTORY) {
+            $quantityAfterBeginningInventory = (float) $previousInvoiceItem->quantity_at + (float) $previousInvoiceItem->quantity;
+
+            return [
+                'baseCost' => (float) $previousInvoiceItem->cog_after * $quantityAfterBeginningInventory,
+                'availableQuantity' => 0.0,
+                'newQuantity' => $quantityAfterBeginningInventory,
+                'ancillaryCosts' => collect(),
+            ];
+        }
+
         return [
             'baseCost' => (float) $previousInvoiceItem->amount - (float) ($previousInvoiceItem->vat ?? 0),
             'availableQuantity' => $previousInvoiceItem->quantity_at,
@@ -148,7 +186,7 @@ class CostOfGoodsService
                     $q->where('date', '<', $invoice->date)
                         ->orWhere(function ($q2) use ($invoice) {
                             $q2->where('date', $invoice->date)
-                                ->where('number', '<', $invoice->number);
+                                ->where('id', '<', $invoice->id);
                         });
                 })
                 ->whereHas('items', function ($query) use ($invoiceItem) {
@@ -164,7 +202,7 @@ class CostOfGoodsService
                 ->sum('quantity');
         };
 
-        $totalIncomingQuantity = (float) $buildQuery([InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID]);
+        $totalIncomingQuantity = (float) $buildQuery([InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID, InvoiceType::BEGINNING_INVENTORY]);
         $totalOutgoingQuantity = (float) $buildQuery([InvoiceType::SELL, InvoiceType::RETURN_BUY]);
 
         return $totalIncomingQuantity - $totalOutgoingQuantity;
@@ -192,7 +230,15 @@ class CostOfGoodsService
         if ($invoice->status->isApprovedOrSettled()) {
             $previousInvoiceItem = $previousInvoice->items->where('itemable_id', $productId)->first();
 
-            return $previousInvoiceItem ? (float) $previousInvoiceItem->itemable->average_cost * $availableQuantity : 0.0;
+            if (! $previousInvoiceItem) {
+                return 0.0;
+            }
+
+            $previousAverageCost = $previousInvoice->invoice_type === InvoiceType::BEGINNING_INVENTORY
+                ? (float) $previousInvoiceItem->cog_after
+                : (float) $previousInvoiceItem->itemable->average_cost;
+
+            return $previousAverageCost * $availableQuantity;
         }
 
         // Unapproved calculation uses the previous one of previous invoice item's COG.
@@ -272,19 +318,28 @@ class CostOfGoodsService
     private static function getPreviousInvoice(Invoice $invoice, $productId)
     {
         $allowedInvoiceTypes = match ($invoice->invoice_type) {
-            InvoiceType::BUY => [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID],
-            InvoiceType::RETURN_SELL => [InvoiceType::RETURN_SELL, InvoiceType::BUY, InvoiceType::VOID],
-            InvoiceType::VOID => [InvoiceType::VOID, InvoiceType::BUY, InvoiceType::RETURN_SELL],
+            InvoiceType::BUY => [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID, InvoiceType::BEGINNING_INVENTORY],
+            InvoiceType::RETURN_SELL => [InvoiceType::RETURN_SELL, InvoiceType::BUY, InvoiceType::VOID, InvoiceType::BEGINNING_INVENTORY],
+            InvoiceType::VOID => [InvoiceType::VOID, InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::BEGINNING_INVENTORY],
+            InvoiceType::BEGINNING_INVENTORY => [InvoiceType::BEGINNING_INVENTORY, InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID],
             InvoiceType::SELL => [InvoiceType::SELL, InvoiceType::RETURN_BUY],
             InvoiceType::RETURN_BUY => [InvoiceType::RETURN_BUY, InvoiceType::SELL],
             default => [],
         };
 
-        return Invoice::where('number', '<', $invoice->number)
-            ->whereIn('status', InvoiceStatus::approvedOrSettled())
+        return Invoice::whereIn('status', InvoiceStatus::approvedOrSettled())
+            ->where(function ($query) use ($invoice) {
+                $query->where('date', '<', $invoice->date)
+                    ->orWhere(function ($sameDateQuery) use ($invoice) {
+                        $sameDateQuery->where('date', $invoice->date)
+                            ->where('id', '<', $invoice->id);
+                    });
+            })
             ->whereIn('invoice_type', $allowedInvoiceTypes)
             ->whereHas('items', fn ($query) => $query->where('itemable_id', $productId)
                                                                             && $query->where('itemable_type', Product::class))
-            ->orderByDesc('number')->first();
+            ->orderByDesc('date')
+            ->orderByDesc('id')
+            ->first();
     }
 }
