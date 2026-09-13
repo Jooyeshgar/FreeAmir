@@ -63,6 +63,11 @@
             <h2 class="text-xl font-bold">{{ __('Create Commercial Ledger') }}</h2>
             <form method="POST" action="{{ route('commercial-ledgers.store') }}" class="mt-5 space-y-4">
                 @csrf
+                @if($unapprovedDocumentsCount > 0)
+                    <div class="alert alert-warning text-sm">
+                        {{ trans_choice(':count document is not approved yet.|:count documents are not approved yet.', $unapprovedDocumentsCount, ['count' => localizeNumber($unapprovedDocumentsCount)]) }}
+                    </div>
+                @endif
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <x-date-picker id="from_date" name="from_date" :title="__('From Date')" :value="old('from_date', $defaultFromDate)" required />
                     <x-date-picker id="to_date" name="to_date" :title="__('To Date')" :value="old('to_date', $defaultToDate)" required />

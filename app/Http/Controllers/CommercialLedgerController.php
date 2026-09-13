@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\CommercialLedgerType;
 use App\Models\CommercialLedgerExport;
 use App\Models\Company;
+use App\Models\Document;
 use App\Services\CommercialLedgerService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,11 +25,17 @@ class CommercialLedgerController extends Controller
         $company = Company::query()->findOrFail(getActiveCompany());
         [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
 
+        $unapprovedDocumentsCount = Document::query()
+            ->whereNull('approved_at')
+            ->whereBetween('date', [$fiscalStart->toDateString(), $fiscalEnd->toDateString()])
+            ->count();
+
         return view('commercial-ledgers.index', [
             'exports' => CommercialLedgerExport::query()->latest()->paginate(15),
             'ledgerTypes' => CommercialLedgerType::cases(),
             'defaultFromDate' => gregorian_to_jalali_date($fiscalStart->toDateString(), '/', '-'),
             'defaultToDate' => gregorian_to_jalali_date($fiscalEnd->toDateString(), '/', '-'),
+            'unapprovedDocumentsCount' => $unapprovedDocumentsCount,
         ]);
     }
 

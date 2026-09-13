@@ -3425,6 +3425,8 @@
     "Are you sure you want to delete this commercial ledger?": "Are you sure you want to delete this commercial ledger?",
     "Commercial ledger generated successfully. :count rows are ready.": "Commercial ledger generated successfully. :count rows are ready.",
     "Commercial ledger deleted successfully.": "Commercial ledger deleted successfully.",
+    "A commercial ledger already exists for this date (:from to :to). Do you want to continue?": "A commercial ledger already exists for this date (:from to :to). Do you want to continue?",
+    ":count document is not approved yet.|:count documents are not approved yet.": ":count document is not approved yet.|:count documents are not approved yet.",
     "From date cannot be greater than to date.": "From date cannot be greater than to date.",
     "Document :number": "Document :number",
     "Opening document :number": "Opening document :number",

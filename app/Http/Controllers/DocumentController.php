@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreTransactionRequest;
+use App\Models\CommercialLedgerExport;
 use App\Models\Company;
 use App\Models\Document;
 use App\Models\Subject;
@@ -86,6 +87,10 @@ class DocumentController extends Controller
 
     public function store(StoreTransactionRequest $request)
     {
+        if ($prompt = $this->commercialLedgerPrompt($request->date)) {
+            return redirect()->back()->withInput()->with('ledger_confirmation_prompt', $prompt);
+        }
+
         $transactions = [];
         foreach ($request->input('transactions') as $transactionData) {
             $transactionData = (object) $transactionData;
@@ -262,6 +267,10 @@ class DocumentController extends Controller
     public function update(StoreTransactionRequest $request, $id)
     {
         $document = Document::findOrFail($id);
+
+        if ($prompt = $this->commercialLedgerPrompt($request->date)) {
+            return redirect()->back()->withInput()->with('ledger_confirmation_prompt', $prompt);
+        }
 
         DocumentService::updateDocument($document, $request->toArray());
 
@@ -445,5 +454,19 @@ class DocumentController extends Controller
         }
 
         return redirect()->route('documents.index')->with('success', $message);
+    }
+
+    private function commercialLedgerPrompt(string $date): ?string
+    {
+        $ledger = CommercialLedgerExport::query()->where('from_date', '<=', $date)->where('to_date', '>=', $date)->latest('id')->first();
+
+        if ($ledger && ! request()->boolean('ledger_confirmation')) {
+            return __('A commercial ledger already exists for this date (:from to :to). Do you want to continue?', [
+                'from' => formatDate($ledger->from_date),
+                'to' => formatDate($ledger->to_date),
+            ]);
+        }
+
+        return null;
     }
 }

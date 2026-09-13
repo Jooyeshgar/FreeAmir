@@ -3426,6 +3426,8 @@
     "Are you sure you want to delete this commercial ledger?": "آیا از حذف این دفتر الکترونیکی مطمئن هستید؟",
     "Commercial ledger generated successfully. :count rows are ready.": "دفتر الکترونیکی با موفقیت تولید شد. :count ردیف آماده است.",
     "Commercial ledger deleted successfully.": "دفتر الکترونیکی با موفقیت حذف شد.",
+    "A commercial ledger already exists for this date (:from to :to). Do you want to continue?": "برای این تاریخ دفتر الکترونیکی (:from تا :to) وجود دارد. آیا می‌خواهید ادامه دهید؟",
+    ":count document is not approved yet.|:count documents are not approved yet.": ":count سند هنوز تأیید نشده است.|:count سند هنوز تأیید نشده‌اند.",
     "From date cannot be greater than to date.": "تاریخ شروع نمی‌تواند بعد از تاریخ پایان باشد.",
     "Document :number": "سند شماره :number",
     "Opening document :number": "سند افتتاحیه شماره :number",
