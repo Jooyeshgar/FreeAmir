@@ -172,7 +172,7 @@ body {
 
 [x-cloak] { display: none !important; }
 
-.admin-shell main { z-index: auto; padding: 0; }
+.admin-shell main { z-index: auto; }
 
 .grid-paper {
     background-image: linear-gradient(rgb(255 255 255 / 0.045) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.045) 1px, transparent 1px);
@@ -311,6 +311,10 @@ main {
     .app-main-menu .app-main-menu-panel ul {
         width: max-content;
         min-width: 100%;
+    }
+
+    .app-mobile-menu .app-main-menu-panel li > details > summary::after {
+        margin-inline-end: .5rem;
     }
 
     .app-main-menu .app-main-menu-panel {

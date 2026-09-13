@@ -71,7 +71,7 @@
 </head>
 
 <body
-    class="admin-shell p-2 min-h-screen overflow-x-hidden bg-[#f5f7f6] text-[#172033] antialiased dark:bg-slate-950 dark:text-slate-100"
+    class="admin-shell min-h-screen overflow-x-hidden bg-[#f5f7f6] text-[#172033] antialiased dark:bg-slate-950 dark:text-slate-100"
     dir="{{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }}">
     <div class="drawer md:drawer-open">
         <input id="management-drawer" type="checkbox" class="drawer-toggle">
@@ -160,7 +160,7 @@
                 </div>
                 <x-impersonation-banner within-sticky-header />
             </header>
-            <main class="relative w-full min-w-0 px-3 pb-7 pt-6 sm:px-6 sm:pt-10 lg:px-8 xl:px-10 xl:pb-10">
+            <main class="relative w-full min-w-0 px-6 pb-7 pt-6 sm:px-6 sm:pt-10 lg:px-8 xl:px-10 xl:pb-10">
                 {{ $slot }}</main>
             <footer
                 class="flex w-full flex-wrap justify-between gap-2 border-t border-slate-200 px-4 py-5 text-[10px] text-slate-400 sm:px-6 xl:px-8 dark:border-slate-800">

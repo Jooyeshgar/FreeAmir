@@ -32,6 +32,13 @@
                         </svg>
                     </label>
                 </li>
+                @can('access-super-admin-panel')
+                    <li class="hidden min-[1430px]:flex">
+                        <a href="{{ route('management.dashboard') }}" class="btn btn-ghost btn-sm whitespace-nowrap">
+                            {{ __('Admin panel') }}
+                        </a>
+                    </li>
+                @endcan
                 <li>
                     <details class="app-main-menu-dropdown" data-main-menu-dropdown>
                         <summary class="text-sm">

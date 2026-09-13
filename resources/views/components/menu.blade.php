@@ -1,6 +1,6 @@
 @php
     $topDropdownClass = 'app-main-menu-dropdown';
-    $topDropdownContentClass = 'z-50 min-w-0 max-w-full overflow-y-auto';
+    $topDropdownContentClass = 'app-main-menu-panel z-50 w-full min-w-full max-w-[calc(100vw-2rem)] overflow-y-auto md:w-50';
     $scrollingTopDropdownContentClass = $topDropdownContentClass . ' max-h-[calc(100dvh-8rem)]';
 @endphp
 
