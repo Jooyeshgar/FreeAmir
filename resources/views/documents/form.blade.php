@@ -206,7 +206,24 @@
         {{ __('save and close form') }} </button>
 </div>
 
+<input type="hidden" name="ledger_confirmation" id="ledger-confirmation" value="{{ old('ledger_confirmation') }}">
+
 @pushOnce('scripts')
+    @php
+        $ledgerConfirmationPrompt = session('ledger_confirmation_prompt');
+        session()->forget('ledger_confirmation_prompt');
+    @endphp
+    @if($ledgerConfirmationPrompt)
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const message = @js($ledgerConfirmationPrompt);
+                if (window.confirm(message)) {
+                    document.getElementById('ledger-confirmation').value = '1';
+                    document.querySelector('form[action*="documents"]').submit();
+                }
+            });
+        </script>
+    @endif
     <script type="module">
         jalaliDatepicker.startWatch({'persianDigits': true});
     </script>

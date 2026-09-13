@@ -240,6 +240,12 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     });
     Route::get('warehouse/dashboard', [Controllers\WarehouseDashboardController::class, 'index'])->name('warehouse.dashboard');
 
+    Route::get('commercial-ledgers', [Controllers\CommercialLedgerController::class, 'index'])->name('commercial-ledgers.index');
+    Route::post('commercial-ledgers', [Controllers\CommercialLedgerController::class, 'store'])->name('commercial-ledgers.store');
+    Route::get('commercial-ledgers/{commercialLedger}', [Controllers\CommercialLedgerController::class, 'show'])->name('commercial-ledgers.show');
+    Route::get('commercial-ledgers/{commercialLedger}/download', [Controllers\CommercialLedgerController::class, 'download'])->name('commercial-ledgers.download');
+    Route::delete('commercial-ledgers/{commercialLedger}', [Controllers\CommercialLedgerController::class, 'destroy'])->name('commercial-ledgers.destroy');
+
     Route::get('monthly-budgets', [Controllers\MonthlyBudgetController::class, 'index'])->name('budgets.index');
     Route::get('monthly-budgets/subjects/search/{month}/{scope?}', [Controllers\MonthlyBudgetController::class, 'searchSubjects'])->name('budgets.search-subjects');
     Route::put('monthly-budgets', [Controllers\MonthlyBudgetController::class, 'store'])->name('budgets.store');
