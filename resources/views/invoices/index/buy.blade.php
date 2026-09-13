@@ -1,9 +1,11 @@
-<div class="card-actions flex items-center gap-3">
-    @if ($service_buy)
-        <a href="{{ route('invoices.create', ['invoice_type' => 'buy', 'service_buy' => '1']) }}" class="btn btn-primary">{{ __('Service Buy Invoice') }}</a>
-    @else
-        <a href="{{ route('invoices.create', ['invoice_type' => 'buy']) }}" class="btn btn-primary">{{ __('Create buy invoice') }}</a>
-    @endif
+<div class="card-actions flex flex-col items-stretch gap-3 lg:flex-row lg:items-start">
+    <div>
+        @if ($service_buy)
+            <a href="{{ route('invoices.create', ['invoice_type' => 'buy', 'service_buy' => '1']) }}" class="btn btn-primary">{{ __('Service Buy Invoice') }}</a>
+        @else
+            <a href="{{ route('invoices.create', ['invoice_type' => 'buy']) }}" class="btn btn-primary">{{ __('Create buy invoice') }}</a>
+        @endif
+    </div>
     @include('invoices.index.partials.search-form', [
         'invoiceType' => 'buy',
         'isSellWorkflow' => false,

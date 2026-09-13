@@ -2,7 +2,7 @@
     <div aria-hidden="true" class="absolute -end-20 -top-24 size-64 rounded-full blur-3xl bg-info/20"></div>
     <div aria-hidden="true" class="absolute -bottom-24 start-1/3 size-48 rounded-full bg-base-200/50 blur-3xl"></div>
 
-    <div class="relative grid gap-3 lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-center">
+    <div class="relative grid gap-3 md:grid-cols-[minmax(0,1fr)_19rem] lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-center">
         <div class="flex min-w-0 items-center gap-3">
             <span class="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl shadow-sm ring-1 ring-current/10 sm:size-14 bg-info/15 text-info">
                 @switch($homeVariant)

@@ -26,55 +26,50 @@
                 </div>
             </div>
 
-            <div class="p-4 sm:p-5">
-            <table class="table w-full overflow-auto">
-                <thead>
-                    <tr>
-                        <th class="px-4 py-2">{{ __('SSTID') }}</th>
-                        <th class="px-4 py-2">{{ __('Name') }}</th>
-                        <th class="px-4 py-2">{{ __('VAT') }}</th>
-                        <th class="px-4 py-2">{{ __('Services') }}</th>
-                        <th class="px-4 py-2">{{ __('Subject') }}</th>
-                        <th class="px-4 py-2">{{ __('Action') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-
-                    @foreach ($serviceGroups as $serviceGroup)
+            <div class="overflow-x-auto">
+                <table class="table">
+                    <thead>
                         <tr>
-                            <td class="px-4 py-2">{{ $serviceGroup->sstid }}</td>
-                            <td class="px-4 py-2">
-                                <a href="{{ route('services.index', ['group_name' => $serviceGroup->name]) }}"
-                                    class="text-blue-600 hover:underline">
-                                    {{ $serviceGroup->name }}
-                                </a>
-                            </td>
-                            <td class="px-4 py-2">{{ formatNumber($serviceGroup->vat) }}%</td>
-                            <td class="px-4 py-2">{{ formatNumber($serviceGroup->services_count ?? $serviceGroup->services()->count()) }}</td>
-                            <td class="px-4 py-2"><a
-                                    href="{{ route('transactions.index', ['subject_id' => $serviceGroup->subject]) }}">{{ $serviceGroup->subject?->name }}</a>
-                            </td>
-                            <td class="px-4 py-2">
-                                <a href="{{ route('service-groups.show', $serviceGroup) }}"
-                                    class="btn btn-sm btn-info">{{ __('View') }}</a>
-                                <a href="{{ route('service-groups.edit', $serviceGroup) }}"
-                                    class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                @if ($serviceGroup->delete_blocking_reason)
-                                    <span class="tooltip" data-tip="{{ $serviceGroup->delete_blocking_reason }}">
-                                        <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled title="{{ $serviceGroup->delete_blocking_reason }}">{{ __('Delete') }}</button>
-                                    </span>
-                                @else
-                                    <form action="{{ route('service-groups.destroy', $serviceGroup) }}" method="POST" class="inline-block">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
-                                    </form>
-                                @endif
-                            </td>
+                            <th class="px-4 py-2">{{ __('SSTID') }}</th>
+                            <th class="px-4 py-2">{{ __('Name') }}</th>
+                            <th class="px-4 py-2">{{ __('VAT') }}</th>
+                            <th class="px-4 py-2">{{ __('Services') }}</th>
+                            <th class="px-4 py-2">{{ __('Subject') }}</th>
+                            <th class="px-4 py-2">{{ __('Action') }}</th>
                         </tr>
-                    @endforeach
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+
+                        @foreach ($serviceGroups as $serviceGroup)
+                            <tr>
+                                <td class="px-4 py-2">{{ $serviceGroup->sstid }}</td>
+                                <td class="px-4 py-2">
+                                    <a href="{{ route('services.index', ['group_name' => $serviceGroup->name]) }}" class="text-blue-600 hover:underline">{{ $serviceGroup->name }}</a>
+                                </td>
+                                <td class="px-4 py-2">{{ formatNumber($serviceGroup->vat) }}%</td>
+                                <td class="px-4 py-2">
+                                    {{ formatNumber($serviceGroup->services_count ?? $serviceGroup->services()->count()) }}
+                                </td>
+                                <td class="px-4 py-2">
+                                    <a href="{{ route('transactions.index', ['subject_id' => $serviceGroup->subject]) }}">{{ $serviceGroup->subject?->name }}</a>
+                                </td>
+                                <td class="px-4 py-2 inline-flex gap-2 whitespace-nowrap">
+                                    <a href="{{ route('service-groups.show', $serviceGroup) }}" class="btn btn-sm btn-info">{{ __('View') }}</a>
+                                    <a href="{{ route('service-groups.edit', $serviceGroup) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                    @if ($serviceGroup->delete_blocking_reason)
+                                        <button class="btn btn-sm btn-error btn-disabled pointer-events-none">{{ __('Delete') }}</button>
+                                    @else
+                                        <form action="{{ route('service-groups.destroy', $serviceGroup) }}" method="POST">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                        </form>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
             </div>
 
             {{-- Pagination --}}

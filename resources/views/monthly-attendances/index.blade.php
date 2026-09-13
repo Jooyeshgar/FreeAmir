@@ -4,13 +4,10 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             {{-- Filter bar --}}
-            <form action="{{ route('attendance.monthly-attendances.index') }}" method="GET" class="flex flex-wrap items-end gap-3 mb-2">
-
-                <div class="w-1/5">
-                    <label class="w-full">
-                        <div class="label">
-                            <span>{{ __('Employee') }}</span>
-                        </div>
+            <form action="{{ route('attendance.monthly-attendances.index') }}" method="GET">
+                <div class="flex flex-wrap items-end gap-3 mb-2 w-full">
+                    <div class="sm:w-full">
+                        <span class="label">{{ __('Employee') }}</span>
                         <select name="employee_id" class="select  select-sm">
                             <option value="">{{ __('All Employees') }}</option>
                             @foreach ($employees as $employee)
@@ -19,14 +16,10 @@
                                 </option>
                             @endforeach
                         </select>
-                    </label>
-                </div>
+                    </div>
 
-                <div class="w-36">
-                    <label class="w-full">
-                        <div class="label">
-                            <span>{{ __('Month') }}</span>
-                        </div>
+                    <div class="sm:w-full">
+                        <span class="label">{{ __('Month') }}</span>
                         <select name="month" class="select  select-sm">
                             <option value="">{{ __('All Months') }}</option>
                             @foreach (\App\Models\MonthlyAttendance::MONTH_NAMES as $num => $name)
@@ -35,10 +28,9 @@
                                 </option>
                             @endforeach
                         </select>
-                    </label>
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
                 </div>
-
-                <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
             </form>
 
             <div class="flex justify-end items-center gap-2">
@@ -78,38 +70,40 @@
                                 <td>{{ $attendance->present_days }}</td>
                                 <td>{{ $attendance->absent_days }}</td>
                                 <td>{{ $attendance->overtime }}</td>
-                                <td class="flex gap-2">
-                                    @can('attendance.monthly-attendances.show')
-                                        <a href="{{ route('attendance.monthly-attendances.show', $attendance) }}" class="btn btn-sm btn-info">
-                                            {{ __('View') }}
-                                        </a>
-                                    @endcan
-                                    @can('attendance.monthly-attendances.edit')
-                                        <a href="{{ route('attendance.monthly-attendances.edit', $attendance) }}" class="btn btn-sm btn-warning">
-                                            {{ __('Edit') }}
-                                        </a>
-                                    @endcan
-                                    @can('attendance.monthly-attendances.delete')
-                                        <form action="{{ route('attendance.monthly-attendances.destroy', $attendance) }}" method="POST" class="inline-block"
-                                            onsubmit="return confirm('{{ __('Are you sure?') }}')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-error">
-                                                {{ __('Delete') }}
-                                            </button>
-                                        </form>
-                                    @endcan
-                                    @if ($attendance->payroll)
-                                        <a href="{{ route('salary.payrolls.show', $attendance->payroll) }}" class="btn btn-sm btn-success">
-                                            {{ __('Payroll') }}
-                                        </a>
-                                    @else
-                                        @can('salary.payrolls.create')
-                                            <a href="{{ route('attendance.monthly-attendances.show', $attendance) }}" class="btn btn-sm btn-ghost btn-outline">
-                                                {{ __('Create Payroll') }}
+                                <td>
+                                    <div class="inline-flex gap-2">
+                                        @can('attendance.monthly-attendances.show')
+                                            <a href="{{ route('attendance.monthly-attendances.show', $attendance) }}" class="btn btn-sm btn-info">
+                                                {{ __('View') }}
                                             </a>
                                         @endcan
-                                    @endif
+                                        @can('attendance.monthly-attendances.edit')
+                                            <a href="{{ route('attendance.monthly-attendances.edit', $attendance) }}" class="btn btn-sm btn-warning">
+                                                {{ __('Edit') }}
+                                            </a>
+                                        @endcan
+                                        @can('attendance.monthly-attendances.delete')
+                                            <form action="{{ route('attendance.monthly-attendances.destroy', $attendance) }}" method="POST"
+                                                onsubmit="return confirm('{{ __('Are you sure?') }}')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-error">
+                                                    {{ __('Delete') }}
+                                                </button>
+                                            </form>
+                                        @endcan
+                                        @if ($attendance->payroll)
+                                            <a href="{{ route('salary.payrolls.show', $attendance->payroll) }}" class="btn btn-sm btn-success">
+                                                {{ __('Payroll') }}
+                                            </a>
+                                        @else
+                                            @can('salary.payrolls.create')
+                                                <a href="{{ route('attendance.monthly-attendances.show', $attendance) }}" class="btn btn-sm btn-ghost btn-outline">
+                                                    {{ __('Create Payroll') }}
+                                                </a>
+                                            @endcan
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @empty

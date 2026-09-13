@@ -102,7 +102,7 @@
                                         <span class="badge badge-ghost badge-sm">{{ __('Auto') }}</span>
                                     @endif
                                 </td>
-                                <td class="max-w-xs">
+                                <td class="min-h-10 whitespace-nowrap md:flex-1 max-w-xs">
                                     @if ($log->monthly_attendance_id)
                                         <a href="{{ route('attendance.monthly-attendances.show', $log->monthly_attendance_id) }}"
                                             class="badge badge-info badge-sm mt-1 hover:badge-accent" title="{{ __('View Monthly Attendance') }}">
@@ -110,34 +110,36 @@
                                         </a>
                                     @endif
                                 </td>
-                                <td class="flex gap-2">
-                                    <a href="{{ route('attendance.attendance-logs.show', $log) }}" class="btn btn-sm btn-ghost">
-                                        {{ __('Show') }}
-                                    </a>
-                                    @can('attendance.attendance-logs.edit')
-                                        <a href="{{ route('attendance.attendance-logs.edit', $log) }}" class="btn btn-sm btn-info">
-                                            {{ __('Edit') }}
+                                <td>
+                                    <div class="flex items-center space-x-2">
+                                        <a href="{{ route('attendance.attendance-logs.show', $log) }}" class="btn btn-sm btn-ghost">
+                                            {{ __('Show') }}
                                         </a>
-                                    @endcan
-                                    @can('attendance.attendance-logs.edit')
-                                        <form action="{{ route('attendance.attendance-logs.recalculate', $log) }}" method="POST" class="inline-block"
-                                            onsubmit="return confirm('{{ __('Recalculate this log?') }}')">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm btn-warning">
-                                                {{ __('Recalculate') }}
-                                            </button>
-                                        </form>
-                                    @endcan
-                                    @can('attendance.attendance-logs.delete')
-                                        <form action="{{ route('attendance.attendance-logs.destroy', array_merge(['attendance_log' => $log->id], request()->query()))  }}" method="POST" class="inline-block"
-                                            onsubmit="return confirm('{{ __('Are you sure?') }}')">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-error">
-                                                {{ __('Delete') }}
-                                            </button>
-                                        </form>
-                                    @endcan
+                                        @can('attendance.attendance-logs.edit')
+                                            <a href="{{ route('attendance.attendance-logs.edit', $log) }}" class="btn btn-sm btn-info">
+                                                {{ __('Edit') }}
+                                            </a>
+                                        @endcan
+                                        @can('attendance.attendance-logs.edit')
+                                            <form action="{{ route('attendance.attendance-logs.recalculate', $log) }}" method="POST" class="inline-block"
+                                                onsubmit="return confirm('{{ __('Recalculate this log?') }}')">
+                                                @csrf
+                                                <button type="submit" class="btn btn-sm btn-warning">
+                                                    {{ __('Recalculate') }}
+                                                </button>
+                                            </form>
+                                        @endcan
+                                        @can('attendance.attendance-logs.delete')
+                                            <form action="{{ route('attendance.attendance-logs.destroy', array_merge(['attendance_log' => $log->id], request()->query()))  }}" method="POST" class="inline-block"
+                                                onsubmit="return confirm('{{ __('Are you sure?') }}')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-error">
+                                                    {{ __('Delete') }}
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    </div>
                                 </td>
                             </tr>
                         @empty
@@ -148,10 +150,15 @@
                             </tr>
                         @endforelse
                     </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="7">
+                                {!! $attendanceLogs->withQueryString()->links() !!}
+                            </td>
+                        </tr>
+                    </tfoot>
                 </table>
             </div>
-
-            {!! $attendanceLogs->withQueryString()->links() !!}
         </div>
     </div>
 </x-app-layout>

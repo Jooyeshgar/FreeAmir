@@ -2,13 +2,13 @@
     <x-show-message-bags />
 
     {{-- Page Header --}}
-    <div class="flex flex-wrap items-center justify-between gap-4 px-1 pb-5">
+    <div class="flex flex-col items-start justify-between gap-4 px-1 pb-5 md:flex-row md:items-center">
         <div class="min-w-48">
             <h1 class="text-xl font-bold text-base-content">{{ __('Documents') }}</h1>
             <p class="text-sm text-base-content/50 mt-0.5">{{ __('Manage your accounting documents') }}</p>
         </div>
 
-        <div class="flex flex-wrap items-center justify-start gap-2">
+        <div class="flex w-full flex-wrap items-center justify-start gap-2 md:w-auto">
             <a href="{{ route('documents.create') }}" class="btn btn-primary btn-sm">{{ __('Create Document') }}</a>
             @can('documents.approve')
                 <form action="{{ route('documents.approve-all') }}" method="POST" class="inline-block" id="approve-all-form">
@@ -32,7 +32,7 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body p-0">
             {{-- Card Header: title + filters --}}
-            <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-base-200">
+            <div class="flex flex-col items-stretch justify-between gap-3 border-b border-base-200 px-4 py-4 md:px-5 lg:flex-row lg:items-center">
                 <div class="flex flex-wrap items-center gap-3">
                     <h2 class="text-base font-bold text-base-content">
                         @switch($status)
@@ -59,32 +59,35 @@
                     </a>
                 </div>
 
-                <form action="{{ route('documents.index') }}" method="GET" class="flex flex-wrap items-center gap-2">
-                    <div class="relative w-32 max-w-full [&_.input]:input-sm">
+                <form action="{{ route('documents.index') }}" method="GET" class="grid grid-cols-2 items-center gap-2 md:grid-cols-4 lg:flex lg:flex-wrap">
+                    <div class="relative min-w-0 [&_.input]:input-sm lg:w-32">
                         <x-input type="text" name="number" value="{{ request('number') }}" placeholder="{{ __('Doc Number') }}" />
                     </div>
 
-                    <div class="w-36 [&_.input]:input-sm">
+                    <div class="min-w-0 [&_.input]:input-sm lg:w-36">
                         <x-date-picker name="date" placeholder="{{ __('date') }}" value="{{ request('date') }}" class="datePicker" />
                     </div>
 
-                    <div class="relative w-72 max-w-full [&_.input]:input-sm">
+                    <div class="relative col-span-2 min-w-0 [&_.input]:input-sm md:col-span-1 lg:w-72">
                         <x-input type="text" name="text" value="{{ request('text') }}" placeholder="{{ __('Search by document title or transaction description') }}" />
                     </div>
 
-                    <select name="status" class="select select-sm w-30" onchange="this.form.submit()">
+                    <select name="status" class="select select-sm w-full lg:w-30" onchange="this.form.submit()">
                         <option value="all" @selected($status === 'all')>{{ __('All Documents') }}</option>
                         <option value="approved" @selected($status === 'approved')>{{ __('Approved') }}</option>
                         <option value="unapproved" @selected($status === 'unapproved')>{{ __('Not approved') }}</option>
                     </select>
 
-                    <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
+                    <div>
+                        <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
+                    </div>
                 </form>
             </div>
 
             {{-- Table --}}
             @if ($documents->count())
-            <table class="table w-full overflow-auto">
+            <div class="overflow-x-auto lg:overflow-x-hidden">
+            <table class="table min-w-[72rem] w-full">
                 <thead>
                     <tr>
                         <th class="p-2 w-12">{{ __('Doc Number') }}</th>
@@ -140,7 +143,7 @@
                             <td class="p-2">{{ formatDate($document->approved_at) }}</td>
                             <td class="p-2">{{ $document->approver?->name }}</td>
                             <td class="p-2">
-                                <div class="flex gap-2">
+                                <div class="flex flex-nowrap gap-2">
                                     <a href="{{ route('documents.show', $document->id) }}" class="btn btn-sm btn-info btn-square" title="{{ __('View') }}">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -149,7 +152,7 @@
                                         </svg>
                                     </a>
                                     @if ($document->documentable)
-                                        <span class="tooltip"
+                                        <span class="lg:tooltip"
                                             data-tip="{{ __('Cannot edit this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
                                             <button class="btn btn-sm btn-info btn-square btn-disabled cursor-not-allowed" disabled
                                                 title="{{ __('Cannot edit this document because it is linked to another record.') }}">
@@ -169,7 +172,7 @@
                                     @endif
 
                                     @if ($document->documentable)
-                                        <span class="tooltip" data-tip="{{ __('Cannot change status of this document because it created automatically.') }}">
+                                        <span class="lg:tooltip" data-tip="{{ __('Cannot change status of this document because it created automatically.') }}">
                                             <button class="btn btn-sm btn-error btn-square btn-disabled cursor-not-allowed"
                                                 title="{{ __('Cannot change status of this document because it created automatically.') }}">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -200,7 +203,7 @@
                                     </a>
 
                                     @if ($document->documentable)
-                                        <span class="tooltip"
+                                        <span class="lg:tooltip"
                                             data-tip="{{ __('Cannot delete this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
                                             <button class="btn btn-sm btn-error btn-square btn-disabled cursor-not-allowed" disabled
                                                 title="{{ __('Cannot delete this document because it is linked to another record.') }}">
@@ -222,7 +225,7 @@
                                             </button>
                                         </form>
                                     @else
-                                        <span class="tooltip"
+                                        <span class="lg:tooltip"
                                             data-tip="{{ __('Cannot delete this document because it is approved') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
                                             <button class="btn btn-sm btn-error btn-square btn-disabled cursor-not-allowed" disabled
                                                 title="{{ __('Cannot delete this document because it is approved.') }}">
@@ -240,6 +243,7 @@
                     @endforeach
                 </tbody>
             </table>
+            </div>
             @else
                 <div class="flex flex-col items-center justify-center py-16 text-base-content/35">
                     <svg xmlns="http://www.w3.org/2000/svg" class="mb-4 h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
@@ -252,7 +256,7 @@
 
             {{-- Pagination --}}
             @if ($documents->hasPages())
-                <div class="px-5 py-4 border-t border-base-200">
+                <div class="overflow-x-auto border-t border-base-200 px-5 py-4">
                     {{ $documents->withQueryString()->links() }}
                 </div>
             @endif

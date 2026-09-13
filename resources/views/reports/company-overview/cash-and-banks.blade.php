@@ -1,8 +1,8 @@
-<article class="card border border-base-300 bg-base-100/90 shadow-sm">
-    <div class="card-body p-4">
+<article class="company-overview-chart card min-w-0 border border-base-300 bg-base-100/90 shadow-sm">
+    <div class="card-body p-3 lg:p-4">
         <div class="flex flex-wrap items-start justify-between gap-2">
             <div>
-                <h2 class="card-title text-base">{{ __('Cash and banks balances') }}</h2>
+                <h2 class="card-title text-sm leading-5 lg:text-base lg:leading-normal">{{ __('Cash and banks balances') }}</h2>
                 <p class="text-xs text-base-content/55">{{ __('Trend across the selected period') }}</p>
             </div>
 

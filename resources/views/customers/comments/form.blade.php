@@ -2,7 +2,7 @@
     $rating = old('rating', round((float) ($comment->rating ?? 0) * 2) / 2);
 @endphp
 
-<div class="grid grid-cols-2 gap-4">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     <x-input name="user_id" value="{{ Auth::id() ?? '' }}" hidden />
     <x-input name="customer_id" value="{{ $comment->customer_id ?? ($customer->id ?? '') }}" hidden />
 

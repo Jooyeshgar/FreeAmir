@@ -25,13 +25,13 @@
 
             {{-- Filter bar --}}
             <form action="{{ route('salary.payrolls.index') }}" method="GET"
-                class="mt-4 rounded-box border border-base-300 bg-base-200/40 p-4 flex flex-wrap items-end gap-3 mb-4">
+                class="mt-4 rounded-box border border-base-300 bg-base-200/40 gap-3 p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
 
-                <div class="w-60">
+                <div class="min-w-0">
                     <div class="label">
                         <span>{{ __('Employee') }}</span>
                     </div>
-                    <select name="employee_id" class="select select-sm">
+                    <select name="employee_id" class="select select-sm w-full">
                         <option value="">{{ __('All Employees') }}</option>
                         @foreach ($employees as $employee)
                             <option value="{{ $employee->id }}" {{ request('employee_id') == $employee->id ? 'selected' : '' }}>
@@ -41,11 +41,11 @@
                     </select>
                 </div>
 
-                <div class="w-30">
+                <div class="min-w-0">
                     <div class="label">
                         <span>{{ __('Month') }}</span>
                     </div>
-                    <select name="month" class="select select-sm">
+                    <select name="month" class="select select-sm w-full">
                         <option value="">{{ __('All Months') }}</option>
                         @foreach (\App\Models\MonthlyAttendance::MONTH_NAMES as $monthIndex => $monthName)
                             <option value="{{ $monthIndex }}" {{ request('month') == $monthIndex ? 'selected' : '' }}>
@@ -55,11 +55,11 @@
                     </select>
                 </div>
 
-                <div class="w-36">
+                <div class="min-w-0">
                     <div class="label">
                         <span>{{ __('Status') }}</span>
                     </div>
-                    <select name="status" class="select select-sm">
+                    <select name="status" class="select select-sm w-full">
                         <option value="">{{ __('All Statuses') }}</option>
                         @foreach (\App\Models\Payroll::statusLabels() as $status => $label)
                             <option value="{{ $status }}" {{ request('status') === $status ? 'selected' : '' }}>
@@ -69,11 +69,11 @@
                     </select>
                 </div>
 
-                <div class="w-40">
+                <div class="min-w-0">
                     <div class="label">
                         <span>{{ __('Organization Unit') }}</span>
                     </div>
-                    <select name="organization_unit_id" class="select select-sm">
+                    <select name="organization_unit_id" class="select select-sm w-full">
                         <option value="">{{ __('All Units') }}</option>
                         @foreach ($organizationUnits as $unit)
                             <option value="{{ $unit->id }}" {{ request('organization_unit_id') == $unit->id ? 'selected' : '' }}>
@@ -82,7 +82,7 @@
                         @endforeach
                     </select>
                 </div>
-                <div>
+                <div class="flex items-end md:col-span-1">
                     <button type="submit" class="btn btn-sm btn-neutral">{{ __('Filter') }}</button>
                     <a href="{{ route('salary.payrolls.index') }}" class="btn btn-ghost btn-sm">{{ __('Reset') }}</a>
                 </div>

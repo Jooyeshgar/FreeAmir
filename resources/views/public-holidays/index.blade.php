@@ -5,7 +5,7 @@
         <div class="card-body">
             <div class="flex items-center justify-between gap-3">
                 <form action="{{ route('salary.public-holidays.index') }}" method="GET" class="flex items-center gap-2">
-                    <div class="w-60 [&_.input]:input-sm">
+                    <div class="[&_.input]:input-sm">
                         <x-input type="text" name="name" value="{{ request('name') }}" placeholder="{{ __('Filter by name') }}" />
                     </div>
                     <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
@@ -20,46 +20,50 @@
                 @endcan
             </div>
 
-            <table class="table w-full mt-4 overflow-auto">
-                <thead>
-                    <tr>
-                        <th>{{ __('Date') }}</th>
-                        <th>{{ __('Name') }}</th>
-                        <th>{{ __('Action') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($publicHolidays as $publicHoliday)
+            <div class="overflow-auto">
+                <table class="table w-full mt-4">
+                    <thead>
                         <tr>
-                            <td>{{ formatDate($publicHoliday->date) }}</td>
-                            <td>{{ $publicHoliday->name }}</td>
-                            <td class="flex gap-2">
-                                @can('salary.public-holidays.edit')
-                                    <a href="{{ route('salary.public-holidays.edit', $publicHoliday) }}" class="btn btn-sm btn-info">
-                                        {{ __('Edit') }}
-                                    </a>
-                                @endcan
-                                @can('salary.public-holidays.delete')
-                                    <form action="{{ route('salary.public-holidays.destroy', $publicHoliday) }}" method="POST" class="inline-block"
-                                        onsubmit="return confirm('{{ __('Are you sure?') }}')">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-error">
-                                            {{ __('Delete') }}
-                                        </button>
-                                    </form>
-                                @endcan
-                            </td>
+                            <th>{{ __('Date') }}</th>
+                            <th>{{ __('Name') }}</th>
+                            <th>{{ __('Action') }}</th>
                         </tr>
-                    @empty
-                        <tr>
-                            <td colspan="3" class="text-center py-4 text-gray-500">
-                                {{ __('No public holidays found.') }}
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @forelse ($publicHolidays as $publicHoliday)
+                            <tr>
+                                <td>{{ formatDate($publicHoliday->date) }}</td>
+                                <td>{{ $publicHoliday->name }}</td>
+                                <td>
+                                    <div class="inline-flex gap-2">
+                                        @can('salary.public-holidays.edit')
+                                            <a href="{{ route('salary.public-holidays.edit', $publicHoliday) }}" class="btn btn-sm btn-info">
+                                                {{ __('Edit') }}
+                                            </a>
+                                        @endcan
+                                        @can('salary.public-holidays.delete')
+                                            <form action="{{ route('salary.public-holidays.destroy', $publicHoliday) }}" method="POST" class="inline-block"
+                                                onsubmit="return confirm('{{ __('Are you sure?') }}')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-error">
+                                                    {{ __('Delete') }}
+                                                </button>
+                                            </form>
+                                        @endcan
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="3" class="text-center py-4 text-gray-500">
+                                    {{ __('No public holidays found.') }}
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
 
             {!! $publicHolidays->withQueryString()->links() !!}
         </div>

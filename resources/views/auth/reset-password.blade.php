@@ -1,9 +1,9 @@
 <x-login-layout>
     @include('auth.partials.header')
 
-    <div class="login-bg bg-cover bg-center rounded-t-3xl flex-1 border-8 border-gray-200 border-opacity-85 overflow-hidden">
-        <div class="flex items-center justify-center rounded-3xl">
-            <div class="card w-96 p-7 mt-16 bg-white">
+    <div class="login-bg flex flex-1 flex-col overflow-hidden bg-cover bg-center sm:rounded-t-3xl sm:border-8 sm:border-gray-200 sm:border-opacity-85">
+        <div class="flex items-center justify-center px-3 py-6 sm:px-6 sm:py-10 md:py-14">
+            <div class="card w-full max-w-sm bg-white p-4 shadow-xl sm:p-7">
                 <form method="POST" action="{{ route('password.update') }}">
                     @csrf
                     <input type="hidden" name="token" value="{{ $token }}">

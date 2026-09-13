@@ -17,21 +17,23 @@
                     </p>
                 </div>
 
-                <form action="{{ route('invoices.dashboard') }}" method="GET" class="flex max-w-md flex-wrap items-end gap-2 xl:justify-self-end">
-                    <div class="w-36 [&_.input]:input-sm">
+                <form action="{{ route('invoices.dashboard') }}" method="GET" class="grid w-full max-w-md grid-cols-2 gap-2 sm:grid-cols-3 xl:justify-self-end">
+                    <div class="w-full [&_.input]:input-sm">
                         <x-text-input data-jdp title="{{ __('Start date') }}" input_name="start_date"
-                            placeholder="{{ __('Start date') }}" readonly
+                            placeholder="{{ __('Start date') }}" readonly label_class="text-sm"
                             input_value="{{ old('start_date') ?? convertToJalali($filters['start_date'], true) }}"
                             label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
                     </div>
-                    <div class="w-36 [&_.input]:input-sm">
+                    <div class="w-full [&_.input]:input-sm">
                         <x-text-input data-jdp title="{{ __('End date') }}" input_name="end_date"
-                            placeholder="{{ __('End date') }}" readonly
+                            placeholder="{{ __('End date') }}" readonly label_class="text-sm"
                             input_value="{{ old('end_date') ?? convertToJalali($filters['end_date'], true) }}"
                             label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
                     </div>
-                    <button type="submit" class="btn btn-sm btn-neutral">{{ __('Apply') }}</button>
-                    <a href="{{ route('invoices.dashboard') }}" class="btn btn-sm btn-ghost">{{ __('Reset') }}</a>
+                    <div class="flex items-end gap-2 sm:col-span-1">
+                        <button type="submit" class="btn btn-sm flex-1 btn-neutral sm:flex-none">{{ __('Apply') }}</button>
+                        <a href="{{ route('invoices.dashboard') }}" class="btn btn-sm flex-1 btn-ghost sm:flex-none">{{ __('Reset') }}</a>
+                    </div>
                 </form>
             </div>
 
@@ -106,16 +108,19 @@
                         <h2 class="card-title text-base">{{ __('Product sell and buy trend') }}</h2>
                         <p class="text-xs text-base-content/55">{{ __('Net invoice-item amount after returns and voids') }}</p>
                     </div>
-                    <x-charts.line-chart
-                        chart-id="productInvoiceTrendChart"
-                        class="mt-3"
-                        height-class="h-72"
-                        :labels="$productTrend['labels']"
-                        :show-legend="true"
-                        :datasets="[
-                            ['label' => __('Sell'), 'data' => $productTrend['sell'], 'borderColor' => '#10b981', 'backgroundColor' => '#10b98120'],
-                            ['label' => __('Buy'), 'data' => $productTrend['buy'], 'borderColor' => '#0ea5e9', 'backgroundColor' => '#0ea5e914'],
-                        ]" />
+                    <div class="overflow-x-auto pb-2">
+                        <x-charts.line-chart
+                            chart-id="productInvoiceTrendChart"
+                            class="mt-3"
+                            style="min-width: {{ max(640, count($productTrend['labels']) * 80) }}px"
+                            height-class="h-72"
+                            :labels="$productTrend['labels']"
+                            :show-legend="true"
+                            :datasets="[
+                                ['label' => __('Sell'), 'data' => $productTrend['sell'], 'borderColor' => '#10b981', 'backgroundColor' => '#10b98120'],
+                                ['label' => __('Buy'), 'data' => $productTrend['buy'], 'borderColor' => '#0ea5e9', 'backgroundColor' => '#0ea5e914'],
+                            ]" />
+                    </div>
                 </div>
             </article>
 
@@ -125,21 +130,24 @@
                         <h2 class="card-title text-base">{{ __('Service sell and buy trend') }}</h2>
                         <p class="text-xs text-base-content/55">{{ __('Net service invoice-item amount after returns') }}</p>
                     </div>
-                    <x-charts.line-chart
-                        chart-id="serviceInvoiceTrendChart"
-                        class="mt-3"
-                        height-class="h-72"
-                        :labels="$serviceTrend['labels']"
-                        :show-legend="true"
-                        :datasets="[
-                            ['label' => __('Sell'), 'data' => $serviceTrend['sell'], 'borderColor' => '#10b981', 'backgroundColor' => '#10b98120'],
-                            ['label' => __('Buy'), 'data' => $serviceTrend['buy'], 'borderColor' => '#0ea5e9', 'backgroundColor' => '#0ea5e914'],
-                        ]" />
+                    <div class="overflow-x-auto pb-2">
+                        <x-charts.line-chart
+                            chart-id="serviceInvoiceTrendChart"
+                            class="mt-3"
+                            style="min-width: {{ max(640, count($serviceTrend['labels']) * 80) }}px"
+                            height-class="h-72"
+                            :labels="$serviceTrend['labels']"
+                            :show-legend="true"
+                            :datasets="[
+                                ['label' => __('Sell'), 'data' => $serviceTrend['sell'], 'borderColor' => '#10b981', 'backgroundColor' => '#10b98120'],
+                                ['label' => __('Buy'), 'data' => $serviceTrend['buy'], 'borderColor' => '#0ea5e9', 'backgroundColor' => '#0ea5e914'],
+                            ]" />
+                    </div>
                 </div>
             </article>
         </section>
 
-        <section class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <section class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <article class="card border border-base-300 bg-base-100/90 shadow-sm">
                 <div class="card-body">
                     <h2 class="card-title text-base">{{ __('Product sales breakdown') }}</h2>

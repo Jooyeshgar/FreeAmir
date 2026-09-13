@@ -1,27 +1,31 @@
 <x-card class="rounded-2xl w-full" class_body="p-4">
-    <div class="flex gap-2">
+    <div class="grid grid-cols-1 gap-2 md:grid-cols-2 lg:flex lg:items-end">
         <x-text-input input_name="title" title="{{ __('document name') }}"
             input_value="{{ old('title') ?? $document->title }}" placeholder="{{ __('document name') }}"
-            label_text_class="text-gray-500" label_class="w-full" input_class="max-w-96"></x-text-input>
+            label_text_class="text-gray-500" label_class="w-full lg:flex-1" input_class="w-full lg:max-w-96"></x-text-input>
         <x-text-input input_value="{{ $document->id ?? '' }}" input_name="document_id" label_text_class="text-gray-500"
             label_class="w-full hidden"></x-text-input>
-        <div class="flex-1"></div>
+        <div class="hidden flex-1 lg:block"></div>
         <x-text-input disabled="true" input_value="{{ formatDocumentNumber($previousDocumentNumber) }}" input_name=""
             title="{{ __('previous document number') }}" placeholder="{{ __('previous document number') }}"
-            label_text_class="text-gray-500 text-nowrap"></x-text-input>
+            label_text_class="text-gray-500 text-nowrap" label_class="w-full lg:flex-1"></x-text-input>
         <x-text-input x-data="{ number: '{{ old('number') ?? ($document->exists ? formatDocumentNumber($document->number) : null) }}' }"
             title="{{ __('current document number') }}" x-bind:name="'number'"
             x-bind:value="$store.utils.localizeNumber($store.utils.formatNumber(number))"
             placeholder="{{ __('current document number') }}" label_text_class="text-gray-500 text-nowrap"
+            label_class="w-full lg:flex-1"
             x-on:input="number = $store.utils.cleanupNumber($event.target.value); $event.target.value = $store.utils.localizeNumber($store.utils.formatNumber(number));">
         </x-text-input>
         <x-text-input data-jdp title="{{ __('date') }}" input_name="date" placeholder="{{ __('date') }}"
             input_value="{{ old('date') ?? convertToJalali($document->date ?? now(), true) }}"
-            label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
+            label_text_class="text-gray-500 text-nowrap" label_class="w-full lg:flex-1"
+            input_class="datePicker w-full"></x-text-input>
     </div>
 </x-card>
 <x-card class="mt-4 rounded-2xl w-full" class_body="p-0 pt-0 mt-4" x-data="transactionForm">
-    <div class="flex overflow-x-auto overflow-y-hidden gap-2 items-center px-4">
+    <div class="overflow-x-auto overflow-y-hidden lg:overflow-visible">
+        <div class="w-max min-w-full">
+    <div class="flex w-max min-w-full gap-2 items-center px-4">
         <div class="text-sm flex-1 max-w-8 text-center text-gray-500 pt-3">
             *
         </div>
@@ -48,7 +52,7 @@
                 $store.account.clear();
             ">
             <template x-for="(transaction, index) in transactions" :key="transaction.id">
-                <div :class="{ 'active': activeTab === index }" class="transaction flex gap-2 items-center px-4 pb-3"
+                <div :class="{ 'active z-[110]': activeTab === index }" class="transaction relative flex w-max min-w-full gap-2 items-center px-4 pb-3"
                     @click.stop="
                         if (activeTab === index) {
                             activeTab = null;
@@ -116,15 +120,72 @@
                             "
                             label_class="w-full" input_class="max-w-42 border-white value codeInput" />
                     </div>
-                    <div>
-                        <x-subject-select :subjects="$subjects" data-subject-select x-bind:selected_id="selectedId" x-bind:selected_name="selectedName"
+                    <div class="flex-none min-w-80 max-w-80"
+                        @click.stop="activeTab = index; $store.account.fetch(selectedId)">
+                        <x-subject-select :subjects="$subjects" data-subject-select
+                            x-init="
+                                const root = $el;
+                                const trigger = root.querySelector(':scope > button');
+                                const panel = $refs.panel;
+                                const keepPanelOpen = event => event.stopPropagation();
+
+                                const positionPanel = () => {
+                                    if (!open) return;
+
+                                    $nextTick(() => {
+                                        const gap = 4;
+                                        const viewportPadding = 8;
+                                        const maxPanelHeight = 240;
+                                        const rect = trigger.getBoundingClientRect();
+                                        const width = Math.min(rect.width, window.innerWidth - (viewportPadding * 2));
+                                        const left = Math.min(
+                                            Math.max(rect.left, viewportPadding),
+                                            window.innerWidth - width - viewportPadding
+                                        );
+                                        const spaceBelow = window.innerHeight - rect.bottom - gap - viewportPadding;
+                                        const spaceAbove = rect.top - gap - viewportPadding;
+                                        const panelHeight = Math.min(panel.scrollHeight, maxPanelHeight);
+                                        const dropUpPanel = spaceBelow < panelHeight && spaceAbove > spaceBelow;
+                                        const availableHeight = Math.max(0, dropUpPanel ? spaceAbove : spaceBelow);
+                                        const maxHeight = Math.min(maxPanelHeight, availableHeight);
+                                        const renderedHeight = Math.min(panel.scrollHeight, maxHeight);
+                                        const top = dropUpPanel ? rect.top - gap - renderedHeight : rect.bottom + gap;
+
+                                        panel.style.inset = 'auto';
+                                        panel.style.top = `${Math.max(viewportPadding, top)}px`;
+                                        panel.style.left = `${left}px`;
+                                        panel.style.width = `${width}px`;
+                                        panel.style.maxHeight = `${maxHeight}px`;
+                                    });
+                                };
+
+                                $nextTick(() => {
+                                    panel.classList.remove('absolute', 'left-0', 'right-0', 'z-[100]', 'w-full');
+                                    panel.classList.add('fixed', 'z-[1000]');
+                                    panel.addEventListener('click', keepPanelOpen);
+                                    document.body.append(panel);
+                                    positionPanel();
+                                });
+                                $watch('open', value => value && positionPanel());
+                                $watch('flatOptions', () => positionPanel());
+                                window.addEventListener('resize', positionPanel);
+                                window.addEventListener('scroll', positionPanel, true);
+
+                                $data.destroy = () => {
+                                    window.removeEventListener('resize', positionPanel);
+                                    window.removeEventListener('scroll', positionPanel, true);
+                                    panel.removeEventListener('click', keepPanelOpen);
+                                    panel.remove();
+                                };
+                            "
+                            x-bind:selected_id="selectedId" x-bind:selected_name="selectedName"
                             x-bind:selected_code="selectedCode" placeholder="{{ __('Select a subject') }}"
                             @selected="
                                 selectedName = $event.detail.name;
                                 selectedCode = $store.subjects.normalize($event.detail.code);
                                 selectedId = $event.detail.id;
                             "
-                            class="w-80 max-w-80" />
+                            class="w-full" />
 
                         <x-input name="" x-bind:name="'transactions[' + index + '][code]'" x-bind:value="selectedCode" hidden />
                         <x-input name="" x-bind:name="'transactions[' + index + '][subject_id]'" x-bind:value="selectedId" hidden />
@@ -155,15 +216,16 @@
                 </div>
             </template>
 
-            <button class="flex justify-content gap-4 align-center w-full px-4" id="addTransaction"
+            <button class="flex justify-content gap-4 align-center w-max min-w-full px-4" id="addTransaction"
                 @click="addTransaction; activeTab = transactions.length;" type="button">
-                <div
-                    class="bg-gray-200 max-h-10 min-h-10 hover:bg-gray-300 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600 border-none btn w-full rounded-md btn-active">
-                    <span class="text-2xl">+</span>
+                <div class="bg-gray-200 max-h-10 min-h-10 text-sm hover:bg-gray-300 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600 border-none btn w-full rounded-md btn-active lg:max-h-10 lg:min-h-10 lg:text-base">
+                    <span class="text-xl lg:text-2xl">+</span>
                     {{ __('Add Transaction') }}
                 </div>
             </button>
         </div>
+    </div>
+    </div>
     </div>
     <hr style="">
     <div class="flex justify-end px-4 gap-2" x-data="{
@@ -194,15 +256,15 @@
             x-text="$store.utils.localizeNumber(creditTotal.toLocaleString())">0</span>
     </div>
 </x-card>
-<div class="mt-4 flex gap-2 justify-end">
-    <a href="{{ route('documents.index') }}" type="submit" class="btn btn-default rounded-md dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-600"> {{ __('cancel') }}
+<div class="mt-4 mb-2 flex gap-2 justify-start sm:justify-end">
+    <a href="{{ route('documents.index') }}" type="submit" class="btn btn-sm lg:btn-md btn-default rounded-md dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-600"> {{ __('cancel') }}
     </a>
     @if(! $document->exists)
-        <button id="submitFormPlus" type="submit" name="submit_action" value="create_new" class="btn btn-default rounded-md dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-600">
+        <button id="submitFormPlus" type="submit" name="submit_action" value="create_new" class="btn btn-sm lg:btn-md btn-default rounded-md dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-600">
             {{ __('save and create new document') }}
         </button>
     @endif
-    <button id="submitForm" type="submit" class="btn text-white btn-primary rounded-md">
+    <button id="submitForm" type="submit" class="btn btn-sm lg:btn-md text-white btn-primary rounded-md">
         {{ __('save and close form') }} </button>
 </div>
 

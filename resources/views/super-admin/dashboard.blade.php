@@ -2,7 +2,7 @@
     <x-show-message-bags />
 
     <section
-        class="admin-rise flex flex-col justify-between gap-5 rounded-2xl px-4 md:flex-row md:items-center md:px-6 md:py-6"
+        class="admin-rise my-2 flex flex-col justify-between gap-5 rounded-2xl px-4 py-5 md:flex-row md:items-center md:px-6 md:py-6"
         aria-labelledby="management-welcome">
         <div>
             <h2 id="management-welcome"
@@ -41,7 +41,7 @@
         </div>
     @endif
 
-    <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5" aria-label="{{ __('Platform metrics') }}">
+    <section class="grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5" aria-label="{{ __('Platform metrics') }}">
         <x-kpi-card class="admin-rise" :title="__('New registrations')" :value="$metrics['newUsers']" :unit="__('Last 30 days')" :change="$metrics['userGrowthRate']"
             icon="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7-3h6m-3-3v6" />
         <x-kpi-card class="admin-rise" :title="__('Businesses')" :value="$metrics['businesses']" :unit="__('Active: :count', ['count' => localizeNumber($metrics['activeBusinesses'])])"
@@ -54,7 +54,7 @@
             icon="M4 6l6 6 4-4 6 6M4 18h16" icon-class="bg-rose-50 text-[#f07662]" />
     </section>
 
-    <section class="mt-5 grid gap-5 xl:grid-cols-[1.65fr_1fr]">
+    <section class="mt-5 grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.65fr)_minmax(18rem,1fr)]">
         <x-management.card>
             <header class="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -72,7 +72,8 @@
                         {{ __('Compare registration, new companies, and documents') }}
                     </p>
                 </div>
-                <div class="flex rounded-xl bg-slate-100 p-1 text-[11px] dark:bg-slate-800" role="tablist">
+                <div class="scrollbar flex max-w-full overflow-x-auto rounded-xl bg-slate-100 p-1 text-[11px] dark:bg-slate-800"
+                    role="tablist">
                     @foreach ([['registrations', __('Registration')], ['companies', __('New company')], ['documents', __('Documents')]] as [$tab, $label])
                         <button type="button" role="tab" data-chart-target="management-growth-chart"
                             data-chart-tab="{{ $tab }}" data-active="{{ $loop->first ? 'true' : 'false' }}"
@@ -81,7 +82,7 @@
                     @endforeach
                 </div>
             </header>
-            <x-charts.line-chart chart-id="management-growth-chart" class="mt-7" height-class="h-64"
+            <x-charts.line-chart chart-id="management-growth-chart" class="mt-7" height-class="h-56 sm:h-64 lg:h-72"
                 :labels="$viewModel['growthLabels']" :tabs="$viewModel['growthTabs']" active-tab="registrations" />
         </x-management.card>
         <x-management.card variant="dark">
@@ -93,13 +94,13 @@
                 <span
                     class="rounded-lg bg-[#16a394]/15 px-2 py-1 text-[10px] font-bold text-emerald-300">{{ __('DAU / WAU / MAU') }}</span>
             </header>
-            <x-charts.pie-chart chart-id="management-active-users-chart" height-class="mt-5 h-64" :labels="[__('Today'), __('Earlier this week'), __('Earlier this month'), __('Inactive')]"
+            <x-charts.pie-chart chart-id="management-active-users-chart" height-class="mt-5 h-56 sm:h-64 lg:h-72" :labels="[__('Today'), __('Earlier this week'), __('Earlier this month'), __('Inactive')]"
                 :data="$viewModel['activeUserSegments']" :colors="['#16a394', '#f5b94c', '#f07662', '#33455b']" cutout="67%" :center-value="$metrics['monthlyActiveUsers']" :center-label="__('Active users')"
                 :label="__('Users')" dark />
         </x-management.card>
     </section>
 
-    <section class="mt-5 grid gap-5 xl:grid-cols-[1.4fr_1fr]">
+    <section class="mt-5 grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(18rem,1fr)]">
         <x-management.card class="overflow-hidden">
             <header class="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -177,7 +178,7 @@
         </x-management.card>
     </section>
 
-    <section class="mt-5 grid gap-5 xl:grid-cols-[1.2fr_1fr]">
+    <section class="mt-5 grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,1fr)]">
         <x-management.card>
             <header>
                 <h2 class="font-bold">{{ __('Engagement and retention') }}</h2>
@@ -202,7 +203,7 @@
                     <b
                         class="mt-1 block text-lg">{{ localizeNumber(number_format($metrics['monthlyDocuments'])) }}</b>
                 </div>
-                <div class="rounded-xl border border-rose-100 bg-rose-50/50 p-4">
+                <div class="rounded-xl border border-rose-300 bg-rose-100 p-4">
                     <span class="text-[10px] text-rose-500">{{ __('Churn rate') }}</span>
                     <b class="mt-1 block text-lg text-rose-600">{{ localizeNumber($metrics['churnRate']) }}٪</b>
                 </div>
@@ -215,7 +216,7 @@
                     {{ __('Activity trend') }} · {{ __('Activity volume over the last seven days') }}
                 </p>
             </header>
-            <div class="mt-6 grid grid-cols-7 gap-2">
+            <div class="mt-6 grid grid-cols-7 gap-1 sm:gap-2">
                 @foreach ($activityTrend as $day)
                     <div class="text-center">
                         <div class="grid h-16 place-items-center rounded-lg bg-[#16a394] text-[10px] font-bold text-white"
@@ -231,9 +232,9 @@
         </x-management.card>
     </section>
 
-    <section class="mt-5 grid gap-5 lg:grid-cols-3">
+    <section class="mt-5 grid min-w-0 gap-5 lg:grid-cols-3">
         <x-management.card class="lg:col-span-2">
-            <header class="flex items-center justify-between">
+            <header class="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <h2 class="font-bold">{{ __('Usage depth') }}</h2>
                     <p class="mt-1 text-xs text-slate-400">
@@ -319,7 +320,7 @@
         </x-management.card>
     </section>
 
-    <section class="mt-5 grid gap-5 xl:grid-cols-[1.65fr_1fr]">
+    <section class="mt-5 grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.65fr)_minmax(18rem,1fr)]">
         <x-management.card class="overflow-hidden" :padded="false">
             <header
                 class="flex items-center justify-between border-b border-slate-100 p-5 sm:px-6 dark:border-slate-800">
@@ -376,7 +377,7 @@
             </header>
             <div class="p-5">
                 @if ($roles->isNotEmpty())
-                    <x-charts.bar-chart chart-id="management-users-by-role-chart" height-class="h-64"
+                    <x-charts.bar-chart chart-id="management-users-by-role-chart" height-class="h-56 sm:h-64 lg:h-72"
                         :datas="$viewModel['roleChartData']" :label="__('Users')" background-color="#16a394" border-color="#118579"
                         datalabel-color="#16a394" />
                 @else
@@ -390,7 +391,7 @@
         </x-management.card>
     </section>
 
-    <section class="mt-5 grid gap-5 xl:grid-cols-[1.65fr_1fr]">
+    <section class="mt-5 grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.65fr)_minmax(18rem,1fr)]">
         <x-management.card class="overflow-hidden" :padded="false">
             <header
                 class="flex items-center justify-between border-b border-slate-100 p-5 sm:px-6 dark:border-slate-800">
@@ -423,7 +424,7 @@
                                 <td>{{ localizeNumber($recentUser->companies_count) }}</td>
                                 <td><span
                                         @class([
-                                            'rounded-full px-2.5 py-1 text-[10px]',
+                                            'badge badge-sm md:badge-md',
                                             'bg-emerald-50 text-emerald-600' => $recentUser->hasVerifiedEmail(),
                                             'bg-amber-50 text-amber-600' => !$recentUser->hasVerifiedEmail(),
                                         ])>{{ $recentUser->hasVerifiedEmail() ? __('Verified') : __('Pending') }}</span>
@@ -433,7 +434,7 @@
                                         @unless ($recentUser->hasVerifiedEmail())
                                             <form action="{{ route('users.verify', $recentUser) }}" method="post">
                                                 @csrf
-                                                <button class="text-[10px] text-emerald-600">{{ __('Verify') }}</button>
+                                                <button class="btn btn-sm md:btn-sm text-emerald-600">{{ __('Verify') }}</button>
                                             </form>
                                         @endunless
                                         @if (auth()->user()->canImpersonateUser($recentUser))
@@ -441,16 +442,16 @@
                                                 method="post">
                                                 @csrf
                                                 <button
-                                                    class="text-[10px] text-violet-600">{{ __('Impersonate') }}</button>
+                                                    class="btn btn-sm md:btn-sm whitespace-nowrap text-violet-600">{{ __('Impersonate') }}</button>
                                             </form>
                                         @else
-                                            <span class="text-[10px] text-slate-300"
+                                            <span class="btn btn-sm md:btn-sm whitespace-nowrap text-slate-300"
                                                 title="{{ (int) $recentUser->companies_count === 0 ? __('User has no company') : __('Impersonation is not available for this user.') }}">
                                                 {{ (int) $recentUser->companies_count === 0 ? __('User has no company') : __('Impersonate') }}
                                             </span>
                                         @endif
                                         <a href="{{ route('users.edit', $recentUser) }}"
-                                            class="text-[10px] text-[#16a394]">{{ __('Edit') }}</a>
+                                            class="btn btn-sm md:btn-sm text-[#16a394]">{{ __('Edit') }}</a>
                                     </div>
                                 </td>
                             </tr>

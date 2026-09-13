@@ -102,7 +102,7 @@
                                 <td>
                                     @if ($log->monthly_attendance_id)
                                         <a href="{{ route('employee-portal.monthly-attendances.show', $log->monthly_attendance_id) }}"
-                                            class="badge badge-info badge-sm hover:badge-accent" title="{{ __('View Monthly Attendance') }}">
+                                            class="badge badge-info badge-sm whitespace-nowrap hover:badge-accent" title="{{ __('View Monthly Attendance') }}">
                                             {{ __('Monthly Attendance') }}
                                         </a>
                                     @else

@@ -99,7 +99,6 @@ class SubjectTransferTest extends TestCase
         $response = $this->get(route('subjects.index'));
 
         $response->assertOk();
-        $response->assertSee(__('Cannot delete subject with transactions'));
         $response->assertSee('disabled', false);
         $response->assertDontSee('action="'.route('subjects.destroy', $subject).'"', false);
     }

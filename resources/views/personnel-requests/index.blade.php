@@ -1,12 +1,12 @@
 <x-app-layout :title="__('Personnel Requests')">
     <div class="card bg-base-100 shadow-xl">
-        <div class="card-body">
+        <div class="card-body p-4 sm:p-6">
 
             {{-- Tabs --}}
             <div role="tablist" class="flex justify-around tabs tabs-lifted tabs-lg mb-4">
 
                 <a role="tab" href="{{ route('hr.personnel-requests.index', array_merge(request()->except('tab', 'page'), ['tab' => 'leaves'])) }}"
-                    class="tab {{ $tab === 'leaves' ? 'tab-active' : '' }}">
+                    class="tab min-h-10 whitespace-nowrap md:flex-1 {{ $tab === 'leaves' ? 'tab-active' : '' }}">
                     {{ __('Leaves') }}
                     @if ($pendingCounts['leaves'] > 0)
                         <span class="badge badge-warning badge-sm ms-1">{{ $pendingCounts['leaves'] }}</span>
@@ -14,7 +14,7 @@
                 </a>
 
                 <a role="tab" href="{{ route('hr.personnel-requests.index', array_merge(request()->except('tab', 'page'), ['tab' => 'missions'])) }}"
-                    class="tab {{ $tab === 'missions' ? 'tab-active' : '' }}">
+                    class="tab min-h-10 whitespace-nowrap md:flex-1 {{ $tab === 'missions' ? 'tab-active' : '' }}">
                     {{ __('Missions') }}
                     @if ($pendingCounts['missions'] > 0)
                         <span class="badge badge-warning badge-sm ms-1">{{ $pendingCounts['missions'] }}</span>
@@ -22,7 +22,7 @@
                 </a>
 
                 <a role="tab" href="{{ route('hr.personnel-requests.index', array_merge(request()->except('tab', 'page'), ['tab' => 'work_orders'])) }}"
-                    class="tab {{ $tab === 'work_orders' ? 'tab-active' : '' }}">
+                    class="tab min-h-10 whitespace-nowrap md:flex-1 {{ $tab === 'work_orders' ? 'tab-active' : '' }}">
                     {{ __('Work Orders') }}
                     @if ($pendingCounts['work_orders'] > 0)
                         <span class="badge badge-warning badge-sm ms-1">{{ $pendingCounts['work_orders'] }}</span>
@@ -30,7 +30,7 @@
                 </a>
 
                 <a role="tab" href="{{ route('hr.personnel-requests.index', array_merge(request()->except('tab', 'page'), ['tab' => 'other'])) }}"
-                    class="tab {{ $tab === 'other' ? 'tab-active' : '' }}">
+                    class="tab min-h-10 whitespace-nowrap md:flex-1 {{ $tab === 'other' ? 'tab-active' : '' }}">
                     {{ __('Other') }}
                     @if ($pendingCounts['other'] > 0)
                         <span class="badge badge-warning badge-sm ms-1">{{ $pendingCounts['other'] }}</span>
@@ -40,11 +40,11 @@
             </div>
 
             {{-- Filters --}}
-            <div class="flex flex-wrap items-end justify-between gap-3">
-                <form action="{{ route('hr.personnel-requests.index') }}" method="GET" class="flex gap-2 w-1/2">
+            <div class="flex flex-col items-stretch justify-between gap-3 md:flex-row md:items-end">
+                <form action="{{ route('hr.personnel-requests.index') }}" method="GET" class="grid w-full grid-cols-2 gap-2 md:w-auto md:grid-cols-[minmax(12rem,15rem)_minmax(8rem,10rem)_auto]">
                     <x-input name="tab" value="{{ $tab }}" hidden />
 
-                    <select name="employee_id" class="select select-sm w-60">
+                    <select name="employee_id" class="select select-sm col-span-2 w-full md:col-span-1">
                         <option value="">{{ __('All Employees') }}</option>
                         @foreach ($employees as $employee)
                             <option value="{{ $employee->id }}" {{ request('employee_id') == $employee->id ? 'selected' : '' }}>
@@ -53,7 +53,7 @@
                         @endforeach
                     </select>
 
-                    <select name="status" class="select select-sm w-30">
+                    <select name="status" class="select select-sm w-full">
                         <option value="">{{ __('All Statuses') }}</option>
                         <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>
                             {{ __('Pending') }}
@@ -66,11 +66,11 @@
                         </option>
                     </select>
 
-                    <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
+                    <button type="submit" class="btn btn-sm btn-neutral w-full md:w-auto">{{ __('Search') }}</button>
                 </form>
 
                 @can('hr.personnel-requests.create')
-                    <a href="{{ route('hr.personnel-requests.create', ['tab' => $tab]) }}" class="btn btn-primary btn-circle" title="{{ __('Create Personnel Request') }}">
+                    <a href="{{ route('hr.personnel-requests.create', ['tab' => $tab]) }}" class="btn btn-primary btn-circle self-end" title="{{ __('Create Personnel Request') }}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                         </svg>
@@ -80,7 +80,7 @@
 
             {{-- Table --}}
             <div class="overflow-x-auto mt-4">
-                <table class="table w-full">
+                <table class="table min-w-[64rem] w-full">
                     <thead>
                         <tr>
                             <th>{{ __('Employee') }}</th>
@@ -95,14 +95,14 @@
                     <tbody>
                         @forelse ($personnelRequests as $personnelRequest)
                             <tr class="{{ $personnelRequest->status?->isPending() ? 'bg-warning/10' : '' }}">
-                                <td>
+                                <td class="whitespace-nowrap">
                                     {{ $personnelRequest->employee?->first_name }}
                                     {{ $personnelRequest->employee?->last_name }}
                                 </td>
                                 <td>{{ $personnelRequest->request_type->label() }}</td>
                                 <td dir="ltr">{{ formatDateTime($personnelRequest->start_date) }}</td>
                                 <td dir="ltr">{{ formatDateTime($personnelRequest->end_date) }}</td>
-                                <td>
+                                <td class="whitespace-nowrap">
                                     @if ($personnelRequest->start_date && $personnelRequest->end_date)
                                         @php
                                             $totalMinutes = $personnelRequest->start_date->diffInMinutes($personnelRequest->end_date);
@@ -116,15 +116,16 @@
                                 </td>
                                 <td>
                                     @if ($personnelRequest->status?->isPending())
-                                        <span class="badge badge-warning">{{ __('Pending') }}</span>
+                                        <span class="badge badge-warning whitespace-nowrap">{{ __('Pending') }}</span>
                                     @elseif ($personnelRequest->status?->isApproved())
-                                        <span class="badge badge-success">{{ __('Approved') }}</span>
+                                        <span class="badge badge-success whitespace-nowrap">{{ __('Approved') }}</span>
                                     @else
-                                        <span class="badge badge-error">{{ __('Rejected') }}</span>
+                                        <span class="badge badge-error whitespace-nowrap">{{ __('Rejected') }}</span>
                                     @endif
                                     {{ $personnelRequest->approvedBy ? __('by :name', ['name' => $personnelRequest->approvedBy->name]) : '' }}
                                 </td>
-                                <td class="flex gap-2">
+                                <td class="whitespace-nowrap">
+                                    <div class="flex flex-nowrap items-center gap-2">
                                     @can('hr.personnel-requests.approve')
                                         @if ($personnelRequest->status?->isPending() || $personnelRequest->status?->isRejected())
                                             <form action="{{ route('hr.personnel-requests.approve', $personnelRequest) }}" method="POST" class="inline-block mb-0">
@@ -168,6 +169,7 @@
                                     @else
                                         <button type="submit" class="btn btn-sm btn-disabled">{{ __('Delete') }}</button>
                                     @endif
+                                    </div>
                                 </td>
                             </tr>
                         @empty

@@ -1,4 +1,4 @@
-<fieldset class="grid grid-cols-2 gap-6 border p-5 my-3">
+<fieldset class="grid grid-cols-1 sm:grid-cols-2 gap-6 border p-5 my-3">
     <legend> {{ __('Bank Account') }} </legend>
     <div class="col-span-2 md:col-span-1">
         <x-input name="name" id="name" title="{{ __('Name') }}" :value="old('name', $bankAccount->name ?? '')" placeholder="{{ __('Please enter the name') }}" />
@@ -38,7 +38,7 @@
     </div>
 </fieldset>
 
-<fieldset class="grid grid-cols-2 gap-6 border p-5">
+<fieldset class="grid grid-cols-1 sm:grid-cols-2 gap-6 border p-5">
     <legend> {{ __('Bank Info') }} </legend>
     <div class="col-span-2 md:col-span-1">
         @php

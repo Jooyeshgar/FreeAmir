@@ -1,7 +1,7 @@
 <x-app-layout :title="__('Moadian Histories')">
     <div class="card bg-base-100">
         <div class="card-body">
-            <h2 class="card-title">
+            <h2 class="card-title flex-wrap">
                 @if(isset($invoice))
                     {{ __('Moadian Histories') }}
                     <a href="{{ route('invoices.show', $invoice) }}" class="link-hover">
@@ -17,32 +17,29 @@
                 <form method="GET" action="{{ route('invoices.moadian-histories.index') }}" class="flex flex-wrap items-end gap-4">
                     <div>
                         <label for="status" class="label text-sm">{{ __('Status') }}</label>
-                        <select name="status" id="status" class="select w-full">
+                        <select name="status" id="status" class="select select-sm w-full">
                             <option value="">{{ __('All') }}</option>
                             <option value="SUCCESS" {{ request('status') == 'SUCCESS' ? 'selected' : '' }}>{{ __('SUCCESS') }}</option>
                             <option value="FAILED" {{ request('status') == 'FAILED' ? 'selected' : '' }}>{{ __('FAILED') }}</option>
                         </select>
                     </div>
 
-                    <div>
-                        <label for="invoice_number" class="label text-sm">{{ __('Invoice Number') }}</label>
-                        <x-input type="text" name="invoice_number" id="invoice_number" value="{{ request('invoice_number') }}" placeholder="{{ __('Invoice Number') }}" />
-                    </div>
+                    <x-text-input input_name="invoice_number" id_input="invoice_number" title="{{ __('Invoice Number') }}" input_class="input-sm" input_value="{{ request('invoice_number') }}" placeholder="{{ __('Invoice Number') }}" label_text_class="text-gray-500 text-nowrap" />
 
-                    <div>
+                    <div class="[&_.input]:input-sm">
                         <label for="date" class="label text-sm">{{ __('Date') }}</label>
                         <x-date-picker name="date" id="date" value="{{ request('date') }}" class="mt-1 block w-full" placeholder="{{ __('Date') }}" />
                     </div>
 
-                    <div class="flex space-x-2">
-                        <button type="submit" class="btn btn-primary">{{ __('Filter') }}</button>
-                        <a href="{{ route('invoices.moadian-histories.index') }}" class="btn">{{ __('Clear') }}</a>
+                    <div class="flex flex-nowrap gap-2">
+                        <button type="submit" class="btn btn-sm btn-primary">{{ __('Filter') }}</button>
+                        <a href="{{ route('invoices.moadian-histories.index') }}" class="btn btn-sm">{{ __('Clear') }}</a>
                     </div>
                 </form>
             </div>
 
-            <div>
-                <table class="w-full divide-y">
+            <div class="overflow-x-auto">
+                <table class="min-w-[48rem] w-full divide-y">
                     <thead>
                         <tr>
                             @if(!isset($invoice))
@@ -68,7 +65,7 @@
                                 </td>
                                 @endif
                                 <td>
-                                    <span class="
+                                    <span class="whitespace-nowrap
                                         {{ $status === 'SUCCESS' ? 'bg-green-100 text-green-500' : ($status === 'FAILED' ? 'bg-red-100 text-red-500' : 'bg-yellow-100 text-yellow-500') }}">
                                         {{ __($status) }}
                                     </span>
