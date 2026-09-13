@@ -8,6 +8,7 @@ use App\Models\Document;
 use App\Models\DocumentFile;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Services\CompanyOverviewService;
 use App\Services\FiscalYearService;
 use Cookie;
 use Database\Seeders\BankSeeder;
@@ -106,6 +107,18 @@ class CompanyController extends Controller
         }
 
         return view('auth.create-company');
+    }
+
+    /**
+     * Display the grouped management overview for a business.
+     */
+    public function show(Request $request, Company $company, CompanyOverviewService $overviewService): View
+    {
+        abort_unless($request->user()->can('access-super-admin-panel'), 403);
+
+        $request->session()->put('interface_mode', 'management');
+
+        return view('companies.show', $overviewService->build($company));
     }
 
     public function storeCompanyForRegisteredUser(Request $request): RedirectResponse

@@ -266,7 +266,7 @@
                     <p class="mb-3 text-[10px] font-bold text-slate-400">{{ __('Highest usage') }}</p>
                     @forelse ($topUsageCompanies as $company)
                         <div class="mb-3 flex items-center gap-3 text-xs">
-                            <span class="w-24 truncate" title="{{ $company['name'] }}">{{ $company['name'] }}</span>
+                            <a href="{{ route('companies.show', $company['id']) }}" class="w-24 truncate transition hover:text-[#16a394] hover:underline" title="{{ $company['name'] }}">{{ $company['name'] }}</a>
                             <div class="h-2 flex-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
                                 <div class="h-full rounded-full bg-[#16a394]"
                                     style="width: {{ $company['percentage'] }}%">
@@ -286,8 +286,8 @@
                     @forelse ($fallingUsageCompanies as $company)
                         <div
                             class="mb-3 flex items-center justify-between rounded-lg bg-rose-50/60 px-3 py-2 text-xs dark:bg-rose-950/20">
-                            <span class="min-w-0 truncate"
-                                title="{{ $company['name'] }}">{{ $company['name'] }}</span><b
+                            <a href="{{ route('companies.show', $company['id']) }}" class="min-w-0 truncate transition hover:text-rose-700 hover:underline dark:hover:text-rose-300"
+                                title="{{ $company['name'] }}">{{ $company['name'] }}</a><b
                                 class="ms-3 shrink-0 text-rose-600 dark:text-rose-400">−{{ localizeNumber($company['drop']) }}٪</b>
                         </div>
                     @empty
@@ -345,7 +345,7 @@
                     <tbody>
                         @forelse ($recentCompanies as $company)
                             <tr>
-                                <td class="font-bold">{{ $company->name }}</td>
+                                <td><a href="{{ route('companies.show', $company) }}" class="font-bold transition hover:text-[#16a394] hover:underline">{{ $company->name }}</a></td>
                                 <td>{{ localizeNumber($company->fiscal_year) }}</td>
                                 <td>{{ localizeNumber($company->users_count) }}</td>
                                 <td><span

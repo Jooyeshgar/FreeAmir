@@ -214,6 +214,7 @@ class ActivityLogController extends Controller
             'userName' => $activity->user?->name ?? __('System'),
             'userUrl' => $activity->user ? route('users.show', $activity->user) : null,
             'companyLabel' => $company ? $company->name.' - '.localizeNumber($company->fiscal_year) : null,
+            'companyUrl' => $company ? route('companies.show', $company) : null,
             'title' => $isRequest ? ($route ?: $activity->description) : $modelTitle,
             'titleDetail' => $isRequest ? null : $details->get('model_label', $hasNumberColumn ? null : '#'.$activity->model_id),
             'requestMethod' => $isRequest

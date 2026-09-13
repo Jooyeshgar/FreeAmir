@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Enums\PersonnelRequestStatus;
+use App\Models\Company;
+use App\Models\Document;
 use App\Models\Employee;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
@@ -21,6 +23,55 @@ use Illuminate\Support\Collection;
 class CompanyOverviewService
 {
     public function __construct(private readonly SubjectService $subjectService) {}
+
+    /**
+     * Build a business-level overview across every fiscal-year record with the same name.
+     *
+     * @return array<string, mixed>
+     */
+    public function build(Company $company): array
+    {
+        $fiscalYears = Company::query()
+            ->where('name', $company->name)
+            ->select('companies.*')
+            ->selectSub(
+                Document::withoutGlobalScopes()
+                    ->selectRaw('COUNT(*)')
+                    ->whereColumn('documents.company_id', 'companies.id'),
+                'documents_count'
+            )
+            ->selectSub(
+                Invoice::withoutGlobalScopes()
+                    ->selectRaw('COUNT(*)')
+                    ->whereColumn('invoices.company_id', 'companies.id'),
+                'invoices_count'
+            )
+            ->withCount('users')
+            ->orderByDesc('fiscal_year')
+            ->orderByDesc('id')
+            ->get();
+
+        $companyIds = $fiscalYears->pluck('id');
+        $users = User::query()
+            ->whereHas('companies', fn ($query) => $query->whereIn('companies.id', $companyIds))
+            ->with('roles:id,name')
+            ->orderBy('name')
+            ->orderBy('id')
+            ->get();
+
+        return [
+            'business' => $fiscalYears->firstOrFail(),
+            'fiscalYears' => $fiscalYears,
+            'users' => $users,
+            'metrics' => [
+                'fiscalYears' => $fiscalYears->count(),
+                'openFiscalYears' => $fiscalYears->whereNull('closed_at')->count(),
+                'users' => $users->count(),
+                'documents' => (int) $fiscalYears->sum('documents_count'),
+                'invoices' => (int) $fiscalYears->sum('invoices_count'),
+            ],
+        ];
+    }
 
     /**
      * Total approved or settled purchases for the active company and fiscal year.

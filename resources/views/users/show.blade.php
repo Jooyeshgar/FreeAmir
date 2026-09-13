@@ -135,7 +135,7 @@
                         @forelse ($user->companies as $company)
                             <tr class="border-slate-200 align-top transition-colors odd:bg-white even:bg-slate-50/70 hover:bg-indigo-50/70 dark:border-slate-800 dark:odd:bg-slate-900 dark:even:bg-slate-950/40 dark:hover:bg-indigo-950/25">
                                 <td class="min-w-52">
-                                    <p class="font-medium text-slate-900 dark:text-slate-100">{{ $company->name }}</p>
+                                    <a href="{{ route('companies.show', $company) }}" class="font-medium text-slate-900 transition hover:text-indigo-700 hover:underline dark:text-slate-100 dark:hover:text-indigo-300">{{ $company->name }}</a>
                                     <p class="mt-1 max-w-56 truncate text-xs text-slate-500">{{ $company->address ? localizeNumber($company->address) : __('No address') }}</p>
                                 </td>
                                 <td class="whitespace-nowrap font-medium">{{ localizeNumber($company->fiscal_year) }}</td>
