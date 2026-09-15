@@ -15,8 +15,9 @@
 4. [بهای تمام‌شده کالا و روش محاسبه در امیر](inventory-costing.md)
 5. [پیش‌بینی ماهانه درآمد و هزینه](monthly-income-expense-forecasting.md)
 6. [راهنمای حضور و غیاب](attendance/README.md)
-7. [راهنمای حقوق و دستمزد](salary/README.md)
-8. [برگشت از فروش و برگشت از خرید](../return-sell-return-buy.md)
+7. [راهنمای درخواستهای پرسنلی](personnel-requests.md)
+8. [راهنمای حقوق و دستمزد](salary/README.md)
+9. [برگشت از فروش و برگشت از خرید](../return-sell-return-buy.md)
 
 ## عملیات برنامه
 
@@ -24,6 +25,7 @@
 |---|---|
 | [getting-started-fiscal-year.md](getting-started-fiscal-year.md) | ورود و ایجاد اولین شرکت، انتخاب زمینه فعال، میز کار، ایجاد سال و همیار اختتامیه |
 | [attendance/README.md](attendance/README.md) | شیفت کاری، لاگ‌های حضور و غیاب، ورود اطلاعات، کارکرد ماهانه و تولید حقوق |
+| [personnel-requests.md](personnel-requests.md) | ثبت مرخصی، مأموریت و کارکرد در پنل کارمند و بررسی در منابع انسانی |
 | [salary/README.md](salary/README.md) | جدول مالیات، محل کار، عوامل حقوقی، احکام حقوقی و فیش حقوقی |
 
 ## مفاهیم حسابداری
