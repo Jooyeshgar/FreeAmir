@@ -3,10 +3,15 @@
 
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
+            <div class="flex items-center gap-2">
+                <h1 class="text-xl font-bold text-base-content">{{ __('Monthly Attendances') }}</h1>
+                <x-user-guide-link source="user/attendance/attendance-log-calculation.md" />
+            </div>
+
             {{-- Filter bar --}}
             <form action="{{ route('attendance.monthly-attendances.index') }}" method="GET">
                 <div class="flex flex-wrap items-end gap-3 mb-2 w-full">
-                    <div class="sm:w-full">
+                    <div class="sm:w-full md:w-36">
                         <span class="label">{{ __('Employee') }}</span>
                         <select name="employee_id" class="select  select-sm">
                             <option value="">{{ __('All Employees') }}</option>
@@ -18,7 +23,7 @@
                         </select>
                     </div>
 
-                    <div class="sm:w-full">
+                    <div class="sm:w-full md:w-36">
                         <span class="label">{{ __('Month') }}</span>
                         <select name="month" class="select  select-sm">
                             <option value="">{{ __('All Months') }}</option>

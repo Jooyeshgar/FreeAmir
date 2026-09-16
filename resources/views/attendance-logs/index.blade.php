@@ -3,6 +3,10 @@
 
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
+            <div class="flex items-center gap-2">
+                <h1 class="text-xl font-bold text-base-content">{{ __('Attendance Logs') }}</h1>
+                <x-user-guide-link source="user/attendance/README.md" />
+            </div>
 
             {{-- Filter bar --}}
             <form action="{{ route('attendance.attendance-logs.index') }}" method="GET" class="flex flex-wrap items-end gap-3 mb-2">

@@ -1,6 +1,10 @@
 <x-app-layout :title="__('Personnel Requests')">
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body p-4 sm:p-6">
+            <div class="flex items-center gap-2">
+                <h1 class="text-xl font-bold text-base-content">{{ __('Personnel Requests') }}</h1>
+                <x-user-guide-link source="hr/personnel-requests.md" />
+            </div>
 
             {{-- Tabs --}}
             <div role="tablist" class="flex justify-around tabs tabs-lifted tabs-lg mb-4">
