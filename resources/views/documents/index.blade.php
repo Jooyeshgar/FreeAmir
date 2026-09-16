@@ -4,7 +4,10 @@
     {{-- Page Header --}}
     <div class="flex flex-col items-start justify-between gap-4 px-1 pb-5 md:flex-row md:items-center">
         <div class="min-w-48">
-            <h1 class="text-xl font-bold text-base-content">{{ __('Documents') }}</h1>
+            <div class="flex items-center gap-2">
+                <h1 class="text-xl font-bold text-base-content">{{ __('Documents') }}</h1>
+                <x-user-guide-link source="user/accounting-documents.md" />
+            </div>
             <p class="text-sm text-base-content/50 mt-0.5">{{ __('Manage your accounting documents') }}</p>
         </div>
 
