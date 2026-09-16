@@ -97,6 +97,7 @@ sail npm run dev
 | فهرست مستندات | [docs/README.md](docs/README.md) | [docs/README.en.md](docs/README.en.md) |
 | راهنمای نصب | [docs/INSTALLATION.md](docs/INSTALLATION.md) | [docs/INSTALLATION.en.md](docs/INSTALLATION.en.md) |
 | راهنمای استفاده‌کنندگان | [docs/user/README.md](docs/user/README.md) | [docs/user/README.en.md](docs/user/README.en.md) |
+| مدیریت منابع انسانی | [docs/hr/README.md](docs/hr/README.md) | [docs/hr/README.en.md](docs/hr/README.en.md) |
 | مفاهیم حسابداری | [docs/accounting/README.md](docs/accounting/README.md) | [docs/accounting/README.en.md](docs/accounting/README.en.md) |
 | راهنمای برنامه‌نویس | [docs/developer/README.md](docs/developer/README.md) | [docs/developer/README.en.md](docs/developer/README.en.md) |
 

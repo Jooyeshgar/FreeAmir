@@ -20,6 +20,7 @@ This directory is the Markdown documentation hub for Amir. To keep languages ali
 | Path | Audience | Description |
 |---|---|---|
 | [Ordinary user guide](user/README.en.md) | Non-developer users | Day-to-day operations, attendance, salary, inventory, and fiscal years |
+| [HR management](hr/README.en.md) | HR and administrative staff | Employees, organization units, organization chart, and personnel requests |
 | [Accounting concepts](accounting/README.en.md) | Users and developers | Accounting concepts, COGS, purchase/sales returns, and fiscal years |
 | [Programmer guide](developer/README.en.md) | Developers | Architecture, database, testing, and scripts |
 | [Installation guide](INSTALLATION.en.md) | System admins and developers | Installation with Docker Compose, single-command Docker, or standard setup |
@@ -37,6 +38,11 @@ This directory is the Markdown documentation hub for Amir. To keep languages ali
 | [developer/README.md](developer/README.md) / [developer/README.en.md](developer/README.en.md) | Programmer | Secondary index for technical documentation |
 | [user/attendance/README.md](user/attendance/README.md) / [user/attendance/README.en.md](user/attendance/README.en.md) | Attendance | Work shifts, logs, imports, and monthly attendance |
 | [user/salary/README.md](user/salary/README.md) / [user/salary/README.en.md](user/salary/README.en.md) | Salary and payroll | Payroll elements, salary decrees, and payrolls |
+| [hr/README.md](hr/README.md) / [hr/README.en.md](hr/README.en.md) | HR | HR documentation index |
+| [hr/employees.md](hr/employees.md) | HR | Employee records, search, export, and organizational assignments |
+| [hr/organization-units.md](hr/organization-units.md) | HR | Organization unit setup and maintenance |
+| [hr/organization-chart.md](hr/organization-chart.md) | HR | Positions and reporting relationships |
+| [hr/personnel-requests.md](hr/personnel-requests.md) | HR | Manager-side personnel request entry and decisions |
 | [user/inventory-costing.md](user/inventory-costing.md) / [user/inventory-costing.en.md](user/inventory-costing.en.md) | Inventory accounting | COGS, costing methods, and Amir's selected method |
 | [user/monthly-income-expense-forecasting.md](user/monthly-income-expense-forecasting.md) / [user/monthly-income-expense-forecasting.en.md](user/monthly-income-expense-forecasting.en.md) | Budgeting | Monthly forecasting and actual-value of income and expense |
 | [fiscal-year.md](fiscal-year.md) / [fiscal-year.en.md](fiscal-year.en.md) | Fiscal year | Fiscal-year concept and creation guide |

@@ -11,14 +11,16 @@ This index is for users who want to understand Amir's accounting concepts and pr
 2. [What a fiscal year is and how to create one](../fiscal-year.en.md)
 3. [Inventory costing and COGS in Amir](inventory-costing.en.md)
 4. [Monthly income and expense forecasting](monthly-income-expense-forecasting.en.md)
-5. [Attendance guide](attendance/README.en.md)
-6. [Salary and payroll guide](salary/README.en.md)
-7. [Sales returns and purchase returns](../return-sell-return-buy.md)
+5. [HR management](../hr/README.en.md)
+6. [Attendance guide](attendance/README.en.md)
+7. [Salary and payroll guide](salary/README.en.md)
+8. [Sales returns and purchase returns](../return-sell-return-buy.md)
 
 ## Product Operations
 
 | File | Topic |
 |---|---|
+| [../hr/README.en.md](../hr/README.en.md) | Employees, organization units, organization chart, and personnel requests |
 | [attendance/README.en.md](attendance/README.en.md) | Work shifts, attendance logs, imports, monthly attendance, and payroll creation |
 | [salary/README.en.md](salary/README.en.md) | Tax slabs, work sites, payroll elements, salary decrees, and payrolls |
 
