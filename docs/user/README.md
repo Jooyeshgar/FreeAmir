@@ -33,7 +33,7 @@
 | [invoice-payments.md](invoice-payments.md) | پرداخت نقدی، بانکی، چکی و سند پرداخت |
 | [ancillary-cost.md](ancillary-cost.md) | هزینهٔ جانبی خرید و اثر آن بر بهای موجودی |
 | [fiscal-year-operations.md](fiscal-year-operations.md) | ایجاد سال بعد، انتقال، پشتیبان‌گیری و بستن سال مالی |
-| [getting-started-fiscal-year.md](getting-started-fiscal-year.md) | ورود و ایجاد نخستین شرکت، انتخاب زمینهٔ فعال، میز کار، ایجاد سال و همیار اختتامیه |
+| [getting-started-fiscal-year.md](getting-started-fiscal-year.md) | سال مالی، ایجاد سال مالی، انتخاب سال مالی فعال، همیار اختتامیه |
 | [employee-portal.md](employee-portal.md) | ورود کارمند، مشاهده اطلاعات شخصی، حضور، کارکرد و فیش و ثبت درخواست پرسنلی |
 | [attendance/README.md](attendance/README.md) | شیفت کاری، لاگ‌های حضور و غیاب، ورود اطلاعات، کارکرد ماهانه و تولید حقوق |
 | [personnel-requests.md](personnel-requests.md) | ثبت مرخصی، مأموریت و کارکرد در پنل کارمند و بررسی در منابع انسانی |
