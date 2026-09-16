@@ -15,10 +15,11 @@
 4. [بهای تمام‌شده کالا و روش محاسبه در امیر](inventory-costing.md)
 5. [پیش‌بینی ماهانه درآمد و هزینه](monthly-income-expense-forecasting.md)
 6. [راهنمای پورتال کارکنان](employee-portal.md)
-7. [راهنمای حضور و غیاب](attendance/README.md)
-8. [راهنمای درخواستهای پرسنلی](personnel-requests.md)
-9. [راهنمای حقوق و دستمزد](salary/README.md)
-10. [برگشت از فروش و برگشت از خرید](../return-sell-return-buy.md)
+7. [راهنمای مدیریت منابع انسانی](../hr/README.md)
+8. [راهنمای حضور و غیاب](attendance/README.md)
+9. [راهنمای درخواستهای پرسنلی](personnel-requests.md)
+10. [راهنمای حقوق و دستمزد](salary/README.md)
+11. [برگشت از فروش و برگشت از خرید](../return-sell-return-buy.md)
 
 ## عملیات برنامه
 
@@ -36,6 +37,7 @@
 | [fiscal-year-operations.md](fiscal-year-operations.md) | ایجاد سال بعد، انتقال، پشتیبان‌گیری و بستن سال مالی |
 | [getting-started-fiscal-year.md](getting-started-fiscal-year.md) | سال مالی، ایجاد سال مالی، انتخاب سال مالی فعال، همیار اختتامیه |
 | [employee-portal.md](employee-portal.md) | ورود کارمند، مشاهده اطلاعات شخصی، حضور، کارکرد و فیش و ثبت درخواست پرسنلی |
+| [../hr/README.md](../hr/README.md) | مدیریت پرونده کارکنان، واحدها، چارت سازمانی و بررسی درخواست‌های پرسنلی |
 | [attendance/README.md](attendance/README.md) | شیفت کاری، لاگ‌های حضور و غیاب، ورود اطلاعات، کارکرد ماهانه و تولید حقوق |
 | [personnel-requests.md](personnel-requests.md) | ثبت مرخصی، مأموریت و کارکرد در پنل کارمند و بررسی در منابع انسانی |
 | [salary/README.md](salary/README.md) | جدول مالیات، محل کار، عوامل حقوقی، احکام حقوقی و فیش حقوقی |

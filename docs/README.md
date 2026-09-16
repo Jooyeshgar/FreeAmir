@@ -22,6 +22,7 @@
 | مسیر | مخاطب | توضیح |
 |---|---|---|
 | [راهنمای استفاده کنندگان](user/README.md) | کاربران غیرتوسعه‌دهنده | عملیات روزمره، حضور و غیاب، حقوق و دستمزد، موجودی کالا و سال مالی |
+| [مدیریت منابع انسانی](hr/README.md) | مدیر منابع انسانی و مسئول اداری | کارکنان، واحدهای سازمانی، چارت و درخواست‌های پرسنلی |
 | [راهنمای شروع کار و سال مالی](user/getting-started-fiscal-year.md) | حسابداران و مدیران مالی | ایجاد شرکت، انتخاب سال فعال، میز کار و بستن سال مالی |
 | [مفاهیم حسابداری](accounting/README.md) | کاربران و توسعه‌دهندگان | مفاهیم حسابداری، بهای تمام‌شده، برگشت از خرید/فروش و سال مالی |
 | [راهنمای برنامه‌نویس](developer/README.md) | توسعه‌دهندگان | معماری پروژه، دیتابیس، تست و اسکریپت‌ها |
@@ -41,6 +42,11 @@
 | [developer/README.md](developer/README.md) / [developer/README.en.md](developer/README.en.md) | برنامه‌نویس | فهرست ثانویه مستندات فنی |
 | [user/attendance/README.md](user/attendance/README.md) / [user/attendance/README.en.md](user/attendance/README.en.md) | حضور و غیاب | راهنمای کار با شیفت، لاگ و کارکرد ماهانه |
 | [user/salary/README.md](user/salary/README.md) / [user/salary/README.en.md](user/salary/README.en.md) | حقوق و دستمزد | راهنمای عوامل حقوقی، احکام و فیش حقوقی |
+| [hr/README.md](hr/README.md) / [hr/README.en.md](hr/README.en.md) | منابع انسانی | فهرست راهنماهای مدیریت کارکنان، ساختار سازمان و درخواست‌ها |
+| [hr/employees.md](hr/employees.md) | منابع انسانی | ایجاد، جستجو، ویرایش و نگهداری پرونده کارکنان |
+| [hr/organization-units.md](hr/organization-units.md) | منابع انسانی | تعریف و نگهداری واحدهای سازمانی |
+| [hr/organization-chart.md](hr/organization-chart.md) | منابع انسانی | تعریف جایگاه‌ها و رابطه‌های چارت سازمانی |
+| [hr/personnel-requests.md](hr/personnel-requests.md) | منابع انسانی | ثبت مدیریتی، تأیید و رد درخواست‌های پرسنلی |
 | [user/inventory-costing.md](user/inventory-costing.md) / [user/inventory-costing.en.md](user/inventory-costing.en.md) | حسابداری کالا | بهای تمام‌شده، روش‌های محاسبه و روش مورد استفاده امیر |
 | [user/monthly-income-expense-forecasting.md](user/monthly-income-expense-forecasting.md) / [user/monthly-income-expense-forecasting.en.md](user/monthly-income-expense-forecasting.en.md) | بودجه‌بندی | پیش‌بینی ماهانه و مقادیر واقعی درآمد و هزینه |
 | [fiscal-year.md](fiscal-year.md) / [fiscal-year.en.md](fiscal-year.en.md) | سال مالی | مفهوم سال مالی و ایجاد آن |
