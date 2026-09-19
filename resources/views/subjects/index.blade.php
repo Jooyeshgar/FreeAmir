@@ -10,6 +10,10 @@
                 this.$nextTick(() => document.getElementById('transferModal').showModal());
             }
         }">
+            <div class="flex items-center gap-2">
+                <h1 class="text-xl font-bold text-base-content">{{ __('Subjects') }}</h1>
+                <x-user-guide-link source="user/accounts-banking-cheques.md" />
+            </div>
             <div class="card-actions">
                 <div>
                     <a href="{{ route('subjects.create', ['parent_id' => request('parent_id', null)]) }}" class="btn btn-sm btn-primary ">{{ __('Create Subject') }}</a>
