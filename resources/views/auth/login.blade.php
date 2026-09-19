@@ -17,9 +17,9 @@
                         <input type="hidden" name="remember" value="0">
                         <x-checkbox name="remember" id="remember" value="1" :title="__('Remember Me')" :checked="old('remember', '0')" />
                     </div>
-                    <div class="mx-auto mt-4 flex w-full max-w-xs flex-col gap-2 min-[375px]:flex-row min-[375px]:items-center min-[375px]:gap-1">
-                        <button type="submit" class="btn bg-blue-500 px-8 py-2 text-white hover:bg-blue-600 min-[375px]:w-[70%] min-[375px]:shrink-0">{{ __('Login') }}</button>
-                        <a href="{{ route('password.request') }}" class="btn whitespace-nowrap bg-gray-300 px-4 py-2 text-black hover:bg-gray-400 min-[375px]:min-w-0 min-[375px]:flex-1 min-[375px]:px-1 min-[375px]:text-xs">{{ __('Forgot Password') }}</a>
+                    <div class="mx-auto mt-4 flex w-full max-w-xs flex-col gap-2 sm:flex-row sm:items-center">
+                        <button type="submit" class="btn btn-sm w-full bg-blue-500 px-4 text-white hover:bg-blue-600 sm:w-auto sm:shrink-0 md:btn-md">{{ __('Login') }}</button>
+                        <a href="{{ route('password.request') }}" class="btn btn-sm w-full whitespace-nowrap bg-gray-300 px-4 text-black hover:bg-gray-400 sm:min-w-0 sm:flex-1 md:btn-md">{{ __('Forgot Password') }}</a>
                     </div>
                 </form>
 

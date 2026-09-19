@@ -618,6 +618,11 @@ class AuthLifecycleTest extends TestCase
             ->assertSee('name="remember"', false)
             ->assertSee('id="remember"', false)
             ->assertSee('type="hidden" name="remember" value="0"', false)
+            ->assertSee('flex-col gap-2 sm:flex-row', false)
+            ->assertSee('btn btn-sm w-full', false)
+            ->assertSee('sm:w-auto sm:shrink-0', false)
+            ->assertSee('sm:min-w-0 sm:flex-1', false)
+            ->assertSee('md:btn-md', false)
             ->assertSee(__('Remember Me'));
     }
 
