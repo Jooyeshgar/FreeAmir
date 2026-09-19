@@ -36,6 +36,7 @@ class ReportExportService
         'employees_csv' => ['permission' => 'hr.employees.export'],
         'documents_csv' => ['permission' => 'documents.export'],
         'trial_balance_csv' => ['permission' => 'reports.trial-balance.export-csv'],
+        'inventory_turnover_pdf' => ['permission' => 'reports.inventory-turnover.pdf'],
         'accounting_report_csv' => ['permission' => 'reports.result'],
         'invoice_pdf' => ['permission' => 'invoices.print'],
     ];
@@ -44,6 +45,7 @@ class ReportExportService
         private readonly WarehouseDashboardService $warehouseDashboardService,
         private readonly DocumentImportExportService $documentExportService,
         private readonly TrialBalanceService $trialBalanceService,
+        private readonly InventoryTurnoverService $inventoryTurnoverService,
     ) {}
 
     public function generate(string $export, array $filters): array
@@ -61,6 +63,7 @@ class ReportExportService
             'employees_csv' => $this->employeesCsv($filters),
             'documents_csv' => $this->captureResponse($this->documentExportService->export($this->validateDocumentFilters($filters))),
             'trial_balance_csv' => $this->captureResponse($this->trialBalanceService->exportCsv($this->filterRequest($filters))),
+            'inventory_turnover_pdf' => $this->inventoryTurnoverPdf($filters),
             'accounting_report_csv' => $this->accountingReportCsv($filters),
             'invoice_pdf' => $this->invoicePdf($filters),
         };
@@ -134,6 +137,27 @@ class ReportExportService
 
         return ['content' => PDF::loadView('warehouse.report-pdf', $data, [], $config)->output(),
             'filename' => 'warehouse-report.pdf', 'mime' => 'application/pdf'];
+    }
+
+    private function inventoryTurnoverPdf(array $filters): array
+    {
+        $data = $this->inventoryTurnoverService->report($filters);
+        $config = [
+            'format' => 'A4',
+            'orientation' => 'L',
+            'directionality' => app()->isLocale('fa') ? 'rtl' : 'ltr',
+            'margin_top' => 30,
+            'margin_bottom' => 16,
+            'margin_header' => 6,
+            'margin_footer' => 6,
+            'defaultPageNumStyle' => app()->isLocale('fa') ? 'persian' : '1',
+        ];
+
+        return [
+            'content' => PDF::loadView('reports.inventoryTurnoverPdf', $data, [], $config)->output(),
+            'filename' => 'inventory-turnover-'.now()->format('YmdHis').'.pdf',
+            'mime' => 'application/pdf',
+        ];
     }
 
     private function servicesCsv(array $filters): array

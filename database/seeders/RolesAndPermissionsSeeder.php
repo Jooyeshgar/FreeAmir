@@ -163,7 +163,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'comments' => self::CRUD_NO_SHOW,
 
             // Reports
-            'reports' => ['ledger', 'journal', 'sub-ledger', 'trial-balance', 'trial-balance.print', 'trial-balance.export-csv', 'documents', 'result', 'cost-income', 'company-overview', 'company-overview.cash-banks', 'company-overview.bank-account', 'company-overview.seed-demo-data', 'company-overview.refresh-database'],
+            'reports' => ['ledger', 'journal', 'sub-ledger', 'trial-balance', 'trial-balance.print', 'trial-balance.export-csv', 'inventory-turnover', 'inventory-turnover.pdf', 'documents', 'result', 'cost-income', 'company-overview', 'company-overview.cash-banks', 'company-overview.bank-account', 'company-overview.seed-demo-data', 'company-overview.refresh-database'],
 
             // Commercial ledgers
             'commercial-ledgers' => ['index', 'store', 'show', 'download', 'destroy'],

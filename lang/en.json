@@ -3086,6 +3086,7 @@
     "Wages": "Wages",
     "Waiting for Salary Decree": "Waiting for Salary Decree",
     "Warehouse": "Warehouse",
+    "All Warehouses": "All Warehouses",
     "Warehouse Dashboard": "Warehouse Dashboard",
     "Warehouse KPIs": "Warehouse KPIs",
     "Warehouse Report": "Warehouse Report",
@@ -3447,5 +3448,12 @@
     "From date cannot be greater than to date.": "From date cannot be greater than to date.",
     "Document :number": "Document :number",
     "Opening document :number": "Opening document :number",
-    "Monthly ledger aggregation for :month": "Monthly ledger aggregation for :month"
+    "Monthly ledger aggregation for :month": "Monthly ledger aggregation for :month",
+    "Product Inventory Turnover": "Product Inventory Turnover",
+    "Remaining from past": "Remaining from past",
+    "Imported": "Imported",
+    "Exported": "Exported",
+    "Total Amount": "Total Amount",
+    "Report": "Report",
+    "No products found.": "No products found."
 }

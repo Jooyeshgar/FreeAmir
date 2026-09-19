@@ -1,0 +1,61 @@
+@page {
+    header: html_reportHeader;
+}
+
+body {
+    color: #000;
+    font-size: 8pt;
+}
+
+.header {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 5pt;
+}
+
+.header td {
+    width: 33.33%;
+    vertical-align: top;
+    line-height: 1.8;
+}
+
+.header .report-meta {
+    text-align: right;
+}
+
+.header .company {
+    font-size: 13pt;
+    font-weight: bold;
+    text-align: center;
+    padding-top: 4pt;
+}
+
+.header .page-meta {
+    text-align: left;
+}
+
+table.report {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+table.report th,
+table.report td {
+    border: .6pt solid #000;
+    padding: 3pt 2pt;
+    text-align: center;
+}
+
+table.report th {
+    font-weight: bold;
+    background: #fff;
+}
+
+table.report td.name {
+    text-align: right;
+}
+
+table.report tr.total td {
+    font-weight: bold;
+}

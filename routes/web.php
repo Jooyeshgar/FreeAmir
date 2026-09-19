@@ -259,6 +259,8 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
         Route::get('trial-balance', [Controllers\ReportsController::class, 'trialBalance'])->name('trial-balance');
         Route::get('trial-balance.print', [Controllers\ReportsController::class, 'printTrialBalance'])->name('trial-balance.print');
         Route::get('trial-balance/export-csv', [Controllers\ReportsController::class, 'exportTrialBalanceCsv'])->name('trial-balance.export-csv');
+        Route::get('inventory-turnover', [Controllers\ReportsController::class, 'inventoryTurnover'])->name('inventory-turnover');
+        Route::get('inventory-turnover/pdf', [Controllers\ReportsController::class, 'inventoryTurnoverPdf'])->name('inventory-turnover.pdf');
         Route::get('documents', [Controllers\ReportsController::class, 'documents'])->name('documents');
         Route::get('result', [Controllers\ReportsController::class, 'result'])->name('result');
         Route::post('documents/export', [Controllers\DocumentController::class, 'export'])->name('documents.export');
