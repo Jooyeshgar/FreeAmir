@@ -262,6 +262,7 @@ class CustomerTest extends TestCase
         $newCustomerData = [
             'name' => 'new name',
             'group_id' => $this->customerGroup->id,
+            'subject_code' => formatCode($subject->code),
             'type' => 'individual',
         ];
 
@@ -528,11 +529,20 @@ class CustomerTest extends TestCase
         ]);
     }
 
-    public function test_it_can_update_a_customer_with_its_current_subject_code_without_creating_a_subject(): void
+    public function test_it_can_update_a_customer_with_its_current_subject_code_without_creating_a_subject_without_syncing_subject_name_with_customer_name(): void
     {
         $subject = $this->customer->subject;
-        $subjectName = $subject->name;
+
+        $subject->forceFill([
+            'name' => 'subject name',
+            'subjectable_type' => null,
+            'subjectable_id' => null,
+        ])->saveQuietly();
+        $this->customer->unsetRelation('subject');
+
         $subjectCount = Subject::withoutGlobalScopes()->count();
+
+        $this->assertNull($this->customer->fresh()->subject);
 
         $response = $this->actingAs($this->user)->put(route('customers.update', $this->customer), [
             'name' => 'Renamed Customer',
@@ -548,7 +558,10 @@ class CustomerTest extends TestCase
         $subject->refresh();
 
         $this->assertSame($subject->id, $this->customer->subject_id);
-        $this->assertSame($subjectName, $subject->name);
+        $this->assertSame('subject name', $subject->name);
+        $this->assertSame($this->customer->id, $subject->subjectable_id);
+        $this->assertSame($this->customer->getMorphClass(), $subject->subjectable_type);
+        $this->assertNotEquals($subject->name, $this->customer->name);
         $this->assertSame($subjectCount, Subject::withoutGlobalScopes()->count());
     }
 
