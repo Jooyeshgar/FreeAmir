@@ -6,7 +6,7 @@
         <div class="min-w-48">
             <div class="flex items-center gap-2">
                 <h1 class="text-xl font-bold text-base-content">{{ __('Chequebooks') }}</h1>
-                <x-user-guide-link source="user/accounts-banking-cheques.md" />
+                <x-user-guide-link source="user/chequebooks.md" />
             </div>
             <p class="mt-0.5 text-sm text-base-content/50">{{ __('Manage chequebooks for payable cheques') }}</p>
         </div>

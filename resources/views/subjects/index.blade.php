@@ -12,7 +12,7 @@
         }">
             <div class="flex items-center gap-2">
                 <h1 class="text-xl font-bold text-base-content">{{ __('Subjects') }}</h1>
-                <x-user-guide-link source="user/accounts-banking-cheques.md" />
+                <x-user-guide-link source="user/subjects.md" />
             </div>
             <div class="card-actions">
                 <div>
