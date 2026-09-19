@@ -26,6 +26,7 @@
 | فایل | موضوع |
 |---|---|
 | [accounting-documents.md](accounting-documents.md) | ایجاد، تأیید، جستجو، ورود/خروج و انتقال اسناد حسابداری |
+| [accounts-banking-cheques.md](accounts-banking-cheques.md) | سرفصل‌ها، بانک‌ها، حساب‌های بانکی، دسته‌چک و چرخه چک |
 | [invoices.md](invoices.md) | نقشهٔ راه و قواعد مشترک فاکتورها |
 | [sales-invoice.md](sales-invoice.md) | ثبت، تأیید، پرداخت و کنترل فاکتور فروش |
 | [purchase-invoice.md](purchase-invoice.md) | ثبت خرید کالا، ورود انبار و بهای موجودی |
