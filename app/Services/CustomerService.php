@@ -100,6 +100,10 @@ class CustomerService
                     $subject = $existingSubject;
                 }
 
+                if ($belongsToCustomer && $subject->name !== $targetName) {
+                    $subject = $this->subjectService->editSubject($subject, ['name' => $targetName]);
+                }
+
                 $this->associateSubject($subject, $customer);
 
                 return;
