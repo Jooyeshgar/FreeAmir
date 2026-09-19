@@ -156,4 +156,13 @@ class ConfigControllerTest extends TestCase
             ]);
         }
     }
+
+    public function test_edit_keeps_moved_subject_search_results_in_the_selector_scope(): void
+    {
+        $response = $this->get(route('configs.edit', 'payroll'));
+
+        $response->assertOk()
+            ->assertSee('Alpine.addScopeToNode(panel, {}, root)', false)
+            ->assertSee('releasePanelScope()', false);
+    }
 }
