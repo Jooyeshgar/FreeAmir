@@ -64,8 +64,11 @@ class TrialBalanceService
     {
         $this->validateTrialBalanceFilters($request);
 
+        $currentParent = $request->filled('parent_id') ? Subject::findOrFail($request->integer('parent_id')) : null;
+        $includeChildren = $request->boolean('include_children', false);
+        $subjectName = $request->input('subject_name');
         $filters = $this->normalizeTrialBalanceFilters($request);
-        $subjects = Subject::whereIsRoot()->orderBy('code')->get();
+        $subjects = $this->buildTrialBalanceSubjects($currentParent, $includeChildren, $subjectName);
         $filename = 'trial_balance_'.Carbon::now()->format('Ymd_His').'.csv';
 
         $headers = [

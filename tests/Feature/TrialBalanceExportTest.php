@@ -10,6 +10,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Services\TrialBalanceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Tests\TestCase;
@@ -89,6 +90,44 @@ class TrialBalanceExportTest extends TestCase
         $this->assertStringContainsString('بانک ها', $csv);
         $this->assertStringContainsString(csvNumber(1000000), $csv);
         $this->assertStringContainsString(csvNumber(500000), $csv);
+    }
+
+    public function test_trial_balance_export_uses_the_current_subject_level(): void
+    {
+        $subjectType = DB::connection()->getDriverName() === 'sqlite' ? 'both' : SubjectType::BOTH->value;
+
+        $createSubject = function (string $code, string $name, ?int $parentId = null) use ($subjectType): Subject {
+            $id = DB::table('subjects')->insertGetId([
+                'company_id' => $this->company->id,
+                'code' => $code,
+                'name' => $name,
+                'parent_id' => $parentId,
+                'type' => $subjectType,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return Subject::findOrFail($id);
+        };
+
+        $root = $createSubject('011', 'دارایی ها');
+        $ledger = $createSubject('011004', 'بانک ها', $root->id);
+        $detail = $createSubject('011004001', 'بانک پاسارگاد', $ledger->id);
+
+        $doc = Document::factory()->create(['company_id' => $this->company->id, 'number' => 5, 'date' => '2026-01-10']);
+        Transaction::create(['document_id' => $doc->id, 'subject_id' => $detail->id, 'value' => -750000, 'user_id' => $this->user->id]);
+
+        $response = $this->service->exportCsv(request()->merge(['parent_id' => $ledger->id]));
+
+        ob_start();
+        $response->sendContent();
+        $csv = ob_get_clean();
+        $rows = array_map('str_getcsv', array_filter(explode("\n", $csv)));
+
+        $this->assertCount(2, $rows);
+        $this->assertSame($detail->code, $rows[1][0]);
+        $this->assertSame($detail->name, $rows[1][1]);
+        $this->assertSame(csvNumber(750000), $rows[1][2]);
     }
 
     public function test_trial_balance_export_remain_bed_and_bes_reflect_net_balance(): void
