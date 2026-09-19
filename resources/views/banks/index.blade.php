@@ -4,7 +4,7 @@
         <div class="card-body">
             <div class="flex items-center gap-2">
                 <h1 class="text-xl font-bold text-base-content">{{ __('Banks') }}</h1>
-                <x-user-guide-link source="user/accounts-banking-cheques.md" />
+                <x-user-guide-link source="user/banks.md" />
             </div>
             <div class="card-actions">
                 <a href="{{ route('banks.create') }}" class="btn btn-primary">{{ __('Create Bank') }}</a>
