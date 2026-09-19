@@ -3071,6 +3071,7 @@
     "Wages": "حقوق پرسنل",
     "Waiting for Salary Decree": "در انتظار حکم",
     "Warehouse": "انبار",
+    "All Warehouses": "همه انبارها",
     "Warehouse Dashboard": "میز کار انبار",
     "Warehouse KPIs": "شاخص‌های کلیدی انبار",
     "Warehouse Report": "گزارش انبار",
@@ -3448,5 +3449,12 @@
     "From date cannot be greater than to date.": "تاریخ شروع نمی‌تواند بعد از تاریخ پایان باشد.",
     "Document :number": "سند شماره :number",
     "Opening document :number": "سند افتتاحیه شماره :number",
-    "Monthly ledger aggregation for :month": "تجمیع ماهانه دفتر برای :month"
+    "Monthly ledger aggregation for :month": "تجمیع ماهانه دفتر برای :month",
+    "Product Inventory Turnover": "گردش موجودی کالا",
+    "Remaining from past": "مانده از قبل",
+    "Imported": "وارده",
+    "Exported": "صادره",
+    "Total Amount": "مبلغ کل",
+    "Report": "گزارش",
+    "No products found.": "محصولی پیدا نشد."
 }

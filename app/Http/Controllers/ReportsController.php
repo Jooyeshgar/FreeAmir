@@ -8,6 +8,7 @@ use App\Models\Subject;
 use App\Models\Transaction;
 use App\Services\CompanyOverviewService;
 use App\Services\DocumentImportExport\DocumentImportExportService;
+use App\Services\InventoryTurnoverService;
 use App\Services\ReportExportService;
 use App\Services\SubjectService;
 use App\Services\TrialBalanceService;
@@ -224,6 +225,16 @@ class ReportsController extends Controller
     public function trialBalance(Request $request, TrialBalanceService $trialBalanceService)
     {
         return view('reports.trialBalance', $trialBalanceService->getTrialBalanceData($request));
+    }
+
+    public function inventoryTurnover(Request $request, InventoryTurnoverService $inventoryTurnoverService)
+    {
+        return view('reports.inventoryTurnover', $inventoryTurnoverService->report($request->all()));
+    }
+
+    public function inventoryTurnoverPdf(Request $request, ReportExportService $reportExportService)
+    {
+        return $reportExportService->inlineResponse('inventory_turnover_pdf', $request->all());
     }
 
     public function exportTrialBalanceCsv(Request $request, ReportExportService $reportExportService): StreamedResponse

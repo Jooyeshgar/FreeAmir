@@ -110,7 +110,7 @@
         </details>
     </li>
 @endcanany
-@canany(['reports.documents', 'reports.journal', 'reports.ledger', 'reports.sub-ledger', 'reports.trial-balance', 'commercial-ledgers.index',
+@canany(['reports.documents', 'reports.journal', 'reports.ledger', 'reports.sub-ledger', 'reports.trial-balance', 'reports.inventory-turnover', 'commercial-ledgers.index',
     'reports.cost-income', 'budgets.index', 'reports.company-overview'])
     <li>
         <details class="{{ $topDropdownClass }}" data-main-menu-dropdown>
@@ -129,7 +129,7 @@
                     <li><a href="{{ route('commercial-ledgers.index') }}">{{ __('Commercial Ledgers') }}</a></li>
                 @endcan
                 @canany(['reports.documents', 'reports.journal', 'reports.ledger', 'reports.sub-ledger',
-                    'reports.trial-balance'])
+                    'reports.trial-balance', 'reports.inventory-turnover'])
                     <li>
                         <details>
                             <summary>{{ __('Accounting') }}</summary>
@@ -148,6 +148,9 @@
                                 @endcan
                                 @can('reports.trial-balance')
                                     <li><a href="{{ route('reports.trial-balance') }}">{{ __('Trial Balance') }}</a></li>
+                                @endcan
+                                @can('reports.inventory-turnover')
+                                    <li><a href="{{ route('reports.inventory-turnover') }}">{{ __('Inventory Turnover') }}</a></li>
                                 @endcan
                             </ul>
                         </details>
