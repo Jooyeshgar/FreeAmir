@@ -593,24 +593,26 @@ class WarehouseDashboardService
             return [];
         }
 
-        $items = InvoiceItem::query()
-            ->where('itemable_type', Product::class)
-            ->whereIn('itemable_id', $productIds)
-            ->whereHas('invoice', function (Builder $query) use ($fiscalStart, $to) {
-                $query->whereIn('status', InvoiceStatus::approvedOrSettled())
-                    ->whereIn('invoice_type', [InvoiceType::BEGINNING_INVENTORY, ...self::STOCK_IN_TYPES, ...self::STOCK_OUT_TYPES])
-                    ->whereBetween('date', [$fiscalStart->toDateString(), $to->toDateString()]);
-            })
-            ->with('invoice:id,invoice_type')
-            ->get(['id', 'invoice_id', 'itemable_id', 'quantity']);
+        $incomingTypes = [InvoiceType::BEGINNING_INVENTORY, ...self::STOCK_IN_TYPES];
+        $movementTypes = [...$incomingTypes, ...self::STOCK_OUT_TYPES];
+        $incomingPlaceholders = implode(', ', array_fill(0, count($incomingTypes), '?'));
 
-        return $items->groupBy('itemable_id')->map(function (Collection $productItems): float {
-            return (float) $productItems->sum(function (InvoiceItem $item): float {
-                return in_array($item->invoice->invoice_type, [InvoiceType::BEGINNING_INVENTORY, ...self::STOCK_IN_TYPES], true)
-                    ? (float) $item->quantity
-                    : (float) $item->quantity * -1;
-            });
-        })->all();
+        return InvoiceItem::query()
+            ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
+            ->where('invoice_items.itemable_type', Product::class)
+            ->whereIn('invoice_items.itemable_id', $productIds)
+            ->where('invoices.company_id', getActiveCompany())
+            ->whereIn('invoices.status', array_map(fn (InvoiceStatus $status) => $status->value, InvoiceStatus::approvedOrSettled()))
+            ->whereIn('invoices.invoice_type', array_map(fn (InvoiceType $type) => $type->value, $movementTypes))
+            ->whereBetween('invoices.date', [$fiscalStart->toDateString(), $to->toDateString()])
+            ->selectRaw(
+                "invoice_items.itemable_id as product_id, SUM(CASE WHEN invoices.invoice_type IN ({$incomingPlaceholders}) THEN invoice_items.quantity ELSE -invoice_items.quantity END) as total",
+                array_map(fn (InvoiceType $type) => $type->value, $incomingTypes)
+            )
+            ->groupBy('invoice_items.itemable_id')
+            ->pluck('total', 'product_id')
+            ->map(fn ($quantity) => (float) $quantity)
+            ->all();
     }
 
     private function stockQuantity(Product $product, array $stockQuantities): float
