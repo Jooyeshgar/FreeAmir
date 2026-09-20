@@ -83,10 +83,14 @@ class ReportsController extends Controller
         ];
 
         if ($canFinancial) {
+            $profitFilters = $this->companyOverviewProfitFilters($request);
             [$bankAccounts, $topTenBankAccountBalances] = $this->companyOverviewService->topTenBanksAccountBalances();
 
             ['incomeData' => $totalIncomesData, 'costData' => $totalCostsData, 'profit' => $profit] =
-                $this->companyOverviewService->profitFromNonPermanentSubjects();
+                $this->companyOverviewService->profitFromNonPermanentSubjects(
+                    $profitFilters['start_date'],
+                    $profitFilters['end_date']
+                );
 
             $data += [
                 'bankAccounts' => $bankAccounts,
@@ -96,6 +100,7 @@ class ReportsController extends Controller
                 'totalIncomesData' => $totalIncomesData,
                 'totalCostsData' => $totalCostsData,
                 'profit' => $profit,
+                'profitFilters' => $profitFilters,
             ];
         }
 
@@ -127,6 +132,50 @@ class ReportsController extends Controller
         }
 
         return view('reports.company-overview', $data);
+    }
+
+    private function companyOverviewProfitFilters(Request $request): array
+    {
+        $validated = $request->validate([
+            'start_date' => ['nullable', 'string', 'max:10'],
+            'end_date' => ['nullable', 'string', 'max:10'],
+        ]);
+
+        foreach (['start_date', 'end_date'] as $field) {
+            if (! empty($validated[$field])) {
+                $validated[$field] = jalaliInputToGregorian($validated[$field], $field);
+            }
+        }
+
+        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
+        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+        $startDate = $validated['start_date'] ?? null;
+        $endDate = $validated['end_date'] ?? null;
+
+        if ($startDate && ($startDate < $fiscalStart->toDateString() || $startDate > $fiscalEnd->toDateString())) {
+            throw ValidationException::withMessages([
+                'start_date' => [__('The start date must be within the active fiscal year.')],
+            ]);
+        }
+
+        if ($endDate && ($endDate < $fiscalStart->toDateString() || $endDate > $fiscalEnd->toDateString())) {
+            throw ValidationException::withMessages([
+                'end_date' => [__('The end date must be within the active fiscal year.')],
+            ]);
+        }
+
+        if ($startDate && $endDate && $startDate > $endDate) {
+            throw ValidationException::withMessages([
+                'end_date' => [__('The end date must be on or after the start date.')],
+            ]);
+        }
+
+        return [
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'start_date_input' => $startDate ? convertToJalali($startDate, true) : '',
+            'end_date_input' => $endDate ? convertToJalali($endDate, true) : '',
+        ];
     }
 
     public function seedDemoData()

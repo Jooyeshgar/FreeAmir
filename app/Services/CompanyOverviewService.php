@@ -218,7 +218,7 @@ class CompanyOverviewService
      *
      * @return array{incomeData: array<string, int>, costData: array<string, int>, profit: int}
      */
-    public function profitFromNonPermanentSubjects(): array
+    public function profitFromNonPermanentSubjects(?string $startDate = null, ?string $endDate = null): array
     {
         // Get all root non-permanent subjects for the current fiscal year (applied via global scope)
         $nonPermanentSubjects = Subject::where('is_permanent', false)->whereIsRoot()->get();
@@ -229,7 +229,17 @@ class CompanyOverviewService
 
         /** @var Subject $subject */
         foreach ($nonPermanentSubjects as $subject) {
-            $balance = $this->subjectService->sumSubject($subject);
+            $subjectIds = array_values(array_unique([
+                (int) $subject->getKey(),
+                ...$subject->getAllDescendantIds(),
+            ]));
+
+            $balance = (float) Transaction::query()
+                ->join('documents', 'documents.id', '=', 'transactions.document_id')
+                ->whereIn('transactions.subject_id', $subjectIds)
+                ->when($startDate, fn ($query, string $date) => $query->where('documents.date', '>=', $date))
+                ->when($endDate, fn ($query, string $date) => $query->where('documents.date', '<=', $date))
+                ->sum('transactions.value');
 
             if ($balance === 0) {
                 continue;

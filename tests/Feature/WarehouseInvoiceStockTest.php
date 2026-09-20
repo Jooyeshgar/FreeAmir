@@ -169,23 +169,26 @@ class WarehouseInvoiceStockTest extends TestCase
             'average_cost' => 100,
         ]);
 
-        $beginningInventory = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900);
+        $buy = $this->createInvoice(InvoiceType::BUY, 4, $this->mainWarehouse, true, null, 100, '2026-01-02');
+        $sell = $this->createInvoice(InvoiceType::SELL, 2, $this->mainWarehouse, false, null, 100, '2026-01-03');
+        $this->approve($sell);
+        $beginningInventory = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900, '2026-01-01');
 
         $this->assertSame(InvoiceStatus::APPROVED, $beginningInventory->status);
-        $this->assertEqualsWithDelta(5, (float) $this->product->fresh()->quantity, 0.001);
-        $this->assertStock($this->mainWarehouse, 5);
+        $this->assertEqualsWithDelta(7, (float) $this->product->fresh()->quantity, 0.001);
+        $this->assertStock($this->mainWarehouse, 7);
 
         $this->product->update(['quantity' => 999]);
-        WarehouseProductStock::query()
-            ->where('product_id', $this->product->id)
-            ->update(['quantity' => 999]);
-        $beginningInventory->items()->update(['quantity_at' => 999]);
+        WarehouseProductStock::query()->where('product_id', $this->product->id)->update(['quantity' => 999]);
+        InvoiceItem::query()->whereIn('invoice_id', [$buy->id, $sell->id, $beginningInventory->id])->update(['quantity_at' => 999]);
 
         $quantity = ProductService::recalculateQuantity($this->product->fresh());
 
-        $this->assertEqualsWithDelta(5, $quantity, 0.001);
-        $this->assertStock($this->mainWarehouse, 5);
+        $this->assertEqualsWithDelta(7, $quantity, 0.001);
+        $this->assertStock($this->mainWarehouse, 7);
         $this->assertEqualsWithDelta(0, (float) $beginningInventory->items()->firstOrFail()->quantity_at, 0.001);
+        $this->assertEqualsWithDelta(5, (float) $buy->items()->firstOrFail()->quantity_at, 0.001);
+        $this->assertEqualsWithDelta(9, (float) $sell->items()->firstOrFail()->quantity_at, 0.001);
     }
 
     public function test_approved_beginning_inventory_adds_stock_updates_cost_and_creates_accounting(): void
@@ -585,11 +588,18 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->assertEqualsWithDelta(100, (float) $transfer->unit_cost, 0.01);
     }
 
-    private function createInvoice(InvoiceType $type, float $quantity, Warehouse $warehouse, bool $approved, ?Invoice $returnedInvoice = null, float $unit = 100): Invoice
-    {
+    private function createInvoice(
+        InvoiceType $type,
+        float $quantity,
+        Warehouse $warehouse,
+        bool $approved,
+        ?Invoice $returnedInvoice = null,
+        float $unit = 100,
+        ?string $date = null
+    ): Invoice {
         $result = InvoiceService::createInvoice(
             $this->user,
-            $this->invoiceData($type, $warehouse, $returnedInvoice),
+            $this->invoiceData($type, $warehouse, $returnedInvoice, $date),
             [$this->item($quantity, $unit)],
             $approved
         );
@@ -597,11 +607,16 @@ class WarehouseInvoiceStockTest extends TestCase
         return Invoice::withoutGlobalScopes()->with('items')->findOrFail($result['invoice']->id);
     }
 
-    private function createBeginningInventory(Product $product, float $quantity, Warehouse $warehouse, float $unit): Invoice
-    {
+    private function createBeginningInventory(
+        Product $product,
+        float $quantity,
+        Warehouse $warehouse,
+        float $unit,
+        ?string $date = null
+    ): Invoice {
         $result = InvoiceService::createInvoice(
             $this->user,
-            $this->beginningInventoryData($warehouse),
+            $this->beginningInventoryData($warehouse, date: $date),
             [[
                 'itemable_type' => 'product',
                 'itemable_id' => $product->id,
@@ -616,11 +631,11 @@ class WarehouseInvoiceStockTest extends TestCase
         return Invoice::withoutGlobalScopes()->with('items')->findOrFail($result['invoice']->id);
     }
 
-    private function beginningInventoryData(Warehouse $warehouse, ?int $number = null): array
+    private function beginningInventoryData(Warehouse $warehouse, ?int $number = null, ?string $date = null): array
     {
         return [
             'title' => 'Beginning inventory',
-            'date' => now()->toDateString(),
+            'date' => $date ?? now()->toDateString(),
             'invoice_type' => InvoiceType::BEGINNING_INVENTORY,
             'customer_id' => null,
             'warehouse_id' => $warehouse->id,
@@ -630,13 +645,17 @@ class WarehouseInvoiceStockTest extends TestCase
         ];
     }
 
-    private function invoiceData(InvoiceType $type, Warehouse $warehouse, ?Invoice $returnedInvoice = null): array
-    {
+    private function invoiceData(
+        InvoiceType $type,
+        Warehouse $warehouse,
+        ?Invoice $returnedInvoice = null,
+        ?string $date = null
+    ): array {
         $number = ++$this->nextInvoiceNumber;
 
         return [
             'title' => $type->valueName(),
-            'date' => now()->toDateString(),
+            'date' => $date ?? now()->toDateString(),
             'invoice_type' => $type,
             'customer_id' => $this->customer->id,
             'warehouse_id' => $warehouse->id,

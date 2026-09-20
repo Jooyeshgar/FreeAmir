@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Enums\SubjectType;
 use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
@@ -231,6 +232,42 @@ class CompanyOverviewServiceTest extends TestCase
         Transaction::create(['value' => 400, 'subject_id' => $subjectB->id, 'document_id' => $document->id, 'user_id' => $this->user->id, 'desc' => 'b']);
 
         $this->assertSame(1000.0, $this->service()->totalWarehouseValue());
+    }
+
+    public function test_profit_and_loss_can_be_limited_to_a_date_interval(): void
+    {
+        $incomeSubject = Subject::create([
+            'code' => '900',
+            'name' => 'Interval income',
+            'parent_id' => null,
+            'company_id' => $this->companyId,
+            'type' => SubjectType::CREDITOR,
+            'is_permanent' => false,
+        ]);
+        $costSubject = Subject::create([
+            'code' => '901',
+            'name' => 'Interval cost',
+            'parent_id' => null,
+            'company_id' => $this->companyId,
+            'type' => SubjectType::DEBTOR,
+            'is_permanent' => false,
+        ]);
+
+        $inside = $this->makeDocument(jalali_to_gregorian(1405, 3, 10, '-'));
+        Transaction::create(['value' => 1200, 'subject_id' => $incomeSubject->id, 'document_id' => $inside->id, 'user_id' => $this->user->id, 'desc' => 'inside income']);
+        Transaction::create(['value' => -350, 'subject_id' => $costSubject->id, 'document_id' => $inside->id, 'user_id' => $this->user->id, 'desc' => 'inside cost']);
+
+        $outside = $this->makeDocument(jalali_to_gregorian(1405, 4, 1, '-'));
+        Transaction::create(['value' => 5000, 'subject_id' => $incomeSubject->id, 'document_id' => $outside->id, 'user_id' => $this->user->id, 'desc' => 'outside income']);
+
+        $result = $this->service()->profitFromNonPermanentSubjects(
+            jalali_to_gregorian(1405, 3, 1, '-'),
+            jalali_to_gregorian(1405, 3, 31, '-')
+        );
+
+        $this->assertSame(850.0, $result['profit']);
+        $this->assertSame(1200.0, $result['incomeData']['Interval income']);
+        $this->assertSame(350.0, $result['costData']['Interval cost']);
     }
 
     private function service(): CompanyOverviewService

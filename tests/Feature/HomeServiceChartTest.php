@@ -302,6 +302,51 @@ class HomeServiceChartTest extends TestCase
         $this->get(route('reports.company-overview'))->assertOk()->assertSee(route('reports.company-overview.seed-demo-data'), false);
     }
 
+    public function test_company_overview_applies_profit_and_loss_date_filters(): void
+    {
+        $this->signInWith(['reports.company-overview', 'documents.show']);
+        $incomeSubject = Subject::create([
+            'code' => '900',
+            'name' => 'Filtered income',
+            'parent_id' => null,
+            'company_id' => $this->companyId,
+            'type' => SubjectType::CREDITOR,
+            'is_permanent' => false,
+        ]);
+
+        foreach ([2 => 700, 3 => 1900] as $month => $value) {
+            $document = $this->makeDocument(jalali_to_gregorian(1405, $month, 1, '-'));
+            Transaction::create([
+                'value' => $value,
+                'subject_id' => $incomeSubject->id,
+                'document_id' => $document->id,
+                'user_id' => $this->user->id,
+                'desc' => 'filtered income',
+            ]);
+        }
+
+        $this->get(route('reports.company-overview', [
+            'start_date' => '1405/02/01',
+            'end_date' => '1405/02/29',
+        ]))->assertOk()
+            ->assertViewHas('profit', 700.0)
+            ->assertSeeInOrder(['data-profit-card', 'data-profit-metric', 'name="start_date"'], false)
+            ->assertSee('name="start_date"', false)
+            ->assertSee('value="1405/02/01"', false)
+            ->assertSee('name="end_date"', false)
+            ->assertSee('value="1405/02/29"', false);
+    }
+
+    public function test_company_overview_rejects_an_inverted_profit_interval(): void
+    {
+        $this->signInWith(['reports.company-overview', 'documents.show']);
+
+        $this->get(route('reports.company-overview', [
+            'start_date' => '1405/03/01',
+            'end_date' => '1405/02/01',
+        ]))->assertSessionHasErrors('end_date');
+    }
+
     public function test_accounting_user_does_not_see_removed_catalog_cards(): void
     {
         $this->signInWith(['home.summary', 'documents.show', 'documents.index', 'reports.ledger', 'bank-accounts.index', 'invoices.index', 'products.index']);

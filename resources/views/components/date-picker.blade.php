@@ -12,6 +12,7 @@
     'required' => false,
     'bordered' => true,
     'model_name' => false,
+    'readonly' => false,
 ])
 <fieldset {{ $attributes->whereDoesntStartWith('x-')->merge(['class' => 'w-full ']) }}>
     @if ($title != '')
@@ -25,7 +26,7 @@
     <input {{ $attributes->whereStartsWith('x-')->merge() }} data-jdp title="{{ $title }}" type="{{ $type }}" name="{{ $name }}"
         id="{{ $name }}" value="{{ $value ?? '' }}" placeholder="{{ $placeholder ?? '' }}"
         class="input {{ $bordered ? 'border-slate-400' : 'input-ghost' }} w-full max-w-full max-h-10" {{ $required ? 'required' : '' }} {{ $disabled ? 'disabled' : '' }}
-        {!! $model_name ? "x-model=\"$model_name\"" : '' !!} />
+        {!! $model_name ? "x-model=\"$model_name\"" : '' !!} {{ $readonly ? 'readonly' : '' }} />
 
     @if ($errors->first($name))
         <span class="label text-xs text-rose-700">{{ $errors->first($name) }}</span>
