@@ -136,6 +136,24 @@ class InventoryTurnoverReportTest extends TestCase
         $this->assertEquals(810, $row['remaining_balance']);
     }
 
+    public function test_beginning_inventory_on_start_date_is_opening_but_later_records_are_ignored(): void
+    {
+        $this->movement(InvoiceType::BEGINNING_INVENTORY, '2026-02-01', 10, -1000, 1);
+        $this->movement(InvoiceType::BEGINNING_INVENTORY, '2026-02-02', 50, -5000, 2);
+
+        $row = app(InventoryTurnoverService::class)->report([
+            'start_date' => '2026/02/01',
+            'end_date' => '2026/02/28',
+        ])['rows']->first();
+
+        $this->assertEquals(10, $row['opening_quantity']);
+        $this->assertEquals(1000, $row['opening_balance']);
+        $this->assertEquals(0, $row['imported_quantity']);
+        $this->assertEquals(0, $row['imported_balance']);
+        $this->assertEquals(10, $row['remaining_quantity']);
+        $this->assertEquals(1000, $row['remaining_balance']);
+    }
+
     public function test_product_group_filter_excludes_products_from_other_groups(): void
     {
         $otherGroup = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->company->id, 'name' => 'Other']);

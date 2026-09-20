@@ -42,8 +42,7 @@ class InventoryTurnoverService
             [InvoiceType::BEGINNING_INVENTORY],
             null,
             $filters['start_date'],
-            $filters['warehouse_id'],
-            excludeThrough: true
+            $filters['warehouse_id']
         );
         $importedBalances = $this->invoiceMovementBalances($subjectIds, self::IMPORT_TYPES, $filters['start_date'], $filters['end_date'], $filters['warehouse_id']);
         $exportedBalances = $this->invoiceMovementBalances($subjectIds, self::EXPORT_TYPES, $filters['start_date'], $filters['end_date'], $filters['warehouse_id']);
@@ -162,7 +161,7 @@ class InventoryTurnoverService
                 $quantity = (float) $item->quantity;
 
                 if ($type === InvoiceType::BEGINNING_INVENTORY->value) {
-                    if ($item->date < $filters['start_date']) {
+                    if ($item->date <= $filters['start_date']) {
                         $opening += $quantity;
                     }
 
@@ -184,7 +183,7 @@ class InventoryTurnoverService
         });
     }
 
-    private function invoiceMovementBalances(array $subjectIds, array $types, ?string $from, ?string $through, ?int $warehouseId = null, bool $excludeThrough = false): Collection
+    private function invoiceMovementBalances(array $subjectIds, array $types, ?string $from, ?string $through, ?int $warehouseId = null): Collection
     {
         if ($subjectIds === []) {
             return collect();
@@ -199,7 +198,7 @@ class InventoryTurnoverService
             ->whereIn('transactions.subject_id', $subjectIds)
             ->when($warehouseId, fn (Builder $query, int $id) => $query->where('invoices.warehouse_id', $id))
             ->when($from, fn (Builder $query, string $date) => $query->where('invoices.date', '>=', $date))
-            ->when($through, fn (Builder $query, string $date) => $query->where('invoices.date', $excludeThrough ? '<' : '<=', $date))
+            ->when($through, fn (Builder $query, string $date) => $query->where('invoices.date', '<=', $date))
             ->groupBy('transactions.subject_id')
             ->selectRaw('transactions.subject_id, SUM(transactions.value) as balance')
             ->pluck('balance', 'transactions.subject_id');
