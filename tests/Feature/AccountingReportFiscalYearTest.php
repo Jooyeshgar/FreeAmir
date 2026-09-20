@@ -30,7 +30,7 @@ class AccountingReportFiscalYearTest extends TestCase
             'company_id' => $company->id,
             'code' => '001',
             'name' => 'Test subject',
-            'type' => 'both',
+            'type' => 3,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
