@@ -3484,5 +3484,19 @@
     "This step recalculates only the Closing Document for fiscal year :year.": "این مرحله فقط سند اختتامیه سال مالی :year را دوباره محاسبه می‌کند.",
     "The next fiscal year and its Opening Document will not be changed. Update the Opening Document manually if you have access.": "سال مالی بعد و سند افتتاحیه آن تغییر نمی‌کنند. در صورت داشتن دسترسی، سند افتتاحیه را دستی اصلاح کنید.",
     "This will recalculate only the Closing Document for fiscal year :year. The next fiscal year will not be changed. Are you sure?": "این کار فقط سند اختتامیه سال مالی :year را دوباره محاسبه می‌کند. سال مالی بعد تغییر نمی‌کند. آیا مطمئن هستید؟",
-    "Only a closed fiscal year can have its closing document recalculated.": "محاسبه مجدد سند اختتامیه فقط برای سال مالی بسته‌شده امکان‌پذیر است."
+    "Only a closed fiscal year can have its closing document recalculated.": "محاسبه مجدد سند اختتامیه فقط برای سال مالی بسته‌شده امکان‌پذیر است.",
+    "Inventory account balance at the selected period end": "مانده حساب موجودی کالا در پایان دوره انتخاب‌شده",
+    "Period-end quantity: :qty": "تعداد در پایان دوره: :qty",
+    "At the selected period end": "در پایان دوره انتخاب‌شده",
+    "No movement for :days days as of period end": "بدون گردش به مدت :days روز تا پایان دوره",
+    "Period COGS divided by period-end inventory value": "بهای تمام‌شده دوره تقسیم بر ارزش موجودی پایان دوره",
+    "Products with positive stock at the selected period end": "کالاهای دارای موجودی مثبت در پایان دوره انتخاب‌شده",
+    "Period-end stock, lowest first": "موجودی پایان دوره، از کمترین مقدار",
+    "Items matching the inventory status at the selected period end": "کالاهای منطبق با وضعیت موجودی در پایان دوره انتخاب‌شده",
+    "Nothing needed replenishment at the selected period end.": "در پایان دوره انتخاب‌شده کالایی نیاز به تأمین مجدد نداشت.",
+    "No item was stagnant at the selected period end.": "در پایان دوره انتخاب‌شده کالای راکدی وجود نداشت.",
+    ":count item(s) were at or below their reorder point at period end": ":count کالا در پایان دوره روی نقطه سفارش یا پایین‌تر از آن بود",
+    "All stock levels were above their reorder points at period end": "در پایان دوره موجودی همه کالاها بالاتر از نقطه سفارش بود",
+    ":count item(s) had no movement for :days days as of period end": ":count کالا تا پایان دوره به مدت :days روز بدون گردش بود",
+    "No stagnant inventory at period end": "در پایان دوره موجودی راکدی وجود نداشت"
 }

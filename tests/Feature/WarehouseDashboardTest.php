@@ -106,8 +106,10 @@ class WarehouseDashboardTest extends TestCase
             'average_cost' => 50,
             'selling_price' => 90,
         ]);
-        $this->inventoryBalance($bestSeller, 500);
-        $this->inventoryBalance($stagnant, 1000);
+        $this->inventoryBalance($bestSeller, -500);
+        $this->inventoryBalance($stagnant, -1000);
+        $this->stockMovement($bestSeller, InvoiceType::BEGINNING_INVENTORY, 8, 2, jalali_to_gregorian(1405, 1, 1, '-'));
+        $this->stockMovement($stagnant, InvoiceType::BEGINNING_INVENTORY, 20, 3, jalali_to_gregorian(1405, 1, 1, '-'));
 
         $sell = $this->invoice(InvoiceType::SELL, InvoiceStatus::APPROVED, 1, Carbon::now()->subDays(5)->toDateString(), 750);
         InvoiceItem::factory()->create([
@@ -152,7 +154,8 @@ class WarehouseDashboardTest extends TestCase
             'quantity_warning' => 5,
             'average_cost' => 50,
         ]);
-        $this->inventoryBalance($widgetsProduct, 500);
+        $this->inventoryBalance($widgetsProduct, -500);
+        $this->stockMovement($widgetsProduct, InvoiceType::BEGINNING_INVENTORY, 5, 1, jalali_to_gregorian(1405, 1, 1, '-'));
 
         $data = app(WarehouseDashboardService::class)->dashboard(['category_id' => $widgets->id]);
 
@@ -195,7 +198,8 @@ class WarehouseDashboardTest extends TestCase
             'quantity' => 20,
             'average_cost' => 50,
         ]);
-        $this->inventoryBalance($product, 725);
+        $this->inventoryBalance($product, -725);
+        $this->stockMovement($product, InvoiceType::BEGINNING_INVENTORY, 20, 1, jalali_to_gregorian(1405, 1, 1, '-'));
 
         $data = app(WarehouseDashboardService::class)->dashboard();
 
@@ -220,11 +224,58 @@ class WarehouseDashboardTest extends TestCase
             'quantity_warning' => 10,
             'average_cost' => 100,
         ]);
+        $this->stockMovement($lowStock, InvoiceType::BEGINNING_INVENTORY, 3, 1, jalali_to_gregorian(1405, 1, 1, '-'));
+        $healthy = Product::query()->where('code', 'P-OK')->firstOrFail();
+        $this->stockMovement($healthy, InvoiceType::BEGINNING_INVENTORY, 100, 2, jalali_to_gregorian(1405, 1, 1, '-'));
 
         $data = app(WarehouseDashboardService::class)->dashboard(['status' => 'below_reorder']);
 
         $this->assertCount(1, $data['statusFilteredItems']);
         $this->assertEquals($lowStock->id, $data['statusFilteredItems']->first()['id']);
+    }
+
+    public function test_snapshot_metrics_use_the_selected_period_end(): void
+    {
+        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId, 'name' => 'Widgets']);
+        $active = Product::factory()->withGroup($group)->withSubjects()->create([
+            'company_id' => $this->companyId,
+            'code' => 'ACTIVE',
+            'quantity' => 999,
+            'quantity_warning' => 7,
+        ]);
+        $stagnant = Product::factory()->withGroup($group)->withSubjects()->create([
+            'company_id' => $this->companyId,
+            'code' => 'STAGNANT',
+            'quantity' => 999,
+            'quantity_warning' => 2,
+        ]);
+
+        $fiscalStart = jalali_to_gregorian(1405, 1, 1, '-');
+        $this->stockMovement($active, InvoiceType::BEGINNING_INVENTORY, 10, 10, $fiscalStart);
+        $this->stockMovement($stagnant, InvoiceType::BEGINNING_INVENTORY, 5, 11, $fiscalStart);
+        $this->stockMovement($active, InvoiceType::SELL, 4, 12, Carbon::now()->subDays(5)->toDateString(), 800);
+        $this->stockMovement($active, InvoiceType::SELL, 2, 13, Carbon::now()->addDays(5)->toDateString(), 400);
+        $this->stockMovement($stagnant, InvoiceType::SELL, 1, 14, Carbon::now()->addDays(5)->toDateString(), 100);
+        $this->inventoryBalance($active, -600, Carbon::now()->subDays(5)->toDateString());
+        $this->inventoryBalance($active, 200, Carbon::now()->addDays(5)->toDateString());
+        $this->inventoryBalance($stagnant, -500, $fiscalStart);
+        $this->inventoryBalance($stagnant, 100, Carbon::now()->addDays(5)->toDateString());
+
+        $data = app(WarehouseDashboardService::class)->dashboard(['period' => 'month']);
+
+        $this->assertSame(2, $data['summary']['total_item_count']);
+        $this->assertSame(11.0, $data['summary']['total_stock_quantity']);
+        $this->assertSame(1100.0, $data['summary']['total_inventory_value']);
+        $this->assertSame(1, $data['summary']['below_reorder_count']);
+        $this->assertSame(1, $data['summary']['stagnant_count']);
+        $this->assertSame(2, $data['categoryBreakdown']->first()['item_count']);
+        $this->assertSame(1100.0, $data['categoryBreakdown']->first()['inventory_value']);
+        $this->assertSame($active->id, $data['belowReorderItems']->first()['id']);
+        $this->assertSame(6.0, $data['belowReorderItems']->first()['quantity']);
+        $this->assertSame($stagnant->id, $data['stagnantItems']->first()['id']);
+        $this->assertSame(5.0, $data['stagnantItems']->first()['quantity']);
+        $this->assertSame($active->id, $data['topSellers']->first()['id']);
+        $this->assertSame(4.0, $data['topSellers']->first()['units']);
     }
 
     public function test_report_min_quantity_filter_is_inclusive(): void
@@ -321,11 +372,11 @@ class WarehouseDashboardTest extends TestCase
         ]);
     }
 
-    private function inventoryBalance(Product $product, float $value): void
+    private function inventoryBalance(Product $product, float $value, ?string $date = null): void
     {
         $document = Document::factory()->create([
             'company_id' => $this->companyId,
-            'date' => jalali_to_gregorian(1405, 2, 1, '-'),
+            'date' => $date ?? jalali_to_gregorian(1405, 2, 1, '-'),
         ]);
 
         Transaction::create([
@@ -334,6 +385,24 @@ class WarehouseDashboardTest extends TestCase
             'user_id' => $this->user->id,
             'value' => $value,
             'desc' => 'inventory balance',
+        ]);
+    }
+
+    private function stockMovement(Product $product, InvoiceType $type, float $quantity, int $number, string $date, float $amount = 0): void
+    {
+        $invoice = $this->invoice($type, InvoiceStatus::APPROVED, $number, $date, $amount);
+
+        InvoiceItem::factory()->create([
+            'invoice_id' => $invoice->id,
+            'itemable_type' => Product::class,
+            'itemable_id' => $product->id,
+            'quantity' => $quantity,
+            'unit_price' => $quantity > 0 ? $amount / $quantity : 0,
+            'unit_discount' => 0,
+            'vat' => 0,
+            'amount' => $amount,
+            'cog_after' => 100,
+            'quantity_at' => 0,
         ]);
     }
 }

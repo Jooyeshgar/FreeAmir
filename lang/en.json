@@ -3483,5 +3483,19 @@
     "This step recalculates only the Closing Document for fiscal year :year.": "This step recalculates only the Closing Document for fiscal year :year.",
     "The next fiscal year and its Opening Document will not be changed. Update the Opening Document manually if you have access.": "The next fiscal year and its Opening Document will not be changed. Update the Opening Document manually if you have access.",
     "This will recalculate only the Closing Document for fiscal year :year. The next fiscal year will not be changed. Are you sure?": "This will recalculate only the Closing Document for fiscal year :year. The next fiscal year will not be changed. Are you sure?",
-    "Only a closed fiscal year can have its closing document recalculated.": "Only a closed fiscal year can have its closing document recalculated."
+    "Only a closed fiscal year can have its closing document recalculated.": "Only a closed fiscal year can have its closing document recalculated.",
+    "Inventory account balance at the selected period end": "Inventory account balance at the selected period end",
+    "Period-end quantity: :qty": "Period-end quantity: :qty",
+    "At the selected period end": "At the selected period end",
+    "No movement for :days days as of period end": "No movement for :days days as of period end",
+    "Period COGS divided by period-end inventory value": "Period COGS divided by period-end inventory value",
+    "Products with positive stock at the selected period end": "Products with positive stock at the selected period end",
+    "Period-end stock, lowest first": "Period-end stock, lowest first",
+    "Items matching the inventory status at the selected period end": "Items matching the inventory status at the selected period end",
+    "Nothing needed replenishment at the selected period end.": "Nothing needed replenishment at the selected period end.",
+    "No item was stagnant at the selected period end.": "No item was stagnant at the selected period end.",
+    ":count item(s) were at or below their reorder point at period end": ":count item(s) were at or below their reorder point at period end",
+    "All stock levels were above their reorder points at period end": "All stock levels were above their reorder points at period end",
+    ":count item(s) had no movement for :days days as of period end": ":count item(s) had no movement for :days days as of period end",
+    "No stagnant inventory at period end": "No stagnant inventory at period end"
 }

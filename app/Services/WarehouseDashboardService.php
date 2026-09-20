@@ -71,19 +71,22 @@ class WarehouseDashboardService
         $products = $this->productsQuery($filters)
             ->with('productGroup:id,name')
             ->get();
-        $inventoryBalances = $this->inventoryBalances($products);
+        $inventoryBalances = $this->inventoryBalances($products, $fiscalStart, $to);
+        $stockQuantities = $this->stockQuantities($products, $fiscalStart, $to);
+        $periodProducts = $products->filter(fn (Product $product) => array_key_exists($product->id, $stockQuantities)
+            || $this->inventoryValue($product, $inventoryBalances) != 0.0);
 
         $itemsInPeriod = $this->invoiceItemsBetween($from, $to, $filters['category_id']);
         $movementMap = $this->aggregateMovement($itemsInPeriod);
-        $lastMovementByProduct = $this->lastMovementDates($filters['category_id']);
+        $lastMovementByProduct = $this->lastMovementDates($fiscalStart, $to, $filters['category_id']);
 
-        $categoryBuckets = $this->bucketByCategory($products, $movementMap, $productGroups, $inventoryBalances);
+        $categoryBuckets = $this->bucketByCategory($periodProducts, $movementMap, $productGroups, $inventoryBalances, $stockQuantities);
 
-        $totalInventoryValue = $products->sum(fn (Product $product) => $this->inventoryValue($product, $inventoryBalances));
-        $belowReorder = $products->filter(fn (Product $p) => $this->isBelowReorder($p));
-        $stagnantStandalone = $this->stagnantProducts($products, $lastMovementByProduct);
+        $totalInventoryValue = $periodProducts->sum(fn (Product $product) => $this->inventoryValue($product, $inventoryBalances));
+        $belowReorder = $periodProducts->filter(fn (Product $product) => $this->isBelowReorder($product, $stockQuantities));
+        $stagnantStandalone = $this->stagnantProducts($periodProducts, $lastMovementByProduct, $stockQuantities, $to);
 
-        $statusFiltered = $this->applyStatusFilter($products, $belowReorder, $stagnantStandalone, $filters['status']);
+        $statusFiltered = $this->applyStatusFilter($periodProducts, $belowReorder, $stagnantStandalone, $filters['status'], $stockQuantities);
 
         $topSellers = $this->topSellers($itemsInPeriod, 10);
         $monthlyMovement = $this->monthlyMovement($itemsInPeriod, $from, $to);
@@ -103,8 +106,8 @@ class WarehouseDashboardService
             'statusOptions' => $this->statusOptions(),
             'summary' => [
                 'total_inventory_value' => (float) $totalInventoryValue,
-                'total_item_count' => $products->count(),
-                'total_stock_quantity' => (float) $products->sum(fn (Product $p) => (float) $p->quantity),
+                'total_item_count' => $periodProducts->filter(fn (Product $product) => $this->stockQuantity($product, $stockQuantities) > 0)->count(),
+                'total_stock_quantity' => (float) $periodProducts->sum(fn (Product $product) => $this->stockQuantity($product, $stockQuantities)),
                 'below_reorder_count' => $belowReorder->count(),
                 'stagnant_count' => $stagnantStandalone->count(),
                 'avg_turnover_ratio' => (float) $overallTurnover,
@@ -113,10 +116,10 @@ class WarehouseDashboardService
             'categoryBreakdown' => $categoryBuckets->values(),
             'monthlyMovement' => $monthlyMovement,
             'monthlyMovementByCategory' => $monthlyMovementByCategory,
-            'belowReorderItems' => $this->mapProductRows($belowReorder->sortBy(fn (Product $p) => (float) $p->quantity)->take(15), $inventoryBalances),
-            'stagnantItems' => $this->mapStagnantRows($stagnantStandalone->take(15), $lastMovementByProduct, $inventoryBalances),
+            'belowReorderItems' => $this->mapProductRows($belowReorder->sortBy(fn (Product $product) => $this->stockQuantity($product, $stockQuantities))->take(15), $inventoryBalances, $stockQuantities),
+            'stagnantItems' => $this->mapStagnantRows($stagnantStandalone->take(15), $lastMovementByProduct, $inventoryBalances, $stockQuantities, $to),
             'topSellers' => $topSellers,
-            'statusFilteredItems' => $this->mapProductRows($statusFiltered->take(15), $inventoryBalances),
+            'statusFilteredItems' => $this->mapProductRows($statusFiltered->take(15), $inventoryBalances, $stockQuantities),
             'alerts' => $this->alerts($belowReorder, $stagnantStandalone, $itemsInPeriod->isEmpty()),
             'stagnant_days' => self::STAGNANT_DAYS,
         ];
@@ -219,15 +222,19 @@ class WarehouseDashboardService
         return $map;
     }
 
-    private function lastMovementDates(?int $categoryId): array
+    private function lastMovementDates(Carbon $fiscalStart, Carbon $to, ?int $categoryId): array
     {
         return InvoiceItem::query()
             ->selectRaw('invoice_items.itemable_id as product_id, MAX(invoices.date) as last_date')
             ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
             ->where('invoice_items.itemable_type', Product::class)
             ->whereIn('invoices.status', array_map(fn (InvoiceStatus $s) => $s->value, InvoiceStatus::approvedOrSettled()))
-            ->whereIn('invoices.invoice_type', array_map(fn (InvoiceType $t) => $t->value, array_merge(self::STOCK_IN_TYPES, self::STOCK_OUT_TYPES)))
+            ->whereIn('invoices.invoice_type', array_map(
+                fn (InvoiceType $type) => $type->value,
+                [InvoiceType::BEGINNING_INVENTORY, ...self::STOCK_IN_TYPES, ...self::STOCK_OUT_TYPES]
+            ))
             ->where('invoices.company_id', getActiveCompany())
+            ->whereBetween('invoices.date', [$fiscalStart->toDateString(), $to->toDateString()])
             ->when($categoryId, function ($q, int $id) {
                 $q->join('products', 'products.id', '=', 'invoice_items.itemable_id')
                     ->where('products.group', $id);
@@ -237,13 +244,13 @@ class WarehouseDashboardService
             ->all();
     }
 
-    private function bucketByCategory(Collection $products, array $movementMap, Collection $productGroups, array $inventoryBalances): Collection
+    private function bucketByCategory(Collection $products, array $movementMap, Collection $productGroups, array $inventoryBalances, array $stockQuantities): Collection
     {
         $byGroupId = $products->groupBy(fn (Product $p) => (int) ($p->group ?? 0));
         $groupNames = $productGroups->keyBy('id');
 
         return $byGroupId
-            ->map(function (Collection $groupProducts, int $groupId) use ($movementMap, $groupNames, $inventoryBalances) {
+            ->map(function (Collection $groupProducts, int $groupId) use ($movementMap, $groupNames, $inventoryBalances, $stockQuantities) {
                 $value = (float) $groupProducts->sum(fn (Product $product) => $this->inventoryValue($product, $inventoryBalances));
                 $cogsPeriod = 0.0;
                 $unitsOut = 0.0;
@@ -264,7 +271,7 @@ class WarehouseDashboardService
                 return [
                     'id' => $groupId,
                     'name' => $groupId === 0 ? __('Uncategorized') : ($groupNames->get($groupId)?->name ?? __('Unknown')),
-                    'item_count' => $groupProducts->count(),
+                    'item_count' => $groupProducts->filter(fn (Product $product) => $this->stockQuantity($product, $stockQuantities) > 0)->count(),
                     'inventory_value' => $value,
                     'units_in' => $unitsIn,
                     'units_out' => $unitsOut,
@@ -272,6 +279,11 @@ class WarehouseDashboardService
                     'turnover_ratio' => $turnover,
                 ];
             })
+            ->filter(fn (array $bucket) => $bucket['item_count'] > 0
+                || $bucket['inventory_value'] != 0.0
+                || $bucket['units_in'] != 0.0
+                || $bucket['units_out'] != 0.0
+                || $bucket['cogs_period'] != 0.0)
             ->sortByDesc('inventory_value');
     }
 
@@ -295,22 +307,22 @@ class WarehouseDashboardService
         return round($days / $turnover, 1);
     }
 
-    private function isBelowReorder(Product $product): bool
+    private function isBelowReorder(Product $product, array $stockQuantities): bool
     {
         $warning = $product->quantity_warning;
         if ($warning === null || (float) $warning <= 0) {
             return false;
         }
 
-        return (float) $product->quantity <= (float) $warning;
+        return $this->stockQuantity($product, $stockQuantities) <= (float) $warning;
     }
 
-    private function stagnantProducts(Collection $products, array $lastMovementByProduct): Collection
+    private function stagnantProducts(Collection $products, array $lastMovementByProduct, array $stockQuantities, Carbon $to): Collection
     {
-        $threshold = Carbon::now()->subDays(self::STAGNANT_DAYS);
+        $threshold = $to->copy()->subDays(self::STAGNANT_DAYS);
 
-        return $products->filter(function (Product $product) use ($lastMovementByProduct, $threshold) {
-            if ((float) $product->quantity <= 0) {
+        return $products->filter(function (Product $product) use ($lastMovementByProduct, $stockQuantities, $threshold) {
+            if ($this->stockQuantity($product, $stockQuantities) <= 0) {
                 return false;
             }
 
@@ -323,13 +335,13 @@ class WarehouseDashboardService
         })->values();
     }
 
-    private function applyStatusFilter(Collection $products, Collection $belowReorder, Collection $stagnant, ?string $status): Collection
+    private function applyStatusFilter(Collection $products, Collection $belowReorder, Collection $stagnant, ?string $status, array $stockQuantities): Collection
     {
         return match ($status) {
             self::STATUS_BELOW_REORDER => $belowReorder->values(),
             self::STATUS_STAGNANT => $stagnant->values(),
             self::STATUS_NORMAL => $products
-                ->reject(fn (Product $p) => $this->isBelowReorder($p) || $stagnant->contains('id', $p->id))
+                ->reject(fn (Product $product) => $this->isBelowReorder($product, $stockQuantities) || $stagnant->contains('id', $product->id))
                 ->values(),
             default => collect(),
         };
@@ -474,23 +486,23 @@ class WarehouseDashboardService
             ->values();
     }
 
-    private function mapProductRows(Collection $products, array $inventoryBalances): Collection
+    private function mapProductRows(Collection $products, array $inventoryBalances, array $stockQuantities): Collection
     {
         return $products->map(fn (Product $p) => [
             'id' => $p->id,
             'code' => $p->code,
             'name' => $p->name,
             'group' => $p->productGroup?->name ?? '-',
-            'quantity' => (float) $p->quantity,
+            'quantity' => $this->stockQuantity($p, $stockQuantities),
             'quantity_warning' => (float) ($p->quantity_warning ?? 0),
             'average_cost' => (float) $p->average_cost,
             'inventory_value' => $this->inventoryValue($p, $inventoryBalances),
         ])->values();
     }
 
-    private function mapStagnantRows(Collection $products, array $lastMovementByProduct, array $inventoryBalances): Collection
+    private function mapStagnantRows(Collection $products, array $lastMovementByProduct, array $inventoryBalances, array $stockQuantities, Carbon $to): Collection
     {
-        return $products->map(function (Product $p) use ($lastMovementByProduct, $inventoryBalances) {
+        return $products->map(function (Product $p) use ($lastMovementByProduct, $inventoryBalances, $stockQuantities, $to) {
             $last = $lastMovementByProduct[$p->id] ?? null;
             $lastCarbon = $last ? Carbon::parse($last) : null;
 
@@ -499,10 +511,10 @@ class WarehouseDashboardService
                 'code' => $p->code,
                 'name' => $p->name,
                 'group' => $p->productGroup?->name ?? '-',
-                'quantity' => (float) $p->quantity,
+                'quantity' => $this->stockQuantity($p, $stockQuantities),
                 'inventory_value' => $this->inventoryValue($p, $inventoryBalances),
                 'last_movement' => $lastCarbon,
-                'days_idle' => $lastCarbon ? $lastCarbon->diffInDays(Carbon::now()) : null,
+                'days_idle' => $lastCarbon ? $lastCarbon->diffInDays($to) : null,
             ];
         })->values();
     }
@@ -512,20 +524,20 @@ class WarehouseDashboardService
         return [
             [
                 'title' => $belowReorder->isNotEmpty()
-                    ? __(':count item(s) are at or below their reorder point', ['count' => formatNumber($belowReorder->count())])
-                    : __('All stock levels are above their reorder points'),
+                    ? __(':count item(s) were at or below their reorder point at period end', ['count' => formatNumber($belowReorder->count())])
+                    : __('All stock levels were above their reorder points at period end'),
                 'description' => $belowReorder->isNotEmpty()
                     ? __('Review the below-reorder table and trigger purchase orders.')
-                    : __('Nothing needs replenishment right now.'),
+                    : __('Nothing needed replenishment at the selected period end.'),
                 'tone' => $belowReorder->isNotEmpty() ? 'warning' : 'success',
             ],
             [
                 'title' => $stagnant->isNotEmpty()
-                    ? __(':count item(s) have had no movement in the last :days days', ['count' => formatNumber($stagnant->count()), 'days' => formatNumber(self::STAGNANT_DAYS)])
-                    : __('No stagnant inventory detected'),
+                    ? __(':count item(s) had no movement for :days days as of period end', ['count' => formatNumber($stagnant->count()), 'days' => formatNumber(self::STAGNANT_DAYS)])
+                    : __('No stagnant inventory at period end'),
                 'description' => $stagnant->isNotEmpty()
                     ? __('Consider discounts, bundles, or write-offs for these items.')
-                    : __('Items are turning regularly across the selected categories.'),
+                    : __('No item was stagnant at the selected period end.'),
                 'tone' => $stagnant->isNotEmpty() ? 'info' : 'success',
             ],
             [
@@ -549,7 +561,7 @@ class WarehouseDashboardService
         ];
     }
 
-    private function inventoryBalances(Collection $products): array
+    private function inventoryBalances(Collection $products, Carbon $fiscalStart, Carbon $to): array
     {
         $subjectIds = $products->pluck('inventory_subject_id')->filter()->unique()->values()->all();
 
@@ -559,6 +571,8 @@ class WarehouseDashboardService
 
         return Transaction::query()
             ->whereIn('subject_id', $subjectIds)
+            ->join('documents', 'documents.id', '=', 'transactions.document_id')
+            ->whereBetween('documents.date', [$fiscalStart->toDateString(), $to->toDateString()])
             ->selectRaw('subject_id, SUM(value) as total')
             ->groupBy('subject_id')
             ->pluck('total', 'subject_id')
@@ -568,7 +582,40 @@ class WarehouseDashboardService
 
     private function inventoryValue(Product $product, array $inventoryBalances): float
     {
-        return (float) ($inventoryBalances[$product->inventory_subject_id] ?? 0.0);
+        return abs((float) ($inventoryBalances[$product->inventory_subject_id] ?? 0.0));
+    }
+
+    private function stockQuantities(Collection $products, Carbon $fiscalStart, Carbon $to): array
+    {
+        $productIds = $products->pluck('id')->all();
+
+        if ($productIds === []) {
+            return [];
+        }
+
+        $items = InvoiceItem::query()
+            ->where('itemable_type', Product::class)
+            ->whereIn('itemable_id', $productIds)
+            ->whereHas('invoice', function (Builder $query) use ($fiscalStart, $to) {
+                $query->whereIn('status', InvoiceStatus::approvedOrSettled())
+                    ->whereIn('invoice_type', [InvoiceType::BEGINNING_INVENTORY, ...self::STOCK_IN_TYPES, ...self::STOCK_OUT_TYPES])
+                    ->whereBetween('date', [$fiscalStart->toDateString(), $to->toDateString()]);
+            })
+            ->with('invoice:id,invoice_type')
+            ->get(['id', 'invoice_id', 'itemable_id', 'quantity']);
+
+        return $items->groupBy('itemable_id')->map(function (Collection $productItems): float {
+            return (float) $productItems->sum(function (InvoiceItem $item): float {
+                return in_array($item->invoice->invoice_type, [InvoiceType::BEGINNING_INVENTORY, ...self::STOCK_IN_TYPES], true)
+                    ? (float) $item->quantity
+                    : (float) $item->quantity * -1;
+            });
+        })->all();
+    }
+
+    private function stockQuantity(Product $product, array $stockQuantities): float
+    {
+        return (float) ($stockQuantities[$product->id] ?? 0.0);
     }
 
     private function statusOptions(): array
