@@ -29,11 +29,11 @@ class TrialBalanceExportTest extends TestCase
     {
         parent::setUp();
 
-        $this->company = Company::factory()->create();
+        $this->company = Company::factory()->create(['fiscal_year' => 1405]);
         $this->user = User::factory()->create();
         $this->company->users()->attach($this->user);
 
-        foreach (['reports.trial-balance', 'reports.trial-balance.export-csv'] as $perm) {
+        foreach (['reports.trial-balance', 'reports.trial-balance.print', 'reports.trial-balance.export-csv'] as $perm) {
             $this->user->givePermissionTo(Permission::firstOrCreate(['name' => $perm]));
         }
 
@@ -201,5 +201,20 @@ class TrialBalanceExportTest extends TestCase
 
         $response->assertRedirect(route('reports.trial-balance'));
         $response->assertSessionHasErrors('start_date');
+    }
+
+    public function test_trial_balance_html_print_and_csv_reject_dates_outside_the_active_fiscal_year(): void
+    {
+        foreach (['reports.trial-balance', 'reports.trial-balance.print', 'reports.trial-balance.export-csv'] as $route) {
+            $this->from(route('reports.trial-balance'))->get(route($route, [
+                'start_date' => '1404/12/29',
+                'end_date' => '1405/12/29',
+            ]))->assertSessionHasErrors('start_date');
+
+            $this->from(route('reports.trial-balance'))->get(route($route, [
+                'start_date' => '1405/01/01',
+                'end_date' => '1406/01/01',
+            ]))->assertSessionHasErrors('end_date');
+        }
     }
 }

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Models\Company;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Employee;
@@ -266,6 +267,17 @@ class ReportExportService
 
         $startDate = $this->reportDate($validated['start_date'] ?? null, 'start_date');
         $endDate = $this->reportDate($validated['end_date'] ?? null, 'end_date');
+        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
+        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+
+        if ($startDate && ($startDate < $fiscalStart->toDateString() || $startDate > $fiscalEnd->toDateString())) {
+            throw ValidationException::withMessages(['start_date' => __('The start date must be within the active fiscal year.')]);
+        }
+
+        if ($endDate && ($endDate < $fiscalStart->toDateString() || $endDate > $fiscalEnd->toDateString())) {
+            throw ValidationException::withMessages(['end_date' => __('The end date must be within the active fiscal year.')]);
+        }
+
         if ($startDate && $endDate && Carbon::parse($startDate)->isAfter(Carbon::parse($endDate))) {
             throw ValidationException::withMessages(['start_date' => __('Start date cannot be greater than end date.')]);
         }
