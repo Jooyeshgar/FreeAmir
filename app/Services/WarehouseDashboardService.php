@@ -848,10 +848,15 @@ class WarehouseDashboardService
 
     private function fiscalYearToDate(): array
     {
-        $year = (int) (config('active-company-fiscal-year') ?? toEnglish(jdate('Y')));
-        $from = Carbon::parse(jalali_to_gregorian($year, 1, 1, '/'))->startOfDay();
+        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
+        [$from, $fiscalEnd] = $company->fiscalYearRange();
+        $to = Carbon::now()->endOfDay();
 
-        return [$from, Carbon::now()->endOfDay()];
+        if ($to->greaterThan($fiscalEnd)) {
+            $to = $fiscalEnd;
+        }
+
+        return [$from, $to];
     }
 
     private function fiscalYearMovement(Carbon $from, Carbon $to, array $productIds): array

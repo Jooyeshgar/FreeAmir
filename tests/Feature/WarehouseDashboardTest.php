@@ -347,6 +347,33 @@ class WarehouseDashboardTest extends TestCase
         $this->assertContains(__('Need Order'), collect($report['filterSummary'])->pluck('label')->all());
     }
 
+    public function test_report_clamps_movements_to_the_end_of_a_closed_fiscal_year(): void
+    {
+        $company = Company::withoutGlobalScopes()->findOrFail($this->companyId);
+        $company->update(['fiscal_year' => 1404]);
+        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+
+        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId]);
+        $product = Product::factory()->withGroup($group)->withSubjects()->create([
+            'company_id' => $this->companyId,
+            'code' => 'CLOSED-YEAR',
+        ]);
+
+        $this->stockMovement($product, InvoiceType::BUY, 2, 20, $fiscalStart->copy()->addMonth()->toDateString());
+        $this->stockMovement($product, InvoiceType::BUY, 5, 21, $fiscalEnd->copy()->addDay()->toDateString());
+
+        $report = app(WarehouseDashboardService::class)->report();
+        $row = $report['rows']->firstWhere('id', $product->id);
+        $period = collect($report['filterSummary'])->firstWhere('label', __('Period'));
+
+        $this->assertSame(2.0, $row['inbound']);
+        $this->assertSame(
+            localizeNumber(toEnglish(jdate('Y/m/d', $fiscalStart->timestamp))).' - '
+                .localizeNumber(toEnglish(jdate('Y/m/d', $fiscalEnd->timestamp))),
+            $period['value']
+        );
+    }
+
     private function grant(string ...$permissions): void
     {
         $this->user->givePermissionTo(
