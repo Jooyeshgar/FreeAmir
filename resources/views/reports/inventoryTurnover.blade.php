@@ -120,4 +120,11 @@
             </div>
         </div>
     </div>
+
+    @pushOnce('scripts')
+        <script type="module">
+            jalaliDatepicker.startWatch({'persianDigits': true});
+        </script>
+    @endPushOnce
+
 </x-app-layout>

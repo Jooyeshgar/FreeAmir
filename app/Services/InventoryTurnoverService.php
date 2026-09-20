@@ -37,18 +37,21 @@ class InventoryTurnoverService
         $productIds = $products->pluck('id')->all();
         $subjectIds = $products->pluck('inventory_subject_id')->all();
         $quantities = $this->movementQuantities($productIds, $filters);
-        $movementTypes = [InvoiceType::BEGINNING_INVENTORY, ...self::IMPORT_TYPES, ...self::EXPORT_TYPES];
-        $openingBalances = $filters['warehouse_id']
-            ? $this->invoiceMovementBalances($subjectIds, $movementTypes, null, $filters['start_date'], $filters['warehouse_id'], excludeThrough: true)
-            : $this->subjectBalances($subjectIds, before: $filters['start_date']);
+        $openingBalances = $this->invoiceMovementBalances(
+            $subjectIds,
+            [InvoiceType::BEGINNING_INVENTORY],
+            null,
+            $filters['start_date'],
+            $filters['warehouse_id']
+        );
         $importedBalances = $this->invoiceMovementBalances($subjectIds, self::IMPORT_TYPES, $filters['start_date'], $filters['end_date'], $filters['warehouse_id']);
         $exportedBalances = $this->invoiceMovementBalances($subjectIds, self::EXPORT_TYPES, $filters['start_date'], $filters['end_date'], $filters['warehouse_id']);
-        $remainingBalances = $filters['warehouse_id']
-            ? $this->invoiceMovementBalances($subjectIds, $movementTypes, null, $filters['end_date'], $filters['warehouse_id'])
-            : $this->subjectBalances($subjectIds, through: $filters['end_date']);
 
-        $rows = $products->map(function (Product $product) use ($quantities, $openingBalances, $importedBalances, $exportedBalances, $remainingBalances): array {
+        $rows = $products->map(function (Product $product) use ($quantities, $openingBalances, $importedBalances, $exportedBalances): array {
             $quantity = $quantities[$product->id] ?? ['opening' => 0.0, 'imported' => 0.0, 'exported' => 0.0];
+            $openingBalance = abs((float) ($openingBalances[$product->inventory_subject_id] ?? 0));
+            $importedBalance = abs((float) ($importedBalances[$product->inventory_subject_id] ?? 0));
+            $exportedBalance = abs((float) ($exportedBalances[$product->inventory_subject_id] ?? 0));
 
             return [
                 'product_id' => $product->id,
@@ -57,13 +60,13 @@ class InventoryTurnoverService
                 'subject_code' => $product?->inventorySubject->code,
                 'product_name' => $product->name,
                 'opening_quantity' => $quantity['opening'],
-                'opening_balance' => abs((float) ($openingBalances[$product->inventory_subject_id] ?? 0)),
+                'opening_balance' => $openingBalance,
                 'imported_quantity' => $quantity['imported'],
-                'imported_balance' => abs((float) ($importedBalances[$product->inventory_subject_id] ?? 0)),
+                'imported_balance' => $importedBalance,
                 'exported_quantity' => $quantity['exported'],
-                'exported_balance' => abs((float) ($exportedBalances[$product->inventory_subject_id] ?? 0)),
+                'exported_balance' => $exportedBalance,
                 'remaining_quantity' => $quantity['opening'] + $quantity['imported'] - $quantity['exported'],
-                'remaining_balance' => abs((float) ($remainingBalances[$product->inventory_subject_id] ?? 0)),
+                'remaining_balance' => $openingBalance + $importedBalance - $exportedBalance,
             ];
         })->values();
 
@@ -157,15 +160,15 @@ class InventoryTurnoverService
                 $type = (int) $item->invoice_type;
                 $quantity = (float) $item->quantity;
 
-                if ($filters['start_date'] && $item->date < $filters['start_date']) {
-                    $opening += in_array($type, $exports, true) ? -$quantity : $quantity;
+                if ($type === InvoiceType::BEGINNING_INVENTORY->value) {
+                    if ($item->date <= $filters['start_date']) {
+                        $opening += $quantity;
+                    }
 
                     continue;
                 }
 
-                if (! $filters['start_date'] && $type === InvoiceType::BEGINNING_INVENTORY->value) {
-                    $opening += $quantity;
-
+                if ($item->date < $filters['start_date']) {
                     continue;
                 }
 
@@ -180,7 +183,7 @@ class InventoryTurnoverService
         });
     }
 
-    private function invoiceMovementBalances(array $subjectIds, array $types, ?string $from, ?string $through, ?int $warehouseId = null, bool $excludeThrough = false): Collection
+    private function invoiceMovementBalances(array $subjectIds, array $types, ?string $from, ?string $through, ?int $warehouseId = null): Collection
     {
         if ($subjectIds === []) {
             return collect();
@@ -195,24 +198,7 @@ class InventoryTurnoverService
             ->whereIn('transactions.subject_id', $subjectIds)
             ->when($warehouseId, fn (Builder $query, int $id) => $query->where('invoices.warehouse_id', $id))
             ->when($from, fn (Builder $query, string $date) => $query->where('invoices.date', '>=', $date))
-            ->when($through, fn (Builder $query, string $date) => $query->where('invoices.date', $excludeThrough ? '<' : '<=', $date))
-            ->groupBy('transactions.subject_id')
-            ->selectRaw('transactions.subject_id, SUM(transactions.value) as balance')
-            ->pluck('balance', 'transactions.subject_id');
-    }
-
-    private function subjectBalances(array $subjectIds, ?string $before = null, ?string $through = null): Collection
-    {
-        if ($subjectIds === []) {
-            return collect();
-        }
-
-        return DB::table('transactions')
-            ->join('documents', 'documents.id', '=', 'transactions.document_id')
-            ->where('documents.company_id', getActiveCompany())
-            ->whereIn('transactions.subject_id', $subjectIds)
-            ->when($before, fn (Builder $query, string $date) => $query->where('documents.date', '<', $date))
-            ->when($through, fn (Builder $query, string $date) => $query->where('documents.date', '<=', $date))
+            ->when($through, fn (Builder $query, string $date) => $query->where('invoices.date', '<=', $date))
             ->groupBy('transactions.subject_id')
             ->selectRaw('transactions.subject_id, SUM(transactions.value) as balance')
             ->pluck('balance', 'transactions.subject_id');

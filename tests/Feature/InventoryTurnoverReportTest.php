@@ -90,6 +90,8 @@ class InventoryTurnoverReportTest extends TestCase
         $this->movement(InvoiceType::RETURN_BUY, '2026-02-12', 2, 250, 6);
         $this->movement(InvoiceType::BUY, '2026-03-01', 8, -800, 7);
         $this->movement(InvoiceType::BUY, '2026-02-20', 99, -9900, 8, InvoiceStatus::PENDING);
+        $this->movement(InvoiceType::BEGINNING_INVENTORY, '2026-01-02', 99, -9900, 9, InvoiceStatus::PENDING);
+        $this->movement(InvoiceType::BEGINNING_INVENTORY, '2026-02-15', 77, -7700, 10);
 
         $report = app(InventoryTurnoverService::class)->report([
             'start_date' => '2026/02/01',
@@ -99,15 +101,57 @@ class InventoryTurnoverReportTest extends TestCase
         $row = $report['rows']->first();
 
         $this->assertSame($this->product->code, $row['product_code']);
-        $this->assertEquals(12, $row['opening_quantity']);
-        $this->assertEquals(1200, $row['opening_balance']);
+        $this->assertEquals(10, $row['opening_quantity']);
+        $this->assertEquals(1000, $row['opening_balance']);
         $this->assertEquals(6, $row['imported_quantity']);
         $this->assertEquals(700, $row['imported_balance']);
         $this->assertEquals(6, $row['exported_quantity']);
         $this->assertEquals(650, $row['exported_balance']);
-        $this->assertEquals(12, $row['remaining_quantity']);
-        $this->assertEquals(1250, $row['remaining_balance']);
-        $this->assertEquals(12, $report['totals']['remaining_quantity']);
+        $this->assertEquals(10, $row['remaining_quantity']);
+        $this->assertEquals(1050, $row['remaining_balance']);
+        $this->assertEquals(10, $report['totals']['remaining_quantity']);
+    }
+
+    public function test_report_includes_only_approved_or_settled_invoice_statuses(): void
+    {
+        $this->movement(InvoiceType::BEGINNING_INVENTORY, '2026-01-01', 3, -300, 1, InvoiceStatus::PARTIALLY_PAID);
+        $this->movement(InvoiceType::BEGINNING_INVENTORY, '2026-01-02', 4, -400, 2, InvoiceStatus::PAID);
+        $this->movement(InvoiceType::BEGINNING_INVENTORY, '2026-01-03', 50, -5000, 3, InvoiceStatus::UNAPPROVED);
+        $this->movement(InvoiceType::BUY, '2026-02-05', 2, -220, 4, InvoiceStatus::PAID);
+        $this->movement(InvoiceType::SELL, '2026-02-10', 1, 110, 5, InvoiceStatus::PARTIALLY_PAID);
+        $this->movement(InvoiceType::BUY, '2026-02-15', 60, -6000, 6, InvoiceStatus::READY_TO_APPROVE);
+
+        $row = app(InventoryTurnoverService::class)->report([
+            'start_date' => '2026/02/01',
+            'end_date' => '2026/02/28',
+        ])['rows']->first();
+
+        $this->assertEquals(7, $row['opening_quantity']);
+        $this->assertEquals(700, $row['opening_balance']);
+        $this->assertEquals(2, $row['imported_quantity']);
+        $this->assertEquals(220, $row['imported_balance']);
+        $this->assertEquals(1, $row['exported_quantity']);
+        $this->assertEquals(110, $row['exported_balance']);
+        $this->assertEquals(8, $row['remaining_quantity']);
+        $this->assertEquals(810, $row['remaining_balance']);
+    }
+
+    public function test_beginning_inventory_on_start_date_is_opening_but_later_records_are_ignored(): void
+    {
+        $this->movement(InvoiceType::BEGINNING_INVENTORY, '2026-02-01', 10, -1000, 1);
+        $this->movement(InvoiceType::BEGINNING_INVENTORY, '2026-02-02', 50, -5000, 2);
+
+        $row = app(InventoryTurnoverService::class)->report([
+            'start_date' => '2026/02/01',
+            'end_date' => '2026/02/28',
+        ])['rows']->first();
+
+        $this->assertEquals(10, $row['opening_quantity']);
+        $this->assertEquals(1000, $row['opening_balance']);
+        $this->assertEquals(0, $row['imported_quantity']);
+        $this->assertEquals(0, $row['imported_balance']);
+        $this->assertEquals(10, $row['remaining_quantity']);
+        $this->assertEquals(1000, $row['remaining_balance']);
     }
 
     public function test_product_group_filter_excludes_products_from_other_groups(): void
@@ -131,6 +175,7 @@ class InventoryTurnoverReportTest extends TestCase
         $this->movement(InvoiceType::BUY, '2026-02-05', 5, -500, 2);
         $this->movement(InvoiceType::SELL, '2026-02-10', 2, 200, 3);
         $this->movement(InvoiceType::BUY, '2026-02-12', 7, -700, 4, warehouse: $this->otherWarehouse);
+        $this->movement(InvoiceType::BEGINNING_INVENTORY, '2026-01-01', 20, -2000, 5, warehouse: $this->otherWarehouse);
 
         $report = app(InventoryTurnoverService::class)->report([
             'start_date' => '2026/02/01',
