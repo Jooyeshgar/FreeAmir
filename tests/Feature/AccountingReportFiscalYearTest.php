@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\SubjectType;
 use App\Models\Company;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -26,11 +27,12 @@ class AccountingReportFiscalYearTest extends TestCase
         $company = Company::factory()->create(['fiscal_year' => 1405]);
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
+        $subjectType = DB::connection()->getDriverName() === 'sqlite' ? 'both' : SubjectType::BOTH->value;
         $this->subjectId = DB::table('subjects')->insertGetId([
             'company_id' => $company->id,
             'code' => '001',
             'name' => 'Test subject',
-            'type' => 3,
+            'type' => $subjectType,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
