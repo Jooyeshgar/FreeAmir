@@ -15,7 +15,7 @@
             'title' => __('Total Inventory Value'),
             'value' => $summary['total_inventory_value'],
             'suffix' => __('Rial'),
-            'detail' => __('Based on average cost'),
+            'detail' => __('Current inventory accounts'),
             'tone' => 'info',
             'series' => collect($monthlyMovement['in'] ?? [])
                 ->zip($monthlyMovement['out'] ?? [])

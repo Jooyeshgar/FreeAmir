@@ -7,10 +7,12 @@ use App\Enums\InvoiceType;
 use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\ProductGroup;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Services\WarehouseDashboardService;
 use Carbon\Carbon;
@@ -33,6 +35,8 @@ class WarehouseDashboardTest extends TestCase
     {
         parent::setUp();
 
+        Carbon::setTestNow(Carbon::parse('2026-09-03 12:00:00', config('app.timezone')));
+
         $company = Company::factory()->create(['fiscal_year' => 1405]);
         $this->companyId = $company->id;
 
@@ -47,6 +51,14 @@ class WarehouseDashboardTest extends TestCase
 
         $customerGroup = CustomerGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
         $this->customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create(['company_id' => $this->companyId]);
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        unset($_COOKIE['active-company-id']);
+
+        parent::tearDown();
     }
 
     public function test_user_with_warehouse_dashboard_can_view_warehouse_dashboard(): void
@@ -94,6 +106,8 @@ class WarehouseDashboardTest extends TestCase
             'average_cost' => 50,
             'selling_price' => 90,
         ]);
+        $this->inventoryBalance($bestSeller, 500);
+        $this->inventoryBalance($stagnant, 1000);
 
         $sell = $this->invoice(InvoiceType::SELL, InvoiceStatus::APPROVED, 1, Carbon::now()->subDays(5)->toDateString(), 750);
         InvoiceItem::factory()->create([
@@ -124,7 +138,7 @@ class WarehouseDashboardTest extends TestCase
         $widgets = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId, 'name' => 'Widgets']);
         $gadgets = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId, 'name' => 'Gadgets']);
 
-        Product::factory()->withGroup($widgets)->withSubjects()->create([
+        $widgetsProduct = Product::factory()->withGroup($widgets)->withSubjects()->create([
             'company_id' => $this->companyId,
             'code' => 'W-1',
             'quantity' => 5,
@@ -138,6 +152,7 @@ class WarehouseDashboardTest extends TestCase
             'quantity_warning' => 5,
             'average_cost' => 50,
         ]);
+        $this->inventoryBalance($widgetsProduct, 500);
 
         $data = app(WarehouseDashboardService::class)->dashboard(['category_id' => $widgets->id]);
 
@@ -145,6 +160,47 @@ class WarehouseDashboardTest extends TestCase
         $this->assertEquals(500.0, $data['summary']['total_inventory_value']);
         $this->assertEquals(1, $data['categoryBreakdown']->count());
         $this->assertEquals('Widgets', $data['categoryBreakdown']->first()['name']);
+    }
+
+    public function test_year_period_uses_exact_fiscal_year_and_has_twelve_jalali_months(): void
+    {
+        $data = app(WarehouseDashboardService::class)->dashboard(['period' => 'year']);
+
+        $this->assertSame(jalali_to_gregorian(1405, 1, 1, '-'), $data['periodRange']['from']->toDateString());
+        $this->assertSame(
+            Carbon::parse(jalali_to_gregorian(1406, 1, 1, '-'))->subDay()->toDateString(),
+            $data['periodRange']['to']->toDateString()
+        );
+        $this->assertSame(
+            array_map(fn (int $month) => sprintf('1405/%02d', $month), range(1, 12)),
+            $data['monthlyMovement']['labels']
+        );
+    }
+
+    public function test_short_periods_are_clamped_to_the_active_fiscal_year(): void
+    {
+        Carbon::setTestNow(Carbon::parse(jalali_to_gregorian(1405, 1, 10, '-').' 12:00:00'));
+
+        $data = app(WarehouseDashboardService::class)->dashboard(['period' => 'quarter']);
+
+        $this->assertSame(jalali_to_gregorian(1405, 1, 1, '-'), $data['periodRange']['from']->toDateString());
+        $this->assertSame(jalali_to_gregorian(1405, 1, 10, '-'), $data['periodRange']['to']->toDateString());
+    }
+
+    public function test_inventory_value_uses_inventory_account_balance(): void
+    {
+        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId]);
+        $product = Product::factory()->withGroup($group)->withSubjects()->create([
+            'company_id' => $this->companyId,
+            'quantity' => 20,
+            'average_cost' => 50,
+        ]);
+        $this->inventoryBalance($product, 725);
+
+        $data = app(WarehouseDashboardService::class)->dashboard();
+
+        $this->assertSame(725.0, $data['summary']['total_inventory_value']);
+        $this->assertSame(725.0, $data['categoryBreakdown']->first()['inventory_value']);
     }
 
     public function test_status_filter_returns_below_reorder_items(): void
@@ -262,6 +318,22 @@ class WarehouseDashboardTest extends TestCase
             'vat' => 0,
             'amount' => $amount,
             'title' => $type->label(),
+        ]);
+    }
+
+    private function inventoryBalance(Product $product, float $value): void
+    {
+        $document = Document::factory()->create([
+            'company_id' => $this->companyId,
+            'date' => jalali_to_gregorian(1405, 2, 1, '-'),
+        ]);
+
+        Transaction::create([
+            'document_id' => $document->id,
+            'subject_id' => $product->inventory_subject_id,
+            'user_id' => $this->user->id,
+            'value' => $value,
+            'desc' => 'inventory balance',
         ]);
     }
 }
