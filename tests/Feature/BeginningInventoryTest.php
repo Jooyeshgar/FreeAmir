@@ -344,6 +344,23 @@ class BeginningInventoryTest extends TestCase
             ->assertDontSee(__('Payments'));
     }
 
+    public function test_index_page_has_beginning_inventory_status_action(): void
+    {
+        $invoice = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900, false);
+
+        $this->get(route('invoices.index', ['invoice_type' => 'beginning_inventory']))
+            ->assertOk()
+            ->assertSee(route('invoices.change-status', [$invoice, 'approved']), false)
+            ->assertSee(__('Approve'));
+
+        (new InvoiceService)->changeInvoiceStatus($invoice, 'approved');
+
+        $this->get(route('invoices.index', ['invoice_type' => 'beginning_inventory']))
+            ->assertOk()
+            ->assertSee(route('invoices.change-status', [$invoice, 'unapproved']), false)
+            ->assertSee(__('Unapprove'));
+    }
+
     public function test_approved_beginning_inventory_cannot_be_deleted(): void
     {
         $invoice = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900, true);

@@ -189,7 +189,7 @@
     <button id="submitForm" type="submit" class="btn btn-sm lg:btn-md text-white btn-primary rounded-md">{{ __('save') }}</button>
     @can('invoices.approve')
         <button name="approve" value="1" type="submit"
-            class="btn btn-sm lg:btn-md btn-success rounded-md">{{ __('Save and Approve') }}</button>
+            class="btn btn-sm lg:btn-md btn-success rounded-md">{{ __('save and approve') }}</button>
     @endcan
 </div>
 

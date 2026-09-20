@@ -51,6 +51,19 @@
                     <td>
                         <div class="inline-flex gap-2">
                             <a href="{{ route('invoices.show', $invoice) }}" class="btn btn-sm btn-primary">{{ __('Show') }}</a>
+                            @can('invoices.approve')
+                                @if ($invoice->changeStatusValidation->hasErrors())
+                                    <a class="btn btn-sm btn-accent" href="{{ route('invoices.conflicts', $invoice) }}">{{ __('Fix Conflict') }}</a>
+                                @else
+                                    <form action="{{ route('invoices.change-status', [$invoice, $invoice->status->isApprovedOrSettled() ? 'unapproved' : 'approved']) }}{{ $invoice->changeStatusValidation->hasWarning() ? '?confirm=1' : '' }}"
+                                        method="POST" class="{{ $invoice->changeStatusValidation->hasWarning() ? 'change-status-form' : '' }}">
+                                        @csrf
+                                        <button class="btn btn-sm {{ $invoice->status->isApprovedOrSettled() ? 'btn-warning' : 'btn-success' }}" type="submit">
+                                            {{ $invoice->status->isApprovedOrSettled() ? __('Unapprove') : __('Approve') }}
+                                        </button>
+                                    </form>
+                                @endif
+                            @endcan
                             @can('invoices.edit')
                                 <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                             @endcan

@@ -207,6 +207,7 @@ class InvoiceService
                 $invoiceData['title'] = $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? ''));
                 $invoiceData['status'] = InvoiceStatus::UNAPPROVED;
                 $invoice->update($invoiceData);
+                self::syncAncillaryCostsDate($invoice);
                 self::syncInvoiceItems($invoice, $items);
 
                 $createdDocument = self::createDocumentFromInvoiceItems(auth()->user(), $invoice);
@@ -280,11 +281,21 @@ class InvoiceService
             $invoiceData['title'] = $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? ''));
 
             $invoice->update($invoiceData);
+            self::syncAncillaryCostsDate($invoice);
 
             self::syncInvoiceItems($invoice, $items);
         });
 
         return $invoice;
+    }
+
+    private static function syncAncillaryCostsDate(Invoice $invoice): void
+    {
+        if (! $invoice->wasChanged('date')) {
+            return;
+        }
+
+        $invoice->ancillaryCosts()->update(['date' => $invoice->date->toDateString()]);
     }
 
     private static function updateBeginningInventory(Invoice $invoice, array $invoiceData, array $items, bool $approved): array
