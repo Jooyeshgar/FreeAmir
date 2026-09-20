@@ -6,7 +6,6 @@ use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
 use App\Models\AncillaryCostItem;
-use App\Models\Company;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -288,8 +287,6 @@ class ProductService
     public static function recalculateQuantity(Product $product): float
     {
         return DB::transaction(function () use ($product): float {
-            [$quantity, $warehouseQuantities] = self::previousFiscalYearOpeningBalances($product);
-
             $stocks = WarehouseProductStock::query()
                 ->where('product_id', $product->id)
                 ->lockForUpdate()
@@ -297,22 +294,8 @@ class ProductService
                 ->keyBy('warehouse_id');
 
             foreach ($stocks as $stock) {
-                $stock->quantity = $warehouseQuantities[$stock->warehouse_id] ?? 0;
+                $stock->quantity = 0;
                 $stock->save();
-            }
-
-            foreach ($warehouseQuantities as $warehouseId => $warehouseQuantity) {
-                if ($stocks->has($warehouseId)) {
-                    continue;
-                }
-
-                $stock = WarehouseProductStock::query()->firstOrCreate(
-                    ['warehouse_id' => $warehouseId, 'product_id' => $product->id],
-                    ['quantity' => $warehouseQuantity, 'average_cost' => $product->average_cost ?? 0]
-                );
-                $stock->quantity = $warehouseQuantity;
-                $stock->save();
-                $stocks->put($warehouseId, $stock);
             }
 
             $invoices = Invoice::withoutGlobalScopes()
@@ -330,6 +313,9 @@ class ProductService
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->get();
+
+            $quantity = 0.0;
+            $warehouseQuantities = [];
 
             foreach ($invoices as $invoice) {
                 foreach ($invoice->items as $item) {
@@ -368,53 +354,6 @@ class ProductService
 
             return $quantity;
         });
-    }
-
-    private static function previousFiscalYearOpeningBalances(Product $product): array
-    {
-        $company = Company::query()->find($product->company_id);
-
-        if (! $company) {
-            return [0.0, []];
-        }
-
-        $previousProduct = Product::withoutGlobalScopes()
-            ->select('products.*')
-            ->join('companies', 'companies.id', '=', 'products.company_id')
-            ->where('companies.name', $company->name)
-            ->where('companies.fiscal_year', '<', $company->fiscal_year)
-            ->where('products.code', $product->code)
-            ->orderByDesc('companies.fiscal_year')
-            ->orderByDesc('companies.id')
-            ->lockForUpdate()
-            ->first();
-
-        if (! $previousProduct) {
-            return [0.0, []];
-        }
-
-        $currentWarehouses = Warehouse::withoutGlobalScopes()
-            ->where('company_id', $product->company_id)
-            ->get(['id', 'code', 'name']);
-
-        $warehouseQuantities = [];
-        $previousStocks = DB::table('warehouse_product_stocks')
-            ->join('warehouses', 'warehouses.id', '=', 'warehouse_product_stocks.warehouse_id')
-            ->where('warehouse_product_stocks.product_id', $previousProduct->id)
-            ->get(['warehouses.code', 'warehouses.name', 'warehouse_product_stocks.quantity']);
-
-        foreach ($previousStocks as $previousStock) {
-            $warehouse = filled($previousStock->code)
-                ? $currentWarehouses->firstWhere('code', $previousStock->code)
-                : null;
-            $warehouse ??= $currentWarehouses->firstWhere('name', $previousStock->name);
-
-            if ($warehouse) {
-                $warehouseQuantities[$warehouse->id] = (float) $previousStock->quantity;
-            }
-        }
-
-        return [(float) $previousProduct->quantity, $warehouseQuantities];
     }
 
     protected function syncSubjects(Product $product): void
