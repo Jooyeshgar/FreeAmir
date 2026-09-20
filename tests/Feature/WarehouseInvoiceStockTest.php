@@ -145,6 +145,75 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->assertStock($this->emptyWarehouse, 4);
     }
 
+    public function test_recalculate_quantity_uses_previous_fiscal_year_stock_as_its_opening_balance(): void
+    {
+        $previousCompany = Company::factory()->create([
+            'name' => $this->company->name,
+            'fiscal_year' => (int) $this->company->fiscal_year - 1,
+        ]);
+        $previousGroup = ProductGroup::factory()->create(['company_id' => $previousCompany->id]);
+        $previousProduct = Product::factory()->withGroup($previousGroup)->create([
+            'company_id' => $previousCompany->id,
+            'code' => $this->product->code,
+            'quantity' => 12,
+        ]);
+        $previousMainWarehouse = Warehouse::create([
+            'company_id' => $previousCompany->id,
+            'name' => $this->mainWarehouse->name,
+            'code' => $this->mainWarehouse->code,
+        ]);
+        $previousEmptyWarehouse = Warehouse::create([
+            'company_id' => $previousCompany->id,
+            'name' => $this->emptyWarehouse->name,
+            'code' => $this->emptyWarehouse->code,
+        ]);
+        WarehouseProductStock::create([
+            'warehouse_id' => $previousMainWarehouse->id,
+            'product_id' => $previousProduct->id,
+            'quantity' => 8,
+            'average_cost' => 100,
+        ]);
+        WarehouseProductStock::create([
+            'warehouse_id' => $previousEmptyWarehouse->id,
+            'product_id' => $previousProduct->id,
+            'quantity' => 4,
+            'average_cost' => 100,
+        ]);
+
+        $this->product->update(['quantity' => 12]);
+        $this->setStock($this->mainWarehouse, 8);
+        $this->setStock($this->emptyWarehouse, 4);
+
+        $this->product->update(['quantity' => 999]);
+        WarehouseProductStock::query()
+            ->where('product_id', $this->product->id)
+            ->update(['quantity' => 999]);
+
+        $this->assertEqualsWithDelta(12, ProductService::recalculateQuantity($this->product->fresh()), 0.001);
+        $this->assertStock($this->mainWarehouse, 8);
+        $this->assertStock($this->emptyWarehouse, 4);
+
+        $buy = $this->createInvoice(InvoiceType::BUY, 5, $this->mainWarehouse, true);
+        $sell = $this->createInvoice(InvoiceType::SELL, 2, $this->emptyWarehouse, true);
+        $this->approve($sell);
+
+        $this->product->update(['quantity' => 999]);
+        WarehouseProductStock::query()
+            ->where('product_id', $this->product->id)
+            ->update(['quantity' => 999]);
+        InvoiceItem::query()
+            ->whereIn('invoice_id', [$buy->id, $sell->id])
+            ->update(['quantity_at' => 999]);
+
+        $quantity = ProductService::recalculateQuantity($this->product->fresh());
+
+        $this->assertEqualsWithDelta(15, $quantity, 0.001);
+        $this->assertStock($this->mainWarehouse, 13);
+        $this->assertStock($this->emptyWarehouse, 2);
+        $this->assertEqualsWithDelta(12, (float) $buy->items()->firstOrFail()->quantity_at, 0.001);
+        $this->assertEqualsWithDelta(17, (float) $sell->items()->firstOrFail()->quantity_at, 0.001);
+    }
+
     public function test_approved_beginning_inventory_adds_stock_updates_cost_and_creates_accounting(): void
     {
         $this->setStock($this->mainWarehouse, 2, 175);

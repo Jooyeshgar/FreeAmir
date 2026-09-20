@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\AncillaryCostType;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
@@ -42,7 +43,7 @@ class InvoiceAncillaryCostDateSyncTest extends TestCase
         $ancillaryCosts = collect(['2026-02-05', '2026-02-06'])->map(
             fn (string $date, int $index) => AncillaryCost::query()->create([
                 'number' => $index + 1,
-                'type' => 'Shipping',
+                'type' => AncillaryCostType::Shipping,
                 'amount' => 100,
                 'vat' => 0,
                 'date' => $date,
