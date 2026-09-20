@@ -54,6 +54,11 @@ class CommercialLedgerController extends Controller
             }
         };
 
+        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
+        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+        $fiscalStartDate = $fiscalStart->toDateString();
+        $fiscalEndDate = $fiscalEnd->toDateString();
+
         $validator = Validator::make($request->all(), [
             'from_date' => ['bail', 'required', 'string', $jalaliDate],
             'to_date' => ['bail', 'required', 'string', $jalaliDate],
@@ -62,13 +67,21 @@ class CommercialLedgerController extends Controller
             'ledger_type' => ['required', Rule::enum(CommercialLedgerType::class)],
         ]);
 
-        $validator->after(function ($validator) use ($request): void {
+        $validator->after(function ($validator) use ($request, $fiscalStartDate, $fiscalEndDate): void {
             if ($validator->errors()->hasAny(['from_date', 'to_date'])) {
                 return;
             }
 
             $fromDate = jalali_to_gregorian_date($request->input('from_date'), '-', '/');
             $toDate = jalali_to_gregorian_date($request->input('to_date'), '-', '/');
+
+            if ($fromDate < $fiscalStartDate || $fromDate > $fiscalEndDate) {
+                $validator->errors()->add('from_date', __('The start date must be within the active fiscal year.'));
+            }
+
+            if ($toDate < $fiscalStartDate || $toDate > $fiscalEndDate) {
+                $validator->errors()->add('to_date', __('The end date must be within the active fiscal year.'));
+            }
 
             if ($fromDate > $toDate) {
                 $validator->errors()->add('from_date', __('From date cannot be greater than to date.'));
