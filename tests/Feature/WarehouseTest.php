@@ -196,7 +196,7 @@ class WarehouseTest extends TestCase
             'from_warehouse_id' => $source->id,
             'to_warehouse_id' => $destination->id,
             'quantity' => 4,
-        ])->assertRedirect(route('warehouses.transfer'));
+        ])->assertRedirect(route('warehouses.show', $destination));
 
         $this->assertDatabaseHas('warehouse_transfers', [
             'product_id' => $product->id,
@@ -206,6 +206,43 @@ class WarehouseTest extends TestCase
         ]);
 
         $this->get(route('warehouses.transfer-history'))->assertOk()->assertSee('Transferred Product')->assertSee($this->user->name);
+    }
+
+    public function test_transfer_form_can_save_and_start_another_transfer(): void
+    {
+        $source = $this->makeWarehouse();
+        $destination = $this->makeWarehouse();
+        $product = Product::factory()->create([
+            'company_id' => $this->companyId,
+            'average_cost' => 125,
+        ]);
+
+        WarehouseProductStock::create([
+            'warehouse_id' => $source->id,
+            'product_id' => $product->id,
+            'quantity' => 10,
+            'average_cost' => 125,
+        ]);
+
+        $this->get(route('warehouses.transfer'))
+            ->assertOk()
+            ->assertSee('name="submit_action"', false)
+            ->assertSee('value="create_new"', false);
+
+        $this->post(route('warehouses.transfer.store'), [
+            'product_id' => $product->id,
+            'from_warehouse_id' => $source->id,
+            'to_warehouse_id' => $destination->id,
+            'quantity' => 4,
+            'submit_action' => 'create_new',
+        ])->assertRedirect(route('warehouses.transfer'));
+
+        $this->assertDatabaseHas('warehouse_transfers', [
+            'product_id' => $product->id,
+            'from_warehouse_id' => $source->id,
+            'to_warehouse_id' => $destination->id,
+            'quantity' => 4,
+        ]);
     }
 
     public function test_product_create_and_update_ignore_legacy_warehouse_field(): void

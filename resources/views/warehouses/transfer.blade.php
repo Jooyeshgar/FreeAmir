@@ -46,7 +46,10 @@
                 </div>
                 <div class="card-actions grid grid-cols-2 gap-2 sm:flex sm:justify-end">
                     <a href="{{ route('warehouses.index') }}" class="btn btn-ghost w-full sm:w-auto">{{ __('Cancel') }}</a>
-                    <button class="btn btn-primary w-full sm:w-auto">{{ __('Transfer') }}</button>
+                    <button type="submit" name="submit_action" value="create_new" class="btn btn-default w-full rounded-md sm:w-auto">
+                        {{ __('save and create new transfer') }}
+                    </button>
+                    <button type="submit" class="btn btn-primary w-full sm:w-auto">{{ __('Transfer') }}</button>
                 </div>
             </div>
         </form>
