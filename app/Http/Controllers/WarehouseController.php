@@ -179,10 +179,15 @@ class WarehouseController extends Controller
             'to_warehouse_id' => ['required', 'integer', Rule::exists('warehouses', 'id')->where('company_id', getActiveCompany())],
             'quantity' => ['required', 'numeric', 'gt:0'],
             'description' => ['nullable', 'string', 'max:500'],
+            'submit_action' => ['nullable', Rule::in(['create_new'])],
         ]);
         $this->warehouseService->transfer(Product::findOrFail($data['product_id']), Warehouse::findOrFail($data['from_warehouse_id']), Warehouse::findOrFail($data['to_warehouse_id']), (float) $data['quantity'], $data['description'] ?? null);
 
-        return redirect()->route('warehouses.transfer')->with('success', __('Stock transferred successfully.'));
+        if (($data['submit_action'] ?? null) === 'create_new') {
+            return redirect()->route('warehouses.transfer')->with('success', __('Stock transferred successfully.'));
+        }
+
+        return redirect()->route('warehouses.show', $data['to_warehouse_id'])->with('success', __('Stock transferred successfully.'));
     }
 
     private function validateWarehouse(Request $request, ?Warehouse $warehouse = null): array
