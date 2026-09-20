@@ -63,20 +63,23 @@ class WarehouseDashboardService
     public function dashboard(array $rawFilters = []): array
     {
         $filters = $this->normalizeFilters($rawFilters);
-        [$from, $to] = $this->periodRange($filters['period']);
+        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
+        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+        [$from, $to] = $this->periodRange($filters['period'], $fiscalStart, $fiscalEnd);
 
         $productGroups = ProductGroup::orderBy('name')->get(['id', 'name']);
         $products = $this->productsQuery($filters)
             ->with('productGroup:id,name')
             ->get();
+        $inventoryBalances = $this->inventoryBalances($products);
 
         $itemsInPeriod = $this->invoiceItemsBetween($from, $to, $filters['category_id']);
         $movementMap = $this->aggregateMovement($itemsInPeriod);
         $lastMovementByProduct = $this->lastMovementDates($filters['category_id']);
 
-        $categoryBuckets = $this->bucketByCategory($products, $movementMap, $productGroups);
+        $categoryBuckets = $this->bucketByCategory($products, $movementMap, $productGroups, $inventoryBalances);
 
-        $totalInventoryValue = $products->sum(fn (Product $p) => (float) $p->quantity * (float) $p->average_cost);
+        $totalInventoryValue = $products->sum(fn (Product $product) => $this->inventoryValue($product, $inventoryBalances));
         $belowReorder = $products->filter(fn (Product $p) => $this->isBelowReorder($p));
         $stagnantStandalone = $this->stagnantProducts($products, $lastMovementByProduct);
 
@@ -87,7 +90,7 @@ class WarehouseDashboardService
         $monthlyMovementByCategory = $this->monthlyMovementByCategory($itemsInPeriod, $from, $to, $categoryBuckets);
 
         $overallTurnover = $this->turnoverRatio(
-            $products->sum(fn (Product $p) => (float) $p->quantity * (float) $p->average_cost),
+            $totalInventoryValue,
             $categoryBuckets->sum('cogs_period')
         );
 
@@ -110,10 +113,10 @@ class WarehouseDashboardService
             'categoryBreakdown' => $categoryBuckets->values(),
             'monthlyMovement' => $monthlyMovement,
             'monthlyMovementByCategory' => $monthlyMovementByCategory,
-            'belowReorderItems' => $this->mapProductRows($belowReorder->sortBy(fn (Product $p) => (float) $p->quantity)->take(15)),
-            'stagnantItems' => $this->mapStagnantRows($stagnantStandalone->take(15), $lastMovementByProduct),
+            'belowReorderItems' => $this->mapProductRows($belowReorder->sortBy(fn (Product $p) => (float) $p->quantity)->take(15), $inventoryBalances),
+            'stagnantItems' => $this->mapStagnantRows($stagnantStandalone->take(15), $lastMovementByProduct, $inventoryBalances),
             'topSellers' => $topSellers,
-            'statusFilteredItems' => $this->mapProductRows($statusFiltered->take(15)),
+            'statusFilteredItems' => $this->mapProductRows($statusFiltered->take(15), $inventoryBalances),
             'alerts' => $this->alerts($belowReorder, $stagnantStandalone, $itemsInPeriod->isEmpty()),
             'stagnant_days' => self::STAGNANT_DAYS,
         ];
@@ -140,16 +143,20 @@ class WarehouseDashboardService
         ];
     }
 
-    private function periodRange(string $period): array
+    private function periodRange(string $period, Carbon $fiscalStart, Carbon $fiscalEnd): array
     {
-        $to = Carbon::now()->endOfDay();
+        if ($period === self::PERIOD_YEAR) {
+            return [$fiscalStart->copy(), $fiscalEnd->copy()];
+        }
+
+        $to = Carbon::now()->endOfDay()->max($fiscalStart)->min($fiscalEnd);
         $from = match ($period) {
-            self::PERIOD_MONTH => Carbon::now()->subDays(30)->startOfDay(),
-            self::PERIOD_QUARTER => Carbon::now()->subDays(90)->startOfDay(),
-            default => Carbon::now()->subDays(365)->startOfDay(),
+            self::PERIOD_MONTH => $to->copy()->subDays(29)->startOfDay(),
+            self::PERIOD_QUARTER => $to->copy()->subDays(89)->startOfDay(),
+            default => $fiscalStart->copy(),
         };
 
-        return [$from, $to];
+        return [$from->max($fiscalStart), $to];
     }
 
     private function productsQuery(array $filters): Builder
@@ -230,14 +237,14 @@ class WarehouseDashboardService
             ->all();
     }
 
-    private function bucketByCategory(Collection $products, array $movementMap, Collection $productGroups): Collection
+    private function bucketByCategory(Collection $products, array $movementMap, Collection $productGroups, array $inventoryBalances): Collection
     {
         $byGroupId = $products->groupBy(fn (Product $p) => (int) ($p->group ?? 0));
         $groupNames = $productGroups->keyBy('id');
 
         return $byGroupId
-            ->map(function (Collection $groupProducts, int $groupId) use ($movementMap, $groupNames) {
-                $value = (float) $groupProducts->sum(fn (Product $p) => (float) $p->quantity * (float) $p->average_cost);
+            ->map(function (Collection $groupProducts, int $groupId) use ($movementMap, $groupNames, $inventoryBalances) {
+                $value = (float) $groupProducts->sum(fn (Product $product) => $this->inventoryValue($product, $inventoryBalances));
                 $cogsPeriod = 0.0;
                 $unitsOut = 0.0;
                 $unitsIn = 0.0;
@@ -408,14 +415,14 @@ class WarehouseDashboardService
 
     private function monthlyBuckets(Carbon $from, Carbon $to): array
     {
-        $cursor = $from->copy()->startOfMonth();
-        $end = $to->copy()->startOfMonth();
+        $cursor = $from->copy()->startOfDay();
+        $end = $to->copy()->startOfDay();
         $buckets = [];
 
         while ($cursor->lte($end)) {
             $key = $this->jalaliMonthKey($cursor);
-            $buckets[$key] = ['in' => 0.0, 'out' => 0.0];
-            $cursor->addMonthNoOverflow();
+            $buckets[$key] ??= ['in' => 0.0, 'out' => 0.0];
+            $cursor->addDay();
         }
 
         return $buckets;
@@ -467,7 +474,7 @@ class WarehouseDashboardService
             ->values();
     }
 
-    private function mapProductRows(Collection $products): Collection
+    private function mapProductRows(Collection $products, array $inventoryBalances): Collection
     {
         return $products->map(fn (Product $p) => [
             'id' => $p->id,
@@ -477,13 +484,13 @@ class WarehouseDashboardService
             'quantity' => (float) $p->quantity,
             'quantity_warning' => (float) ($p->quantity_warning ?? 0),
             'average_cost' => (float) $p->average_cost,
-            'inventory_value' => (float) $p->quantity * (float) $p->average_cost,
+            'inventory_value' => $this->inventoryValue($p, $inventoryBalances),
         ])->values();
     }
 
-    private function mapStagnantRows(Collection $products, array $lastMovementByProduct): Collection
+    private function mapStagnantRows(Collection $products, array $lastMovementByProduct, array $inventoryBalances): Collection
     {
-        return $products->map(function (Product $p) use ($lastMovementByProduct) {
+        return $products->map(function (Product $p) use ($lastMovementByProduct, $inventoryBalances) {
             $last = $lastMovementByProduct[$p->id] ?? null;
             $lastCarbon = $last ? Carbon::parse($last) : null;
 
@@ -493,7 +500,7 @@ class WarehouseDashboardService
                 'name' => $p->name,
                 'group' => $p->productGroup?->name ?? '-',
                 'quantity' => (float) $p->quantity,
-                'inventory_value' => (float) $p->quantity * (float) $p->average_cost,
+                'inventory_value' => $this->inventoryValue($p, $inventoryBalances),
                 'last_movement' => $lastCarbon,
                 'days_idle' => $lastCarbon ? $lastCarbon->diffInDays(Carbon::now()) : null,
             ];
@@ -538,8 +545,30 @@ class WarehouseDashboardService
         return [
             self::PERIOD_MONTH => __('Last 30 days'),
             self::PERIOD_QUARTER => __('Last quarter'),
-            self::PERIOD_YEAR => __('All time'),
+            self::PERIOD_YEAR => __('Fiscal year'),
         ];
+    }
+
+    private function inventoryBalances(Collection $products): array
+    {
+        $subjectIds = $products->pluck('inventory_subject_id')->filter()->unique()->values()->all();
+
+        if ($subjectIds === []) {
+            return [];
+        }
+
+        return Transaction::query()
+            ->whereIn('subject_id', $subjectIds)
+            ->selectRaw('subject_id, SUM(value) as total')
+            ->groupBy('subject_id')
+            ->pluck('total', 'subject_id')
+            ->map(fn ($value) => (float) $value)
+            ->all();
+    }
+
+    private function inventoryValue(Product $product, array $inventoryBalances): float
+    {
+        return (float) ($inventoryBalances[$product->inventory_subject_id] ?? 0.0);
     }
 
     private function statusOptions(): array
