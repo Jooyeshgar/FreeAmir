@@ -15,7 +15,7 @@
             'title' => __('Total Inventory Value'),
             'value' => $summary['total_inventory_value'],
             'suffix' => __('Rial'),
-            'detail' => __('Current inventory accounts'),
+            'detail' => __('Inventory account balance at the selected period end'),
             'tone' => 'info',
             'series' => collect($monthlyMovement['in'] ?? [])
                 ->zip($monthlyMovement['out'] ?? [])
@@ -26,7 +26,7 @@
             'title' => __('Items in Stock'),
             'value' => $summary['total_item_count'],
             'suffix' => __('Items'),
-            'detail' => __('Total quantity: :qty', ['qty' => formatNumber($summary['total_stock_quantity'])]),
+            'detail' => __('Period-end quantity: :qty', ['qty' => formatNumber($summary['total_stock_quantity'])]),
             'tone' => 'primary',
             'series' => $flatLine,
         ],
@@ -34,7 +34,7 @@
             'title' => __('Below Reorder Point'),
             'value' => $summary['below_reorder_count'],
             'suffix' => __('Products'),
-            'detail' => __('Needs replenishment'),
+            'detail' => __('At the selected period end'),
             'tone' => $summary['below_reorder_count'] > 0 ? 'warning' : 'success',
             'series' => $flatLine,
         ],
@@ -42,7 +42,7 @@
             'title' => __('Stagnant Items'),
             'value' => $summary['stagnant_count'],
             'suffix' => __('Products'),
-            'detail' => __('No movement in :days days', ['days' => formatNumber($stagnant_days)]),
+            'detail' => __('No movement for :days days as of period end', ['days' => formatNumber($stagnant_days)]),
             'tone' => $summary['stagnant_count'] > 0 ? 'error' : 'success',
             'series' => $flatLine,
         ],
@@ -126,7 +126,7 @@
             <article class="card border border-base-300 bg-base-100/90 shadow-sm">
                 <div class="card-body">
                     <h2 class="card-title text-base min-[1440px]:text-lg">{{ __('Inventory Value by Category') }}</h2>
-                    <p class="text-xs text-base-content/55 min-[1440px]:text-sm">{{ __('Share of total stock value (at average cost)') }}</p>
+                    <p class="text-xs text-base-content/55 min-[1440px]:text-sm">{{ __('Inventory account balance at the selected period end') }}</p>
                     <div class="mt-3 h-64">
                         <canvas id="inventoryValueChart" class="h-full w-full"></canvas>
                     </div>
@@ -136,7 +136,7 @@
             <article class="card border border-base-300 bg-base-100/90 shadow-sm">
                 <div class="card-body">
                     <h2 class="card-title text-base min-[1440px]:text-lg">{{ __('Turnover Ratio by Category') }}</h2>
-                    <p class="text-xs text-base-content/55 min-[1440px]:text-sm">{{ __('Period COGS divided by current inventory value') }}</p>
+                    <p class="text-xs text-base-content/55 min-[1440px]:text-sm">{{ __('Period COGS divided by period-end inventory value') }}</p>
                     <div class="mt-3 h-64">
                         <canvas id="turnoverChart" class="h-full w-full"></canvas>
                     </div>
@@ -146,7 +146,7 @@
             <article class="card border border-base-300 bg-base-100/90 shadow-sm">
                 <div class="card-body">
                     <h2 class="card-title text-base min-[1440px]:text-lg">{{ __('Items per Category') }}</h2>
-                    <p class="text-xs text-base-content/55 min-[1440px]:text-sm">{{ __('How many distinct products live in each category') }}</p>
+                    <p class="text-xs text-base-content/55 min-[1440px]:text-sm">{{ __('Products with positive stock at the selected period end') }}</p>
                     <div class="mt-3 h-64">
                         <canvas id="itemsPerCategoryChart" class="h-full w-full"></canvas>
                     </div>
@@ -221,7 +221,7 @@
                     <div class="flex flex-wrap items-center justify-between gap-3 border-b border-base-300 p-4">
                         <div>
                             <h2 class="card-title text-base">{{ __('Below Reorder Point') }}</h2>
-                            <p class="text-xs text-base-content/55">{{ __('Lowest stock items first') }}</p>
+                            <p class="text-xs text-base-content/55">{{ __('Period-end stock, lowest first') }}</p>
                         </div>
                         @can('products.index')
                             <a href="{{ route('products.index', $categoryLinkParams) }}" class="btn btn-xs btn-outline">{{ __('Open in Products') }}</a>
@@ -275,7 +275,7 @@
                     <div class="flex flex-wrap items-center justify-between gap-3 border-b border-base-300 p-4">
                         <div>
                             <h2 class="card-title text-base">{{ __('Stagnant Items') }}</h2>
-                            <p class="text-xs text-base-content/55">{{ __('No movement for at least :days days', ['days' => formatNumber($stagnant_days)]) }}</p>
+                            <p class="text-xs text-base-content/55">{{ __('No movement for :days days as of period end', ['days' => formatNumber($stagnant_days)]) }}</p>
                         </div>
                         @can('products.index')
                             <a href="{{ route('products.index', $categoryLinkParams) }}" class="btn btn-xs btn-outline">{{ __('Open in Products') }}</a>
@@ -376,7 +376,7 @@
                     <div class="flex flex-wrap items-center justify-between gap-3 border-b border-base-300 p-4">
                         <div>
                             <h2 class="card-title text-base">{{ __('Filtered: :label', ['label' => $statusOptions[$statusFilter] ?? $statusFilter]) }}</h2>
-                            <p class="text-xs text-base-content/55">{{ __('Items matching the current inventory status filter') }}</p>
+                            <p class="text-xs text-base-content/55">{{ __('Items matching the inventory status at the selected period end') }}</p>
                         </div>
                     </div>
                     <div class="overflow-x-auto">
