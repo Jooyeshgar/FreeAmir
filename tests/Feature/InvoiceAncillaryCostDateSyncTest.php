@@ -8,6 +8,7 @@ use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
 use App\Models\Company;
 use App\Models\Customer;
+use App\Models\CustomerGroup;
 use App\Models\Invoice;
 use App\Models\User;
 use App\Services\InvoiceService;
@@ -24,7 +25,10 @@ class InvoiceAncillaryCostDateSyncTest extends TestCase
         config(['active-company-id' => $company->id]);
 
         $user = User::factory()->create();
-        $customer = Customer::query()->create([
+        $customerGroup = CustomerGroup::factory()->withSubject()->create([
+            'company_id' => $company->id,
+        ]);
+        $customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create([
             'name' => 'Test Customer',
             'company_id' => $company->id,
         ]);

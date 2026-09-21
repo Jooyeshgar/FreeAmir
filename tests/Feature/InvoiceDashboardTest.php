@@ -47,10 +47,9 @@ class InvoiceDashboardTest extends TestCase
             'active-company-fiscal-year' => 1405,
         ]);
 
-        $group = CustomerGroup::factory()->create(['company_id' => $this->companyId]);
-        $this->customer = Customer::create([
+        $group = CustomerGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
+        $this->customer = Customer::factory()->withGroup($group)->withSubject()->create([
             'company_id' => $this->companyId,
-            'group_id' => $group->id,
             'name' => 'Dashboard Customer',
         ]);
     }
