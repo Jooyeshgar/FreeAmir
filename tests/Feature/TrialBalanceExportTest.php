@@ -76,7 +76,7 @@ class TrialBalanceExportTest extends TestCase
         $root = Subject::create(['company_id' => $this->company->id, 'code' => '011', 'name' => 'بانک ها', 'parent_id' => null, 'type' => SubjectType::BOTH]);
         $child = Subject::create(['company_id' => $this->company->id, 'code' => '011004', 'name' => 'پاسارگاد', 'parent_id' => $root->id, 'type' => SubjectType::BOTH]);
 
-        $doc = Document::factory()->create(['company_id' => $this->company->id, 'number' => 5, 'date' => '2026-01-10']);
+        $doc = Document::factory()->create(['company_id' => $this->company->id, 'number' => 5, 'date' => '2026-04-10']);
         Transaction::create(['document_id' => $doc->id, 'subject_id' => $child->id, 'value' => 1000000, 'user_id' => $this->user->id]);
         Transaction::create(['document_id' => $doc->id, 'subject_id' => $child->id, 'value' => -500000, 'user_id' => $this->user->id]);
 
@@ -114,7 +114,7 @@ class TrialBalanceExportTest extends TestCase
         $ledger = $createSubject('011004', 'بانک ها', $root->id);
         $detail = $createSubject('011004001', 'بانک پاسارگاد', $ledger->id);
 
-        $doc = Document::factory()->create(['company_id' => $this->company->id, 'number' => 5, 'date' => '2026-01-10']);
+        $doc = Document::factory()->create(['company_id' => $this->company->id, 'number' => 5, 'date' => '2026-04-10']);
         Transaction::create(['document_id' => $doc->id, 'subject_id' => $detail->id, 'value' => -750000, 'user_id' => $this->user->id]);
 
         $response = $this->service->exportCsv(request()->merge(['parent_id' => $ledger->id]));
@@ -133,7 +133,7 @@ class TrialBalanceExportTest extends TestCase
     public function test_trial_balance_export_remain_bed_and_bes_reflect_net_balance(): void
     {
         $root = Subject::create(['company_id' => $this->company->id, 'code' => '011', 'name' => 'بانک', 'parent_id' => null, 'type' => SubjectType::BOTH]);
-        $doc = Document::factory()->create(['company_id' => $this->company->id, 'number' => 3, 'date' => '2026-01-01']);
+        $doc = Document::factory()->create(['company_id' => $this->company->id, 'number' => 3, 'date' => '2026-04-01']);
         // Net debit: value=-300 (debit) + value=100 (credit) → net = -200 → RemainBed=200
         Transaction::create(['document_id' => $doc->id, 'subject_id' => $root->id, 'value' => -300, 'user_id' => $this->user->id]);
         Transaction::create(['document_id' => $doc->id, 'subject_id' => $root->id, 'value' => 100, 'user_id' => $this->user->id]);
@@ -216,5 +216,67 @@ class TrialBalanceExportTest extends TestCase
                 'end_date' => '1406/01/01',
             ]))->assertSessionHasErrors('end_date');
         }
+    }
+
+    public function test_trial_balance_defaults_missing_boundaries_for_html_print_and_csv(): void
+    {
+        $subjectType = DB::connection()->getDriverName() === 'sqlite' ? 'both' : SubjectType::BOTH->value;
+        $subjectId = DB::table('subjects')->insertGetId([
+            'company_id' => $this->company->id,
+            'code' => '099',
+            'name' => 'Fiscal boundary subject',
+            'parent_id' => null,
+            'type' => $subjectType,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        [$fiscalStart, $fiscalEnd] = $this->company->fiscalYearRange();
+
+        $this->transaction($subjectId, 1, $fiscalStart->copy()->subDay()->toDateString(), -11);
+        $this->transaction($subjectId, 4, $fiscalStart->copy()->subDay()->toDateString(), -111);
+        $this->transaction($subjectId, 2, $fiscalStart->copy()->addDay()->toDateString(), -22);
+        $this->transaction($subjectId, 5, $fiscalStart->copy()->addDay()->toDateString(), -222);
+        $this->transaction($subjectId, 6, $fiscalEnd->copy()->addDay()->toDateString(), -333);
+
+        $html = $this->get(route('reports.trial-balance'));
+        $html->assertOk();
+        $htmlSubject = $html->viewData('subjects')->firstWhere('id', $subjectId);
+        $this->assertSame(-22.0, $htmlSubject->opening);
+        $this->assertSame(-222.0, $htmlSubject->turnover_debit);
+        $this->assertSame(-244.0, $htmlSubject->balance);
+        $this->assertSame(convertToJalali($fiscalStart, true), $html->viewData('start_date'));
+        $this->assertSame(convertToJalali($fiscalEnd, true), $html->viewData('end_date'));
+
+        $print = $this->get(route('reports.trial-balance.print', [
+            'start_date' => convertToJalali($fiscalStart, true),
+        ]));
+        $print->assertOk();
+        $printSubject = $print->viewData('subjects')->firstWhere('id', $subjectId);
+        $this->assertSame(-22.0, $printSubject->opening);
+        $this->assertSame(-222.0, $printSubject->turnover_debit);
+        $this->assertSame(-244.0, $printSubject->balance);
+
+        $csv = $this->get(route('reports.trial-balance.export-csv', [
+            'end_date' => convertToJalali($fiscalEnd, true),
+        ]))->streamedContent();
+        $this->assertStringContainsString(csvNumber(222), $csv);
+        $this->assertStringNotContainsString(csvNumber(111), $csv);
+        $this->assertStringNotContainsString(csvNumber(333), $csv);
+    }
+
+    private function transaction(int $subjectId, int $number, string $date, float $value): void
+    {
+        $document = Document::factory()->create([
+            'company_id' => $this->company->id,
+            'number' => $number,
+            'date' => $date,
+        ]);
+
+        Transaction::create([
+            'document_id' => $document->id,
+            'subject_id' => $subjectId,
+            'value' => $value,
+            'user_id' => $this->user->id,
+        ]);
     }
 }

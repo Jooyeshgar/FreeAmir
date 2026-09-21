@@ -34,7 +34,7 @@ class TrialBalanceService
             // Opening columns: only documents 1 and 2
             $documentNumbers = $filters['start_document_number'] <= 2 ? [$filters['start_document_number'] - 1] : [1, 2];
 
-            [$openingDebit, $openingCredit] = $this->aggregateSubjectColumns($subject, [], $documentNumbers);
+            [$openingDebit, $openingCredit] = $this->aggregateSubjectColumns($subject, $filters, $documentNumbers);
 
             // Turnover columns: respect filters, by default starting from document 3 and excluding 1 and 2
             [$turnoverDebit, $turnoverCredit] = $this->aggregateSubjectColumns($subject, $filters);
@@ -54,8 +54,8 @@ class TrialBalanceService
             'subject_name' => $subjectName,
             'currentParent' => $currentParent,
             'include_children' => $includeChildren,
-            'start_date' => $request->input('start_date'),
-            'end_date' => $request->input('end_date'),
+            'start_date' => convertToJalali($filters['start_date'], true),
+            'end_date' => convertToJalali($filters['end_date'], true),
             'start_document_number' => $request->input('start_document_number', 3),
             'end_document_number' => $request->input('end_document_number'),
         ];
@@ -161,9 +161,12 @@ class TrialBalanceService
 
     private function normalizeTrialBalanceFilters(Request $request): array
     {
+        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
+        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+
         return [
-            'start_date' => $request->filled('start_date') ? jalaliInputToGregorian($request->input('start_date'), 'start_date') : null,
-            'end_date' => $request->filled('end_date') ? jalaliInputToGregorian($request->input('end_date'), 'end_date') : null,
+            'start_date' => $request->filled('start_date') ? jalaliInputToGregorian($request->input('start_date'), 'start_date') : $fiscalStart->toDateString(),
+            'end_date' => $request->filled('end_date') ? jalaliInputToGregorian($request->input('end_date'), 'end_date') : $fiscalEnd->toDateString(),
             'start_document_number' => $request->filled('start_document_number') ? (int) $request->input('start_document_number') : 3,
             'end_document_number' => $request->filled('end_document_number') ? (int) $request->input('end_document_number') : null,
         ];
@@ -186,13 +189,14 @@ class TrialBalanceService
                 $query->where('documents.number', '<=', $filters['end_document_number']);
             }
 
-            if ($filters['start_date']) {
-                $query->where('documents.date', '>=', $filters['start_date']);
-            }
+        }
 
-            if ($filters['end_date']) {
-                $query->where('documents.date', '<=', $filters['end_date']);
-            }
+        if ($filters['start_date']) {
+            $query->where('documents.date', '>=', $filters['start_date']);
+        }
+
+        if ($filters['end_date']) {
+            $query->where('documents.date', '<=', $filters['end_date']);
         }
 
         $sums = $query->selectRaw('

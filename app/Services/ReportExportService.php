@@ -265,10 +265,10 @@ class ReportExportService
             }
         })->validate();
 
-        $startDate = $this->reportDate($validated['start_date'] ?? null, 'start_date');
-        $endDate = $this->reportDate($validated['end_date'] ?? null, 'end_date');
         $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
         [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+        $startDate = $this->reportDate($validated['start_date'] ?? null, 'start_date') ?? $fiscalStart->toDateString();
+        $endDate = $this->reportDate($validated['end_date'] ?? null, 'end_date') ?? $fiscalEnd->toDateString();
 
         if ($startDate && ($startDate < $fiscalStart->toDateString() || $startDate > $fiscalEnd->toDateString())) {
             throw ValidationException::withMessages(['start_date' => __('The start date must be within the active fiscal year.')]);
@@ -286,8 +286,8 @@ class ReportExportService
             $documentFilters = [
                 'start_document_number' => $validated['start_document_number'] ?? null,
                 'end_document_number' => $validated['end_document_number'] ?? null,
-                'start_date' => $validated['start_date'] ?? null,
-                'end_date' => $validated['end_date'] ?? null,
+                'start_date' => $validated['start_date'] ?? convertToJalali($startDate, true),
+                'end_date' => $validated['end_date'] ?? convertToJalali($endDate, true),
                 'text' => $validated['search'] ?? null,
                 'columns_selected' => $validated['columns_selected'] ?? null,
                 'columns' => $validated['columns'] ?? [],

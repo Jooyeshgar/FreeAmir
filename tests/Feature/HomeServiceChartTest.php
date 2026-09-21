@@ -337,6 +337,47 @@ class HomeServiceChartTest extends TestCase
             ->assertSee('value="1405/02/29"', false);
     }
 
+    public function test_company_overview_defaults_missing_profit_dates_to_the_fiscal_year(): void
+    {
+        $this->signInWith(['reports.company-overview', 'documents.show']);
+        $incomeSubject = Subject::create([
+            'code' => '901',
+            'name' => 'Fiscal year income',
+            'parent_id' => null,
+            'company_id' => $this->companyId,
+            'type' => SubjectType::CREDITOR,
+            'is_permanent' => false,
+        ]);
+        $company = Company::withoutGlobalScopes()->findOrFail($this->companyId);
+        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+
+        foreach ([
+            [$fiscalStart->copy()->subDay()->toDateString(), 100],
+            [$fiscalStart->copy()->addDay()->toDateString(), 700],
+            [$fiscalEnd->copy()->addDay()->toDateString(), 1900],
+        ] as [$date, $value]) {
+            $document = $this->makeDocument($date);
+            Transaction::create([
+                'value' => $value,
+                'subject_id' => $incomeSubject->id,
+                'document_id' => $document->id,
+                'user_id' => $this->user->id,
+                'desc' => 'fiscal year income',
+            ]);
+        }
+
+        foreach ([
+            [],
+            ['start_date' => convertToJalali($fiscalStart, true)],
+            ['end_date' => convertToJalali($fiscalEnd, true)],
+        ] as $filters) {
+            $this->get(route('reports.company-overview', $filters))->assertOk()
+                ->assertViewHas('profit', 700.0)
+                ->assertSee('value="'.convertToJalali($fiscalStart, true).'"', false)
+                ->assertSee('value="'.convertToJalali($fiscalEnd, true).'"', false);
+        }
+    }
+
     public function test_company_overview_rejects_an_inverted_profit_interval(): void
     {
         $this->signInWith(['reports.company-overview', 'documents.show']);

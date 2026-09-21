@@ -58,11 +58,11 @@ class DocumentImportExportService
         }
 
         if (! empty($filters['start_date'])) {
-            $query->where('date', '>=', jalali_to_gregorian_date($filters['start_date']));
+            $query->where('date', '>=', jalaliInputToGregorian($filters['start_date'], 'start_date'));
         }
 
         if (! empty($filters['end_date'])) {
-            $query->where('date', '<=', jalali_to_gregorian_date($filters['end_date']));
+            $query->where('date', '<=', jalaliInputToGregorian($filters['end_date'], 'end_date'));
         }
 
         if (! empty($filters['subject_id'])) {
