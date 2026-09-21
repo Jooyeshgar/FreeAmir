@@ -85,7 +85,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'companies' => [
                 ...self::CRUD,
                 'close-fiscal-year',
-                'closing-wizard', 'closing-wizard.step1', 'closing-wizard.step3',
+                'closing-wizard', 'closing-wizard.step1', 'closing-wizard.step3', 'closing-wizard.recalculate',
             ],
 
             // Backups

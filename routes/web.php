@@ -184,6 +184,7 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
         Route::get('companies/{company}/closing-wizard', [Controllers\CompanyController::class, 'closingWizard'])->name('companies.closing-wizard');
         Route::post('companies/{company}/closing-wizard/step1', [Controllers\CompanyController::class, 'closingWizardStep1'])->name('companies.closing-wizard.step1');
         Route::post('companies/{company}/closing-wizard/step3', [Controllers\CompanyController::class, 'closingWizardStep3'])->name('companies.closing-wizard.step3');
+        Route::post('companies/{company}/closing-wizard/recalculate', [Controllers\CompanyController::class, 'recalculateClosingDocument'])->name('companies.closing-wizard.recalculate');
         Route::post('users/{user}/create-employee', [Controllers\Management\UserController::class, 'createEmployee'])
             ->name('users.create-employee');
         Route::post('users/{user}/impersonate', [Controllers\Management\UserController::class, 'impersonate'])

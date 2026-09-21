@@ -1151,6 +1151,7 @@
     "Fiscal year closed on": "سال مالی بسته شده در",
     "Fiscal year closed successfully.": "سال مالی با موفقیت بسته شد.",
     "Fiscal year closing Document": "سند اختتامیه سال مالی",
+    "Fiscal year closing document recalculated successfully.": "سند اختتامیه سال مالی با موفقیت دوباره محاسبه شد.",
     "Fiscal year opening Document": "سند افتتاحیه سال مالی",
     "Fiscal year status": "وضعیت سال مالی",
     "Fiscal years": "سال‌های مالی",
@@ -2203,7 +2204,9 @@
     "Reason": "دلیل",
     "Recalculate": "محاسبه مجدد",
     "Recalculate All": "محاسبه مجدد همه",
+    "Recalculate Closing Document": "محاسبه مجدد سند اختتامیه",
     "Recalculate all attendance logs? Stored values will be overwritten with the computed values.": "تمام گزارش‌های حضور و غیاب دوباره محاسبه شوند؟ مقادیر ذخیره شده با مقادیر محاسبه شده بازنویسی می‌شوند.",
+    "Recalculate the closing document? The current closing document will be deleted and replaced.": "سند اختتامیه دوباره محاسبه شود؟ سند اختتامیه فعلی حذف و با سند جدید جایگزین خواهد شد.",
     "Recalculate from Logs": "بازمحاسبه از لاگ‌ها",
     "Recalculate stock": "محاسبه مجدد موجودی",
     "Recalculate this attendance log? Stored values will be overwritten with the computed values.": "این گزارش حضور و غیاب دوباره محاسبه شود؟ مقادیر ذخیره شده با مقادیر محاسبه شده بازنویسی می شوند.",
@@ -3457,5 +3460,7 @@
     "Exported": "صادره",
     "Total Amount": "مبلغ کل",
     "Report": "گزارش",
-    "No products found.": "محصولی پیدا نشد."
+    "No products found.": "محصولی پیدا نشد.",
+    "No fiscal year closing document was found to recalculate.": "سند اختتامیه‌ای برای محاسبه مجدد این سال مالی پیدا نشد.",
+    "Only a closed fiscal year can have its closing document recalculated.": "محاسبه مجدد سند اختتامیه فقط برای سال مالی بسته‌شده امکان‌پذیر است."
 }
