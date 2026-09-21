@@ -281,32 +281,50 @@ class COGSCalculationTest extends TestCase
         $this->assertEqualsWithDelta(110, $product->average_cost, 0.01);
     }
 
-    // public function test_sale_without_inventory_fails_validation(): void
-    // {
-    //     $this->withoutMiddleware();
+    public function test_ancillary_cost_on_later_purchase_uses_historical_cost_for_existing_stock_and_sale_document(): void
+    {
+        $product = $this->createProduct();
+        $firstBuy = $this->buy([$this->productItem($product, 1, 24_098_940)], true, 922, '2026-01-15')['invoice'];
 
-    //     $product = $this->createProduct(['quantity' => 1, 'average_cost' => 100]);
+        AncillaryCostService::createAncillaryCost($this->user, [
+            'invoice_id' => $firstBuy->id,
+            'customer_id' => $this->customer->id,
+            'company_id' => $this->companyId,
+            'date' => '2026-01-15',
+            'type' => 'Shipping',
+            'amount' => 11_015_622,
+            'vatPrice' => 0,
+            'ancillaryCosts' => [
+                ['product_id' => $product->id, 'amount' => 11_015_622],
+            ],
+        ], true);
 
-    //     $response = $this->post('/invoices', [
-    //         'title' => 'Sale',
-    //         'date' => '2026-01-16',
-    //         'invoice_type' => 'sell',
-    //         'customer_id' => $this->customer->id,
-    //         'document_number' => 9911,
-    //         'invoice_number' => 9912,
-    //         'approve' => 1,
-    //         'transactions' => [[
-    //             'item_id' => "product-{$product->id}",
-    //             'quantity' => 5,
-    //             'unit' => 100,
-    //             'vat' => 0,
-    //             'off' => 0,
-    //             'total' => 500,
-    //         ]],
-    //     ]);
+        $secondBuy = $this->buy([$this->productItem($product, 6, 158_079_133 / 6)], true, 923, '2026-01-16')['invoice'];
 
-    //     $response->assertSessionHasErrors('transactions.0.quantity');
-    // }
+        AncillaryCostService::createAncillaryCost($this->user, [
+            'invoice_id' => $secondBuy->id,
+            'customer_id' => $this->customer->id,
+            'company_id' => $this->companyId,
+            'date' => '2026-01-16',
+            'type' => 'Shipping',
+            'amount' => 61_287_554,
+            'vatPrice' => 0,
+            'ancillaryCosts' => [
+                ['product_id' => $product->id, 'amount' => 61_287_554],
+            ],
+        ], true);
+
+        $expectedAverageCost = 254_481_249 / 7;
+        $product = $this->findProduct($product->id);
+
+        $this->assertEquals(7, $product->quantity);
+        $this->assertEqualsWithDelta($expectedAverageCost, $product->average_cost, 0.01);
+
+        $sell = $this->sell([$this->productItem($product, 1, 50_000_000)], true, 924, '2026-01-17')['invoice'];
+        $cogsTransaction = $sell->document->transactions()->where('subject_id', $product->cogs_subject_id)->firstOrFail();
+
+        $this->assertEqualsWithDelta(-$expectedAverageCost, $cogsTransaction->value, 0.01);
+    }
 
     public function test_unapproved_invoice_does_not_affect_inventory(): void
     {

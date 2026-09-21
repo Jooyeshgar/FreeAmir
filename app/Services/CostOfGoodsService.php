@@ -226,7 +226,8 @@ class CostOfGoodsService
             return 0.0;
         }
 
-        // Approved calculation uses the immediate previous invoice item's COG.
+        // Incoming invoice recalculations need the historical COG snapshot. A return buy
+        // removes value from the current inventory pool, so it keeps the current average.
         if ($invoice->status->isApprovedOrSettled()) {
             $previousInvoiceItem = $previousInvoice->items->where('itemable_id', $productId)->first();
 
@@ -234,9 +235,9 @@ class CostOfGoodsService
                 return 0.0;
             }
 
-            $previousAverageCost = $previousInvoice->invoice_type === InvoiceType::BEGINNING_INVENTORY
-                ? (float) $previousInvoiceItem->cog_after
-                : (float) $previousInvoiceItem->itemable->average_cost;
+            $previousAverageCost = $invoice->invoice_type === InvoiceType::RETURN_BUY
+                ? (float) $previousInvoiceItem->itemable->average_cost
+                : (float) $previousInvoiceItem->cog_after;
 
             return $previousAverageCost * $availableQuantity;
         }
