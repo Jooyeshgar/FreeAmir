@@ -104,12 +104,73 @@ class InventoryTurnoverReportTest extends TestCase
         $this->assertEquals(10, $row['opening_quantity']);
         $this->assertEquals(1000, $row['opening_balance']);
         $this->assertEquals(6, $row['imported_quantity']);
-        $this->assertEquals(700, $row['imported_balance']);
+        $this->assertEquals(600, $row['imported_balance']);
         $this->assertEquals(6, $row['exported_quantity']);
-        $this->assertEquals(650, $row['exported_balance']);
+        $this->assertEquals(600, $row['exported_balance']);
         $this->assertEquals(10, $row['remaining_quantity']);
-        $this->assertEquals(1050, $row['remaining_balance']);
+        $this->assertEquals(1000, $row['remaining_balance']);
         $this->assertEquals(10, $report['totals']['remaining_quantity']);
+    }
+
+    public function test_full_fiscal_year_values_imports_and_exports_at_the_product_average_cost(): void
+    {
+        $this->product->update(['average_cost' => 135]);
+        $this->movement(InvoiceType::BUY, '2026-04-05', 4, -400, 1, cogAfter: 100);
+        $this->movement(InvoiceType::SELL, '2026-04-06', 2, 200, 2, cogAfter: 100);
+
+        $service = app(InventoryTurnoverService::class);
+        $report = $service->report();
+        $row = $report['rows']->first();
+
+        $this->assertEquals(4, $row['imported_quantity']);
+        $this->assertEquals(540, $row['imported_balance']);
+        $this->assertEquals(2, $row['exported_quantity']);
+        $this->assertEquals(270, $row['exported_balance']);
+
+        $rowWithSubmittedDefaults = $service->report([
+            'start_date' => $report['filters']['start_date'],
+            'end_date' => $report['filters']['end_date'],
+        ])['rows']->first();
+
+        $this->assertEquals(540, $rowWithSubmittedDefaults['imported_balance']);
+        $this->assertEquals(270, $rowWithSubmittedDefaults['exported_balance']);
+    }
+
+    public function test_interval_values_imports_and_exports_at_the_last_approved_invoice_item_cost(): void
+    {
+        $this->product->update(['average_cost' => 500]);
+        $this->movement(InvoiceType::BUY, '2026-02-05', 5, -500, 1, cogAfter: 90);
+        $this->movement(InvoiceType::SELL, '2026-02-10', 2, 200, 2, cogAfter: 125);
+        $this->movement(InvoiceType::BUY, '2026-02-15', 20, -2000, 3, InvoiceStatus::PENDING, cogAfter: 900);
+        $this->movement(InvoiceType::SELL, '2026-03-01', 1, 100, 4, cogAfter: 700);
+
+        $row = app(InventoryTurnoverService::class)->report([
+            'start_date' => '2026/02/01',
+            'end_date' => '2026/02/28',
+        ])['rows']->first();
+
+        $this->assertEquals(5, $row['imported_quantity']);
+        $this->assertEquals(625, $row['imported_balance']);
+        $this->assertEquals(2, $row['exported_quantity']);
+        $this->assertEquals(250, $row['exported_balance']);
+    }
+
+    public function test_interval_average_cost_respects_the_warehouse_filter(): void
+    {
+        $this->movement(InvoiceType::BUY, '2026-02-05', 3, -300, 1, cogAfter: 110);
+        $this->movement(InvoiceType::SELL, '2026-02-10', 1, 100, 2, cogAfter: 120);
+        $this->movement(InvoiceType::BUY, '2026-02-20', 5, -500, 3, warehouse: $this->otherWarehouse, cogAfter: 900);
+
+        $row = app(InventoryTurnoverService::class)->report([
+            'start_date' => '2026/02/01',
+            'end_date' => '2026/02/28',
+            'warehouse_id' => $this->mainWarehouse->id,
+        ])['rows']->first();
+
+        $this->assertEquals(3, $row['imported_quantity']);
+        $this->assertEquals(360, $row['imported_balance']);
+        $this->assertEquals(1, $row['exported_quantity']);
+        $this->assertEquals(120, $row['exported_balance']);
     }
 
     public function test_report_includes_only_approved_or_settled_invoice_statuses(): void
@@ -277,7 +338,8 @@ class InventoryTurnoverReportTest extends TestCase
         float $balance,
         int $number,
         InvoiceStatus $status = InvoiceStatus::APPROVED,
-        ?Warehouse $warehouse = null
+        ?Warehouse $warehouse = null,
+        ?float $cogAfter = null
     ): void {
         $warehouse ??= $this->mainWarehouse;
         $document = Document::factory()->create([
@@ -306,6 +368,7 @@ class InventoryTurnoverReportTest extends TestCase
             'itemable_id' => $this->product->id,
             'quantity' => $quantity,
             'unit_price' => $quantity > 0 ? abs($balance) / $quantity : 0,
+            'cog_after' => $cogAfter ?? ($quantity > 0 ? abs($balance) / $quantity : 0),
             'unit_discount' => 0,
             'vat' => 0,
             'amount' => abs($balance),
