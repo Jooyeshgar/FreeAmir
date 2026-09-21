@@ -14,9 +14,12 @@ use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Models\Warehouse;
+use App\Services\ProductImportService;
 use App\Services\WarehouseDashboardService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Spatie\Permission\Models\Permission;
 use Tests\Helpers\SeederHelper;
 use Tests\TestCase;
@@ -207,6 +210,55 @@ class WarehouseDashboardTest extends TestCase
         $this->assertSame(725.0, $data['categoryBreakdown']->first()['inventory_value']);
     }
 
+    public function test_dashboard_uses_directly_imported_stock_when_invoice_history_is_absent(): void
+    {
+        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId]);
+        Warehouse::create([
+            'company_id' => $this->companyId,
+            'name' => 'Imported stock warehouse',
+        ]);
+        $csv = "code,name,group_name,quantity,quantity_warning,Imported stock warehouse\n"."IMP-1,Imported product,{$group->name},7,10,7\n";
+
+        app(ProductImportService::class)->import(UploadedFile::fake()->createWithContent('products.csv', $csv), $this->companyId);
+
+        $data = app(WarehouseDashboardService::class)->dashboard();
+
+        $this->assertSame(1, $data['summary']['total_item_count']);
+        $this->assertSame(7.0, $data['summary']['total_stock_quantity']);
+        $this->assertSame(1, $data['summary']['below_reorder_count']);
+        $this->assertSame(1, $data['summary']['stagnant_count']);
+        $this->assertSame(7.0, $data['belowReorderItems']->first()['quantity']);
+        $this->assertSame(7.0, $data['stagnantItems']->first()['quantity']);
+    }
+
+    public function test_holding_days_include_both_period_endpoints_for_every_preset(): void
+    {
+        $company = Company::withoutGlobalScopes()->findOrFail($this->companyId);
+        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId]);
+        $product = Product::factory()->withGroup($group)->withSubjects()->create([
+            'company_id' => $this->companyId,
+            'quantity' => 1,
+            'average_cost' => 100,
+        ]);
+        $this->stockMovement($product, InvoiceType::BEGINNING_INVENTORY, 2, 30, $fiscalStart->toDateString());
+        $this->stockMovement($product, InvoiceType::SELL, 1, 31, Carbon::now()->toDateString(), 100);
+        $this->inventoryBalance($product, -100, Carbon::now()->toDateString());
+
+        $expectedDays = [
+            'month' => 30.0,
+            'quarter' => 90.0,
+            'year' => (float) ($fiscalStart->copy()->startOfDay()->diffInDays($fiscalEnd->copy()->startOfDay()) + 1),
+        ];
+
+        foreach ($expectedDays as $period => $days) {
+            $data = app(WarehouseDashboardService::class)->dashboard(['period' => $period]);
+
+            $this->assertSame(1.0, $data['summary']['avg_turnover_ratio'], $period);
+            $this->assertSame($days, $data['summary']['avg_holding_days'], $period);
+        }
+    }
+
     public function test_status_filter_returns_below_reorder_items(): void
     {
         $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId, 'name' => 'Widgets']);
@@ -361,12 +413,29 @@ class WarehouseDashboardTest extends TestCase
 
         $this->stockMovement($product, InvoiceType::BUY, 2, 20, $fiscalStart->copy()->addMonth()->toDateString());
         $this->stockMovement($product, InvoiceType::BUY, 5, 21, $fiscalEnd->copy()->addDay()->toDateString());
+        $this->accountTotals($product, $fiscalStart->copy()->addMonth()->toDateString(), [
+            'income_subject_id' => 1000,
+            'cogs_subject_id' => -600,
+            'inventory_subject_id' => -400,
+            'sales_returns_subject_id' => 100,
+        ]);
+        $this->accountTotals($product, $fiscalEnd->copy()->addDay()->toDateString(), [
+            'income_subject_id' => 5000,
+            'cogs_subject_id' => -5000,
+            'inventory_subject_id' => -5000,
+            'sales_returns_subject_id' => 5000,
+        ]);
 
         $report = app(WarehouseDashboardService::class)->report();
         $row = $report['rows']->firstWhere('id', $product->id);
         $period = collect($report['filterSummary'])->firstWhere('label', __('Period'));
 
         $this->assertSame(2.0, $row['inbound']);
+        $this->assertSame(1000.0, $row['revenue_account']);
+        $this->assertSame(600.0, $row['cogs_account']);
+        $this->assertSame(400.0, $row['inventory_account']);
+        $this->assertSame(100.0, $row['sales_return_account']);
+        $this->assertSame(400.0, $row['sales_profit']);
         $this->assertSame(
             localizeNumber(toEnglish(jdate('Y/m/d', $fiscalStart->timestamp))).' - '
                 .localizeNumber(toEnglish(jdate('Y/m/d', $fiscalEnd->timestamp))),
@@ -431,5 +500,23 @@ class WarehouseDashboardTest extends TestCase
             'cog_after' => 100,
             'quantity_at' => 0,
         ]);
+    }
+
+    private function accountTotals(Product $product, string $date, array $values): void
+    {
+        $document = Document::factory()->create([
+            'company_id' => $this->companyId,
+            'date' => $date,
+        ]);
+
+        foreach ($values as $subjectKey => $value) {
+            Transaction::create([
+                'document_id' => $document->id,
+                'subject_id' => $product->{$subjectKey},
+                'user_id' => $this->user->id,
+                'value' => $value,
+                'desc' => 'report account total',
+            ]);
+        }
     }
 }
