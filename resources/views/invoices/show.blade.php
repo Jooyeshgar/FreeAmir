@@ -539,7 +539,7 @@
                                                             {{ formatDocumentNumber($ancillaryCost->document->number) ?? '' }}</a>
                                                     @endif
                                                 @else
-                                                    <span class="text-gray-500">{{ formatDocumentNumber($ancillaryCost->document->number) }}</span>
+                                                    <span class="text-gray-500">{{ formatDocumentNumber($ancillaryCost->document?->number) }}</span>
                                                 @endcan
                                             </td>
                                             <td class="px-4 py-3">{{ $ancillaryCost->type?->label() ?? '—' }}</td>
