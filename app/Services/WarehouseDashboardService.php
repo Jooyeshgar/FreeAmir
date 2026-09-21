@@ -595,35 +595,47 @@ class WarehouseDashboardService
 
         $incomingTypes = [InvoiceType::BEGINNING_INVENTORY, ...self::STOCK_IN_TYPES];
         $movementTypes = [...$incomingTypes, ...self::STOCK_OUT_TYPES];
-        $incomingPlaceholders = implode(', ', array_fill(0, count($incomingTypes), '?'));
 
-        $quantities = InvoiceItem::query()
+        $movements = InvoiceItem::query()
             ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
             ->where('invoice_items.itemable_type', Product::class)
             ->whereIn('invoice_items.itemable_id', $productIds)
             ->where('invoices.company_id', getActiveCompany())
             ->whereIn('invoices.status', array_map(fn (InvoiceStatus $status) => $status->value, InvoiceStatus::approvedOrSettled()))
             ->whereIn('invoices.invoice_type', array_map(fn (InvoiceType $type) => $type->value, $movementTypes))
-            ->whereBetween('invoices.date', [$fiscalStart->toDateString(), $to->toDateString()])
-            ->selectRaw(
-                "invoice_items.itemable_id as product_id, SUM(CASE WHEN invoices.invoice_type IN ({$incomingPlaceholders}) THEN invoice_items.quantity ELSE -invoice_items.quantity END) as total",
-                array_map(fn (InvoiceType $type) => $type->value, $incomingTypes)
-            )
-            ->groupBy('invoice_items.itemable_id')
-            ->pluck('total', 'product_id')
-            ->map(fn ($quantity) => (float) $quantity)
-            ->all();
+            ->where('invoices.date', '>=', $fiscalStart->toDateString())
+            ->orderBy('invoices.date')
+            ->orderBy('invoices.number')
+            ->orderBy('invoices.id')
+            ->orderBy('invoice_items.id')
+            ->get([
+                'invoice_items.id',
+                'invoice_items.itemable_id as product_id',
+                'invoice_items.quantity',
+                'invoice_items.quantity_at',
+                'invoices.date',
+                'invoices.invoice_type',
+            ]);
 
-        $productsWithHistory = InvoiceItem::query()
-            ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
-            ->where('invoice_items.itemable_type', Product::class)
-            ->whereIn('invoice_items.itemable_id', $productIds)
-            ->where('invoices.company_id', getActiveCompany())
-            ->whereIn('invoices.status', array_map(fn (InvoiceStatus $status) => $status->value, InvoiceStatus::approvedOrSettled()))
-            ->whereIn('invoices.invoice_type', array_map(fn (InvoiceType $type) => $type->value, $movementTypes))
-            ->pluck('invoice_items.itemable_id')
-            ->mapWithKeys(fn ($productId) => [(int) $productId => true])
-            ->all();
+        $quantities = [];
+        $productsWithHistory = [];
+
+        foreach ($movements as $movement) {
+            $productId = (int) $movement->product_id;
+
+            if (! isset($productsWithHistory[$productId])) {
+                $quantities[$productId] = (float) $movement->quantity_at;
+                $productsWithHistory[$productId] = true;
+            }
+
+            if (Carbon::parse($movement->date)->gt($to)) {
+                continue;
+            }
+
+            $type = InvoiceType::fromName($movement->invoice_type);
+            $sign = in_array($type, $incomingTypes, true) ? 1 : -1;
+            $quantities[$productId] += $sign * (float) $movement->quantity;
+        }
 
         $storedQuantities = WarehouseProductStock::query()
             ->whereIn('product_id', $productIds)

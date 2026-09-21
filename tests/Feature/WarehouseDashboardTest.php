@@ -231,6 +231,46 @@ class WarehouseDashboardTest extends TestCase
         $this->assertSame(7.0, $data['stagnantItems']->first()['quantity']);
     }
 
+    public function test_dashboard_preserves_imported_stock_baseline_after_an_in_period_sale(): void
+    {
+        $product = $this->importProductWithStock(7);
+        $this->stockMovement(
+            $product,
+            InvoiceType::SELL,
+            2,
+            32,
+            Carbon::now()->subDays(5)->toDateString(),
+            200,
+            7,
+        );
+
+        $data = app(WarehouseDashboardService::class)->dashboard(['period' => 'month']);
+
+        $this->assertSame(1, $data['summary']['total_item_count']);
+        $this->assertSame(5.0, $data['summary']['total_stock_quantity']);
+        $this->assertSame(5.0, $data['belowReorderItems']->first()['quantity']);
+    }
+
+    public function test_dashboard_uses_pre_movement_stock_for_a_snapshot_before_the_first_movement(): void
+    {
+        $product = $this->importProductWithStock(7);
+        $this->stockMovement(
+            $product,
+            InvoiceType::SELL,
+            2,
+            33,
+            Carbon::now()->addDays(5)->toDateString(),
+            200,
+            7,
+        );
+
+        $data = app(WarehouseDashboardService::class)->dashboard(['period' => 'month']);
+
+        $this->assertSame(1, $data['summary']['total_item_count']);
+        $this->assertSame(7.0, $data['summary']['total_stock_quantity']);
+        $this->assertSame(7.0, $data['belowReorderItems']->first()['quantity']);
+    }
+
     public function test_holding_days_include_both_period_endpoints_for_every_preset(): void
     {
         $company = Company::withoutGlobalScopes()->findOrFail($this->companyId);
@@ -484,8 +524,15 @@ class WarehouseDashboardTest extends TestCase
         ]);
     }
 
-    private function stockMovement(Product $product, InvoiceType $type, float $quantity, int $number, string $date, float $amount = 0): void
-    {
+    private function stockMovement(
+        Product $product,
+        InvoiceType $type,
+        float $quantity,
+        int $number,
+        string $date,
+        float $amount = 0,
+        float $quantityAt = 0,
+    ): void {
         $invoice = $this->invoice($type, InvoiceStatus::APPROVED, $number, $date, $amount);
 
         InvoiceItem::factory()->create([
@@ -498,8 +545,26 @@ class WarehouseDashboardTest extends TestCase
             'vat' => 0,
             'amount' => $amount,
             'cog_after' => 100,
-            'quantity_at' => 0,
+            'quantity_at' => $quantityAt,
         ]);
+    }
+
+    private function importProductWithStock(float $quantity): Product
+    {
+        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId]);
+        Warehouse::create([
+            'company_id' => $this->companyId,
+            'name' => 'Imported stock warehouse',
+        ]);
+        $csv = "code,name,group_name,quantity,quantity_warning,Imported stock warehouse\n"
+            ."IMP-{$quantity},Imported product,{$group->name},{$quantity},10,{$quantity}\n";
+
+        app(ProductImportService::class)->import(
+            UploadedFile::fake()->createWithContent('products.csv', $csv),
+            $this->companyId,
+        );
+
+        return Product::query()->where('code', "IMP-{$quantity}")->firstOrFail();
     }
 
     private function accountTotals(Product $product, string $date, array $values): void
