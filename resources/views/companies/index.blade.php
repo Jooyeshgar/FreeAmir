@@ -122,9 +122,10 @@
                                         @can('companies.close-fiscal-year')
                                             <a href="{{ route('companies.closing-wizard', $company) }}"
                                                 @class([
-                                                    'btn btn-ghost btn-sm rounded-lg',
-                                                    'btn-disabled' => $company->closed_at,
-                                                ])>{{ __('Close Fiscal Year') }}</a>
+                                                    'btn btn-sm rounded-lg',
+                                                    'btn-ghost' => !$company->closed_at,
+                                                    'btn-info btn-outline' => $company->closed_at,
+                                                ])>{{ $company->closed_at ? __('Review Fiscal Year Closing') : __('Close Fiscal Year') }}</a>
                                         @endcan
                                     @endcannot
                                     @can('companies.destroy')

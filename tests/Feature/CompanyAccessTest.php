@@ -96,6 +96,26 @@ class CompanyAccessTest extends TestCase
         $response->assertOk()->assertDontSee('data-testid="create-first-company"', false);
     }
 
+    public function test_closed_fiscal_year_has_an_enabled_link_to_the_closing_wizard(): void
+    {
+        $this->user->givePermissionTo(
+            Permission::firstOrCreate(['name' => 'companies.index']),
+            Permission::firstOrCreate(['name' => 'companies.close-fiscal-year']),
+            Permission::firstOrCreate(['name' => 'companies.closing-wizard']),
+        );
+        $this->accessibleCompany->update(['closed_at' => now()]);
+
+        $response = $this->get(route('companies.index'));
+
+        $response->assertOk()
+            ->assertSee(route('companies.closing-wizard', $this->accessibleCompany), false)
+            ->assertSee(__('Review Fiscal Year Closing'))
+            ->assertSee('btn-info btn-outline', false)
+            ->assertDontSee('btn-disabled pointer-events-none', false);
+
+        $this->get(route('companies.closing-wizard', $this->accessibleCompany))->assertOk();
+    }
+
     public function test_user_can_delete_an_accessible_company(): void
     {
         Storage::fake('public');
