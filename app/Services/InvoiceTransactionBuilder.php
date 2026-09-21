@@ -489,7 +489,7 @@ class InvoiceTransactionBuilder
 
         $subjectId = $this->invoiceType->isBeginningInventory()
             ? $this->beginningInventorySubjectId()
-            : Customer::findOrFail($this->invoiceData['customer_id'])->subject_id;
+            : $this->customerSubjectId();
 
         $value = match ($this->invoiceType) {
             InvoiceType::SELL => -$customerTotal,
@@ -503,6 +503,26 @@ class InvoiceTransactionBuilder
             'desc' => __('Invoice').' '.$this->invoiceType->label().' '.__(' with number ').' '.formatNumber($this->invoiceData['number']),
             'value' => $value,
         ];
+    }
+
+    private function customerSubjectId(): int
+    {
+        $customer = Customer::findOrFail($this->invoiceData['customer_id']);
+        $subject = $customer->subject;
+
+        if (! $subject && $customer->subject_id) {
+            $subject = Subject::query()
+                ->where('company_id', $customer->company_id)
+                ->find($customer->subject_id);
+        }
+
+        if (! $subject) {
+            throw ValidationException::withMessages([
+                'customer_id' => __('The account side has no accounting subject.'),
+            ]);
+        }
+
+        return (int) $subject->id;
     }
 
     private function beginningInventorySubjectId(): int

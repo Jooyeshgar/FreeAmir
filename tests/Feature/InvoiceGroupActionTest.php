@@ -262,6 +262,26 @@ class InvoiceGroupActionTest extends TestCase
         $this->assertInvoiceStatus($sellInvoice->id, InvoiceStatus::APPROVED);
     }
 
+    public function test_invoice_approval_uses_the_customer_subject_relation_when_subject_id_is_missing(): void
+    {
+        $product = $this->createProduct(['quantity' => 200]);
+        $customerSubject = $this->customer->subject;
+        $this->customer->updateQuietly(['subject_id' => null]);
+
+        $invoice = $this->buy(
+            [$this->productItem($product, 20, 100)],
+            false,
+            2203,
+            now()->toDateString()
+        )['invoice'];
+
+        $this->changeInvoiceStatus($invoice, 'approved');
+
+        $invoice = $this->findInvoice($invoice->id);
+        $this->assertSame(InvoiceStatus::APPROVED, $invoice->status);
+        $this->assertTrue($invoice->document->transactions->contains('subject_id', $customerSubject->id));
+    }
+
     public function test_status_change_is_blocked_for_original_buy_when_return_invoice_exists(): void
     {
         $product = $this->createProduct(['quantity' => 200]);
