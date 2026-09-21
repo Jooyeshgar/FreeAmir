@@ -302,7 +302,7 @@ class WarehouseDashboardService
             return 0.0;
         }
 
-        $days = max(1, $from->diffInDays($to));
+        $days = max(1, $from->copy()->startOfDay()->diffInDays($to->copy()->startOfDay()) + 1);
 
         return round($days / $turnover, 1);
     }
@@ -597,7 +597,7 @@ class WarehouseDashboardService
         $movementTypes = [...$incomingTypes, ...self::STOCK_OUT_TYPES];
         $incomingPlaceholders = implode(', ', array_fill(0, count($incomingTypes), '?'));
 
-        return InvoiceItem::query()
+        $quantities = InvoiceItem::query()
             ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
             ->where('invoice_items.itemable_type', Product::class)
             ->whereIn('invoice_items.itemable_id', $productIds)
@@ -613,6 +613,41 @@ class WarehouseDashboardService
             ->pluck('total', 'product_id')
             ->map(fn ($quantity) => (float) $quantity)
             ->all();
+
+        $productsWithHistory = InvoiceItem::query()
+            ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
+            ->where('invoice_items.itemable_type', Product::class)
+            ->whereIn('invoice_items.itemable_id', $productIds)
+            ->where('invoices.company_id', getActiveCompany())
+            ->whereIn('invoices.status', array_map(fn (InvoiceStatus $status) => $status->value, InvoiceStatus::approvedOrSettled()))
+            ->whereIn('invoices.invoice_type', array_map(fn (InvoiceType $type) => $type->value, $movementTypes))
+            ->pluck('invoice_items.itemable_id')
+            ->mapWithKeys(fn ($productId) => [(int) $productId => true])
+            ->all();
+
+        $storedQuantities = WarehouseProductStock::query()
+            ->whereIn('product_id', $productIds)
+            ->selectRaw('product_id, SUM(quantity) as total')
+            ->groupBy('product_id')
+            ->pluck('total', 'product_id')
+            ->map(fn ($quantity) => (float) $quantity)
+            ->all();
+
+        foreach ($products as $product) {
+            if (isset($productsWithHistory[$product->id])) {
+                continue;
+            }
+
+            $storedQuantity = array_key_exists($product->id, $storedQuantities)
+                ? $storedQuantities[$product->id]
+                : (float) $product->quantity;
+
+            if ($storedQuantity != 0.0) {
+                $quantities[$product->id] = $storedQuantity;
+            }
+        }
+
+        return $quantities;
     }
 
     private function stockQuantity(Product $product, array $stockQuantities): float
@@ -664,7 +699,7 @@ class WarehouseDashboardService
 
         [$fyStart, $now] = $this->fiscalYearToDate();
         $movement = $this->fiscalYearMovement($fyStart, $now, $products->pluck('id')->all());
-        $subjectTotals = $this->subjectTransactionTotals($products);
+        $subjectTotals = $this->subjectTransactionTotals($products, $fyStart, $now);
         $needsLastCost = in_array('last_item_cost', $columns, true);
 
         $rows = $products->map(function (Product $p) use ($movement, $subjectTotals, $needsLastCost, $warehouses, $warehouseStocks) {
@@ -891,7 +926,7 @@ class WarehouseDashboardService
         return $map;
     }
 
-    private function subjectTransactionTotals(Collection $products): array
+    private function subjectTransactionTotals(Collection $products, Carbon $from, Carbon $to): array
     {
         $subjectIds = $products->flatMap(fn (Product $p) => [
             $p->income_subject_id,
@@ -904,7 +939,12 @@ class WarehouseDashboardService
             return [];
         }
 
-        return Transaction::query()->whereIn('subject_id', $subjectIds)->selectRaw('subject_id, SUM(value) as total')
+        return Transaction::query()
+            ->whereIn('subject_id', $subjectIds)
+            ->join('documents', 'documents.id', '=', 'transactions.document_id')
+            ->where('documents.company_id', getActiveCompany())
+            ->whereBetween('documents.date', [$from->toDateString(), $to->toDateString()])
+            ->selectRaw('subject_id, SUM(value) as total')
             ->groupBy('subject_id')->pluck('total', 'subject_id')->map(fn ($value) => (float) $value)->all();
     }
 
