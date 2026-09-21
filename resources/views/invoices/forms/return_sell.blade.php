@@ -160,7 +160,7 @@
 </x-card>
 <x-card class="mt-4 min-w-0 max-w-full rounded-2xl w-full" class_body="p-0 pt-0 mt-4" x-data="transactionForm"
     x-on:include-last-years-invoices-changed.window="lastYearsInvoices = $event.detail.enabled">
-    <div class="max-w-full overflow-x-auto overflow-y-hidden">
+    <div class="max-w-full overflow-visible">
         <div class="w-max min-w-full">
             <div class="flex w-max min-w-full gap-2 items-center px-4">
         <div class="text-sm flex-1 max-w-8 text-center text-gray-500 pt-3">*</div>
@@ -190,7 +190,7 @@
     <div class="min-h-96">
         <div id="transactions" x-data="{ activeTab: {{ $total }} }">
             <template x-for="(transaction, index) in transactions" :key="transaction.id">
-                <div :class="{ 'active': activeTab === index }" class="transaction flex w-max min-w-full gap-2 items-center px-4 pb-3"
+                <div :class="{ 'active z-[110]': activeTab === index }" class="transaction flex w-max min-w-full gap-2 items-center px-4 pb-3"
                     @click="activeTab = index">
                     <div class="relative flex-1 text-center max-w-8 pt-2 pb-2 transaction-count-container">
                         <span class="transaction-count block"
