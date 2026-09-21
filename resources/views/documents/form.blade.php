@@ -128,6 +128,7 @@
                                 const trigger = root.querySelector(':scope > button');
                                 const panel = $refs.panel;
                                 const keepPanelOpen = event => event.stopPropagation();
+                                const releasePanelScope = Alpine.addScopeToNode(panel, {}, root);
 
                                 const positionPanel = () => {
                                     if (!open) return;
@@ -175,6 +176,7 @@
                                     window.removeEventListener('resize', positionPanel);
                                     window.removeEventListener('scroll', positionPanel, true);
                                     panel.removeEventListener('click', keepPanelOpen);
+                                    releasePanelScope();
                                     panel.remove();
                                 };
                             "
