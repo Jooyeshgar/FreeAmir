@@ -1156,6 +1156,7 @@
     "Fiscal year closed on": "Fiscal year closed on",
     "Fiscal year closed successfully.": "Fiscal year closed successfully.",
     "Fiscal year closing Document": "Fiscal year closing Document",
+    "Fiscal year closing document recalculated successfully.": "Fiscal year closing document recalculated successfully.",
     "Fiscal year opening Document": "Fiscal year opening Document",
     "Fiscal year status": "Fiscal year status",
     "Fiscal years": "Fiscal years",
@@ -2215,7 +2216,9 @@
     "Reason": "Reason",
     "Recalculate": "Recalculate",
     "Recalculate All": "Recalculate All",
+    "Recalculate Closing Document": "Recalculate Closing Document",
     "Recalculate all attendance logs? Stored values will be overwritten with the computed values.": "Recalculate all attendance logs? Stored values will be overwritten with the computed values.",
+    "Recalculate the closing document? The current closing document will be deleted and replaced.": "Recalculate the closing document? The current closing document will be deleted and replaced.",
     "Recalculate from Logs": "Recalculate from Logs",
     "Recalculate stock": "Recalculate stock",
     "Recalculate this attendance log? Stored values will be overwritten with the computed values.": "Recalculate this attendance log? Stored values will be overwritten with the computed values.",
@@ -3456,5 +3459,7 @@
     "Exported": "Exported",
     "Total Amount": "Total Amount",
     "Report": "Report",
-    "No products found.": "No products found."
+    "No products found.": "No products found.",
+    "No fiscal year closing document was found to recalculate.": "No fiscal year closing document was found to recalculate.",
+    "Only a closed fiscal year can have its closing document recalculated.": "Only a closed fiscal year can have its closing document recalculated."
 }

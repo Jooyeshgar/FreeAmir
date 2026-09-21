@@ -590,4 +590,24 @@ class CompanyController extends Controller
         return redirect()->route('companies.index')
             ->with('success', __('Fiscal year closed successfully.'));
     }
+
+    public function recalculateClosingDocument(Company $company, Request $request): RedirectResponse
+    {
+        if (! $company->users->contains($request->user()->id)) {
+            abort(403);
+        }
+
+        try {
+            FiscalYearService::recalculateClosingDocument($company, $request->user());
+        } catch (ValidationException $e) {
+            return redirect()->route('companies.closing-wizard', $company)
+                ->withErrors($e->errors());
+        } catch (\Exception $e) {
+            return redirect()->route('companies.closing-wizard', $company)
+                ->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('companies.closing-wizard', $company)
+            ->with('success', __('Fiscal year closing document recalculated successfully.'));
+    }
 }

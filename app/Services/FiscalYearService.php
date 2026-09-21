@@ -2871,6 +2871,59 @@ class FiscalYearService
         return DocumentService::createDocument($user, $documentData, $transactions);
     }
 
+    /**
+     * Replace a closed fiscal year's closing document with a fresh calculation.
+     */
+    public static function recalculateClosingDocument(Company $company, User $user): Document
+    {
+        return DB::transaction(function () use ($company, $user) {
+            $lockedCompany = Company::query()->lockForUpdate()->findOrFail($company->id);
+
+            if ($lockedCompany->closed_at === null) {
+                throw ValidationException::withMessages([
+                    'company' => __('Only a closed fiscal year can have its closing document recalculated.'),
+                ]);
+            }
+
+            if ($lockedCompany->closing_document_id === null) {
+                throw ValidationException::withMessages([
+                    'company' => __('No fiscal year closing document was found to recalculate.'),
+                ]);
+            }
+
+            $closingDocument = Document::query()
+                ->where('company_id', $lockedCompany->id)
+                ->find($lockedCompany->closing_document_id);
+
+            if (! $closingDocument) {
+                throw ValidationException::withMessages([
+                    'company' => __('No fiscal year closing document was found to recalculate.'),
+                ]);
+            }
+
+            $lockedCompany->closing_document_id = null;
+            $lockedCompany->save();
+
+            $documentFileService = new DocumentFileService;
+            foreach ($closingDocument->documentFiles()->get() as $documentFile) {
+                $documentFileService->delete($documentFile);
+            }
+
+            app(ActivityLogService::class)->deleteModels(
+                Transaction::query()->where('document_id', $closingDocument->id)
+            );
+            app(ActivityLogService::class)->deleteModels(
+                Document::query()->whereKey($closingDocument->id)
+            );
+
+            $newClosingDocument = self::createClosingDocument($lockedCompany, $user);
+            $lockedCompany->closing_document_id = $newClosingDocument->id;
+            $lockedCompany->save();
+
+            return $newClosingDocument;
+        });
+    }
+
     protected static function newFiscalYear(Company $company): Company
     {
         $newFiscalYearData = collect($company->getAttributes())->except(['id', 'closed_at', 'closed_by', 'fiscal_year'])
