@@ -527,8 +527,8 @@
                                                 </a>
                                             </td>
                                             <td class="px-4 py-3">
-                                                @can('documents.show')
-                                                    @if ($ancillaryCost->document_id)
+                                                @if ($ancillaryCost->document_id)
+                                                    @can('documents.show')
                                                         <a href="{{ route('documents.show', $ancillaryCost->document_id) }}">
                                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -536,11 +536,11 @@
                                                             </svg>
                                                         </a>&nbsp;
                                                         <a class="link" href="{{ route('documents.edit', $ancillaryCost->document_id) }}">
-                                                            {{ formatDocumentNumber($ancillaryCost->document->number) ?? '' }}</a>
-                                                    @endif
-                                                @else
-                                                    <span class="text-gray-500">{{ formatDocumentNumber($ancillaryCost->document?->number) }}</span>
-                                                @endcan
+                                                            {{ formatDocumentNumber($ancillaryCost->document?->number ?? $ancillaryCost->document_id) }}</a>
+                                                    @else
+                                                        <span class="text-gray-500">{{ formatDocumentNumber($ancillaryCost->document?->number ?? $ancillaryCost->document_id) }}</span>
+                                                    @endcan
+                                                @endif
                                             </td>
                                             <td class="px-4 py-3">{{ $ancillaryCost->type?->label() ?? '—' }}</td>
                                             <td class="px-4 py-3">{{ $ancillaryCost->status?->label() ?? '—' }}</td>
