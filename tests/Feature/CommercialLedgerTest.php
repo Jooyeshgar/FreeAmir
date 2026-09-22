@@ -112,8 +112,8 @@ class CommercialLedgerTest extends TestCase
         $this->assertStringContainsString('ردیف,تاریخ,"کد حساب کل"', $content);
         $this->assertStringContainsString('125000', $content);
         $this->assertStringNotContainsString('125,000', $content);
-        $this->assertStringContainsString('خرید نقدی,125000,', $content);
-        $this->assertStringContainsString('طرف حساب,,125000', $content);
+        $this->assertStringContainsString('"خرید نقدی",125000,', $content);
+        $this->assertStringContainsString('"طرف حساب",,125000', $content);
     }
 
     public function test_xlsx_is_rtl_styled_and_amount_cells_are_numeric(): void
@@ -131,7 +131,7 @@ class CommercialLedgerTest extends TestCase
 
         $this->assertStringContainsString('rightToLeft="1"', $sheet);
         $this->assertStringContainsString('<c r="H2" s="2" t="n"><v>9876.5</v></c>', $sheet);
-        $this->assertStringContainsString('<c r="I2" s="2"/>', $sheet);
+        $this->assertStringNotContainsString('<c r="I2"', $sheet);
         $this->assertStringContainsString('Vazirmatn', $styles);
         $this->assertStringContainsString('FF1F2937', $styles);
     }
@@ -166,6 +166,7 @@ class CommercialLedgerTest extends TestCase
         $allSubsidiary = $service->rows($from, $to, CommercialLedgerType::ALL_SUBSIDIARY);
         $this->assertCount(7, $allSubsidiary);
         $this->assertEqualsCanonicalizing(['101001', '101002'], $allSubsidiary->pluck('subsidiary_code')->unique()->all());
+        $this->assertNull($allSubsidiary->first()['credit']);
 
         $allGeneral = $service->rows($from, $to, CommercialLedgerType::ALL_GENERAL);
         $this->assertCount(7, $allGeneral);
