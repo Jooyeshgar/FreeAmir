@@ -115,8 +115,8 @@ class InventoryTurnoverReportTest extends TestCase
     public function test_full_fiscal_year_values_imports_and_exports_at_the_product_average_cost(): void
     {
         $this->product->update(['average_cost' => 135]);
-        $this->movement(InvoiceType::BUY, '2026-04-05', 4, -400, 1, cogAfter: 100);
-        $this->movement(InvoiceType::SELL, '2026-04-06', 2, 200, 2, cogAfter: 100);
+        $this->movement(InvoiceType::BUY, '2026-02-05', 4, -400, 1, cogAfter: 100);
+        $this->movement(InvoiceType::SELL, '2026-02-06', 2, 200, 2, cogAfter: 100);
 
         $service = app(InventoryTurnoverService::class);
         $report = $service->report();
