@@ -63,15 +63,21 @@
             <h2 class="text-xl font-bold">{{ __('Create Commercial Ledger') }}</h2>
             <form method="POST" action="{{ route('commercial-ledgers.store') }}" class="mt-5 space-y-4">
                 @csrf
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <x-text-input data-jdp title="{{ __('From Date') }}" input_name="from_date" id_input="from_date"
+                        placeholder="{{ __('From Date') }}" readonly required
+                        input_value="{{ old('from_date') ?? $defaultFromDate }}"
+                        label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
+                    <x-text-input data-jdp title="{{ __('To Date') }}" input_name="to_date" id_input="to_date"
+                        placeholder="{{ __('To Date') }}" readonly required
+                        input_value="{{ old('to_date') ?? $defaultToDate }}"
+                        label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
+                </div>
                 @if($unapprovedDocumentsCount > 0)
                     <div class="alert alert-warning text-sm">
                         {{ trans_choice(':count document is not approved yet.|:count documents are not approved yet.', $unapprovedDocumentsCount, ['count' => localizeNumber($unapprovedDocumentsCount)]) }}
                     </div>
                 @endif
-                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <x-date-picker id="from_date" name="from_date" :title="__('From Date')" :value="old('from_date', $defaultFromDate)" required />
-                    <x-date-picker id="to_date" name="to_date" :title="__('To Date')" :value="old('to_date', $defaultToDate)" required />
-                </div>
                 <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <fieldset class="form-control w-full">
                         <label class="label" for="format">{{ __('Export Format') }}*</label>
@@ -106,4 +112,13 @@
             <script>document.getElementById('commercial-ledger-settings')?.showModal();</script>
         @endpush
     @endif
+
+    @pushOnce('scripts')
+        <script type="module">
+            jalaliDatepicker.startWatch({persianDigits: true,
+                selector: '#commercial-ledger-settings input[data-jdp]',
+                container: '#commercial-ledger-settings'});
+        </script>
+    @endPushOnce
+
 </x-app-layout>
