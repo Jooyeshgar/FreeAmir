@@ -155,7 +155,7 @@ class CommercialLedgerService
         return [
             'transaction_id' => $transaction->id,
             'document_id' => $transaction->document_id,
-            'document_number' => $transaction->document_number,
+            'document_number' => $this->documentNumber((string) $transaction->document_number),
             'date' => $transaction->date,
             'general_code' => (string) ($general?->code ?? ''),
             'general_title' => (string) ($general?->name ?? ''),
@@ -225,6 +225,13 @@ class CommercialLedgerService
         return $negative ? -$minor : $minor;
     }
 
+    private function documentNumber(string $value): int|float
+    {
+        $normalized = str_contains($value, '.') ? rtrim(rtrim($value, '0'), '.') : $value;
+
+        return str_contains($normalized, '.') ? (float) $normalized : (int) $normalized;
+    }
+
     private function ensureDocumentsAreBalanced(string $fromDate, string $toDate): void
     {
         $unbalancedDocuments = DB::table('documents')
@@ -243,7 +250,7 @@ class CommercialLedgerService
 
         $documentNumbers = $unbalancedDocuments
             ->pluck('number')
-            ->map(fn ($number): string => (string) $number)
+            ->map(fn ($number): string => (string) $this->documentNumber((string) $number))
             ->implode(', ');
 
         throw ValidationException::withMessages([

@@ -119,6 +119,19 @@ class CommercialLedgerTest extends TestCase
         $this->assertSame('3', str_getcsv($lines[2])[0]);
     }
 
+    public function test_csv_preserves_fractional_document_numbers_without_decimal_padding(): void
+    {
+        $this->createTransaction(3.5, '1403/02/10', -125000, 'خرید نقدی');
+        $this->createTransaction(3.5, '1403/02/10', 125000, 'طرف حساب');
+
+        $this->post(route('commercial-ledgers.store'), $this->payload('csv'))->assertRedirect();
+
+        $content = Storage::disk('local')->get(CommercialLedgerExport::query()->sole()->file_path);
+        $lines = explode("\n", trim($content));
+        $this->assertSame('3.5', str_getcsv($lines[1])[0]);
+        $this->assertSame('3.5', str_getcsv($lines[2])[0]);
+    }
+
     public function test_xlsx_is_rtl_styled_and_amount_cells_are_numeric(): void
     {
         $this->createTransaction(3, '1403/03/12', -9876.5, 'پرداخت');
@@ -264,7 +277,7 @@ class CommercialLedgerTest extends TestCase
         ];
     }
 
-    private function createTransaction(int $documentNumber, string $jalaliDate, float $value, string $description, ?Subject $subject = null): Transaction
+    private function createTransaction(int|float $documentNumber, string $jalaliDate, float $value, string $description, ?Subject $subject = null): Transaction
     {
         $document = Document::query()->firstOrCreate([
             'company_id' => $this->company->id,
