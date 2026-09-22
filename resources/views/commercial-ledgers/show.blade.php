@@ -40,8 +40,8 @@
                             <td>{{ $row['subsidiary_code'] }}</td>
                             <td>{{ $row['subsidiary_title'] }}</td>
                             <td>{{ $row['description'] }}</td>
-                            <td>{{ formatNumber($row['debit']) }}</td>
-                            <td>{{ formatNumber($row['credit']) }}</td>
+                            <td>{{ $row['debit'] == 0 ? '' : formatNumber($row['debit']) }}</td>
+                            <td>{{ $row['credit'] == 0 ? '' : formatNumber($row['credit']) }}</td>
                         </tr>
                     @empty
                         <tr><td colspan="9" class="py-10 text-center opacity-60">{{ __('No ledger entries were found for this date range.') }}</td></tr>

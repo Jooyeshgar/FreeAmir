@@ -225,7 +225,7 @@ class CommercialLedgerService
         fputcsv($handle, array_map('__', self::HEADERS));
 
         foreach ($rows as $row) {
-            fputcsv($handle, array_values($row));
+            fputcsv($handle, array_values($this->withoutZeroAmounts($row)));
         }
 
         rewind($handle);
@@ -271,7 +271,7 @@ class CommercialLedgerService
     {
         $xmlRows = [$this->xlsxRow(1, array_map('__', self::HEADERS), true)];
         foreach ($rows as $index => $row) {
-            $xmlRows[] = $this->xlsxRow($index + 2, array_values($row));
+            $xmlRows[] = $this->xlsxRow($index + 2, array_values($this->withoutZeroAmounts($row)));
         }
         $lastRow = max(1, $rows->count() + 1);
 
@@ -288,13 +288,27 @@ class CommercialLedgerService
         foreach (array_values($values) as $index => $value) {
             $reference = chr(65 + $index).$number;
             if (! $header && in_array($index, [0, 7, 8], true)) {
-                $cells .= '<c r="'.$reference.'" s="'.($index === 0 ? 1 : 2).'" t="n"><v>'.(float) $value.'</v></c>';
+                $style = $index === 0 ? 1 : 2;
+                $cells .= $value === ''
+                    ? '<c r="'.$reference.'" s="'.$style.'"/>'
+                    : '<c r="'.$reference.'" s="'.$style.'" t="n"><v>'.(float) $value.'</v></c>';
             } else {
                 $cells .= '<c r="'.$reference.'" s="'.($header ? 3 : 1).'" t="inlineStr"><is><t xml:space="preserve">'.$this->xml((string) $value).'</t></is></c>';
             }
         }
 
         return '<row r="'.$number.'">'.$cells.'</row>';
+    }
+
+    private function withoutZeroAmounts(array $row): array
+    {
+        foreach (['debit', 'credit'] as $amount) {
+            if ($row[$amount] == 0) {
+                $row[$amount] = '';
+            }
+        }
+
+        return $row;
     }
 
     private function xml(string $value): string

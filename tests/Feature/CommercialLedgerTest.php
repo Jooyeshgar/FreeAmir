@@ -112,6 +112,8 @@ class CommercialLedgerTest extends TestCase
         $this->assertStringContainsString('ردیف,تاریخ,"کد حساب کل"', $content);
         $this->assertStringContainsString('125000', $content);
         $this->assertStringNotContainsString('125,000', $content);
+        $this->assertStringContainsString('خرید نقدی,125000,', $content);
+        $this->assertStringContainsString('طرف حساب,,125000', $content);
     }
 
     public function test_xlsx_is_rtl_styled_and_amount_cells_are_numeric(): void
@@ -129,6 +131,7 @@ class CommercialLedgerTest extends TestCase
 
         $this->assertStringContainsString('rightToLeft="1"', $sheet);
         $this->assertStringContainsString('<c r="H2" s="2" t="n"><v>9876.5</v></c>', $sheet);
+        $this->assertStringContainsString('<c r="I2" s="2"/>', $sheet);
         $this->assertStringContainsString('Vazirmatn', $styles);
         $this->assertStringContainsString('FF1F2937', $styles);
     }
@@ -194,6 +197,7 @@ class CommercialLedgerTest extends TestCase
             ->assertSee('۱ ردیف هشدار')
             ->assertSee('<tr class="bg-warning/20">', false);
         $this->assertSame(1, substr_count($preview->getContent(), '<tr class="bg-warning/20">'));
+        $this->assertSame(3, substr_count($preview->getContent(), '<td></td>'));
         $index = $this->get(route('commercial-ledgers.index'));
         $index->assertOk()
             ->assertSee(__('Warning Rows'))
