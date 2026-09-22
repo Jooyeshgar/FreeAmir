@@ -3455,6 +3455,7 @@
     "Commercial ledger deleted successfully.": "Commercial ledger deleted successfully.",
     "A commercial ledger already exists for this date (:from to :to). Do you want to continue?": "A commercial ledger already exists for this date (:from to :to). Do you want to continue?",
     ":count document is not approved yet.|:count documents are not approved yet.": ":count document is not approved yet.|:count documents are not approved yet.",
+    "The commercial ledger cannot be generated because these documents are unbalanced: :documents. Balance their debit and credit totals, then generate the file again.": "The commercial ledger cannot be generated because these documents are unbalanced: :documents. Balance their debit and credit totals, then generate the file again.",
     "From date cannot be greater than to date.": "From date cannot be greater than to date.",
     "Document :number": "Document :number",
     "Opening document :number": "Opening document :number",

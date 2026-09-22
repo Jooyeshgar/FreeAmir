@@ -10,6 +10,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 use ZipArchive;
 
@@ -33,6 +34,7 @@ class CommercialLedgerService
         $fromDate = jalali_to_gregorian_date($data['from_date'], '-', '/');
         $toDate = jalali_to_gregorian_date($data['to_date'], '-', '/');
         $type = CommercialLedgerType::from((int) $data['ledger_type']);
+        $this->ensureDocumentsAreBalanced($fromDate, $toDate);
         $rows = $this->rows($fromDate, $toDate, $type);
         $extension = $data['format'];
         $path = 'commercial-ledgers/'.$company->id.'/'.Str::uuid().'.'.$extension;
@@ -93,9 +95,9 @@ class CommercialLedgerService
             $transactions = $this->aggregateMonthly($transactions, $type);
         }
 
-        return $transactions->values()->map(function (array $row, int $index): array {
+        return $transactions->values()->map(function (array $row): array {
             return [
-                'row_number' => $index + 1,
+                'row_number' => $row['document_number'],
                 'date' => gregorian_to_jalali_date($row['date'], '/', '-'),
                 'general_code' => $row['general_code'],
                 'general_title' => $row['general_title'],
@@ -191,16 +193,21 @@ class CommercialLedgerService
             $opening = $this->aggregate($opening, fn (array $row): string => 'opening|'.$row['document_id'].'|'.$row['account_key'], __('Opening document :number'));
         }
 
+        $monthlyDocumentNumbers = $monthly
+            ->groupBy(fn (array $row): string => substr(gregorian_to_jalali_date($row['date'], '/', '-'), 0, 7))
+            ->map(fn (Collection $group) => $group->max('document_number'));
+
         $monthly = $monthly->groupBy(function (array $row): string {
             $jalaliMonth = gregorian_to_jalali_date($row['date'], '/', '-');
 
             return substr($jalaliMonth, 0, 7).'|'.$row['account_key'];
-        })->map(function (Collection $group): array {
+        })->map(function (Collection $group) use ($monthlyDocumentNumbers): array {
             $first = $group->first();
             $jalaliMonth = substr(gregorian_to_jalali_date($first['date'], '/', '-'), 0, 7);
             $first['debit_minor'] = $group->sum('debit_minor');
             $first['credit_minor'] = $group->sum('credit_minor');
             $first['date'] = $group->max('date');
+            $first['document_number'] = $monthlyDocumentNumbers[$jalaliMonth];
             $first['description'] = __('Monthly ledger aggregation for :month', ['month' => $jalaliMonth]);
 
             return $first;
@@ -216,6 +223,34 @@ class CommercialLedgerService
         $minor = ((int) $whole * 100) + (int) str_pad(substr($fraction, 0, 2), 2, '0');
 
         return $negative ? -$minor : $minor;
+    }
+
+    private function ensureDocumentsAreBalanced(string $fromDate, string $toDate): void
+    {
+        $unbalancedDocuments = DB::table('documents')
+            ->leftJoin('transactions', 'transactions.document_id', '=', 'documents.id')
+            ->where('documents.company_id', getActiveCompany())
+            ->whereBetween('documents.date', [$fromDate, $toDate])
+            ->groupBy('documents.id', 'documents.number')
+            ->select('documents.number')
+            ->selectRaw('COALESCE(SUM(transactions.value), 0) as balance')
+            ->get()
+            ->filter(fn (object $document): bool => $this->minorUnits((string) $document->balance) !== 0);
+
+        if ($unbalancedDocuments->isEmpty()) {
+            return;
+        }
+
+        $documentNumbers = $unbalancedDocuments
+            ->pluck('number')
+            ->map(fn ($number): string => (string) $number)
+            ->implode(', ');
+
+        throw ValidationException::withMessages([
+            'from_date' => __('The commercial ledger cannot be generated because these documents are unbalanced: :documents. Balance their debit and credit totals, then generate the file again.', [
+                'documents' => $documentNumbers,
+            ]),
+        ]);
     }
 
     private function csv(Collection $rows): string

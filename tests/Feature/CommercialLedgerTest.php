@@ -114,11 +114,15 @@ class CommercialLedgerTest extends TestCase
         $this->assertStringNotContainsString('125,000', $content);
         $this->assertStringContainsString('"خرید نقدی",125000,', $content);
         $this->assertStringContainsString('"طرف حساب",,125000', $content);
+        $lines = explode("\n", trim($content));
+        $this->assertSame('3', str_getcsv($lines[1])[0]);
+        $this->assertSame('3', str_getcsv($lines[2])[0]);
     }
 
     public function test_xlsx_is_rtl_styled_and_amount_cells_are_numeric(): void
     {
         $this->createTransaction(3, '1403/03/12', -9876.5, 'پرداخت');
+        $this->createTransaction(3, '1403/03/12', 9876.5, 'طرف حساب');
 
         $this->post(route('commercial-ledgers.store'), $this->payload('xlsx'))->assertRedirect();
         $export = CommercialLedgerExport::query()->sole();
@@ -130,6 +134,8 @@ class CommercialLedgerTest extends TestCase
         $zip->close();
 
         $this->assertStringContainsString('rightToLeft="1"', $sheet);
+        $this->assertStringContainsString('<c r="A2" s="1" t="n"><v>3</v></c>', $sheet);
+        $this->assertStringContainsString('<c r="A3" s="1" t="n"><v>3</v></c>', $sheet);
         $this->assertStringContainsString('<c r="H2" s="2" t="n"><v>9876.5</v></c>', $sheet);
         $this->assertStringNotContainsString('<c r="I2"', $sheet);
         $this->assertStringContainsString('Vazirmatn', $styles);
@@ -165,6 +171,7 @@ class CommercialLedgerTest extends TestCase
 
         $allSubsidiary = $service->rows($from, $to, CommercialLedgerType::ALL_SUBSIDIARY);
         $this->assertCount(7, $allSubsidiary);
+        $this->assertSame([1, 1, 1, 3, 3, 3, 4], $allSubsidiary->pluck('row_number')->all());
         $this->assertEqualsCanonicalizing(['101001', '101002'], $allSubsidiary->pluck('subsidiary_code')->unique()->all());
         $this->assertNull($allSubsidiary->first()['credit']);
 
@@ -180,6 +187,7 @@ class CommercialLedgerTest extends TestCase
 
         $monthlyGeneral = $service->rows($from, $to, CommercialLedgerType::MONTHLY_GENERAL);
         $this->assertCount(1, $monthlyGeneral);
+        $this->assertSame(4, $monthlyGeneral->first()['row_number']);
         $this->assertEquals(425, $monthlyGeneral->first()['debit']);
         $this->assertEquals(10, $monthlyGeneral->first()['credit']);
     }
@@ -187,6 +195,7 @@ class CommercialLedgerTest extends TestCase
     public function test_preview_download_delete_and_company_scope_are_enforced(): void
     {
         $this->createTransaction(3, '1403/04/01', -500, 'آزمایش');
+        $this->createTransaction(3, '1403/04/01', 500, 'طرف حساب');
         $this->createTransaction(3, '1403/04/01', 0, 'ردیف صفر');
         $this->post(route('commercial-ledgers.store'), $this->payload('csv'));
         $export = CommercialLedgerExport::query()->sole();
@@ -198,7 +207,7 @@ class CommercialLedgerTest extends TestCase
             ->assertSee('۱ ردیف هشدار')
             ->assertSee('<tr class="bg-warning/20">', false);
         $this->assertSame(1, substr_count($preview->getContent(), '<tr class="bg-warning/20">'));
-        $this->assertSame(3, substr_count($preview->getContent(), '<td></td>'));
+        $this->assertSame(4, substr_count($preview->getContent(), '<td></td>'));
         $index = $this->get(route('commercial-ledgers.index'));
         $index->assertOk()
             ->assertSee(__('Warning Rows'))
@@ -226,6 +235,22 @@ class CommercialLedgerTest extends TestCase
         $payload['from_date'] = '1403/12/29';
         $payload['to_date'] = '1403/01/01';
         $this->post(route('commercial-ledgers.store'), $payload)->assertSessionHasErrors('from_date');
+    }
+
+    public function test_generation_rejects_unbalanced_documents_before_writing_a_file(): void
+    {
+        $this->createTransaction(15, '1403/05/10', -125000, 'خرید ناقص');
+
+        $response = $this->post(route('commercial-ledgers.store'), $this->payload('xlsx'));
+
+        $response->assertRedirect()
+            ->assertSessionHasErrors([
+                'from_date' => __('The commercial ledger cannot be generated because these documents are unbalanced: :documents. Balance their debit and credit totals, then generate the file again.', [
+                    'documents' => '15',
+                ]),
+            ]);
+        $this->assertDatabaseCount('commercial_ledger_exports', 0);
+        Storage::disk('local')->assertDirectoryEmpty('commercial-ledgers');
     }
 
     private function payload(string $format): array
