@@ -21,6 +21,7 @@
                         <th>{{ __('To Date') }}</th>
                         <th>{{ __('Ledger Seal Tracking Code') }}</th>
                         <th>{{ __('Fiscal Year (Ending)') }}</th>
+                        <th>{{ __('Warning Rows') }}</th>
                         <th>{{ __('Status') }}</th>
                         <th>{{ __('Actions') }}</th>
                     </tr>
@@ -33,6 +34,15 @@
                             <td>{{ formatDate($export->to_date) }}</td>
                             <td>{{ $export->seal_tracking_code }}</td>
                             <td>{{ localizeNumber($export->company->fiscal_year) }}</td>
+                            <td>
+                                <span @class([
+                                    'badge badge-sm',
+                                    'badge-warning' => $warningRowsCounts[$export->id] > 0,
+                                    'badge-ghost' => $warningRowsCounts[$export->id] === 0,
+                                ]) title="{{ __('Rows with zero debit and credit') }}">
+                                    {{ localizeNumber($warningRowsCounts[$export->id]) }}
+                                </span>
+                            </td>
                             <td><span class="badge badge-sm badge-success badge-outline whitespace-nowrap">{{ __('Ready to Send') }}</span></td>
                             <td>
                                 <div class="inline-flex gap-1">
@@ -47,7 +57,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="py-4 text-center opacity-60">{{ __('No commercial ledger has been generated yet.') }}</td></tr>
+                        <tr><td colspan="8" class="py-4 text-center opacity-60">{{ __('No commercial ledger has been generated yet.') }}</td></tr>
                     @endforelse
                 </tbody>
             </table>

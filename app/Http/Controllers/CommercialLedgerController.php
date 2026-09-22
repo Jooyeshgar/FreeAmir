@@ -29,9 +29,20 @@ class CommercialLedgerController extends Controller
             ->whereNull('approved_at')
             ->whereBetween('date', [$fiscalStart->toDateString(), $fiscalEnd->toDateString()])
             ->count();
+        $exports = CommercialLedgerExport::query()->latest()->paginate(15);
+        $warningRowsCounts = $exports->getCollection()->mapWithKeys(function (CommercialLedgerExport $export): array {
+            $rows = $this->service->rows(
+                $export->from_date->toDateString(),
+                $export->to_date->toDateString(),
+                $export->ledger_type
+            );
+
+            return [$export->id => $this->service->warningRowsCount($rows)];
+        });
 
         return view('commercial-ledgers.index', [
-            'exports' => CommercialLedgerExport::query()->latest()->paginate(15),
+            'exports' => $exports,
+            'warningRowsCounts' => $warningRowsCounts,
             'ledgerTypes' => CommercialLedgerType::cases(),
             'defaultFromDate' => gregorian_to_jalali_date($fiscalStart->toDateString(), '/', '-'),
             'defaultToDate' => gregorian_to_jalali_date($fiscalEnd->toDateString(), '/', '-'),
@@ -87,6 +98,7 @@ class CommercialLedgerController extends Controller
             $commercialLedger->to_date->toDateString(),
             $commercialLedger->ledger_type
         );
+        $warningRowsCount = $this->service->warningRowsCount($allRows);
         $page = max(1, $request->integer('page', 1));
         $perPage = 100;
         $rows = new LengthAwarePaginator(
@@ -97,7 +109,7 @@ class CommercialLedgerController extends Controller
             ['path' => $request->url(), 'query' => $request->query()]
         );
 
-        return view('commercial-ledgers.show', compact('commercialLedger', 'rows'));
+        return view('commercial-ledgers.show', compact('commercialLedger', 'rows', 'warningRowsCount'));
     }
 
     public function download(CommercialLedgerExport $commercialLedger): StreamedResponse

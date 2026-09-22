@@ -6,6 +6,13 @@
                 {{ formatDate($commercialLedger->from_date) }} {{ __('to') }} {{ formatDate($commercialLedger->to_date) }}
                 · {{ $commercialLedger->ledger_type->label() }}
             </p>
+            <span @class([
+                'badge badge-sm mt-2',
+                'badge-warning' => $warningRowsCount > 0,
+                'badge-ghost' => $warningRowsCount === 0,
+            ]) title="{{ __('Rows with zero debit and credit') }}">
+                {{ trans_choice(':count warning row|:count warning rows', $warningRowsCount, ['count' => localizeNumber($warningRowsCount)]) }}
+            </span>
         </div>
         <div class="flex gap-2">
             <a href="{{ route('commercial-ledgers.index') }}" class="btn btn-sm lg:btn-md">{{ __('Back') }}</a>
@@ -25,7 +32,7 @@
                 </thead>
                 <tbody>
                     @forelse($rows as $row)
-                        <tr>
+                        <tr @class(['bg-warning/20' => $row['debit'] == 0 && $row['credit'] == 0])>
                             <td>{{ localizeNumber($row['row_number']) }}</td>
                             <td>{{ localizeNumber($row['date']) }}</td>
                             <td>{{ $row['general_code'] }}</td>

@@ -23,8 +23,8 @@ class CommercialLedgerService
         'Subsidiary Account Code',
         'Subsidiary Account Title',
         'Description',
-        'Debit Amount',
-        'Credit Amount',
+        'Debit Amount (Rial)',
+        'Credit Amount (Rial)',
     ];
 
     public function generate(array $data, int $userId): CommercialLedgerExport
@@ -106,6 +106,13 @@ class CommercialLedgerService
                 'credit' => $row['credit_minor'] / 100,
             ];
         });
+    }
+
+    public function warningRowsCount(Collection $rows): int
+    {
+        return $rows->filter(
+            fn (array $row): bool => $row['debit'] == 0 && $row['credit'] == 0
+        )->count();
     }
 
     public function delete(CommercialLedgerExport $export): void

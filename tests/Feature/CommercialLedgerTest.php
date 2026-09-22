@@ -109,7 +109,7 @@ class CommercialLedgerTest extends TestCase
 
         $content = Storage::disk('local')->get($export->file_path);
         $this->assertStringStartsWith("\xEF\xBB\xBF", $content);
-        $this->assertStringContainsString('ردیف,تاریخ,"کد کل"', $content);
+        $this->assertStringContainsString('ردیف,تاریخ,"کد حساب کل"', $content);
         $this->assertStringContainsString('125000', $content);
         $this->assertStringNotContainsString('125,000', $content);
     }
@@ -183,10 +183,22 @@ class CommercialLedgerTest extends TestCase
     public function test_preview_download_delete_and_company_scope_are_enforced(): void
     {
         $this->createTransaction(3, '1403/04/01', -500, 'آزمایش');
+        $this->createTransaction(3, '1403/04/01', 0, 'ردیف صفر');
         $this->post(route('commercial-ledgers.store'), $this->payload('csv'));
         $export = CommercialLedgerExport::query()->sole();
 
-        $this->get(route('commercial-ledgers.show', $export))->assertOk()->assertSee('آزمایش');
+        $preview = $this->get(route('commercial-ledgers.show', $export));
+        $preview->assertOk()
+            ->assertSee('آزمایش')
+            ->assertSee('ردیف صفر')
+            ->assertSee('۱ ردیف هشدار')
+            ->assertSee('<tr class="bg-warning/20">', false);
+        $this->assertSame(1, substr_count($preview->getContent(), '<tr class="bg-warning/20">'));
+        $index = $this->get(route('commercial-ledgers.index'));
+        $index->assertOk()
+            ->assertSee(__('Warning Rows'))
+            ->assertSee('title="'.__('Rows with zero debit and credit').'">', false);
+        $this->assertMatchesRegularExpression('/title="[^"]+">\s*۱\s*<\/span>/', $index->getContent());
         $this->get(route('commercial-ledgers.download', $export))->assertDownload();
 
         $otherCompany = Company::factory()->create(['fiscal_year' => 1403]);
