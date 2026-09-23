@@ -509,7 +509,7 @@ class CompanyController extends Controller
         $validations = FiscalYearService::getWizardValidations($company);
         $allPass = collect($validations)->every(fn ($v) => $v['pass']);
 
-        $plDocument = $company->pl_document_id ? $company->plDocument : null;
+        $plDocument = $company->pl_document_id && $company->closing_recalculation_step !== 1 ? $company->plDocument : null;
         $incomeSummaryBalance = $plDocument ? FiscalYearService::getIncomeSummaryBalance($company) : null;
         $step3Enabled = $plDocument && $incomeSummaryBalance === 0.0;
 
@@ -537,7 +537,7 @@ class CompanyController extends Controller
                 ->with('error', __('This fiscal year is already closed.'));
         }
 
-        if ($company->pl_document_id) {
+        if ($company->pl_document_id && $company->closing_recalculation_step !== 1) {
             return redirect()->route('companies.closing-wizard', $company)
                 ->with('error', __('Step 1 has already been completed.'));
         }
@@ -567,7 +567,7 @@ class CompanyController extends Controller
                 ->with('error', __('This fiscal year is already closed.'));
         }
 
-        if (! $company->pl_document_id) {
+        if (! $company->pl_document_id || $company->closing_recalculation_step === 1) {
             return redirect()->route('companies.closing-wizard', $company)
                 ->with('error', __('You must complete Step 1 before closing permanent accounts.'));
         }
@@ -579,16 +579,19 @@ class CompanyController extends Controller
         }
 
         try {
+            $isRecalculation = $company->closing_recalculation_step === 2;
             $newFiscalYear = FiscalYearService::stepThreeCloseAndOpenNewYear($company, $request->user());
         } catch (\Exception $e) {
             return redirect()->route('companies.closing-wizard', $company)
                 ->with('error', $e->getMessage());
         }
 
-        $this->setActiveCompany($newFiscalYear);
+        if (! $isRecalculation) {
+            $this->setActiveCompany($newFiscalYear);
+        }
 
         return redirect()->route('companies.index')
-            ->with('success', __('Fiscal year closed successfully.'));
+            ->with('success', __($isRecalculation ? 'Fiscal year closing document recalculated successfully.' : 'Fiscal year closed successfully.'));
     }
 
     public function recalculateClosingDocument(Company $company, Request $request): RedirectResponse
@@ -608,6 +611,6 @@ class CompanyController extends Controller
         }
 
         return redirect()->route('companies.closing-wizard', $company)
-            ->with('success', __('Fiscal year closing document recalculated successfully.'));
+            ->with('success', __('Closing recalculation started. Complete all three closing steps again.'));
     }
 }

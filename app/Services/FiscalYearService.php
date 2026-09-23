@@ -2851,10 +2851,12 @@ class FiscalYearService
             'approver_id' => $user->id,
         ];
 
-        // Gather net balances of all permanent accounts across the entire fiscal year.
-        // Temporary accounts are already zeroed out by Step 1 (currentProfitAndLoss),
-        // so we only need permanent subjects here.
-        $transactions = Transaction::query()
+        return DocumentService::createDocument($user, $documentData, self::closingTransactions($company, $user));
+    }
+
+    protected static function closingTransactions(Company $company, User $user): array
+    {
+        return Transaction::query()
             ->whereHas('document', fn ($doc) => $doc->where('company_id', $company->id))
             ->whereHas('subject', fn ($sub) => $sub->where('company_id', $company->id)->where('is_permanent', true))
             ->selectRaw('subject_id, SUM(value) as value')
@@ -2867,16 +2869,14 @@ class FiscalYearService
                 'user_id' => $user->id,
                 'desc' => __('Fiscal year closing Document').' '.$company->fiscal_year,
             ])->toArray();
-
-        return DocumentService::createDocument($user, $documentData, $transactions);
     }
 
     /**
-     * Replace a closed fiscal year's closing document with a fresh calculation.
+     * Reopen the three-step closing workflow while preserving generated document numbers.
      */
     public static function recalculateClosingDocument(Company $company, User $user): Document
     {
-        return DB::transaction(function () use ($company, $user) {
+        return DB::transaction(function () use ($company) {
             $lockedCompany = Company::query()->lockForUpdate()->findOrFail($company->id);
 
             if ($lockedCompany->closed_at === null) {
@@ -2901,32 +2901,32 @@ class FiscalYearService
                 ]);
             }
 
-            $lockedCompany->closing_document_id = null;
-            $lockedCompany->save();
-
-            $documentFileService = new DocumentFileService;
-            foreach ($closingDocument->documentFiles()->get() as $documentFile) {
-                $documentFileService->delete($documentFile);
+            if ($lockedCompany->pl_document_id === null || ! $lockedCompany->plDocument) {
+                throw ValidationException::withMessages([
+                    'company' => __('No Income Summary document was found to recalculate.'),
+                ]);
             }
 
-            app(ActivityLogService::class)->deleteModels(
-                Transaction::query()->where('document_id', $closingDocument->id)
-            );
-            app(ActivityLogService::class)->deleteModels(
-                Document::query()->whereKey($closingDocument->id)
-            );
-
-            $newClosingDocument = self::createClosingDocument($lockedCompany, $user);
-            $lockedCompany->closing_document_id = $newClosingDocument->id;
+            $lockedCompany->closed_at = null;
+            $lockedCompany->closed_by = null;
+            $lockedCompany->closing_recalculation_step = 1;
             $lockedCompany->save();
 
-            return $newClosingDocument;
+            return $closingDocument;
         });
     }
 
     protected static function newFiscalYear(Company $company): Company
     {
-        $newFiscalYearData = collect($company->getAttributes())->except(['id', 'closed_at', 'closed_by', 'fiscal_year'])
+        $newFiscalYearData = collect($company->getAttributes())->except([
+            'id',
+            'fiscal_year',
+            'closed_at',
+            'closed_by',
+            'pl_document_id',
+            'closing_document_id',
+            'closing_recalculation_step',
+        ])
             ->merge(['fiscal_year' => $company->fiscal_year + 1])->toArray();
 
         $sectionsToCopy = ['subjects', 'configs', 'banks', 'customers', 'products', 'warehouses', 'services', 'employees']; // Sections to copy to the new fiscal year
@@ -2969,6 +2969,28 @@ class FiscalYearService
     public static function closeTemporaryAccounts(Company $company, User $user): Document
     {
         $document = DB::transaction(function () use ($company, $user) {
+            $company = Company::query()->lockForUpdate()->findOrFail($company->id);
+
+            if ($company->closing_recalculation_step === 1) {
+                $document = Document::query()->where('company_id', $company->id)->findOrFail($company->pl_document_id);
+
+                self::replaceDocumentTransactions($document, function () use ($company, $user) {
+                    return self::currentProfitAndLossTransactions($company, $user);
+                });
+
+                $document->forceFill([
+                    'date' => now(),
+                    'title' => __('Current Profit and Loss Summary'),
+                    'approved_at' => now(),
+                    'approver_id' => $user->id,
+                ])->save();
+
+                $company->closing_recalculation_step = 2;
+                $company->save();
+
+                return $document;
+            }
+
             $doc = self::currentProfitAndLoss($company, $user);
 
             // Persist the link so the wizard can track progress
@@ -2982,7 +3004,8 @@ class FiscalYearService
     }
 
     /**
-     * Step 3 – Close permanent accounts, create the new fiscal year, and generate the opening document.
+     * Step 3 closes permanent accounts. A normal closing also creates the next fiscal year and its
+     * opening document. A recalculation changes only the existing closing document for this company.
      * Requires Step 1 to have been completed and the Income Summary balance to be exactly 0.
      *
      * @throws Exception
@@ -2992,6 +3015,30 @@ class FiscalYearService
         $newFiscalYear = null;
 
         DB::transaction(function () use ($company, $user, &$newFiscalYear) {
+            $company = Company::query()->lockForUpdate()->findOrFail($company->id);
+
+            if ($company->closing_recalculation_step === 1) {
+                throw ValidationException::withMessages([
+                    'company' => __('You must complete Step 1 before closing permanent accounts.'),
+                ]);
+            }
+
+            if ($company->closing_recalculation_step === 2) {
+                $closeDocument = Document::query()->where('company_id', $company->id)->findOrFail($company->closing_document_id);
+
+                self::replaceDocumentTransactions($closeDocument, function () use ($company, $user) {
+                    return self::closingTransactions($company, $user);
+                });
+
+                $newFiscalYear = $company;
+                $company->closed_at = now();
+                $company->closed_by = $user->id;
+                $company->closing_recalculation_step = null;
+                $company->save();
+
+                return;
+            }
+
             $closeDocument = self::createClosingDocument($company, $user);
 
             $company->closing_document_id = $closeDocument->id;
@@ -3128,9 +3175,20 @@ class FiscalYearService
             'approver_id' => $user->id,
         ];
 
-        // Temporary income and expense accounts
+        return DocumentService::createDocument($user, $documentData, self::currentProfitAndLossTransactions($company, $user)->toArray());
+    }
+
+    protected static function currentProfitAndLossTransactions(Company $company, User $user): Collection
+    {
+        $incomeSummarySubject = Subject::where('company_id', $company->id)
+            ->where('name', __('Current Profit and Loss Summary'))
+            ->first();
+
         $temporarySubjects = Subject::where('company_id', $company->id)
-            ->where('is_permanent', false)->pluck('id')->toArray();
+            ->where('is_permanent', false)
+            ->when($incomeSummarySubject, fn ($query) => $query->whereKeyNot($incomeSummarySubject->id))
+            ->pluck('id')
+            ->toArray();
 
         $transactions = Transaction::query()
             ->whereHas('document', fn ($document) => $document->where('company_id', $company->id))
@@ -3145,9 +3203,17 @@ class FiscalYearService
                 'desc' => __('Balance for closing fiscal year'),
             ]);
 
-        // Move any remaining balance in current profit and loss to accumulated profit and loss to balance them
-        $transactions = self::balanceCurrentProfitAndLoss($company, $transactions, $user);
+        return self::balanceCurrentProfitAndLoss($company, $transactions, $user);
+    }
 
-        return DocumentService::createDocument($user, $documentData, $transactions->toArray());
+    protected static function replaceDocumentTransactions(Document $document, callable $transactions): void
+    {
+        app(ActivityLogService::class)->deleteModels(
+            Transaction::query()->where('document_id', $document->id)
+        );
+
+        foreach ($transactions() as $transaction) {
+            DocumentService::createTransaction($document, $transaction);
+        }
     }
 }

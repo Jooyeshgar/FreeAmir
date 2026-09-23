@@ -17,45 +17,90 @@ class FiscalYearClosingRecalculationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_it_replaces_the_previous_closing_document_with_recalculated_balances(): void
+    public function test_recalculation_repeats_all_three_steps_without_changing_the_next_year_opening_document(): void
     {
         $user = User::factory()->create();
+        $user->givePermissionTo(Permission::firstOrCreate([
+            'name' => 'companies.closing-wizard.recalculate',
+        ]));
         $company = Company::factory()->create([
             'fiscal_year' => 1403,
-            'closed_at' => now(),
-            'closed_by' => $user->id,
         ]);
         config(['active-company-id' => $company->id]);
 
         $cash = Subject::factory()->create(['name' => 'Cash', 'is_permanent' => true]);
-        $capital = Subject::factory()->create(['name' => 'Capital', 'is_permanent' => true]);
+        $revenue = Subject::factory()->create(['name' => 'Revenue', 'is_permanent' => false]);
+        $expense = Subject::factory()->create(['name' => 'Expense', 'is_permanent' => false]);
+        $retainedProfit = Subject::factory()->create(['name' => __('Accumulated Profit and Loss'), 'is_permanent' => true]);
 
         $this->createDocument($company, $user, 1, [
             $cash->id => 100,
-            $capital->id => -100,
-        ]);
-        $oldClosingDocument = $this->createDocument($company, $user, 2, [
-            $cash->id => -100,
-            $capital->id => 100,
-        ]);
-        $company->update(['closing_document_id' => $oldClosingDocument->id]);
-
-        $adjustment = $this->createDocument($company, $user, 3, [
-            $cash->id => 25,
-            $capital->id => -25,
+            $revenue->id => -100,
         ]);
 
-        $newClosingDocument = FiscalYearService::recalculateClosingDocument($company, $user);
+        $profitAndLossDocument = FiscalYearService::closeTemporaryAccounts($company, $user);
+        $currentProfit = Subject::where('name', __('Current Profit and Loss Summary'))->firstOrFail();
+        $this->createDocument($company, $user, 3, [
+            $currentProfit->id => 100,
+            $retainedProfit->id => -100,
+        ]);
 
-        $this->assertDatabaseMissing('documents', ['id' => $oldClosingDocument->id]);
-        $this->assertDatabaseMissing('transactions', ['document_id' => $oldClosingDocument->id]);
-        $this->assertDatabaseHas('documents', ['id' => $adjustment->id]);
-        $this->assertSame($newClosingDocument->id, $company->fresh()->closing_document_id);
-        $this->assertEquals(4, $newClosingDocument->number);
-        $this->assertNotNull($newClosingDocument->approved_at);
-        $values = $newClosingDocument->transactions()->pluck('value', 'subject_id');
-        $this->assertEquals(-125, $values[$cash->id]);
-        $this->assertEquals(125, $values[$capital->id]);
+        $nextFiscalYear = FiscalYearService::stepThreeCloseAndOpenNewYear($company, $user);
+        $company = $company->fresh();
+        $closingDocumentId = $company->closing_document_id;
+        $openingDocument = Document::withoutGlobalScopes()
+            ->where('company_id', $nextFiscalYear->id)
+            ->where('number', 1)
+            ->firstOrFail();
+        $openingValues = $openingDocument->transactions()->pluck('value', 'subject_id')->all();
+
+        $this->createDocument($company, $user, 5, [
+            $expense->id => 20,
+            $cash->id => -20,
+        ]);
+
+        $response = $this->actingAs($user)
+            ->post(route('companies.closing-wizard.recalculate', $company));
+
+        $response->assertRedirect(route('companies.closing-wizard', $company));
+        $response->assertSessionHas('success', __('Closing recalculation started. Complete all three closing steps again.'));
+
+        $company = $company->fresh();
+        $this->assertNull($company->closed_at);
+        $this->assertSame(1, $company->closing_recalculation_step);
+        $this->assertDatabaseHas('documents', ['id' => $profitAndLossDocument->id]);
+        $this->assertDatabaseHas('documents', ['id' => $closingDocumentId]);
+        $this->assertDatabaseHas('documents', ['id' => $openingDocument->id]);
+
+        $recalculatedProfitAndLoss = FiscalYearService::closeTemporaryAccounts($company, $user);
+
+        $this->assertSame($profitAndLossDocument->id, $recalculatedProfitAndLoss->id);
+        $this->assertSame(2, $company->fresh()->closing_recalculation_step);
+        $this->assertEquals(20, FiscalYearService::getIncomeSummaryBalance($company));
+
+        $this->createDocument($company, $user, 6, [
+            $currentProfit->id => -20,
+            $retainedProfit->id => 20,
+        ]);
+        $this->assertSame(0.0, FiscalYearService::getIncomeSummaryBalance($company));
+
+        $recalculatedFiscalYear = FiscalYearService::stepThreeCloseAndOpenNewYear($company, $user);
+
+        $company = $company->fresh();
+        $this->assertSame($company->id, $recalculatedFiscalYear->id);
+        $this->assertSame($closingDocumentId, $company->closing_document_id);
+        $this->assertNull($company->closing_recalculation_step);
+        $this->assertNotNull($company->closed_at);
+        $this->assertSame(2, Company::count());
+
+        $closingValues = Document::findOrFail($closingDocumentId)->transactions()->pluck('value', 'subject_id');
+        $this->assertEquals(-80, $closingValues[$cash->id]);
+        $this->assertEquals(80, $closingValues[$retainedProfit->id]);
+        $this->assertSame(
+            $openingValues,
+            Document::withoutGlobalScopes()->findOrFail($openingDocument->id)
+                ->transactions()->pluck('value', 'subject_id')->all()
+        );
     }
 
     public function test_it_rejects_recalculation_for_an_open_fiscal_year(): void
