@@ -2879,7 +2879,9 @@ class FiscalYearService
         return DB::transaction(function () use ($company) {
             $lockedCompany = Company::query()->lockForUpdate()->findOrFail($company->id);
 
-            if ($lockedCompany->closed_at === null) {
+            $recalculationInProgress = in_array($lockedCompany->closing_recalculation_step, [1, 2], true);
+
+            if ($lockedCompany->closed_at === null && ! $recalculationInProgress) {
                 throw ValidationException::withMessages([
                     'company' => __('Only a closed fiscal year can have its closing document recalculated.'),
                 ]);

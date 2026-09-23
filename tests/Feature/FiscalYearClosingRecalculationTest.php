@@ -7,6 +7,7 @@ use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\DocumentService;
 use App\Services\FiscalYearService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
@@ -54,7 +55,7 @@ class FiscalYearClosingRecalculationTest extends TestCase
             ->firstOrFail();
         $openingValues = $openingDocument->transactions()->pluck('value', 'subject_id')->all();
 
-        $this->createDocument($company, $user, 5, [
+        $changedDocument = $this->createDocument($company, $user, 5, [
             $expense->id => 20,
             $cash->id => -20,
         ]);
@@ -78,10 +79,16 @@ class FiscalYearClosingRecalculationTest extends TestCase
         $this->assertSame(2, $company->fresh()->closing_recalculation_step);
         $this->assertEquals(20, FiscalYearService::getIncomeSummaryBalance($company));
 
-        $this->createDocument($company, $user, 6, [
-            $currentProfit->id => -20,
-            $retainedProfit->id => 20,
-        ]);
+        DocumentService::deleteDocument($changedDocument->id);
+
+        $restartResponse = $this->post(route('companies.closing-wizard.recalculate', $company));
+
+        $restartResponse->assertRedirect(route('companies.closing-wizard', $company));
+        $this->assertSame(1, $company->fresh()->closing_recalculation_step);
+
+        FiscalYearService::closeTemporaryAccounts($company->fresh(), $user);
+
+        $this->assertSame(2, $company->fresh()->closing_recalculation_step);
         $this->assertSame(0.0, FiscalYearService::getIncomeSummaryBalance($company));
 
         $recalculatedFiscalYear = FiscalYearService::stepThreeCloseAndOpenNewYear($company, $user);
@@ -94,8 +101,8 @@ class FiscalYearClosingRecalculationTest extends TestCase
         $this->assertSame(2, Company::count());
 
         $closingValues = Document::findOrFail($closingDocumentId)->transactions()->pluck('value', 'subject_id');
-        $this->assertEquals(-80, $closingValues[$cash->id]);
-        $this->assertEquals(80, $closingValues[$retainedProfit->id]);
+        $this->assertEquals(-100, $closingValues[$cash->id]);
+        $this->assertEquals(100, $closingValues[$retainedProfit->id]);
         $this->assertSame(
             $openingValues,
             Document::withoutGlobalScopes()->findOrFail($openingDocument->id)

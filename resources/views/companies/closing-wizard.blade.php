@@ -146,6 +146,20 @@
                                 </a>
                             </div>
                         </div>
+                        @if ($company->closing_recalculation_step === 2)
+                            @can('companies.closing-wizard.recalculate')
+                                <form action="{{ route('companies.closing-wizard.recalculate', $company) }}" method="POST"
+                                    onsubmit="return confirm('{{ __('Restart closing recalculation from Step 1?') }}')">
+                                    @csrf
+                                    <button type="submit" class="btn btn-outline btn-warning gap-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                        </svg>
+                                        {{ __('Restart from Step 1') }}
+                                    </button>
+                                </form>
+                            @endcan
+                        @endif
                     @else
                         <form action="{{ route('companies.closing-wizard.step1', $company) }}" method="POST">
                             @csrf

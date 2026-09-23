@@ -3474,6 +3474,8 @@
     "No fiscal year closing document was found to recalculate.": "سند اختتامیه‌ای برای محاسبه مجدد این سال مالی پیدا نشد.",
     "No Income Summary document was found to recalculate.": "سند خلاصه سود و زیانی برای محاسبه مجدد پیدا نشد.",
     "Step 3: Recalculate Closing Document": "مرحله ۳: محاسبه مجدد سند اختتامیه",
+    "Restart closing recalculation from Step 1?": "محاسبه مجدد بستن سال از مرحله ۱ دوباره آغاز شود؟",
+    "Restart from Step 1": "آغاز مجدد از مرحله ۱",
     "This step recalculates only the Closing Document for fiscal year :year.": "این مرحله فقط سند اختتامیه سال مالی :year را دوباره محاسبه می‌کند.",
     "The next fiscal year and its Opening Document will not be changed. Update the Opening Document manually if you have access.": "سال مالی بعد و سند افتتاحیه آن تغییر نمی‌کنند. در صورت داشتن دسترسی، سند افتتاحیه را دستی اصلاح کنید.",
     "This will recalculate only the Closing Document for fiscal year :year. The next fiscal year will not be changed. Are you sure?": "این کار فقط سند اختتامیه سال مالی :year را دوباره محاسبه می‌کند. سال مالی بعد تغییر نمی‌کند. آیا مطمئن هستید؟",

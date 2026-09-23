@@ -3473,6 +3473,8 @@
     "No fiscal year closing document was found to recalculate.": "No fiscal year closing document was found to recalculate.",
     "No Income Summary document was found to recalculate.": "No Income Summary document was found to recalculate.",
     "Step 3: Recalculate Closing Document": "Step 3: Recalculate Closing Document",
+    "Restart closing recalculation from Step 1?": "Restart closing recalculation from Step 1?",
+    "Restart from Step 1": "Restart from Step 1",
     "This step recalculates only the Closing Document for fiscal year :year.": "This step recalculates only the Closing Document for fiscal year :year.",
     "The next fiscal year and its Opening Document will not be changed. Update the Opening Document manually if you have access.": "The next fiscal year and its Opening Document will not be changed. Update the Opening Document manually if you have access.",
     "This will recalculate only the Closing Document for fiscal year :year. The next fiscal year will not be changed. Are you sure?": "This will recalculate only the Closing Document for fiscal year :year. The next fiscal year will not be changed. Are you sure?",
