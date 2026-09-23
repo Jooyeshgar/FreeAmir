@@ -59,6 +59,8 @@ Recalculation reloads approved requests that cover the log date. It rebuilds req
 
 Daily paid leave, daily unpaid leave, sick leave, and daily mission use the shift duration for that date. Hourly requests use their exact start-to-end duration.
 
+The order of entry does not change the final result. If clock times are imported from a TSV file before a personnel request is approved, the importer first calculates the log without that pending request. Approving the request then applies it to the existing log and recalculates the stored daily values. Delay or early leave may exist before approval, but approved leave that covers those gaps must remove them afterward.
+
 Hourly leave and mission interact with clock time according to their position:
 
 - Coverage before entry reduces delay.
@@ -105,6 +107,8 @@ Amir has three related actions. They do different jobs.
 | **Recalculate All** on a monthly attendance page | Runs daily recalculation for every log currently linked to that monthly record | Days without logs, monthly totals, leave balance, and payroll |
 | **Recalculate from Logs** on a monthly attendance record | Deletes and recreates the monthly summary from the stored daily log values, using the submitted start date and duration | Daily log calculations and payroll |
 
+Approving or rejecting a personnel request also recalculates each affected daily log. This matters when device logs were imported before the request was approved. The monthly page displays the stored daily values; it does not calculate overtime, delay, or early leave while rendering the table.
+
 Use this sequence after importing or correcting logs for an already calculated month:
 
 1. Run **Recalculate from Logs** so the monthly summary reads the imported or corrected daily values and links newly imported logs in the date range.
@@ -144,14 +148,27 @@ Entry after the 60-minute float produces delay. Approved leave after physical ex
 
 ### Leave starts at the shift boundary
 
-Tests: `test_recalculation_applies_hourly_leave_until_entry_and_calculates_overtime` and `test_hourly_leave_at_shift_start_with_overtime_calculation`
+Tests: `test_recalculation_applies_hourly_leave_until_entry_and_calculates_overtime`, `test_hourly_leave_at_shift_start_with_overtime_calculation`, `test_recalculate_hourly_leave_at_shift_start_calculates_overtime`, `test_recalculate_hourly_leave_from_shift_start_calculates_overtime`, and `test_attendance_service_recalculates_hourly_leave_from_shift_start_with_overtime`
 
 | Shift | Float | Max Auto Overtime | Approved Hourly Leave | Entry Time | Exit Time | Paid Leave | Delay | Early Leave | Overtime + Auto Overtime |
 |---|---:|---:|---|---|---|---:|---:|---:|---:|
 | 08:00 to 16:00 | 60 | 60 | 08:00 to 10:02 | 10:02 | 16:28 | 122 | 0 | 0 | 28 |
 | 07:30 to 15:30 | 60 | 120 | 07:30 to 10:35 | 10:35 | 16:38 | 185 | 0 | 0 | 68 |
+| 07:30 to 15:30 | 60 | 120 | 07:30 to 10:53 | 10:53 | 16:34 | 203 | 0 | 0 | 64 |
 
 Leave that starts at shift start and reaches entry covers the entry gap. The scheduled shift end does not slide in this case, so work after that end remains eligible for automatic overtime.
+
+The last scenario has 341 worked minutes and 203 paid-leave minutes. Their total is 544 minutes, which is 64 minutes beyond the 480-minute shift. The expected overtime is therefore 01:04, not the 02:00 automatic-overtime cap. The direct service test verifies the same result without using the daily recalculation route.
+
+### Leave after shift start continues until entry
+
+Test: `test_recalculate_hourly_leave_after_shift_start_calculates_overtime`
+
+| Shift | Float | Max Auto Overtime | Approved Hourly Leave | Entry Time | Exit Time | Paid Leave | Delay | Early Leave | Overtime + Auto Overtime |
+|---|---:|---:|---|---|---|---:|---:|---:|---:|
+| 07:30 to 15:30 | 60 | 120 | 08:14 to 09:50 | 09:50 | 16:14 | 96 | 0 | 0 | 0 |
+
+The first 44 minutes after shift start use the 60-minute float. Approved leave covers the remaining 96 minutes up to entry, so delay is zero. The uncovered 44-minute gap moves the expected exit from 15:30 to 16:14. Leaving at 16:14 therefore produces neither early leave nor overtime.
 
 ### Leave ends before entry and the remaining gap uses float
 
@@ -183,4 +200,4 @@ Test: `test_hourly_leave_with_float_covers_delay_without_overtime`
 
 The first 43 minutes after shift start consume float, and the following 47 minutes are approved leave up to entry. The expected exit becomes 16:13. Exit at that time produces neither early leave nor overtime.
 
-The four matching `test_recalculate_*` cases repeat the last four scenarios through the daily **Recalculate** endpoint. They verify that recalculation rebuilds the same paid-leave, delay, early-leave, and overtime values from stored clock times and approved requests.
+The six matching `test_recalculate_*` cases repeat the last five scenarios through the daily **Recalculate** endpoint. They verify that recalculation rebuilds the same paid-leave, delay, early-leave, and overtime values from stored clock times and approved requests.

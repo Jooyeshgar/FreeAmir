@@ -1594,4 +1594,100 @@ class AttendanceLogTest extends TestCase
         $this->assertEquals(0, $log->delay);
         $this->assertEquals(0, $log->early_leave);
     }
+
+    public function test_recalculate_hourly_leave_after_shift_start_calculates_overtime(): void
+    {
+        $workShift = WorkShift::factory()->create([
+            'company_id' => $this->companyId,
+            'start_time' => '07:30:00', 'end_time' => '15:30:00',
+            'break' => 30, 'float' => 60, 'max_auto_overtime' => 120,
+        ]);
+        $this->employee->update(['work_shift_id' => $workShift->id]);
+        $logDate = '2026-08-16';
+        PersonnelRequest::create([
+            'company_id' => $this->companyId, 'employee_id' => $this->employee->id,
+            'status' => PersonnelRequestStatus::APPROVED, 'request_type' => PersonnelRequestType::LEAVE_HOURLY,
+            'start_date' => $logDate.' 08:14:00', 'end_date' => $logDate.' 09:50:00',
+            'approved_by' => auth()->id(),
+        ]);
+        $log = $this->makeAttendanceLog([
+            'log_date' => $logDate, 'entry_time' => '09:50', 'exit_time' => '16:14',
+        ]);
+
+        $response = $this->post(route('attendance.attendance-logs.recalculate', $log));
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+        $log->refresh();
+
+        $this->assertEquals(96, $log->paid_leave);
+        $this->assertEquals(0, $log->auto_overtime + $log->overtime);
+        $this->assertEquals(0, $log->delay);
+        $this->assertEquals(0, $log->early_leave);
+    }
+
+    public function test_recalculate_hourly_leave_from_shift_start_calculates_overtime(): void
+    {
+        $workShift = WorkShift::factory()->create([
+            'company_id' => $this->companyId,
+            'start_time' => '07:30:00', 'end_time' => '15:30:00',
+            'break' => 30, 'float' => 60, 'max_auto_overtime' => 120,
+        ]);
+        $this->employee->update(['work_shift_id' => $workShift->id]);
+        $logDate = '2026-08-19';
+        PersonnelRequest::create([
+            'company_id' => $this->companyId, 'employee_id' => $this->employee->id,
+            'status' => PersonnelRequestStatus::APPROVED, 'request_type' => PersonnelRequestType::LEAVE_HOURLY,
+            'start_date' => $logDate.' 07:30:00', 'end_date' => $logDate.' 10:53:00',
+            'approved_by' => auth()->id(),
+        ]);
+        $log = $this->makeAttendanceLog([
+            'log_date' => $logDate, 'entry_time' => '10:53', 'exit_time' => '16:34',
+        ]);
+
+        $response = $this->post(route('attendance.attendance-logs.recalculate', $log));
+        $response->assertRedirect();
+        $response->assertSessionHas('success');
+        $log->refresh();
+
+        $this->assertEquals(203, $log->paid_leave);
+        $this->assertEquals(64, $log->auto_overtime + $log->overtime);
+        $this->assertEquals(0, $log->delay);
+        $this->assertEquals(0, $log->early_leave);
+    }
+
+    public function test_attendance_service_recalculates_hourly_leave_from_shift_start_with_overtime(): void
+    {
+        $workShift = WorkShift::factory()->create([
+            'company_id' => $this->companyId,
+            'start_time' => '07:30:00',
+            'end_time' => '15:30:00',
+            'break' => 30,
+            'float' => 60,
+            'max_auto_overtime' => 120,
+        ]);
+        $this->employee->update(['work_shift_id' => $workShift->id]);
+
+        $logDate = '2026-08-19';
+        PersonnelRequest::create([
+            'company_id' => $this->companyId,
+            'employee_id' => $this->employee->id,
+            'status' => PersonnelRequestStatus::APPROVED,
+            'request_type' => PersonnelRequestType::LEAVE_HOURLY,
+            'start_date' => $logDate.' 07:30:00',
+            'end_date' => $logDate.' 10:53:00',
+            'approved_by' => auth()->id(),
+        ]);
+        $log = $this->makeAttendanceLog([
+            'log_date' => $logDate,
+            'entry_time' => '10:53',
+            'exit_time' => '16:34',
+        ]);
+
+        $log = app(AttendanceService::class)->recalculateLog($log);
+
+        $this->assertEquals(203, $log->paid_leave);
+        $this->assertEquals(64, $log->auto_overtime + $log->overtime);
+        $this->assertEquals(0, $log->delay);
+        $this->assertEquals(0, $log->early_leave);
+    }
 }
