@@ -9,7 +9,10 @@
     {{-- Page Header --}}
     <div class="flex flex-wrap items-center justify-between gap-4 px-1 pb-5">
         <div class="min-w-48">
-            <h1 class="text-xl font-bold text-base-content">{{ __('Cheque Management') }}</h1>
+            <div class="flex items-center gap-2">
+                <h1 class="text-xl font-bold text-base-content">{{ __('Cheque Management') }}</h1>
+                <x-user-guide-link source="user/cheques.md" />
+            </div>
             <p class="mt-0.5 text-sm text-base-content/50">{{ __('Manage cheques and their lifecycle') }}</p>
         </div>
 

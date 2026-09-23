@@ -27,7 +27,10 @@
                 </svg>
             </div>
             <div>
-                <h1 class="text-xl font-bold text-base-content">{{ __('Cheque Report') }}</h1>
+                <div class="flex items-center gap-2">
+                    <h1 class="text-xl font-bold text-base-content">{{ __('Cheque Report') }}</h1>
+                    <x-user-guide-link source="user/accounts-banking-cheques.md" />
+                </div>
                 <p class="mt-0.5 text-sm text-base-content/50">{{ __('Cheque status and maturity overview') }}</p>
             </div>
         </div>
