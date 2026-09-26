@@ -13,6 +13,7 @@
                     <div class="min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
                             <h1 class="break-words text-xl font-bold text-base-content sm:text-2xl">{{ __('Monthly Income and Expense Workbench') }}</h1>
+                            <x-user-guide-link source="user/monthly-income-expense-forecasting.md" />
                             <span class="badge badge-primary badge-outline">{{ $selectedMonthLabel }}</span>
                             @if (! $hasDocuments)
                                 <span class="inline-flex max-w-full rounded-lg border border-warning px-2 py-1 text-xs leading-5 text-warning">

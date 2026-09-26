@@ -3,7 +3,10 @@
 
     <main class="cost-income-dashboard mt-6 space-y-6">
         <section class="flex flex-col gap-1">
-            <h1 class="text-[.95rem] font-bold text-base-content sm:text-[1rem] lg:text-2xl">{{ __('Cost and Income Dashboard') }}</h1>
+            <div class="flex items-center gap-2">
+                <h1 class="text-[.95rem] font-bold text-base-content sm:text-[1rem] lg:text-2xl">{{ __('Cost and Income Dashboard') }}</h1>
+                <x-user-guide-link source="user/cost-income-dashboard.md" />
+            </div>
             <p class="text-[.8125rem] text-base-content/60 lg:text-sm">
                 {{ __('Profitability and trade for the current fiscal year') }}
             </p>

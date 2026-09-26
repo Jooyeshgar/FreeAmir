@@ -29,6 +29,38 @@ class ContextualUserGuideTest extends TestCase
         $this->assertStringNotContainsString('FiscalYearExportImport', $html);
     }
 
+    public function test_financial_report_pages_reference_their_contextual_user_guides(): void
+    {
+        $guideViews = [
+            'user/accounting-reports.md' => [
+                'reports/documents.blade.php',
+                'reports/journal.blade.php',
+                'reports/ledger.blade.php',
+                'reports/subLedger.blade.php',
+                'reports/trialBalance.blade.php',
+            ],
+            'user/company-overview.md' => ['reports/company-overview.blade.php'],
+            'user/cost-income-dashboard.md' => ['reports/cost-income/index.blade.php'],
+            'user/monthly-income-expense-forecasting.md' => ['monthly-budgets/index.blade.php'],
+        ];
+        $guideIndex = file_get_contents(base_path('docs/user/README.md'));
+
+        foreach ($guideViews as $guideSource => $views) {
+            $guideName = basename($guideSource);
+
+            $this->assertFileExists(base_path('docs/'.$guideSource));
+            $this->assertStringContainsString('['.$guideName.']('.$guideName.')', $guideIndex);
+
+            foreach ($views as $view) {
+                $this->assertStringContainsString(
+                    'source="'.$guideSource.'"',
+                    file_get_contents(resource_path('views/'.$view)),
+                    $view,
+                );
+            }
+        }
+    }
+
     public function test_company_and_fiscal_year_pages_show_the_contextual_user_guide(): void
     {
         config([

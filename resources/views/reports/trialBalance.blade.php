@@ -3,13 +3,16 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <div class="card-actions flex items-center justify-between mb-4">
-                <h3 class="text-lg font-bold">
-                    @if($currentParent)
-                        {{ __('Trial Balance') }} - {{ $currentParent->name }}
-                    @else
-                        {{ __('Trial Balance at General Level') }}
-                    @endif
-                </h3>
+                <div class="flex items-center gap-2">
+                    <h3 class="text-lg font-bold">
+                        @if($currentParent)
+                            {{ __('Trial Balance') }} - {{ $currentParent->name }}
+                        @else
+                            {{ __('Trial Balance at General Level') }}
+                        @endif
+                    </h3>
+                    <x-user-guide-link source="user/accounting-reports.md" />
+                </div>
                 <div class="flex items-center gap-2">
                     @if($currentParent)
                         <a href="{{ route('reports.trial-balance', array_merge(request()->query(), ['parent_id' => $currentParent->parent_id])) }}" class="btn btn-outline btn-sm">{{ __('Go Up').' - '.( !is_null($currentParent->parent) ? $currentParent->parent->name : __('General Level') ) }}</a>
