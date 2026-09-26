@@ -29,6 +29,34 @@ class ContextualUserGuideTest extends TestCase
         $this->assertStringNotContainsString('FiscalYearExportImport', $html);
     }
 
+    public function test_financial_report_pages_reference_the_contextual_user_guide(): void
+    {
+        $guideSource = 'user/financial-reports-dashboards.md';
+
+        $this->assertFileExists(base_path('docs/'.$guideSource));
+        $this->assertStringContainsString(
+            '[financial-reports-dashboards.md](financial-reports-dashboards.md)',
+            file_get_contents(base_path('docs/user/README.md')),
+        );
+
+        foreach ([
+            'monthly-budgets/index.blade.php',
+            'reports/company-overview.blade.php',
+            'reports/cost-income/index.blade.php',
+            'reports/documents.blade.php',
+            'reports/journal.blade.php',
+            'reports/ledger.blade.php',
+            'reports/subLedger.blade.php',
+            'reports/trialBalance.blade.php',
+        ] as $view) {
+            $this->assertStringContainsString(
+                'source="'.$guideSource.'"',
+                file_get_contents(resource_path('views/'.$view)),
+                $view,
+            );
+        }
+    }
+
     public function test_company_and_fiscal_year_pages_show_the_contextual_user_guide(): void
     {
         config([

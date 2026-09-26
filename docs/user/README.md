@@ -14,18 +14,20 @@
 3. [سال مالی چیست و چگونه ساخته می‌شود](../fiscal-year.md)
 4. [بهای تمام‌شده کالا و روش محاسبه در امیر](inventory-costing.md)
 5. [پیش‌بینی ماهانه درآمد و هزینه](monthly-income-expense-forecasting.md)
-6. [راهنمای پورتال کارکنان](employee-portal.md)
-7. [راهنمای مدیریت منابع انسانی](../hr/README.md)
-8. [راهنمای حضور و غیاب](attendance/README.md)
-9. [راهنمای درخواستهای پرسنلی](personnel-requests.md)
-10. [راهنمای حقوق و دستمزد](salary/README.md)
-11. [برگشت از فروش و برگشت از خرید](../return-sell-return-buy.md)
+6. [گزارش‌های مالی، داشبوردها و پیش‌بینی ماهانه](financial-reports-dashboards.md)
+7. [راهنمای پورتال کارکنان](employee-portal.md)
+8. [راهنمای مدیریت منابع انسانی](../hr/README.md)
+9. [راهنمای حضور و غیاب](attendance/README.md)
+10. [راهنمای درخواستهای پرسنلی](personnel-requests.md)
+11. [راهنمای حقوق و دستمزد](salary/README.md)
+12. [برگشت از فروش و برگشت از خرید](../return-sell-return-buy.md)
 
 ## عملیات برنامه
 
 | فایل | موضوع |
 |---|---|
 | [accounting-documents.md](accounting-documents.md) | ایجاد، تأیید، جستجو، ورود/خروج و انتقال اسناد حسابداری |
+| [financial-reports-dashboards.md](financial-reports-dashboards.md) | گزارش‌های اسناد، روزنامه، کل، معین، تراز آزمایشی، داشبوردها و پیش‌بینی ماهانه |
 | [subjects.md](subjects.md) | ساختار، ایجاد، ویرایش و انتقال سرفصل‌ها |
 | [banks.md](banks.md) | مدیریت بانک‌ها |
 | [bank-accounts.md](bank-accounts.md) | مدیریت حساب‌های بانکی و اعتبارسنجی شماره شبا |

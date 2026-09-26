@@ -2,6 +2,9 @@
     <x-show-message-bags />
 
     <main class="mt-6 space-y-4">
+        <div class="flex justify-end">
+            <x-user-guide-link source="user/financial-reports-dashboards.md" />
+        </div>
 
         @include('reports.company-overview.database-actions')
 

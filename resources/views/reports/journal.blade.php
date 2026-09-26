@@ -1,8 +1,9 @@
 <x-app-layout :title="__('Journal Report')">
-    <div class="font-bold text-gray-500 py-6 text-2xl">
+    <div class="flex items-center gap-2 font-bold text-gray-500 py-6 text-2xl">
         <span>
             {{ __('Journal Report') }}
         </span>
+        <x-user-guide-link source="user/financial-reports-dashboards.md" />
     </div>
     <x-show-message-bags />
 
