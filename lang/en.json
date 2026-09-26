@@ -1273,6 +1273,7 @@
     "Hourly": "Hourly",
     "Hourly Leave": "Hourly Leave",
     "Hourly Leave Without Pay": "Hourly Leave Without Pay",
+    "Hourly leave must be within the employee's work shift, including float time.": "Hourly leave must be within the employee's work shift, including float time.",
     "Hourly Mission": "Hourly Mission",
     "Housing Allowance": "Housing Allowance",
     "How many distinct products live in each category": "How many distinct products live in each category",
