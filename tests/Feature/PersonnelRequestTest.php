@@ -45,7 +45,12 @@ class PersonnelRequestTest extends TestCase
         $this->withCookies(['active-company-id' => $this->companyId]);
 
         $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
-        $this->workShift = WorkShift::factory()->create(['company_id' => $this->companyId]);
+        $this->workShift = WorkShift::factory()->create([
+            'company_id' => $this->companyId,
+            'start_time' => '08:00',
+            'end_time' => '17:00',
+            'float' => 30,
+        ]);
 
         $this->employee = Employee::factory()->create([
             'company_id' => $this->companyId,
@@ -243,19 +248,32 @@ class PersonnelRequestTest extends TestCase
         $response->assertSessionHasErrors();
     }
 
+    public function test_store_rejects_hourly_leave_start_before_work_shift(): void
+    {
+        $response = $this->post(route('hr.personnel-requests.store'), $this->validPayload([
+            'start_time' => '07:59',
+            'end_time' => '09:00',
+        ]));
+
+        $response->assertSessionHasErrors([
+            'start_time' => __('Hourly leave must be within the employee\'s work shift, including float time.'),
+        ]);
+        $this->assertDatabaseCount('personnel_requests', 0);
+    }
+
     public function test_store_accepts_flexible_time_format_and_normalizes_it(): void
     {
         $response = $this->post(route('hr.personnel-requests.store'), $this->validPayload([
-            'start_time' => '7:3',
-            'end_time' => '7:30',
+            'start_time' => '8:3',
+            'end_time' => '8:30',
         ]));
 
         $response->assertRedirect(route('hr.personnel-requests.index', ['tab' => 'leaves']));
 
         $personnelRequest = PersonnelRequest::query()->latest('id')->firstOrFail();
 
-        $this->assertSame('07:03:00', $personnelRequest->start_date->format('H:i:s'));
-        $this->assertSame('07:30:00', $personnelRequest->end_date->format('H:i:s'));
+        $this->assertSame('08:03:00', $personnelRequest->start_date->format('H:i:s'));
+        $this->assertSame('08:30:00', $personnelRequest->end_date->format('H:i:s'));
     }
 
     public function test_store_rejects_invalid_flexible_time_values(): void
@@ -344,6 +362,40 @@ class PersonnelRequestTest extends TestCase
         );
 
         $response->assertSessionHasErrors(['end_time']);
+    }
+
+    public function test_update_rejects_hourly_leave_end_after_work_shift_flex_time(): void
+    {
+        $personnelRequest = $this->makePersonnelRequest([
+            'request_type' => PersonnelRequestType::LEAVE_HOURLY,
+            'reason' => 'Original reason',
+        ]);
+
+        $allowedResponse = $this->put(
+            route('hr.personnel-requests.update', $personnelRequest),
+            $this->validPayload([
+                'start_time' => '16:00',
+                'end_time' => '17:30',
+                'reason' => 'Allowed at flex boundary',
+            ])
+        );
+
+        $allowedResponse->assertSessionHasNoErrors();
+        $this->assertSame('17:30:00', $personnelRequest->fresh()->end_date->format('H:i:s'));
+
+        $rejectedResponse = $this->put(
+            route('hr.personnel-requests.update', $personnelRequest),
+            $this->validPayload([
+                'start_time' => '16:00',
+                'end_time' => '17:31',
+                'reason' => 'Outside flex boundary',
+            ])
+        );
+
+        $rejectedResponse->assertSessionHasErrors([
+            'end_time' => __('Hourly leave must be within the employee\'s work shift, including float time.'),
+        ]);
+        $this->assertSame('Allowed at flex boundary', $personnelRequest->fresh()->reason);
     }
 
     public function test_update_accepts_flexible_time_format_and_normalizes_it(): void

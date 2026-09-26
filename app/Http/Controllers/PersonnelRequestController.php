@@ -133,6 +133,15 @@ class PersonnelRequestController extends Controller
             ]);
         }
 
+        $employee = Employee::findOrFail($request->integer('employee_id'));
+        $this->attendanceService->validateHourlyLeaveWithinShift(
+            $employee,
+            PersonnelRequestType::fromName($request->request_type),
+            $gregorianDate,
+            $request->start_time,
+            $request->end_time,
+        );
+
         PersonnelRequest::create([
             'employee_id' => $request->employee_id,
             'company_id' => getActiveCompany(),
@@ -217,6 +226,14 @@ class PersonnelRequestController extends Controller
                 'end_time' => __('End time must be after or equal to start time.'),
             ]);
         }
+
+        $this->attendanceService->validateHourlyLeaveWithinShift(
+            $personnelRequest->employee,
+            $validated['request_type'],
+            $gregorianDate,
+            $validated['start_time'],
+            $validated['end_time'],
+        );
 
         $personnelRequest->update($validated);
 

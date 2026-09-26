@@ -1269,6 +1269,7 @@
     "Hourly": "ساعتی",
     "Hourly Leave": "مرخصی ساعتی",
     "Hourly Leave Without Pay": "مرخصی ساعتی بدون حقوق",
+    "Hourly leave must be within the employee's work shift, including float time.": "مرخصی ساعتی باید با در نظر گرفتن زمان شناوری، در محدوده شیفت کاری کارمند باشد.",
     "Hourly Mission": "مأموریت ساعتی",
     "Housing Allowance": "کمک هزینه مسکن",
     "How many distinct products live in each category": "تعداد محصولات مجزا در هر دسته‌بندی",

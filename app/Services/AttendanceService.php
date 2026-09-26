@@ -12,6 +12,7 @@ use App\Models\PublicHoliday;
 use App\Models\WorkShift;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 /**
  * AttendanceService
@@ -673,6 +674,35 @@ class AttendanceService
             'start' => Carbon::createFromTimeString($start)->format('H:i'),
             'end' => Carbon::createFromTimeString($end)->format('H:i'),
         ];
+    }
+
+    /** Reject hourly leave outside the employee's shift window.*/
+    public function validateHourlyLeaveWithinShift(Employee $employee, PersonnelRequestType $requestType, Carbon|string $date, string $startTime, string $endTime): void
+    {
+        if (! in_array($requestType, [PersonnelRequestType::LEAVE_HOURLY, PersonnelRequestType::LEAVE_WITHOUT_PAY_HOURLY], true)) {
+            return;
+        }
+
+        $workShift = $employee->workShift;
+        $shiftTimes = $this->shiftTimesForDate($workShift, $date);
+        $shiftStart = Carbon::createFromTimeString($shiftTimes['start']);
+        $shiftEnd = Carbon::createFromTimeString($shiftTimes['end'])->addMinutes(max(0, (int) ($workShift?->float ?? 0)));
+        $leaveStart = Carbon::createFromTimeString($startTime);
+        $leaveEnd = Carbon::createFromTimeString($endTime);
+        $message = __('Hourly leave must be within the employee\'s work shift, including float time.');
+        $errors = [];
+
+        if ($leaveStart->lessThan($shiftStart) || $leaveStart->greaterThan($shiftEnd)) {
+            $errors['start_time'] = $message;
+        }
+
+        if ($leaveEnd->lessThan($shiftStart) || $leaveEnd->greaterThan($shiftEnd)) {
+            $errors['end_time'] = $message;
+        }
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════════
