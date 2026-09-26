@@ -11,7 +11,7 @@
                     @endif
                 </h3>
                 <div class="flex items-center gap-2">
-                    <x-user-guide-link source="user/financial-reports-dashboards.md" />
+                    <x-user-guide-link source="user/accounting-reports.md" />
                     @if($currentParent)
                         <a href="{{ route('reports.trial-balance', array_merge(request()->query(), ['parent_id' => $currentParent->parent_id])) }}" class="btn btn-outline btn-sm">{{ __('Go Up').' - '.( !is_null($currentParent->parent) ? $currentParent->parent->name : __('General Level') ) }}</a>
                     @endif

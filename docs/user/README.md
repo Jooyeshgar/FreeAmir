@@ -13,21 +13,25 @@
 2. [مبانی حسابداری](../accounting-basics.md)
 3. [سال مالی چیست و چگونه ساخته می‌شود](../fiscal-year.md)
 4. [بهای تمام‌شده کالا و روش محاسبه در امیر](inventory-costing.md)
-5. [پیش‌بینی ماهانه درآمد و هزینه](monthly-income-expense-forecasting.md)
-6. [گزارش‌های مالی، داشبوردها و پیش‌بینی ماهانه](financial-reports-dashboards.md)
-7. [راهنمای پورتال کارکنان](employee-portal.md)
-8. [راهنمای مدیریت منابع انسانی](../hr/README.md)
-9. [راهنمای حضور و غیاب](attendance/README.md)
-10. [راهنمای درخواستهای پرسنلی](personnel-requests.md)
-11. [راهنمای حقوق و دستمزد](salary/README.md)
-12. [برگشت از فروش و برگشت از خرید](../return-sell-return-buy.md)
+5. [گزارش‌های حسابداری](accounting-reports.md)
+6. [نمای کلی شرکت](company-overview.md)
+7. [میزکار درآمد و هزینه](cost-income-dashboard.md)
+8. [پیش‌بینی ماهانه درآمد و هزینه](monthly-income-expense-forecasting.md)
+9. [راهنمای پورتال کارکنان](employee-portal.md)
+10. [راهنمای مدیریت منابع انسانی](../hr/README.md)
+11. [راهنمای حضور و غیاب](attendance/README.md)
+12. [راهنمای درخواستهای پرسنلی](personnel-requests.md)
+13. [راهنمای حقوق و دستمزد](salary/README.md)
+14. [برگشت از فروش و برگشت از خرید](../return-sell-return-buy.md)
 
 ## عملیات برنامه
 
 | فایل | موضوع |
 |---|---|
 | [accounting-documents.md](accounting-documents.md) | ایجاد، تأیید، جستجو، ورود/خروج و انتقال اسناد حسابداری |
-| [financial-reports-dashboards.md](financial-reports-dashboards.md) | گزارش‌های اسناد، روزنامه، کل، معین، تراز آزمایشی، داشبوردها و پیش‌بینی ماهانه |
+| [accounting-reports.md](accounting-reports.md) | گزارش‌های اسناد، روزنامه، کل، معین/تفصیلی و تراز آزمایشی |
+| [company-overview.md](company-overview.md) | شاخص‌های مالی، فروش، نقد و بانک، موجودی و روش تطبیق آن‌ها |
+| [cost-income-dashboard.md](cost-income-dashboard.md) | درآمد، هزینه، سود، روند ماهانه، فروش، خرید و مانده مشتریان |
 | [subjects.md](subjects.md) | ساختار، ایجاد، ویرایش و انتقال سرفصل‌ها |
 | [banks.md](banks.md) | مدیریت بانک‌ها |
 | [bank-accounts.md](bank-accounts.md) | مدیریت حساب‌های بانکی و اعتبارسنجی شماره شبا |
