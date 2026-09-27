@@ -12,17 +12,20 @@
 1. [شروع کار، شرکت فعال، میز کار و سال مالی](getting-started-fiscal-year.md)
 2. [مبانی حسابداری](../accounting-basics.md)
 3. [سال مالی چیست و چگونه ساخته می‌شود](../fiscal-year.md)
-4. [بهای تمام‌شده کالا و روش محاسبه در امیر](inventory-costing.md)
-5. [گزارش‌های حسابداری](accounting-reports.md)
-6. [نمای کلی شرکت](company-overview.md)
-7. [میزکار درآمد و هزینه](cost-income-dashboard.md)
-8. [پیش‌بینی ماهانه درآمد و هزینه](monthly-income-expense-forecasting.md)
-9. [راهنمای پورتال کارکنان](employee-portal.md)
-10. [راهنمای مدیریت منابع انسانی](../hr/README.md)
-11. [راهنمای حضور و غیاب](attendance/README.md)
-12. [راهنمای درخواستهای پرسنلی](personnel-requests.md)
-13. [راهنمای حقوق و دستمزد](salary/README.md)
-14. [برگشت از فروش و برگشت از خرید](../return-sell-return-buy.md)
+4. [کالا، خدمت و سرفصل‌های حسابداری](products-and-services.md)
+5. [انبارها و انتقال کالا](warehouses-and-transfers.md)
+6. [بهای تمام‌شده کالا و روش محاسبه در امیر](inventory-costing.md)
+7. [میزکار انبار و گزارش کالا](warehouse-dashboard-reports.md)
+8. [گزارش‌های حسابداری](accounting-reports.md)
+9. [نمای کلی شرکت](company-overview.md)
+10. [میزکار درآمد و هزینه](cost-income-dashboard.md)
+11. [پیش‌بینی ماهانه درآمد و هزینه](monthly-income-expense-forecasting.md)
+12. [راهنمای پورتال کارکنان](employee-portal.md)
+13. [راهنمای مدیریت منابع انسانی](../hr/README.md)
+14. [راهنمای حضور و غیاب](attendance/README.md)
+15. [راهنمای درخواستهای پرسنلی](personnel-requests.md)
+16. [راهنمای حقوق و دستمزد](salary/README.md)
+17. [برگشت از فروش و برگشت از خرید](../return-sell-return-buy.md)
 
 ## عملیات برنامه
 
@@ -45,6 +48,9 @@
 | [void-invoice.md](void-invoice.md) | ابطال فاکتور فروش و آثار معکوس آن |
 | [invoice-payments.md](invoice-payments.md) | پرداخت نقدی، بانکی، چکی و سند پرداخت |
 | [ancillary-cost.md](ancillary-cost.md) | هزینهٔ جانبی خرید و اثر آن بر بهای موجودی |
+| [products-and-services.md](products-and-services.md) | تعریف کالا و خدمت، گروه‌ها، سرفصل‌های خودکار و خروجی CSV |
+| [warehouses-and-transfers.md](warehouses-and-transfers.md) | انبار، موجودی هر انبار و انتقال کالا |
+| [warehouse-dashboard-reports.md](warehouse-dashboard-reports.md) | شاخص‌های میزکار، وضعیت موجودی و گزارش کالا |
 | [fiscal-year-operations.md](fiscal-year-operations.md) | ایجاد سال بعد، انتقال، پشتیبان‌گیری و بستن سال مالی |
 | [getting-started-fiscal-year.md](getting-started-fiscal-year.md) | سال مالی، ایجاد سال مالی، انتخاب سال مالی فعال، همیار اختتامیه |
 | [employee-portal.md](employee-portal.md) | ورود کارمند، مشاهده اطلاعات شخصی، حضور، کارکرد و فیش و ثبت درخواست پرسنلی |
@@ -58,7 +64,7 @@
 | فایل | موضوع |
 |---|---|
 | [accounting-basics.md](../accounting-basics.md) | مفاهیم پایه حسابداری، بدهکار، بستانکار و سند حسابداری |
-| [inventory-costing.md](inventory-costing.md) | بهای تمام‌شده، روش‌های FIFO/LIFO/میانگین و روش میانگین موزون متحرک در امیر |
+| [inventory-costing.md](inventory-costing.md) | بهای تمام‌شده کالا |
 | [return-sell-return-buy.md](../return-sell-return-buy.md) | ثبت حسابداری برگشت از فروش و برگشت از خرید |
 | [monthly-income-expense-forecasting.md](monthly-income-expense-forecasting.md) | پیش‌بینی، درآمد و هزینه واقعی، انحراف و نسبت‌های عملکرد |
 

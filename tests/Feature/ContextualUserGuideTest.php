@@ -61,6 +61,39 @@ class ContextualUserGuideTest extends TestCase
         }
     }
 
+    public function test_warehouse_pages_reference_their_split_contextual_user_guides(): void
+    {
+        $guideViews = [
+            'user/products-and-services.md' => [
+                'products/index.blade.php',
+                'services/index.blade.php',
+                'productGroups/index.blade.php',
+                'serviceGroups/index.blade.php',
+            ],
+            'user/warehouses-and-transfers.md' => [
+                'warehouses/index.blade.php',
+                'warehouses/transfer.blade.php',
+            ],
+            'user/warehouse-dashboard-reports.md' => ['warehouse/dashboard.blade.php'],
+        ];
+        $guideIndex = file_get_contents(base_path('docs/user/README.md'));
+
+        foreach ($guideViews as $guideSource => $views) {
+            $guideName = basename($guideSource);
+
+            $this->assertFileExists(base_path('docs/'.$guideSource));
+            $this->assertStringContainsString('['.$guideName.']('.$guideName.')', $guideIndex);
+
+            foreach ($views as $view) {
+                $this->assertStringContainsString(
+                    'source="'.$guideSource.'"',
+                    file_get_contents(resource_path('views/'.$view)),
+                    $view,
+                );
+            }
+        }
+    }
+
     public function test_company_and_fiscal_year_pages_show_the_contextual_user_guide(): void
     {
         config([

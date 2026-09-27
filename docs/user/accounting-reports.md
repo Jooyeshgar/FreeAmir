@@ -155,7 +155,7 @@
 - [نمای کلی شرکت](company-overview.md)
 - [میزکار درآمد و هزینه](cost-income-dashboard.md)
 - [فاکتورها](invoices.md)
-- [موجودی و بهای تمام‌شده](inventory-costing.md)
+- [بهای تمام‌شده کالا و روش محاسبه در امیر](inventory-costing.md)
 - [بانک‌ها](banks.md) و [حساب‌های بانکی](bank-accounts.md)
 
 </div>
