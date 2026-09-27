@@ -17,15 +17,16 @@
 6. [بهای تمام‌شده کالا و روش محاسبه در امیر](inventory-costing.md)
 7. [میزکار انبار و گزارش کالا](warehouse-dashboard-reports.md)
 8. [گزارش‌های حسابداری](accounting-reports.md)
-9. [نمای کلی شرکت](company-overview.md)
-10. [میزکار درآمد و هزینه](cost-income-dashboard.md)
-11. [پیش‌بینی ماهانه درآمد و هزینه](monthly-income-expense-forecasting.md)
-12. [راهنمای پورتال کارکنان](employee-portal.md)
-13. [راهنمای مدیریت منابع انسانی](../hr/README.md)
-14. [راهنمای حضور و غیاب](attendance/README.md)
-15. [راهنمای درخواستهای پرسنلی](personnel-requests.md)
-16. [راهنمای حقوق و دستمزد](salary/README.md)
-17. [برگشت از فروش و برگشت از خرید](../return-sell-return-buy.md)
+9. [مشتریان، گروه‌های مشتری و ارتباط با مشتری](customers-and-crm.md)
+10. [نمای کلی شرکت](company-overview.md)
+11. [میزکار درآمد و هزینه](cost-income-dashboard.md)
+12. [پیش‌بینی ماهانه درآمد و هزینه](monthly-income-expense-forecasting.md)
+13. [راهنمای پورتال کارکنان](employee-portal.md)
+14. [راهنمای مدیریت منابع انسانی](../hr/README.md)
+15. [راهنمای حضور و غیاب](attendance/README.md)
+16. [راهنمای درخواستهای پرسنلی](personnel-requests.md)
+17. [راهنمای حقوق و دستمزد](salary/README.md)
+18. [برگشت از فروش و برگشت از خرید](../return-sell-return-buy.md)
 
 ## عملیات برنامه
 
@@ -33,6 +34,12 @@
 |---|---|
 | [accounting-documents.md](accounting-documents.md) | ایجاد، تأیید، جستجو، ورود/خروج و انتقال اسناد حسابداری |
 | [accounting-reports.md](accounting-reports.md) | گزارش‌های اسناد، روزنامه، کل، معین/تفصیلی و تراز آزمایشی |
+| [customers-and-crm.md](customers-and-crm.md) | فهرست راهنماهای مشتریان و ارتباط با مشتری |
+| [customer-groups.md](customer-groups.md) | گروه مشتریان و پیامدهای حذف گروه |
+| [customers.md](customers.md) | اطلاعات مشتری، سرفصل، مانده، فاکتور و چک مشتری |
+| [customer-comments.md](customer-comments.md) | نظرها و امتیازهای مشتری |
+| [customer-import-export.md](customer-import-export.md) | ورود و خروج فایل و انتقال اطلاعات مشتریان میان سال‌های مالی |
+| [crm-dashboard.md](crm-dashboard.md) | شاخص‌های فروش، پرداخت، مطالبات و تحلیل دوره‌ای |
 | [company-overview.md](company-overview.md) | شاخص‌های مالی، فروش، نقد و بانک، موجودی و روش تطبیق آن‌ها |
 | [cost-income-dashboard.md](cost-income-dashboard.md) | درآمد، هزینه، سود، روند ماهانه، فروش، خرید و مانده مشتریان |
 | [subjects.md](subjects.md) | ساختار، ایجاد، ویرایش و انتقال سرفصل‌ها |
