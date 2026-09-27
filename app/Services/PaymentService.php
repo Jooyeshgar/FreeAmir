@@ -14,7 +14,6 @@ use App\Models\Payment;
 use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -82,11 +81,6 @@ class PaymentService
 
         if (isset($data['amount']) && $data['amount'] > $this->remainingAmount($invoice, $except) + 0.001) {
             $decision->addMessage('error', __('Payment amount exceeds the remaining balance of the invoice.'));
-        }
-
-        if (! empty($data['date']) && $invoice->date
-            && Carbon::parse($data['date'])->startOfDay()->lt($invoice->date->copy()->startOfDay())) {
-            $decision->addMessage('error', __('The payment date cannot be earlier than the invoice date.'));
         }
 
         return $decision;

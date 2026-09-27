@@ -148,6 +148,21 @@ class InvoicePaymentTest extends TestCase
         $this->assertEqualsWithDelta(1200, $this->paymentService->remainingAmount($sell), 0.01);
     }
 
+    public function test_payment_date_can_be_earlier_than_invoice_date(): void
+    {
+        $sell = $this->approvedSell(1000, 2);
+        $paymentDate = $sell->date->copy()->subDay()->toDateString();
+
+        $payment = $this->recordPayment($sell, [
+            'amount' => 800,
+            'subject_id' => $this->cashSubjectId(),
+            'date' => $paymentDate,
+        ]);
+
+        $this->assertSame($paymentDate, $payment->date->toDateString());
+        $this->assertSame($paymentDate, $payment->document->date->toDateString());
+    }
+
     public function test_full_payment_marks_invoice_paid(): void
     {
         $sell = $this->approvedSell(1000, 2);
