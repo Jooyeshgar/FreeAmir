@@ -3,7 +3,10 @@
 
     <div class="flex flex-col gap-4 px-1 pb-5 lg:flex-row lg:items-center lg:justify-between">
         <div class="min-w-48">
-            <h1 class="text-xl font-bold text-base-content">{{ __('Warehouses') }}</h1>
+            <div class="flex flex-wrap items-center">
+                <h1 class="text-xl font-bold text-base-content">{{ __('Warehouses') }}</h1>
+                <x-user-guide-link source="user/warehouses-and-transfers.md" />
+            </div>
             <p class="text-sm text-base-content/50 mt-0.5">{{ __('Manage your warehouses and stock locations') }}</p>
         </div>
 

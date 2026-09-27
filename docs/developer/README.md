@@ -30,7 +30,7 @@
 | فایل | کاربرد |
 |---|---|
 | [accounting-basics.md](../accounting-basics.md) | مفاهیم بدهکار/بستانکار، سند متوازن و مدل ذخیره تراکنش‌ها |
-| [user/inventory-costing.md](../user/inventory-costing.md) | توضیح کاربرمحور بهای تمام‌شده و روش میانگین موزون متحرک |
+| [user/inventory-costing.md](../user/inventory-costing.md) | توضیح بهای تمام‌شده و روش میانگین موزون متحرک |
 | [return-sell-return-buy.md](../return-sell-return-buy.md) | ثبت برگشت از فروش و برگشت از خرید |
 | [fiscal-year.md](../fiscal-year.md) | مفهوم سال مالی و ایجاد آن در سیستم |
 | [FiscalYearExportImport.md](../FiscalYearExportImport.md) | دستورهای خروجی و ورودی سال مالی |

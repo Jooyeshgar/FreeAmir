@@ -4,7 +4,10 @@
     {{-- Page Header --}}
     <div class="flex flex-wrap items-center justify-between gap-4 px-1 pb-5">
         <div class="min-w-48">
-            <h1 class="text-xl font-bold text-base-content">{{ __('Products Group') }}</h1>
+            <div class="flex flex-wrap items-center">
+                <h1 class="text-xl font-bold text-base-content">{{ __('Products Group') }}</h1>
+                <x-user-guide-link source="user/products-and-services.md" />
+            </div>
             <p class="text-sm text-base-content/50 mt-0.5">{{ __('Manage your product groups and their accounts') }}</p>
         </div>
 
