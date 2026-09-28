@@ -107,7 +107,7 @@ fiscal scoping are enforced through middleware/session context and model scopes 
 services for data migration and fiscal-year operations.
 
 ## Project Patterns & Reference Files
-- Read `README.md` and `docs/project-structure.md` first for high-level onboarding.
+- Read `README.md` and `docs/developer/project-structure.md` first for high-level onboarding.
 - Service layer examples: `app/Services/` (for example `InvoiceService`, `FiscalYearService`,
   `CostOfGoodsService`).
 - Transaction/invariant logic: `app/Services/*TransactionBuilder.php`.
@@ -118,7 +118,7 @@ services for data migration and fiscal-year operations.
   `app/Console/Commands/FiscalYearImportCommand.php`.
 - Scoping rules: `app/Models/Scopes/FiscalYearScope.php` and middleware such as
   `app/Http/Middleware/DefaultCompany.php`.
-- Testing expectations and examples: `docs/testing-guide.md`, `tests/`.
+- Testing expectations and examples: `docs/developer/testing-guide.md`, `tests/`.
 - Data migration scripts: `script/README.md` and `script/`.
 
 ## Security & Compliance
