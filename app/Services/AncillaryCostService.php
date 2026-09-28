@@ -473,8 +473,15 @@ class AncillaryCostService
 
     private static function validateNoApprovedInvoicesAfterAncillaryCostWithSameProducts(AncillaryCost $ancillaryCost, array $productIds): void
     {
-        $query = Invoice::where('date', '>', $ancillaryCost->date)
-            ->where('status', InvoiceStatus::APPROVED)
+        // Ancillary costs change the purchase's COG snapshot, so protect every posted movement after that purchase, even if the cost is dated later.
+        $invoice = $ancillaryCost->invoice;
+        $query = Invoice::where(function ($query) use ($invoice) {
+            $query->where('date', '>', $invoice->date)
+                ->orWhere(function ($query) use ($invoice) {
+                    $query->where('date', $invoice->date)->where('id', '>', $invoice->id);
+                });
+        })
+            ->whereIn('status', InvoiceStatus::approvedOrSettled())
             ->whereHas('items', fn ($q) => $q->whereIn('itemable_id', $productIds)->where('itemable_type', Product::class));
 
         if ($query->exists()) {

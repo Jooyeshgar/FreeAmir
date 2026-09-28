@@ -173,7 +173,7 @@ class CostOfGoodsService
             'baseCost' => (float) $previousInvoiceItem->amount - (float) ($previousInvoiceItem->vat ?? 0),
             'availableQuantity' => $previousInvoiceItem->quantity_at,
             'newQuantity' => (float) $previousInvoiceItem->quantity,
-            'ancillaryCosts' => $previousInvoiceItem->ancillaryCosts,
+            'ancillaryCosts' => $previousInvoice->ancillaryCosts,
         ];
     }
 

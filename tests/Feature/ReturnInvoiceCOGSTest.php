@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
 use App\Models\Company;
@@ -11,6 +12,7 @@ use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\ProductGroup;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Models\WarehouseProductStock;
@@ -190,6 +192,147 @@ class ReturnInvoiceCOGSTest extends TestCase
     {
         (new AncillaryCostService)->changeAncillaryCostStatus($ancillaryCost, 'approve');
         $ancillaryCost->refresh();
+    }
+
+    public function test_battery_clamp_sale_preserves_ancillary_cost_after_unapproving_a_later_purchase(): void
+    {
+        $product = $this->createProduct(['name' => 'Battery Clamp Holder']);
+        $buy = $this->buy([$this->productItem($product, 1, 4016490)], true, 4, '2026-06-01')['invoice'];
+        $this->createBatteryClampAncillaryCost($buy, $product, true);
+        $laterBuy = $this->buy([$this->productItem($product, 5, 4326030)], true, 8, '2026-06-03')['invoice'];
+        $this->unapproveInvoice($laterBuy);
+
+        $this->assertEqualsWithDelta(7933156, $product->fresh()->average_cost, 0.01);
+        $sale = $this->sell([$this->productItem($product, 1, 14510000)], true, 30, '2026-06-02')['invoice'];
+        $this->assertEqualsWithDelta(7933156, $this->findInvoiceItem($sale, $product)->cog_after, 0.01);
+        $this->assertEqualsWithDelta(7933156, $sale->document->transactions()->where('subject_id', $product->inventory_subject_id)->sum('value'), 0.01);
+        $this->assertEqualsWithDelta(-7933156, $sale->document->transactions()->where('subject_id', $product->cogs_subject_id)->sum('value'), 0.01);
+        $this->assertEqualsWithDelta(0, $sale->document->transactions()->sum('value'), 0.01);
+        $this->assertEqualsWithDelta(0, Transaction::where('subject_id', $product->inventory_subject_id)->sum('value'), 0.01);
+        $this->assertEquals(0, $product->fresh()->quantity);
+
+        $this->approveInvoice($laterBuy);
+        $this->assertEqualsWithDelta(5 * 4326030, -Transaction::where('subject_id', $product->inventory_subject_id)->sum('value'), 0.01);
+        $this->assertEqualsWithDelta(4326030, $product->fresh()->average_cost, 0.01);
+    }
+
+    public function test_same_day_approved_sale_blocks_ancillary_cost_approval(): void
+    {
+        $this->assertAncillaryApprovalBlocked(InvoiceStatus::APPROVED, '2026-06-01');
+    }
+
+    public function test_later_approved_sale_blocks_ancillary_cost_approval(): void
+    {
+        $this->assertAncillaryApprovalBlocked(InvoiceStatus::APPROVED, '2026-06-02');
+    }
+
+    public function test_same_day_partially_paid_sale_blocks_ancillary_cost_approval(): void
+    {
+        $this->assertAncillaryApprovalBlocked(InvoiceStatus::PARTIALLY_PAID, '2026-06-01');
+    }
+
+    public function test_later_partially_paid_sale_blocks_ancillary_cost_approval(): void
+    {
+        $this->assertAncillaryApprovalBlocked(InvoiceStatus::PARTIALLY_PAID, '2026-06-02');
+    }
+
+    public function test_same_day_paid_sale_blocks_ancillary_cost_approval(): void
+    {
+        $this->assertAncillaryApprovalBlocked(InvoiceStatus::PAID, '2026-06-01');
+    }
+
+    public function test_later_paid_sale_blocks_ancillary_cost_approval(): void
+    {
+        $this->assertAncillaryApprovalBlocked(InvoiceStatus::PAID, '2026-06-02');
+    }
+
+    private function assertAncillaryApprovalBlocked(InvoiceStatus $status, string $saleDate): void
+    {
+        $product = $this->createProduct();
+        $buy = $this->buy([$this->productItem($product, 1, 4016490)], true, 4, '2026-06-01')['invoice'];
+        $sale = $this->sell([$this->productItem($product, 1, 14510000)], true, 30, $saleDate)['invoice'];
+        $sale->update(['status' => $status]);
+        $cost = $this->createBatteryClampAncillaryCost($buy, $product, true);
+
+        $this->assertSame(InvoiceStatus::UNAPPROVED, $cost->fresh()->status);
+        $this->assertNull($cost->fresh()->document_id);
+        $this->assertFalse(AncillaryCostService::getChangeStatusValidation($cost->fresh())['allowed']);
+        $this->assertEqualsWithDelta(0, Transaction::where('subject_id', $product->inventory_subject_id)->sum('value'), 0.01);
+    }
+
+    public function test_same_day_approved_sale_blocks_ancillary_cost_unapproval(): void
+    {
+        $this->assertAncillaryUnapprovalBlocked(InvoiceStatus::APPROVED, '2026-06-01');
+    }
+
+    public function test_later_approved_sale_blocks_ancillary_cost_unapproval(): void
+    {
+        $this->assertAncillaryUnapprovalBlocked(InvoiceStatus::APPROVED, '2026-06-02');
+    }
+
+    public function test_same_day_partially_paid_sale_blocks_ancillary_cost_unapproval(): void
+    {
+        $this->assertAncillaryUnapprovalBlocked(InvoiceStatus::PARTIALLY_PAID, '2026-06-01');
+    }
+
+    public function test_later_partially_paid_sale_blocks_ancillary_cost_unapproval(): void
+    {
+        $this->assertAncillaryUnapprovalBlocked(InvoiceStatus::PARTIALLY_PAID, '2026-06-02');
+    }
+
+    public function test_same_day_paid_sale_blocks_ancillary_cost_unapproval(): void
+    {
+        $this->assertAncillaryUnapprovalBlocked(InvoiceStatus::PAID, '2026-06-01');
+    }
+
+    public function test_later_paid_sale_blocks_ancillary_cost_unapproval(): void
+    {
+        $this->assertAncillaryUnapprovalBlocked(InvoiceStatus::PAID, '2026-06-02');
+    }
+
+    private function assertAncillaryUnapprovalBlocked(InvoiceStatus $status, string $saleDate): void
+    {
+        $product = $this->createProduct();
+        $buy = $this->buy([$this->productItem($product, 1, 4016490)], true, 4, '2026-06-01')['invoice'];
+        $cost = $this->createBatteryClampAncillaryCost($buy, $product, true);
+        $sale = $this->sell([$this->productItem($product, 1, 14510000)], true, 30, $saleDate)['invoice'];
+        $sale->update(['status' => $status]);
+
+        $this->assertFalse(AncillaryCostService::getChangeStatusValidation($cost->fresh())['allowed']);
+        $this->assertEqualsWithDelta(0, Transaction::where('subject_id', $product->inventory_subject_id)->sum('value'), 0.01);
+
+        $this->unapproveInvoice($sale);
+        $this->assertTrue(AncillaryCostService::getChangeStatusValidation($cost->fresh())['allowed']);
+        (new AncillaryCostService)->changeAncillaryCostStatus($cost->fresh(), 'unapprove');
+        $this->assertEqualsWithDelta(4016490, $product->fresh()->average_cost, 0.01);
+        $this->assertEqualsWithDelta(-4016490, Transaction::where('subject_id', $product->inventory_subject_id)->sum('value'), 0.01);
+    }
+
+    public function test_pending_sale_does_not_block_ancillary_cost_approval(): void
+    {
+        $product = $this->createProduct();
+        $buy = $this->buy([$this->productItem($product, 1, 4016490)], true, 4, '2026-06-01')['invoice'];
+        $sale = $this->sell([$this->productItem($product, 1, 14510000)], false, 30, '2026-06-02')['invoice'];
+        $cost = $this->createBatteryClampAncillaryCost($buy, $product, true);
+
+        $this->assertSame(InvoiceStatus::APPROVED, $cost->fresh()->status);
+        $this->approveInvoice($sale);
+        $this->assertEqualsWithDelta(7933156, $this->findInvoiceItem($sale, $product)->cog_after, 0.01);
+        $this->assertEqualsWithDelta(0, Transaction::where('subject_id', $product->inventory_subject_id)->sum('value'), 0.01);
+    }
+
+    private function createBatteryClampAncillaryCost(Invoice $buy, Product $product, bool $approved): AncillaryCost
+    {
+        return AncillaryCostService::createAncillaryCost($this->user, [
+            'invoice_id' => $buy->id,
+            'customer_id' => $this->customer->id,
+            'company_id' => $this->companyId,
+            'date' => '2026-06-02',
+            'type' => 'Shipping',
+            'amount' => 3916666,
+            'vatPrice' => 0,
+            'ancillaryCosts' => [['product_id' => $product->id, 'amount' => 3916666]],
+        ], $approved)['ancillaryCost'];
     }
 
     // =========================================================================
