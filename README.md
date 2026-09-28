@@ -58,7 +58,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-> راهنمای کامل نصب در [docs/INSTALLATION.md](docs/INSTALLATION.md) قرار دارد.
+> راهنمای کامل نصب در [docs/deployment/INSTALLATION.md](docs/deployment/INSTALLATION.md) قرار دارد.
 
 ### اطلاعات ورود پیش‌فرض
 
@@ -89,13 +89,13 @@ sail npm run dev
 
 | بخش | فارسی | English |
 |---|---|---|
-| ویژگی‌ها | [features.md](docs/features.md) | [features.en.md](docs/features.en.md) |
-| مقایسه | [comparison.md](docs/comparison.md) | [comparison.en.md](docs/comparison.en.md) |
-| سوالات متداول | [faq.md](docs/faq.md) | [faq.en.md](docs/faq.en.md) |
-| نقشه راه | [roadmap.md](docs/roadmap.md) | [roadmap.en.md](docs/roadmap.en.md) |
-| نمایشگاه | [screenshots.md](docs/screenshots.md) | [screenshots.en.md](docs/screenshots.en.md) |
-| فهرست مستندات | [docs/README.md](docs/README.md) | [docs/README.en.md](docs/README.en.md) |
-| راهنمای نصب | [docs/INSTALLATION.md](docs/INSTALLATION.md) | [docs/INSTALLATION.en.md](docs/INSTALLATION.en.md) |
+| ویژگی‌ها | [features.md](docs/product/features.md) | [features.en.md](docs/product/features.en.md) |
+| مقایسه | [comparison.md](docs/product/comparison.md) | [comparison.en.md](docs/product/comparison.en.md) |
+| سوالات متداول | [faq.md](docs/product/faq.md) | [faq.en.md](docs/product/faq.en.md) |
+| نقشه راه | [roadmap.md](docs/product/roadmap.md) | [roadmap.en.md](docs/product/roadmap.en.md) |
+| نمایشگاه | [screenshots.md](docs/product/screenshots.md) | [screenshots.en.md](docs/product/screenshots.en.md) |
+| فهرست مستندات | [docs/index/README.md](docs/index/README.md) | [docs/index/README.en.md](docs/index/README.en.md) |
+| راهنمای نصب | [docs/deployment/INSTALLATION.md](docs/deployment/INSTALLATION.md) | [docs/deployment/INSTALLATION.en.md](docs/deployment/INSTALLATION.en.md) |
 | راهنمای استفاده‌کنندگان | [docs/user/README.md](docs/user/README.md) | [docs/user/README.en.md](docs/user/README.en.md) |
 | مدیریت منابع انسانی | [docs/hr/README.md](docs/hr/README.md) | [docs/hr/README.en.md](docs/hr/README.en.md) |
 | مفاهیم حسابداری | [docs/accounting/README.md](docs/accounting/README.md) | [docs/accounting/README.en.md](docs/accounting/README.en.md) |
@@ -139,7 +139,7 @@ sail npm run dev
 بله. امیر برای خود-میزبانی (self-hosted) طراحی شده و داده‌ها کاملاً در اختیار شماست.
 
 **آیا از سامانه مودیان پشتیبانی می‌کند؟**
-بله. امیر از سامانه مودیان پشتیبانی می‌کند. هر شرکت می‌تواند گواهی و کلید خصوصی خود را تنظیم کند. [راهنمای سامانه مودیان](docs/moadian.md)
+بله. امیر از سامانه مودیان پشتیبانی می‌کند. هر شرکت می‌تواند گواهی و کلید خصوصی خود را تنظیم کند. [راهنمای سامانه مودیان](docs/compliance/moadian.md)
 
 **آیا از چند شرکت پشتیبانی می‌کند؟**
 بله. امیر از چند شرکت با سال‌های مالی مستقل پشتیبانی می‌کند.

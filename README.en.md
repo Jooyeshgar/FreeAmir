@@ -49,7 +49,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-> The full installation guide is at [docs/INSTALLATION.en.md](docs/INSTALLATION.en.md).
+> The full installation guide is at [docs/deployment/INSTALLATION.en.md](docs/deployment/INSTALLATION.en.md).
 
 ### Default login credentials
 
@@ -82,13 +82,13 @@ Before changing accounting logic, read the [programmer guide](docs/developer/REA
 
 | Section | Persian | English |
 |---|---|---|
-| Features | [features.md](docs/features.md) | [features.en.md](docs/features.en.md) |
-| Comparison | [comparison.md](docs/comparison.md) | [comparison.en.md](docs/comparison.en.md) |
-| FAQ | [faq.md](docs/faq.md) | [faq.en.md](docs/faq.en.md) |
-| Roadmap | [roadmap.md](docs/roadmap.md) | [roadmap.en.md](docs/roadmap.en.md) |
-| Screenshots | [screenshots.md](docs/screenshots.md) | [screenshots.en.md](docs/screenshots.en.md) |
-| Documentation index | [docs/README.md](docs/README.md) | [docs/README.en.md](docs/README.en.md) |
-| Installation guide | [docs/INSTALLATION.md](docs/INSTALLATION.md) | [docs/INSTALLATION.en.md](docs/INSTALLATION.en.md) |
+| Features | [features.md](docs/product/features.md) | [features.en.md](docs/product/features.en.md) |
+| Comparison | [comparison.md](docs/product/comparison.md) | [comparison.en.md](docs/product/comparison.en.md) |
+| FAQ | [faq.md](docs/product/faq.md) | [faq.en.md](docs/product/faq.en.md) |
+| Roadmap | [roadmap.md](docs/product/roadmap.md) | [roadmap.en.md](docs/product/roadmap.en.md) |
+| Screenshots | [screenshots.md](docs/product/screenshots.md) | [screenshots.en.md](docs/product/screenshots.en.md) |
+| Documentation index | [docs/index/README.md](docs/index/README.md) | [docs/index/README.en.md](docs/index/README.en.md) |
+| Installation guide | [docs/deployment/INSTALLATION.md](docs/deployment/INSTALLATION.md) | [docs/deployment/INSTALLATION.en.md](docs/deployment/INSTALLATION.en.md) |
 | User guide | [docs/user/README.md](docs/user/README.md) | [docs/user/README.en.md](docs/user/README.en.md) |
 | HR management | [docs/hr/README.md](docs/hr/README.md) | [docs/hr/README.en.md](docs/hr/README.en.md) |
 | Accounting concepts | [docs/accounting/README.md](docs/accounting/README.md) | [docs/accounting/README.en.md](docs/accounting/README.en.md) |
@@ -135,7 +135,7 @@ Yes. Amir is released under the GPL-3 license with no license fees or subscripti
 Yes. Amir is designed for self-hosted deployment. Your data stays fully under your control.
 
 **Does it support Moadian?**
-Yes. Amir supports the Moadian system. Each company can configure its own certificate and private key. [Moadian setup guide](docs/moadian.en.md)
+Yes. Amir supports the Moadian system. Each company can configure its own certificate and private key. [Moadian setup guide](docs/compliance/moadian.en.md)
 
 **Does it support multiple companies?**
 Yes. Amir supports multiple companies with independent fiscal years.

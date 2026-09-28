@@ -1,20 +1,20 @@
 # Amir Ordinary User Guide
 
 **[نسخه فارسی](README.md)**  
-**[Back to documentation index](../README.en.md)**
+**[Back to documentation index](../index/README.en.md)**
 
 This index is for users who want to understand Amir's accounting concepts and practical operations without going into programming details.
 
 ## Suggested Start
 
-1. [Accounting basics](../accounting-basics.md)
-2. [What a fiscal year is and how to create one](../fiscal-year.en.md)
+1. [Accounting basics](../accounting/accounting-basics.md)
+2. [What a fiscal year is and how to create one](../accounting/fiscal-year/fiscal-year.en.md)
 3. [Inventory costing and COGS in Amir](inventory-costing.en.md)
 4. [Monthly income and expense forecasting](monthly-income-expense-forecasting.en.md)
 5. [HR management](../hr/README.en.md)
 6. [Attendance guide](attendance/README.en.md)
 7. [Salary and payroll guide](salary/README.en.md)
-8. [Sales returns and purchase returns](../return-sell-return-buy.md)
+8. [Sales returns and purchase returns](../accounting/return-sell-return-buy.md)
 
 ## Product Operations
 
@@ -28,18 +28,18 @@ This index is for users who want to understand Amir's accounting concepts and pr
 
 | File | Topic |
 |---|---|
-| [accounting-basics.md](../accounting-basics.md) | Basic accounting concepts, debit, credit, and accounting documents |
+| [accounting-basics.md](../accounting/accounting-basics.md) | Basic accounting concepts, debit, credit, and accounting documents |
 | [inventory-costing.en.md](inventory-costing.en.md) | COGS, FIFO/LIFO/average methods, and Amir's moving weighted average method |
-| [return-sell-return-buy.md](../return-sell-return-buy.md) | Accounting records for sales returns and purchase returns |
+| [return-sell-return-buy.md](../accounting/return-sell-return-buy.md) | Accounting records for sales returns and purchase returns |
 | [monthly-income-expense-forecasting.en.md](monthly-income-expense-forecasting.en.md) | Forecasts and actual income and expense, variances, and performance ratios |
 
 ## Practical Operations
 
 | File | Topic |
 |---|---|
-| [fiscal-year.en.md](../fiscal-year.en.md) | Fiscal-year definition, when to create one, and important pre-start checks |
-| [FiscalYearExportImport.en.md](../FiscalYearExportImport.en.md) | Backing up, transferring, importing, and exporting fiscal-year data |
-| [INSTALLATION.en.md](../INSTALLATION.en.md) | Installing and running the application |
+| [fiscal-year.en.md](../accounting/fiscal-year/fiscal-year.en.md) | Fiscal-year definition, when to create one, and important pre-start checks |
+| [FiscalYearExportImport.en.md](../accounting/fiscal-year/FiscalYearExportImport.en.md) | Backing up, transferring, importing, and exporting fiscal-year data |
+| [INSTALLATION.en.md](../deployment/INSTALLATION.en.md) | Installing and running the application |
 
 ## Note
 

@@ -3,15 +3,15 @@
 # راهنمای استفاده کنندگان امیر
 
 **[English version](README.en.md)**  
-**[بازگشت به فهرست مستندات](../README.md)**
+**[بازگشت به فهرست مستندات](../index/README.md)**
 
 این فهرست برای کاربرانی است که می‌خواهند مفاهیم حسابداری و عملیات کاربردی امیر را بفهمند، بدون اینکه وارد جزییات برنامه‌نویسی شوند.
 
 ## شروع پیشنهادی
 
 1. [شروع کار، شرکت فعال، میز کار و سال مالی](getting-started-fiscal-year.md)
-2. [مبانی حسابداری](../accounting-basics.md)
-3. [سال مالی چیست و چگونه ساخته می‌شود](../fiscal-year.md)
+2. [مبانی حسابداری](../accounting/accounting-basics.md)
+3. [سال مالی چیست و چگونه ساخته می‌شود](../accounting/fiscal-year/fiscal-year.md)
 4. [کالا، خدمت و سرفصل‌های حسابداری](products-and-services.md)
 5. [انبارها و انتقال کالا](warehouses-and-transfers.md)
 6. [بهای تمام‌شده کالا و روش محاسبه در امیر](inventory-costing.md)
@@ -26,7 +26,7 @@
 15. [راهنمای حضور و غیاب](attendance/README.md)
 16. [راهنمای درخواستهای پرسنلی](personnel-requests.md)
 17. [راهنمای حقوق و دستمزد](salary/README.md)
-18. [برگشت از فروش و برگشت از خرید](../return-sell-return-buy.md)
+18. [برگشت از فروش و برگشت از خرید](../accounting/return-sell-return-buy.md)
 
 ## عملیات برنامه
 
@@ -70,18 +70,18 @@
 
 | فایل | موضوع |
 |---|---|
-| [accounting-basics.md](../accounting-basics.md) | مفاهیم پایه حسابداری، بدهکار، بستانکار و سند حسابداری |
+| [accounting-basics.md](../accounting/accounting-basics.md) | مفاهیم پایه حسابداری، بدهکار، بستانکار و سند حسابداری |
 | [inventory-costing.md](inventory-costing.md) | بهای تمام‌شده کالا |
-| [return-sell-return-buy.md](../return-sell-return-buy.md) | ثبت حسابداری برگشت از فروش و برگشت از خرید |
+| [return-sell-return-buy.md](../accounting/return-sell-return-buy.md) | ثبت حسابداری برگشت از فروش و برگشت از خرید |
 | [monthly-income-expense-forecasting.md](monthly-income-expense-forecasting.md) | پیش‌بینی، درآمد و هزینه واقعی، انحراف و نسبت‌های عملکرد |
 
 ## عملیات کاربردی
 
 | فایل | موضوع |
 |---|---|
-| [fiscal-year.md](../fiscal-year.md) | تعریف سال مالی، زمان ایجاد آن و نکات مهم قبل از شروع |
-| [FiscalYearExportImport.md](../FiscalYearExportImport.md) | پشتیبان‌گیری، انتقال و ورود/خروج داده سال مالی |
-| [INSTALLATION.md](../INSTALLATION.md) | نصب و راه‌اندازی برنامه |
+| [fiscal-year.md](../accounting/fiscal-year/fiscal-year.md) | تعریف سال مالی، زمان ایجاد آن و نکات مهم قبل از شروع |
+| [FiscalYearExportImport.md](../accounting/fiscal-year/FiscalYearExportImport.md) | پشتیبان‌گیری، انتقال و ورود/خروج داده سال مالی |
+| [INSTALLATION.md](../deployment/INSTALLATION.md) | نصب و راه‌اندازی برنامه |
 
 ## نکته
 
