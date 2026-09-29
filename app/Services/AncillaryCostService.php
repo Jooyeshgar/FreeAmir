@@ -478,7 +478,7 @@ class AncillaryCostService
         $query = Invoice::where(function ($query) use ($invoice) {
             $query->where('date', '>', $invoice->date)
                 ->orWhere(function ($query) use ($invoice) {
-                    $query->where('date', $invoice->date)->where('id', '>', $invoice->id);
+                    $query->where('date', $invoice->date)->where('number', '>', $invoice->number);
                 });
         })
             ->whereIn('status', InvoiceStatus::approvedOrSettled())
