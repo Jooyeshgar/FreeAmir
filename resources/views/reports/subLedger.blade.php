@@ -3,7 +3,7 @@
         <span>
             {{ __('Subsidiary Ledger Report') }}
         </span>
-        <x-user-guide-link source="reports/accounting-reports.md" />
+        <x-user-guide-link source="reports/accounting/documents/accounting-reports.md" />
     </div>
     <x-show-message-bags />
 

@@ -6,7 +6,7 @@
         <div class="min-w-48">
             <div class="flex flex-wrap items-center">
                 <h1 class="text-xl font-bold text-base-content">{{ __('Products') }}</h1>
-                <x-user-guide-link source="warehouse/products-and-services.md" />
+                <x-user-guide-link source="warehouse/products/products.md" />
             </div>
             <p class="text-sm text-base-content/50 mt-0.5">{{ __('Manage your products and inventory') }}</p>
         </div>

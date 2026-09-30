@@ -73,7 +73,7 @@
             <div>
                 <div class="flex flex-wrap items-center gap-3">
                     <h1 class="text-2xl font-bold text-base-content min-[1440px]:text-2xl">{{ __('Warehouse Dashboard') }}</h1>
-                    <x-user-guide-link source="warehouse/warehouse-dashboard-reports.md" />
+                    <x-user-guide-link source="warehouse/dashboard/dashboard.md" />
                 </div>
                 <p class="mt-1 text-sm text-base-content/60 min-[1440px]:text-base">
                     {{ __('Inventory, movement, and performance KPIs - :period', ['period' => $periodLabel]) }}

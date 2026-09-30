@@ -208,3 +208,7 @@ After seeding, all users share the password **`password`**. Available accounts:
 ## Database Migration from Older Version
 
 See [Database Migration Guide](https://github.com/Jooyeshgar/FreeAmir/tree/main/script) for migrating from the older SQLite-based version.
+
+## Links from the documentation site to the application
+
+The documentation site's application base URL comes from `app_url` in `docs/_config.yml`. Its default is `https://develop.freeamir.com`. For another deployment, override this value in that deployment's Jekyll configuration and rebuild the documentation site. Guide links such as `/management/companies` and `/invoices/moadian-histories` are built relative to this base URL.

@@ -12,9 +12,9 @@
 1. [ساختار پروژه](project-structure.md)
 2. [راهنمای دیتابیس](database-guide.md)
 3. [راهنمای تست](testing-guide.md)
-4. [مبانی حسابداری](../../accounting/accounting-basics.md)
-5. [سال مالی](../../accounting/fiscal-year/fiscal-year.md)
-6. [خروجی/ورودی سال مالی](../../accounting/fiscal-year/FiscalYearExportImport.md)
+4. [مبانی حسابداری](accounting-basics.md)
+5. [سال مالی](../../management/system/companies/fiscal-year.md)
+6. [خروجی/ورودی سال مالی](FiscalYearExportImport.md)
 
 ## مستندات فنی
 
@@ -29,11 +29,11 @@
 
 | فایل | کاربرد |
 |---|---|
-| [accounting-basics.md](../../accounting/accounting-basics.md) | مفاهیم بدهکار/بستانکار، سند متوازن و مدل ذخیره تراکنش‌ها |
-| [user/inventory-costing.md](../../warehouse/inventory-costing.md) | توضیح بهای تمام‌شده و روش میانگین موزون متحرک |
-| [return-sell-return-buy.md](../../accounting/return-sell-return-buy.md) | ثبت برگشت از فروش و برگشت از خرید |
-| [fiscal-year.md](../../accounting/fiscal-year/fiscal-year.md) | مفهوم سال مالی و ایجاد آن در سیستم |
-| [FiscalYearExportImport.md](../../accounting/fiscal-year/FiscalYearExportImport.md) | دستورهای خروجی و ورودی سال مالی |
+| [accounting-basics.md](accounting-basics.md) | مفاهیم بدهکار/بستانکار، سند متوازن و مدل ذخیره تراکنش‌ها |
+| [user/inventory-costing.md](../../warehouse/products/inventory-costing.md) | توضیح بهای تمام‌شده و روش میانگین موزون متحرک |
+| [return-sell-return-buy.md](../../invoices/sells/return-sell/return-sell-return-buy.md) | ثبت برگشت از فروش و برگشت از خرید |
+| [fiscal-year.md](../../management/system/companies/fiscal-year.md) | مفهوم سال مالی و ایجاد آن در سیستم |
+| [FiscalYearExportImport.md](FiscalYearExportImport.md) | دستورهای خروجی و ورودی سال مالی |
 
 ## قوانین مهم برای تغییر کد
 

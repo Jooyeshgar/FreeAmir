@@ -4,7 +4,7 @@
             <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <div class="flex items-center gap-2">
                     <h2 class="card-title text-2xl">{{ __('Payroll Index') }}</h2>
-                    <x-user-guide-link source="hr/salary/README.md" />
+                    <x-user-guide-link source="hr/payrolls/payrolls.md" />
                 </div>
                 <div class="text-sm text-base-content/70">
                     {{ __('Total records') }}: <span class="font-semibold">{{ $payrolls->total() }}</span>

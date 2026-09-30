@@ -1,5 +1,6 @@
 title: امیر
 description: نرم‌افزار آزاد حسابداری لاراول برای کسب‌وکارهای ایرانی
+app_url: "https://develop.freeamir.com"
 layouts_dir: general/site/layouts
 
 exclude:

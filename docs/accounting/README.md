@@ -1,36 +1,18 @@
-<div dir="rtl">
-
 # راهنمای حسابداری
 
-**[English version](README.en.md)**  
-**[بازگشت به فهرست مستندات](../general/README.md)**
+**[English](README.en.md)** · [فهرست مستندات](../general/README.md)
 
-این بخش راهنماهای منوی حسابداری و مفاهیم پایه موردنیاز برای استفاده از آن‌ها را در کنار هم نگه می‌دارد.
+راهنماها به ترتیب منوی حسابداری آمده‌اند:
 
-## عملیات برنامه
+- [ایجاد سند](create-document/documents.create.md)
+- [فهرست اسناد](document-list/accounting-documents.md)
+- [مدیریت چک](cheque-management/cheques.md)
 
-- [اسناد حسابداری](accounting-documents.md)
-- [سرفصل‌ها](subjects.md)
-- [بانک‌ها](banking/banks.md)
-- [حساب‌های بانکی](banking/bank-accounts.md)
-- [دسته‌چک‌ها](banking/chequebooks.md)
-- [چک‌ها](banking/cheques.md)
-- [چرخه مدیریت چک](cheque-management.md)
+برای شناخت روند کامل چک، [راهنمای چرخهٔ چک](cheque-management/cheque-management.md) را نیز بخوانید. سرفصل‌ها، حساب‌های بانکی، بانک‌ها و دسته‌چک‌ها در [مدیریت ← مالی](../management/README.md#مالی) قرار دارند.
 
-## مسیر پیشنهادی
+## راهنماهای مرتبط
 
-1. [مبانی حسابداری](accounting-basics.md)
-2. [بهای تمام‌شده کالا و روش محاسبه در امیر](../warehouse/inventory-costing.md)
-3. [برگشت از فروش و برگشت از خرید](return-sell-return-buy.md)
-4. [سال مالی](fiscal-year/fiscal-year.md)
-
-## فایل‌های مرتبط
-
-| فایل | موضوع |
-|---|---|
-| [accounting-basics.md](accounting-basics.md) | بدهکار، بستانکار، سند حسابداری و گزارش‌های پایه |
-| [inventory-costing.md](../warehouse/inventory-costing.md) | بهای تمام‌شده، روش‌های FIFO/LIFO/میانگین و روش مورد استفاده امیر |
-| [return-sell-return-buy.md](return-sell-return-buy.md) | ثبت حسابداری برگشت از فروش و برگشت از خرید |
-| [fiscal-year.md](fiscal-year/fiscal-year.md) | مفهوم سال مالی و ایجاد آن در امیر |
-
-</div>
+- [مبانی حسابداری](../general/developer/accounting-basics.md)
+- [بهای تمام‌شدهٔ موجودی](../warehouse/products/inventory-costing.md)
+- [برگشت از فروش](../invoices/sells/return-sell/return-sell.md) و [برگشت از خرید](../invoices/purchases/return-buy/return-buy.md)
+- [سال مالی](../management/system/companies/fiscal-year.md)
