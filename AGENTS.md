@@ -148,3 +148,9 @@ services for data migration and fiscal-year operations.
 - Deployment/runtime environment hooks include `DEPLOY_*`, `APP_LOCALE`, `APP_DIRECTION`, and
   `REPORT_ROW_SIZE` in `.env`.
 - Feature flags.
+
+## Agent workflow configuration
+
+- GitLab host: `vc.jooyeshgar.net`
+- GitLab repository: `JPE/FreeAmir`
+- Default branch: `main`
