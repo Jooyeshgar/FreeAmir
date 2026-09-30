@@ -1,7 +1,7 @@
 # Fiscal Year in Amir
 
 **[نسخه فارسی](fiscal-year.md)**  
-**[Back to documentation index](../../index/README.en.md)**
+**[Back to documentation index](../../general/README.en.md)**
 
 ## What Is a Fiscal Year?
 

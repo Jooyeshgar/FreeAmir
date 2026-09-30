@@ -5,7 +5,7 @@
         <div class="card-body">
             <div class="flex items-center gap-1">
                 <h1 class="card-title">{{ __('Edit Company') }}</h1>
-                <x-user-guide-link source="user/getting-started-fiscal-year.md" />
+                <x-user-guide-link source="management/getting-started-fiscal-year.md" />
             </div>
             <form action="{{ route('companies.update', $company->id) }}" method="POST" enctype="multipart/form-data">
                 @csrf

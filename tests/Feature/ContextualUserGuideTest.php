@@ -13,14 +13,14 @@ class ContextualUserGuideTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const GUIDE_PATH = 'user/getting-started-fiscal-year.html';
+    private const GUIDE_PATH = 'management/getting-started-fiscal-year.html';
 
     public function test_user_guide_component_builds_a_public_html_url_with_accessible_new_tab_attributes(): void
     {
         config(['app.user_guide_url' => 'https://guides.example.test/base/']);
         app()->setLocale('fa');
 
-        $html = Blade::render('<x-user-guide-link source="/user/getting-started-fiscal-year.md" />');
+        $html = Blade::render('<x-user-guide-link source="/management/getting-started-fiscal-year.md" />');
 
         $this->assertStringContainsString('href="https://guides.example.test/base/'.self::GUIDE_PATH.'"', $html);
         $this->assertStringContainsString('target="_blank"', $html);
@@ -32,24 +32,24 @@ class ContextualUserGuideTest extends TestCase
     public function test_financial_report_pages_reference_their_contextual_user_guides(): void
     {
         $guideViews = [
-            'user/accounting-reports.md' => [
+            'reports/accounting-reports.md' => [
                 'reports/documents.blade.php',
                 'reports/journal.blade.php',
                 'reports/ledger.blade.php',
                 'reports/subLedger.blade.php',
                 'reports/trialBalance.blade.php',
             ],
-            'user/company-overview.md' => ['reports/company-overview.blade.php'],
-            'user/cost-income-dashboard.md' => ['reports/cost-income/index.blade.php'],
-            'user/monthly-income-expense-forecasting.md' => ['monthly-budgets/index.blade.php'],
+            'reports/company-overview.md' => ['reports/company-overview.blade.php'],
+            'reports/cost-income-dashboard.md' => ['reports/cost-income/index.blade.php'],
+            'reports/monthly-income-expense-forecasting.md' => ['monthly-budgets/index.blade.php'],
         ];
-        $guideIndex = file_get_contents(base_path('docs/user/README.md'));
 
         foreach ($guideViews as $guideSource => $views) {
             $guideName = basename($guideSource);
+            $guideIndex = file_get_contents(base_path('docs/'.dirname($guideSource).'/README.md'));
 
             $this->assertFileExists(base_path('docs/'.$guideSource));
-            $this->assertStringContainsString('['.$guideName.']('.$guideName.')', $guideIndex);
+            $this->assertStringContainsString(']('.$guideName.')', $guideIndex);
 
             foreach ($views as $view) {
                 $this->assertStringContainsString(
@@ -64,25 +64,25 @@ class ContextualUserGuideTest extends TestCase
     public function test_warehouse_pages_reference_their_split_contextual_user_guides(): void
     {
         $guideViews = [
-            'user/products-and-services.md' => [
+            'warehouse/products-and-services.md' => [
                 'products/index.blade.php',
                 'services/index.blade.php',
                 'productGroups/index.blade.php',
                 'serviceGroups/index.blade.php',
             ],
-            'user/warehouses-and-transfers.md' => [
+            'warehouse/warehouses-and-transfers.md' => [
                 'warehouses/index.blade.php',
                 'warehouses/transfer.blade.php',
             ],
-            'user/warehouse-dashboard-reports.md' => ['warehouse/dashboard.blade.php'],
+            'warehouse/warehouse-dashboard-reports.md' => ['warehouse/dashboard.blade.php'],
         ];
-        $guideIndex = file_get_contents(base_path('docs/user/README.md'));
 
         foreach ($guideViews as $guideSource => $views) {
             $guideName = basename($guideSource);
+            $guideIndex = file_get_contents(base_path('docs/'.dirname($guideSource).'/README.md'));
 
             $this->assertFileExists(base_path('docs/'.$guideSource));
-            $this->assertStringContainsString('['.$guideName.']('.$guideName.')', $guideIndex);
+            $this->assertStringContainsString(']('.$guideName.')', $guideIndex);
 
             foreach ($views as $view) {
                 $this->assertStringContainsString(

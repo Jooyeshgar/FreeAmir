@@ -9,7 +9,7 @@
                         <h2 class="text-2xl font-bold text-gray-800 dark:text-white">
                             {{ __('Year-End Closing Wizard') }}
                         </h2>
-                        <x-user-guide-link source="user/getting-started-fiscal-year.md" />
+                        <x-user-guide-link source="management/getting-started-fiscal-year.md" />
                     </div>
                     <div class="flex flex-wrap gap-2 mt-2">
                         <span class="badge badge-lg badge-warning gap-2">

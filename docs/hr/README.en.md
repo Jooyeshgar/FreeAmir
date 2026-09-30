@@ -1,9 +1,9 @@
 # Human resources management guide
 
 **[نسخه فارسی](README.md)**  
-**[Back to the ordinary user guide](../user/README.en.md)**
+**[Back to the ordinary user guide](../general/README.en.md)**
 
-This section is for HR managers, administrative staff, and support staff. It covers the management side of employee records, organizational structure, and personnel requests. Employees should use the [employee portal guide](../user/employee-portal.md) for their own records and requests.
+This section is for HR managers, administrative staff, and support staff. It covers the management side of employee records, organizational structure, and personnel requests. Employees should use the [employee portal guide](../employee-portal/README.md) for their own records and requests.
 
 ## Guides in this section
 
@@ -18,8 +18,8 @@ The detailed guides are currently available in Persian:
 
 Related English guides:
 
-- [Attendance](../user/attendance/README.en.md)
-- [Salary and payroll](../user/salary/README.en.md)
+- [Attendance](attendance/README.en.md)
+- [Salary and payroll](salary/README.en.md)
 
 ## Access and data scope
 

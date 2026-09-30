@@ -6,7 +6,7 @@
         <div class="min-w-48">
             <div class="flex items-center gap-2">
                 <h1 class="text-xl font-bold text-base-content">{{ __('Documents') }}</h1>
-                <x-user-guide-link source="user/accounting-documents.md" />
+                <x-user-guide-link source="accounting/accounting-documents.md" />
             </div>
             <p class="text-sm text-base-content/50 mt-0.5">{{ __('Manage your accounting documents') }}</p>
         </div>

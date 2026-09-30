@@ -5,7 +5,7 @@
         <div class="card-body">
             <div class="flex items-center gap-2">
                 <h1 class="text-xl font-bold text-base-content">{{ __('Monthly Attendances') }}</h1>
-                <x-user-guide-link source="user/attendance/attendance-log-calculation.md" />
+                <x-user-guide-link source="hr/attendance/attendance-log-calculation.md" />
             </div>
 
             {{-- Filter bar --}}

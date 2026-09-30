@@ -3,7 +3,7 @@
 
     <div class="mb-6 flex items-center gap-1">
         <h1 class="mt-1 text-xl font-black tracking-tight text-base-content sm:text-2xl">{{ __('My Portal') }}</h1>
-        <x-user-guide-link source="user/employee-portal.md" />
+        <x-user-guide-link source="employee-portal/README.md" />
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">

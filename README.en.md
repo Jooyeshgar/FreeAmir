@@ -49,7 +49,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-> The full installation guide is at [docs/deployment/INSTALLATION.en.md](docs/deployment/INSTALLATION.en.md).
+> The full installation guide is at [docs/general/deployment/INSTALLATION.en.md](docs/general/deployment/INSTALLATION.en.md).
 
 ### Default login credentials
 
@@ -74,7 +74,7 @@ sail artisan test
 sail npm run dev
 ```
 
-Before changing accounting logic, read the [programmer guide](docs/developer/README.en.md). Changes that affect financial calculations must include tests.
+Before changing accounting logic, read the [programmer guide](docs/general/developer/README.en.md). Changes that affect financial calculations must include tests.
 
 ---
 
@@ -82,17 +82,17 @@ Before changing accounting logic, read the [programmer guide](docs/developer/REA
 
 | Section | Persian | English |
 |---|---|---|
-| Features | [features.md](docs/product/features.md) | [features.en.md](docs/product/features.en.md) |
-| Comparison | [comparison.md](docs/product/comparison.md) | [comparison.en.md](docs/product/comparison.en.md) |
-| FAQ | [faq.md](docs/product/faq.md) | [faq.en.md](docs/product/faq.en.md) |
-| Roadmap | [roadmap.md](docs/product/roadmap.md) | [roadmap.en.md](docs/product/roadmap.en.md) |
-| Screenshots | [screenshots.md](docs/product/screenshots.md) | [screenshots.en.md](docs/product/screenshots.en.md) |
-| Documentation index | [docs/index/README.md](docs/index/README.md) | [docs/index/README.en.md](docs/index/README.en.md) |
-| Installation guide | [docs/deployment/INSTALLATION.md](docs/deployment/INSTALLATION.md) | [docs/deployment/INSTALLATION.en.md](docs/deployment/INSTALLATION.en.md) |
-| User guide | [docs/user/README.md](docs/user/README.md) | [docs/user/README.en.md](docs/user/README.en.md) |
+| Features | [features.md](docs/general/product/features.md) | [features.en.md](docs/general/product/features.en.md) |
+| Comparison | [comparison.md](docs/general/product/comparison.md) | [comparison.en.md](docs/general/product/comparison.en.md) |
+| FAQ | [faq.md](docs/general/product/faq.md) | [faq.en.md](docs/general/product/faq.en.md) |
+| Roadmap | [roadmap.md](docs/general/product/roadmap.md) | [roadmap.en.md](docs/general/product/roadmap.en.md) |
+| Screenshots | [screenshots.md](docs/general/product/screenshots.md) | [screenshots.en.md](docs/general/product/screenshots.en.md) |
+| Documentation index | [docs/general/README.md](docs/general/README.md) | [docs/general/README.en.md](docs/general/README.en.md) |
+| Installation guide | [docs/general/deployment/INSTALLATION.md](docs/general/deployment/INSTALLATION.md) | [docs/general/deployment/INSTALLATION.en.md](docs/general/deployment/INSTALLATION.en.md) |
+| User guide | [docs/general/README.md](docs/general/README.md) | [docs/general/README.en.md](docs/general/README.en.md) |
 | HR management | [docs/hr/README.md](docs/hr/README.md) | [docs/hr/README.en.md](docs/hr/README.en.md) |
 | Accounting concepts | [docs/accounting/README.md](docs/accounting/README.md) | [docs/accounting/README.en.md](docs/accounting/README.en.md) |
-| Programmer guide | [docs/developer/README.md](docs/developer/README.md) | [docs/developer/README.en.md](docs/developer/README.en.md) |
+| Programmer guide | [docs/general/developer/README.md](docs/general/developer/README.md) | [docs/general/developer/README.en.md](docs/general/developer/README.en.md) |
 
 ---
 
@@ -135,7 +135,7 @@ Yes. Amir is released under the GPL-3 license with no license fees or subscripti
 Yes. Amir is designed for self-hosted deployment. Your data stays fully under your control.
 
 **Does it support Moadian?**
-Yes. Amir supports the Moadian system. Each company can configure its own certificate and private key. [Moadian setup guide](docs/compliance/moadian.en.md)
+Yes. Amir supports the Moadian system. Each company can configure its own certificate and private key. [Moadian setup guide](docs/invoices/moadian.en.md)
 
 **Does it support multiple companies?**
 Yes. Amir supports multiple companies with independent fiscal years.
