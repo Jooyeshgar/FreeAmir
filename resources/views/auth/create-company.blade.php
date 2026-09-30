@@ -8,7 +8,7 @@
                     @csrf
                     <div class="flex items-center justify-center gap-1">
                         <h1 class="font-bold text-center">{{ __('Create your company') }}</h1>
-                        <x-user-guide-link source="user/getting-started-fiscal-year.md" />
+                        <x-user-guide-link source="management/getting-started-fiscal-year.md" />
                     </div>
                     <p class="text-sm mt-2">{{ __('Your default accounting subjects will be created automatically.') }}</p>
                     <x-show-message-bags />

@@ -5,7 +5,7 @@
         <div class="min-w-48">
             <div class="flex flex-wrap items-center">
                 <h1 class="text-xl font-bold text-base-content">{{ __('Warehouses') }}</h1>
-                <x-user-guide-link source="user/warehouses-and-transfers.md" />
+                <x-user-guide-link source="warehouse/warehouses-and-transfers.md" />
             </div>
             <p class="text-sm text-base-content/50 mt-0.5">{{ __('Manage your warehouses and stock locations') }}</p>
         </div>

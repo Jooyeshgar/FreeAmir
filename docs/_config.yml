@@ -1,9 +1,10 @@
 title: امیر
 description: نرم‌افزار آزاد حسابداری لاراول برای کسب‌وکارهای ایرانی
+layouts_dir: general/site/layouts
 
 exclude:
-  - README.md
-  - README.en.md
+  - general/README.md
+  - general/README.en.md
 
 kramdown:
   parse_block_html: true

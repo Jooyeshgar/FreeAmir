@@ -4,7 +4,7 @@
     <main class="mt-6 space-y-4">
         <div class="flex items-center gap-2">
             <h3 class="text-lg font-bold">{{ __('Company overview') }}</h3>
-            <x-user-guide-link source="user/company-overview.md" />
+            <x-user-guide-link source="reports/company-overview.md" />
         </div>
 
         @include('reports.company-overview.database-actions')
