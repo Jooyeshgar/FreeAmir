@@ -2,7 +2,7 @@
 
 # Customers and Customer Relationships
 
-**[Back to the documentation index](../general/README.en.md)**
+**[Back to the documentation index](../README.en.md)**
 
 This is the starting point for the Customers guides. Each guide covers an actual **Customers** menu section so an accountant can find the relevant workflow.
 

@@ -91,11 +91,11 @@ Vite manages JavaScript and CSS assets.
 
 ### `web.php`
 
-`routes/web.php` defines web routes. The original guide includes a long route snapshot: login, logout and locale switching; password recovery; feature-gated registration and verification; about and company creation; management dashboard, activity logs, settings, users, roles, and permissions; and the remaining application modules. Those routes attach authentication, feature, and permission middleware as appropriate. Because routes change, consult the current [`routes/web.php`](../../../routes/web.php) for exact URLs, names, controllers, and middleware. The menu guide hierarchy is derived from the application menu, while route names identify individual destinations.
+`routes/web.php` defines web routes. The original guide includes a long route snapshot: login, logout and locale switching; password recovery; feature-gated registration and verification; about and company creation; management dashboard, activity logs, settings, users, roles, and permissions; and the remaining application modules. Those routes attach authentication, feature, and permission middleware as appropriate. Because routes change, consult the current [`routes/web.php`](../../routes/web.php) for exact URLs, names, controllers, and middleware. The menu guide hierarchy is derived from the application menu, while route names identify individual destinations.
 
 ### `api.php`
 
-The original guide illustrates Sanctum-protected company and company-scoped API routes for attendance logs, employees, documents, and document attachments. They use `auth:sanctum`, `api-company`, and specific `check-permission` rules. Consult the current [`routes/api.php`](../../../routes/api.php) before adding routes to a group. The older note saying this file contains only Laravel's default sample conflicts with its own example and should not be used as a current inventory.
+The original guide illustrates Sanctum-protected company and company-scoped API routes for attendance logs, employees, documents, and document attachments. They use `auth:sanctum`, `api-company`, and specific `check-permission` rules. Consult the current [`routes/api.php`](../../routes/api.php) before adding routes to a group. The older note saying this file contains only Laravel's default sample conflicts with its own example and should not be used as a current inventory.
 
 ## 🧪 Tests (`tests/`)
 

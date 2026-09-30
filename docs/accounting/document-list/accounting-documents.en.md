@@ -8,7 +8,7 @@ This guide helps accountants find, review, confirm, correct, copy, import/export
 
 - Check the active fiscal year.
 - Creation, editing, deletion, confirmation, import/export, and transfer each require their own permission. A missing button may indicate insufficient access.
-- If debits and credits are unfamiliar, read [Accounting Basics](../../general/developer/accounting-basics.en.md).
+- If debits and credits are unfamiliar, read [Accounting Basics](../../developer/accounting-basics.en.md).
 
 ## Manual versus automatic/linked documents
 

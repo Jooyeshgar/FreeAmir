@@ -66,7 +66,7 @@ Full support for Iranian tax requirements and the Moadian system.
 - Full Moadian system integration
 - Each company has its own certificate and private key
 - Tax reports
-- [Moadian setup guide](../../invoices/sells/moadian-histories/how-to-use-moadian.en.md)
+- [Moadian setup guide](../invoices/sells/moadian-histories/how-to-use-moadian.en.md)
 
 
 ## Administration

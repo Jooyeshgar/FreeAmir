@@ -13,7 +13,7 @@
 2. [راهنمای دیتابیس](database-guide.md)
 3. [راهنمای تست](testing-guide.md)
 4. [مبانی حسابداری](accounting-basics.md)
-5. [سال مالی](../../management/system/companies/fiscal-year.md)
+5. [سال مالی](../management/system/companies/fiscal-year.md)
 6. [خروجی/ورودی سال مالی](FiscalYearExportImport.md)
 
 ## مستندات فنی
@@ -23,16 +23,16 @@
 | [project-structure.md](project-structure.md) | معماری Laravel، پوشه‌ها و الگوی کلی کد |
 | [database-guide.md](database-guide.md) | ساختار جدول‌ها، روابط و نکات کار با دیتابیس |
 | [testing-guide.md](testing-guide.md) | اجرای تست‌ها و نوشتن تست‌های Feature و Unit |
-| [../script/README.md](../../../script/README.md) | ابزارها و اسکریپت‌های مهاجرت داده |
+| [../script/README.md](../../script/README.md) | ابزارها و اسکریپت‌های مهاجرت داده |
 
 ## مستندات دامنه حسابداری برای توسعه
 
 | فایل | کاربرد |
 |---|---|
 | [accounting-basics.md](accounting-basics.md) | مفاهیم بدهکار/بستانکار، سند متوازن و مدل ذخیره تراکنش‌ها |
-| [user/inventory-costing.md](../../warehouse/products/inventory-costing.md) | توضیح بهای تمام‌شده و روش میانگین موزون متحرک |
-| [return-sell-return-buy.md](../../invoices/sells/return-sell/return-sell-return-buy.md) | ثبت برگشت از فروش و برگشت از خرید |
-| [fiscal-year.md](../../management/system/companies/fiscal-year.md) | مفهوم سال مالی و ایجاد آن در سیستم |
+| [user/inventory-costing.md](../warehouse/products/inventory-costing.md) | توضیح بهای تمام‌شده و روش میانگین موزون متحرک |
+| [return-sell-return-buy.md](../invoices/sells/return-sell/return-sell-return-buy.md) | ثبت برگشت از فروش و برگشت از خرید |
+| [fiscal-year.md](../management/system/companies/fiscal-year.md) | مفهوم سال مالی و ایجاد آن در سیستم |
 | [FiscalYearExportImport.md](FiscalYearExportImport.md) | دستورهای خروجی و ورودی سال مالی |
 
 ## قوانین مهم برای تغییر کد

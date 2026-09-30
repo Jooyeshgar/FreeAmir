@@ -66,7 +66,7 @@ description: "فهرست کامل قابلیت‌های امیر، نرم‌اف
 - اتصال کامل به سامانه مودیان
 - هر شرکت گواهی و کلید خصوصی مختص خود را دارد
 - گزارش‌های مالیاتی
-- [راهنمای سامانه مودیان](../../invoices/sells/moadian-histories/how-to-use-moadian.md)
+- [راهنمای سامانه مودیان](../invoices/sells/moadian-histories/how-to-use-moadian.md)
 
 
 ## مدیریت سیستم

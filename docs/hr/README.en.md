@@ -1,7 +1,7 @@
 # Human resources management guide
 
 **[نسخه فارسی](README.md)**  
-**[Back to the ordinary user guide](../general/README.en.md)**
+**[Back to the ordinary user guide](../README.en.md)**
 
 This section is for HR managers, administrative staff, and support staff. It covers the management side of employee records, organizational structure, and personnel requests. Employees should use the [employee portal guide](../employee-portal/README.en.md) for their own records and requests.
 

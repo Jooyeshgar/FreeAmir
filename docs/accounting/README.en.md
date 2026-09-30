@@ -1,6 +1,6 @@
 # Accounting guide
 
-**[فارسی](README.md)** · [Documentation index](../general/README.en.md)
+**[فارسی](README.md)** · [Documentation index](../README.en.md)
 
 Guides follow the Accounting menu order:
 
@@ -12,7 +12,7 @@ For the full lifecycle, see the [cheque workflow guide](cheque-management/cheque
 
 ## Related guides
 
-- [Accounting basics](../general/developer/accounting-basics.en.md)
+- [Accounting basics](../developer/accounting-basics.en.md)
 - [Inventory costing](../warehouse/products/inventory-costing.en.md)
 - [Sales returns](../invoices/sells/return-sell/return-sell.en.md) and [purchase returns](../invoices/purchases/return-buy/return-buy.en.md)
 - [Fiscal years](../management/system/companies/fiscal-year.en.md)

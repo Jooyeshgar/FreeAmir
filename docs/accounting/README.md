@@ -1,6 +1,6 @@
 # راهنمای حسابداری
 
-**[English](README.en.md)** · [فهرست مستندات](../general/README.md)
+**[English](README.en.md)** · [فهرست مستندات](../README.md)
 
 راهنماها به ترتیب منوی حسابداری آمده‌اند:
 
@@ -12,7 +12,7 @@
 
 ## راهنماهای مرتبط
 
-- [مبانی حسابداری](../general/developer/accounting-basics.md)
+- [مبانی حسابداری](../developer/accounting-basics.md)
 - [بهای تمام‌شدهٔ موجودی](../warehouse/products/inventory-costing.md)
 - [برگشت از فروش](../invoices/sells/return-sell/return-sell.md) و [برگشت از خرید](../invoices/purchases/return-buy/return-buy.md)
 - [سال مالی](../management/system/companies/fiscal-year.md)
