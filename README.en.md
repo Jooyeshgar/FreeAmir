@@ -135,7 +135,7 @@ Yes. Amir is released under the GPL-3 license with no license fees or subscripti
 Yes. Amir is designed for self-hosted deployment. Your data stays fully under your control.
 
 **Does it support Moadian?**
-Yes. Amir supports the Moadian system. Each company can configure its own certificate and private key. [Moadian setup guide](docs/invoices/moadian.en.md)
+Yes. Amir supports the Moadian system. Each company can configure its own certificate and private key. [Moadian setup guide](docs/invoices/sells/moadian-histories/how-to-use-moadian.en.md)
 
 **Does it support multiple companies?**
 Yes. Amir supports multiple companies with independent fiscal years.

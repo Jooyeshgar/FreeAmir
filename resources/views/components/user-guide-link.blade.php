@@ -1,7 +1,8 @@
 @props(['source'])
 
 @php
-    $publicPath = preg_replace('/\.md$/i', '.html', ltrim($source, '/'));
+    $localizedSource = app()->getLocale() === 'en' ? str_replace('.md', '.en.md', ltrim($source, '/')) : ltrim($source, '/');
+    $publicPath = preg_replace('/\.md$/i', '.html', $localizedSource);
     $guideUrl = rtrim((string) config('app.user_guide_url'), '/').'/'.$publicPath;
 @endphp
 

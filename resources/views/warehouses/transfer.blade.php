@@ -3,7 +3,7 @@
         <form method="POST" action="{{ route('warehouses.transfer.store') }}">@csrf<div class="card-body gap-5 p-4 sm:p-6">
                 <div class="flex flex-wrap items-center">
                     <h1 class="card-title text-xl">{{ __('Transfer Product') }}</h1>
-                    <x-user-guide-link source="warehouse/warehouses-and-transfers.md" />
+                    <x-user-guide-link source="warehouse/warehouses/warehouses.md" />
                 </div>
                 <x-show-message-bags />
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">

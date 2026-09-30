@@ -1,9 +1,12 @@
 # راهنمای انبار
 
-این بخش با منوی «انبار» در برنامه هماهنگ است.
+راهنماها به ترتیب منوی «انبار» آمده‌اند.
 
-- [کالا و خدمت](products-and-services.md)
-- [انبارها، موجودی و انتقال کالا](warehouses-and-transfers.md)
-- [میزکار انبار و گزارش کالا](warehouse-dashboard-reports.md)
-- [بهای تمام‌شده کالا](inventory-costing.md)
+- [میزکار انبار](dashboard/dashboard.md)
+- [انبارها و انتقال کالا](warehouses/warehouses.md)
+- [کالاها](products/products.md)
+- [گروه‌های کالا](product-groups/product-groups.index.md)
+- [خدمات](services/services.index.md)
+- [گروه‌های خدمت](service-groups/service-groups.index.md)
 
+راهنمای تکمیلی: [بهای تمام‌شده و میانگین موزون](products/inventory-costing.md).

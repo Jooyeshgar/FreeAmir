@@ -10,32 +10,34 @@
 
 | نیاز شما | راهنما |
 |---|---|
-| فروش کالا یا خدمت | [فاکتور فروش](sales-invoice.md) |
-| خرید کالا و ورود به انبار | [فاکتور خرید کالا](purchase-invoice.md) |
-| خرید خدمت | [فاکتور خرید خدمت](service-purchase-invoice.md) |
-| برگشت تمام یا بخشی از فروش/خرید | [برگشت از فروش و برگشت از خرید](return-invoice.md) |
-| خنثی‌کردن کامل فروش تأیید‌شده | [ابطال فاکتور فروش](void-invoice.md) |
-| ثبت دریافت/پرداخت و سند آن | [پرداخت فاکتور](invoice-payments.md) |
-| حمل، بیمه و هزینهٔ مرتبط با خرید | [هزینهٔ جانبی خرید](ancillary-cost.md) |
-| راه‌اندازی ارسال مالیاتی | [سامانه مودیان](moadian.md) |
-| انتقال فاکتور یا عملیات پایان سال | [عملیات سال مالی](../management/fiscal-year-operations.md) |
-| کنترل موجودی و بهای کالا | [بهای تمام‌شده کالا و روش محاسبه در امیر](../warehouse/inventory-costing.md) |
+| فروش کالا یا خدمت | [فاکتور فروش](sells/sell/sell.md) |
+| خرید کالا و ورود به انبار | [فاکتور خرید کالا](purchases/buy/buy.md) |
+| خرید خدمت | [فاکتور خرید خدمت](purchases/buy-service/buy-service.md) |
+| برگشت تمام یا بخشی از فروش/خرید | [برگشت از فروش](sells/return-sell/return-sell.md) و [برگشت از خرید](purchases/return-buy/return-buy.md) |
+| خنثی‌کردن کامل فروش تأیید‌شده | [ابطال فاکتور فروش](sells/void/void.md) |
+| ثبت دریافت/پرداخت و سند آن | [پرداخت فاکتور](sells/sell/invoice-payments.md) |
+| حمل، بیمه و هزینهٔ مرتبط با خرید | [هزینهٔ جانبی خرید](purchases/ancillary-costs/ancillary-costs.md) |
+| راه‌اندازی ارسال مالیاتی | [سامانه مودیان](sells/moadian-histories/how-to-use-moadian.md) |
+| انتقال فاکتور یا عملیات پایان سال | [عملیات سال مالی](../management/system/companies/fiscal-year-operations.md) |
+| کنترل موجودی و بهای کالا | [بهای تمام‌شده کالا و روش محاسبه در امیر](../warehouse/products/inventory-costing.md) |
 
-## مسیر‌های منوی فاکتور‌ها
+## راهنماها به ترتیب منوی فاکتورها
 
-| مسیر | کاربرد |
-|---|---|
-| داشبورد | خلاصهٔ وضعیت فاکتور‌ها |
-| فروش | ثبت فروش کالا یا خدمت |
-| برگشت از فروش | برگشت اقلام فروش |
-| فاکتور باطل‌شده | مشاهدهٔ فاکتور‌های ابطال |
-| سوابق مؤدیان | مشاهدهٔ نتیجهٔ ارسال به سامانهٔ مؤدیان |
-| خرید | ثبت خرید کالا |
-| خرید خدمات | ثبت خرید خدمت |
-| برگشت از خرید | برگشت کالا یا خدمت خریداری‌شده |
-| هزینه‌های جانبی | ثبت هزینهٔ مرتبط با خرید |
-| فاکتور‌های غیرفعال | پیگیری فاکتور‌های تأیید‌شدهٔ غیرفعال |
-| افزودن مشتری | تعریف سریع طرف حساب |
+1. [میزکار فاکتورها](dashboard/dashboard.md)
+2. فروش:
+   - [فهرست فروش](sells/sell/sell.md)
+   - [فهرست برگشت از فروش](sells/return-sell/return-sell.md)
+   - [فاکتورهای فروش ابطال‌شده](sells/void/void.md)
+   - [سوابق سامانه مودیان](sells/moadian-histories/moadian-histories.md) و [روش استفاده](sells/moadian-histories/how-to-use-moadian.md)
+3. خرید:
+   - [فهرست خرید کالا](purchases/buy/buy.md)
+   - [خرید خدمت](purchases/buy-service/buy-service.md)
+   - [فهرست برگشت از خرید](purchases/return-buy/return-buy.md)
+   - [برگشت از خرید خدمت](purchases/service-buy-return/service-buy-return.md)
+   - [هزینه‌های جانبی](purchases/ancillary-costs/ancillary-costs.md)
+4. [موجودی ابتدای دوره](beginning-inventory/beginning-inventory.md)
+5. [فعال‌سازی فاکتورهای تأییدشده غیرفعال](inactive/inactive.md)
+6. [افزودن مشتری](../customers/customers/customers.md) — همان راهنمای مشتریان؛ یک مسیر راهنمای تکراری ایجاد نشده است.
 
 ## پیش‌نیاز‌ها
 

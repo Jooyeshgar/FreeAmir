@@ -2,6 +2,7 @@
     <div class="card bg-base-100">
         <div class="card-body">
             <h2 class="card-title">
+                <x-user-guide-link source="invoices/sells/moadian-histories/how-to-use-moadian.md" />
                 <a href="{{ route('invoices.show', $invoice) }}" class="link-hover">
                     {{ __('Invoice') . ' ' . $invoice->invoice_type->label() . ' #' . formatDocumentNumber($invoice->number ?? $invoice->id) }}
                 </a>

@@ -1,5 +1,6 @@
 <x-platform-layout :title="__('Users')">
     <x-show-message-bags />
+    <x-user-guide-link source="management/system/users/users.md" />
 
     <div class="mb-6 px-2 flex flex-col justify-between gap-4 sm:flex-row sm:items-end mt-2">
         <div>

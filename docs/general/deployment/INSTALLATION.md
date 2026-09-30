@@ -212,3 +212,7 @@ php artisan serve
 برای مهاجرت از نسخه قدیمی مبتنی بر SQLite، به [راهنمای مهاجرت پایگاه داده](https://github.com/Jooyeshgar/FreeAmir/tree/main/script) مراجعه کنید.
 
 </div>
+
+## پیوندهای مستندات به برنامه
+
+نشانی پایهٔ برنامه در سایت مستندات از مقدار `app_url` در `docs/_config.yml` گرفته می‌شود و مقدار پیش‌فرض آن `https://develop.freeamir.com` است. برای استقرار دیگر، این مقدار را در پیکربندی Jekyll همان استقرار بازنویسی کنید و سایت مستندات را دوباره بسازید. مسیرهای پیوند مانند `/management/companies` و `/invoices/moadian-histories` نسبت به همین نشانی ساخته می‌شوند.

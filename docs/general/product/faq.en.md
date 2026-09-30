@@ -18,7 +18,7 @@ Yes. Amir is designed for self-hosted deployment. You can set it up with Docker,
 
 ## Does it support Moadian?
 
-Yes. Amir supports the Moadian system. Each company can configure its own certificate and private key. See the [Moadian setup guide](../../invoices/moadian.en.md) for instructions.
+Yes. Amir supports the Moadian system. Each company can configure its own certificate and private key. See the [Moadian setup guide](../../invoices/sells/moadian-histories/how-to-use-moadian.en.md) for instructions.
 
 
 ## Does it support multiple companies?

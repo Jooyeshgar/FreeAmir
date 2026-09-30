@@ -3,7 +3,7 @@
         <span>
             {{ __('General Journal Report') }}
         </span>
-        <x-user-guide-link source="reports/accounting-reports.md" />
+        <x-user-guide-link source="reports/accounting/documents/accounting-reports.md" />
     </div>
 
     <x-show-message-bags />
