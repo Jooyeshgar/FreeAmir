@@ -86,26 +86,26 @@
                     <div class="col-span-2 md:col-span-1">
                         <x-input name="currency" id="currency" title="{{ __('Currency') }}" :value="old('currency', $company->currency ?? '')" />
                     </div>
-                    <div class="col-span-2 md:col-span-1">
-                        <x-input name="moadian_username" id="moadian_username" title="{{ __('Moadian Username') }}" :value="old('moadian_username', '')" />
-                        <x-user-guide-link source="invoices/sells/moadian-histories/how-to-use-moadian.md" />
-                    </div>
-                    <div class="col-span-2 md:col-span-1">
-                        <x-input name="tax_id" id="tax_id" title="{{ __('Tax ID') }}" :value="old('tax_id', '')" />
-                        <x-user-guide-link source="invoices/sells/moadian-histories/how-to-use-moadian.md" />
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        <div class="col-span-2 md:col-span-1">
+                    <fieldset class="col-span-2 grid grid-cols-1 gap-6 border p-5 sm:grid-cols-2">
+                        <legend>
+                            <span class="inline-flex items-center gap-1">
+                                {{ __('Moadian') }}
+                                <x-user-guide-link source="invoices/sells/moadian-histories/how-to-use-moadian.md" />
+                            </span>
+                        </legend>
+                        <div>
+                            <x-input name="moadian_username" id="moadian_username" title="{{ __('Moadian Username') }}" :value="old('moadian_username', '')" />
+                        </div>
+                        <div>
+                            <x-input name="tax_id" id="tax_id" title="{{ __('Tax ID') }}" :value="old('tax_id', '')" />
+                        </div>
+                        <div>
                             <x-file-input name="certificate" title="{{ __('SSL Certificate') }}" accept=".crt,.cer" />
-                            <x-user-guide-link source="invoices/sells/moadian-histories/how-to-use-moadian.md" />
                         </div>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        <div class="col-span-2 md:col-span-1">
+                        <div>
                             <x-file-input name="private_key" title="{{ __('Private Key') }}" accept=".pem" />
-                            <x-user-guide-link source="invoices/sells/moadian-histories/how-to-use-moadian.md" />
                         </div>
-                    </div>
+                    </fieldset>
                     <div class="col-span-2">
                         <div class="col-span-2">
                             <x-textarea name="address" id="address" title="{{ __('Address') }}" :value="old('address', $company->address ?? '')" />
