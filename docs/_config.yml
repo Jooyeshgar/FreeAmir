@@ -3,10 +3,6 @@ description: نرم‌افزار آزاد حسابداری لاراول برای
 app_url: "https://freeamir.ir"
 layouts_dir: general/site/layouts
 
-exclude:
-  - general/README.md
-  - general/README.en.md
-
 kramdown:
   parse_block_html: true
 
