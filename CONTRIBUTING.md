@@ -8,10 +8,10 @@
 
 قبل از شروع به توسعه، حتماً مستندات زیر را مطالعه کنید:
 
-- **[مبانی حسابداری برای برنامه‌نویسان](docs/accounting-basics.md)** - ضروری برای درک منطق کسب‌وکار
-- **[ساختار پروژه](docs/project-structure.md)** - آشنایی با معماری کد
-- **[راهنمای دیتابیس](docs/database-guide.md)** - درک ساختار پایگاه داده
-- **[راهنمای تست](docs/testing-guide.md)** - نحوه نوشتن و اجرای تست‌ها
+- **[مبانی حسابداری برای برنامه‌نویسان](docs/accounting/accounting-basics.md)** - ضروری برای درک منطق کسب‌وکار
+- **[ساختار پروژه](docs/general/developer/project-structure.md)** - آشنایی با معماری کد
+- **[راهنمای دیتابیس](docs/general/developer/database-guide.md)** - درک ساختار پایگاه داده
+- **[راهنمای تست](docs/general/developer/testing-guide.md)** - نحوه نوشتن و اجرای تست‌ها
 
 ### 2. راه‌اندازی محیط توسعه
 

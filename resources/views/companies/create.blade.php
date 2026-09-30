@@ -9,7 +9,7 @@
         <div class="card-body">
             <div class="flex items-center gap-1">
                 <h1 class="card-title">{{ __('Add Company') }}</h1>
-                <x-user-guide-link source="user/getting-started-fiscal-year.md" />
+                <x-user-guide-link source="management/system/companies/getting-started-fiscal-year.md" />
             </div>
             <form action="{{ route('companies.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
@@ -88,18 +88,22 @@
                     </div>
                     <div class="col-span-2 md:col-span-1">
                         <x-input name="moadian_username" id="moadian_username" title="{{ __('Moadian Username') }}" :value="old('moadian_username', '')" />
+                        <x-user-guide-link source="invoices/sells/moadian-histories/how-to-use-moadian.md" />
                     </div>
                     <div class="col-span-2 md:col-span-1">
                         <x-input name="tax_id" id="tax_id" title="{{ __('Tax ID') }}" :value="old('tax_id', '')" />
+                        <x-user-guide-link source="invoices/sells/moadian-histories/how-to-use-moadian.md" />
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <div class="col-span-2 md:col-span-1">
                             <x-file-input name="certificate" title="{{ __('SSL Certificate') }}" accept=".crt,.cer" />
+                            <x-user-guide-link source="invoices/sells/moadian-histories/how-to-use-moadian.md" />
                         </div>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         <div class="col-span-2 md:col-span-1">
                             <x-file-input name="private_key" title="{{ __('Private Key') }}" accept=".pem" />
+                            <x-user-guide-link source="invoices/sells/moadian-histories/how-to-use-moadian.md" />
                         </div>
                     </div>
                     <div class="col-span-2">

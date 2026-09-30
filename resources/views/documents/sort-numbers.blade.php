@@ -1,5 +1,6 @@
 <x-app-layout :title="__('Sort Documents Number')">
     <x-show-message-bags />
+    <x-user-guide-link source="management/finance/sort-numbers/sort-numbers.md" />
 
     <div class="card bg-base-100 shadow-xl" x-data="documentNumberSort({
         startUrl: @js(route('documents.sort-numbers.start')),

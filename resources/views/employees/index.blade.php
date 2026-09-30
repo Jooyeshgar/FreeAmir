@@ -6,7 +6,7 @@
         <div class="min-w-48">
             <div class="flex items-center gap-2">
                 <h1 class="text-xl font-bold text-base-content">{{ __('Employees') }}</h1>
-                <x-user-guide-link source="hr/employees.md" />
+                <x-user-guide-link source="hr/employees/employees.md" />
             </div>
             <p class="text-sm text-base-content/50 mt-0.5">{{ __('Manage your organization\'s team members') }}</p>
         </div>
