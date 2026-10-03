@@ -8,7 +8,7 @@ This guide explains the account hierarchy, creating and editing accounts, and tr
 
 - Confirm the active fiscal year. Accounts are displayed within its scope.
 - Open **Management → Finance → Accounts**. Menu visibility and account operations depend on the user's permissions.
-- For debits and credits, read [Accounting Basics](../../../developer/accounting-basics.en.md). For generated documents, see [Accounting Documents](../../../accounting/document-list/accounting-documents.en.md).
+- For debits and credits, read [Accounting Basics](../../../general/developer/accounting-basics.en.md). For generated documents, see [Accounting Documents](../../../accounting/document-list/accounting-documents.en.md).
 
 ## Account structure in FreeAmir
 
@@ -87,7 +87,7 @@ Only source-account transactions dated from the beginning of the active fiscal y
 - [Banks](../banks/banks.en.md)
 - [Bank accounts](../bank-accounts/bank-accounts.en.md)
 - [Accounting documents](../../../accounting/document-list/accounting-documents.en.md)
-- [Accounting basics](../../../developer/accounting-basics.en.md)
+- [Accounting basics](../../../general/developer/accounting-basics.en.md)
 - [Accounting reports](../../../accounting/document-list/accounting-documents.en.md#find-a-document-and-review-transactions)
 
 </div>

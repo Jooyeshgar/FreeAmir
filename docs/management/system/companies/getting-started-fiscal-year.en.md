@@ -256,7 +256,7 @@ Opening transactions are built by matching source and destination account codes.
 ## Related guides
 
 - [Fiscal-year concepts and general considerations](fiscal-year.en.md)
-- [Developer guide: fiscal-year export and import](../../../developer/FiscalYearExportImport.en.md)
-- [Accounting basics and debit/credit checks](../../../developer/accounting-basics.en.md)
+- [Developer guide: fiscal-year export and import](../../../general/developer/FiscalYearExportImport.en.md)
+- [Accounting basics and debit/credit checks](../../../general/developer/accounting-basics.en.md)
 
 </div>

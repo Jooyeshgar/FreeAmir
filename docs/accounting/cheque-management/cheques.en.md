@@ -10,7 +10,7 @@ This guide covers receivable and payable cheques, their lifecycle events, and re
 - Use **Accounting → Cheque Management**. Menu visibility and operations depend on permissions.
 - Configure valid receivable-notes, notes-in-collection, and payable-notes subjects for the active fiscal year. Counterparties and bank accounts also need accounting subjects.
 - For a payable cheque, prepare a [bank account](../../management/finance/bank-accounts/bank-accounts.en.md) and optionally a [chequebook](../../management/finance/chequebooks/chequebooks.en.md).
-- See [Accounting Basics](../../developer/accounting-basics.en.md) for debits/credits and [Accounting Documents](../document-list/accounting-documents.en.md) to inspect generated documents.
+- See [Accounting Basics](../../general/developer/accounting-basics.en.md) for debits/credits and [Accounting Documents](../document-list/accounting-documents.en.md) to inspect generated documents.
 
 ## Record a cheque
 

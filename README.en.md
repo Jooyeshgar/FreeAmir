@@ -49,7 +49,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-> The full installation guide is at [docs/deployment/INSTALLATION.en.md](docs/deployment/INSTALLATION.en.md).
+> The full installation guide is at [docs/general/deployment/INSTALLATION.en.md](docs/general/deployment/INSTALLATION.en.md).
 
 ### Default login credentials
 
@@ -74,7 +74,7 @@ sail artisan test
 sail npm run dev
 ```
 
-Before changing accounting logic, read the [programmer guide](docs/developer/README.en.md). Changes that affect financial calculations must include tests.
+Before changing accounting logic, read the [programmer guide](docs/general/developer/README.en.md). Changes that affect financial calculations must include tests.
 
 ---
 
@@ -87,12 +87,12 @@ Before changing accounting logic, read the [programmer guide](docs/developer/REA
 | FAQ | [faq.md](docs/product/faq.md) | [faq.en.md](docs/product/faq.en.md) |
 | Roadmap | [roadmap.md](docs/product/roadmap.md) | [roadmap.en.md](docs/product/roadmap.en.md) |
 | Screenshots | [screenshots.md](docs/product/screenshots.md) | [screenshots.en.md](docs/product/screenshots.en.md) |
-| Documentation index | [docs/README.md](docs/README.md) | [docs/README.en.md](docs/README.en.md) |
-| Installation guide | [docs/deployment/INSTALLATION.md](docs/deployment/INSTALLATION.md) | [docs/deployment/INSTALLATION.en.md](docs/deployment/INSTALLATION.en.md) |
-| User guide | [docs/README.md](docs/README.md) | [docs/README.en.md](docs/README.en.md) |
+| Documentation index | [docs/general/README.md](docs/general/README.md) | [docs/general/README.en.md](docs/general/README.en.md) |
+| Installation guide | [docs/general/deployment/INSTALLATION.md](docs/general/deployment/INSTALLATION.md) | [docs/general/deployment/INSTALLATION.en.md](docs/general/deployment/INSTALLATION.en.md) |
+| User guide | [docs/general/README.md](docs/general/README.md) | [docs/general/README.en.md](docs/general/README.en.md) |
 | HR management | [docs/hr/README.md](docs/hr/README.md) | [docs/hr/README.en.md](docs/hr/README.en.md) |
 | Accounting concepts | [docs/accounting/README.md](docs/accounting/README.md) | [docs/accounting/README.en.md](docs/accounting/README.en.md) |
-| Programmer guide | [docs/developer/README.md](docs/developer/README.md) | [docs/developer/README.en.md](docs/developer/README.en.md) |
+| Programmer guide | [docs/general/developer/README.md](docs/general/developer/README.md) | [docs/general/developer/README.en.md](docs/general/developer/README.en.md) |
 
 ---
 

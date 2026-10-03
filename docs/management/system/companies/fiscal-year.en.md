@@ -35,7 +35,7 @@ The project includes two Artisan commands for fiscal-year data transfer or backu
 - `fiscal-year:export`: exports source fiscal-year data
 - `fiscal-year:import`: imports exported data into a new fiscal year
 
-Full details are available in [FiscalYearExportImport.en.md](../../../developer/FiscalYearExportImport.en.md).
+Full details are available in [FiscalYearExportImport.en.md](../../../general/developer/FiscalYearExportImport.en.md).
 
 ## Cautions
 

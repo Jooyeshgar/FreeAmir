@@ -23,8 +23,8 @@
 
 | بخش | محتوا |
 |---|---|
-| [نصب و راه‌اندازی](deployment/INSTALLATION.md) | نصب ویندوز، Docker و Docker Compose |
-| [راهنمای برنامه‌نویس](developer/README.md) | ساختار پروژه، دیتابیس و تست |
+| [نصب و راه‌اندازی](general/deployment/INSTALLATION.md) | نصب ویندوز، Docker و Docker Compose |
+| [راهنمای برنامه‌نویس](general/developer/README.md) | ساختار پروژه، دیتابیس و تست |
 | [معرفی محصول](product/features.md) | ویژگی‌ها، مقایسه، پرسش‌های متداول، نقشه راه و تصاویر |
 
 </div>

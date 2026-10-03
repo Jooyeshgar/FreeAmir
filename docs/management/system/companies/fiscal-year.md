@@ -41,7 +41,7 @@
 - `fiscal-year:export`: خروجی گرفتن از داده‌های سال مالی مبدا
 - `fiscal-year:import`: وارد کردن داده خروجی به سال مالی جدید
 
-جزئیات کامل این دو دستور در [FiscalYearExportImport.md](../../../developer/FiscalYearExportImport.md) آمده است.
+جزئیات کامل این دو دستور در [FiscalYearExportImport.md](../../../general/developer/FiscalYearExportImport.md) آمده است.
 
 ## نکات احتیاطی
 

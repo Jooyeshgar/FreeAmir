@@ -256,7 +256,7 @@
 ## راهنماهای مرتبط
 
 - [مفهوم سال مالی و نکات عمومی](fiscal-year.md)
-- [راهنمای برنامه‌نویس: خروجی و ورود اطلاعات سال مالی](../../../developer/FiscalYearExportImport.md)
-- [مبانی حسابداری و کنترل بدهکار/بستانکار](../../../developer/accounting-basics.md)
+- [راهنمای برنامه‌نویس: خروجی و ورود اطلاعات سال مالی](../../../general/developer/FiscalYearExportImport.md)
+- [مبانی حسابداری و کنترل بدهکار/بستانکار](../../../general/developer/accounting-basics.md)
 
 </div>
