@@ -2,13 +2,13 @@
 
 namespace Database\Factories;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\ProductGroup;
 use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\ProductGroup>
+ * @extends Factory<ProductGroup>
  */
 class ProductGroupFactory extends Factory
 {
@@ -19,7 +19,7 @@ class ProductGroupFactory extends Factory
      */
     public function definition(): array
     {
-        $companyId = Company::withoutGlobalScopes()->inRandomOrder()->value('id') ?? getActiveCompany() ?? Company::factory()->create()->id;
+        $companyId = FiscalYear::withoutGlobalScopes()->inRandomOrder()->value('id') ?? getActiveFiscalYear() ?? FiscalYear::factory()->create()->id;
 
         return [
             'name' => $this->faker?->persianProductCategory(),

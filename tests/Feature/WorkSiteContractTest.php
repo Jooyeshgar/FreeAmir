@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\User;
 use App\Models\WorkSite;
 use App\Models\WorkSiteContract;
@@ -24,7 +24,7 @@ class WorkSiteContractTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
+        $company = FiscalYear::factory()->create();
         $this->companyId = $company->id;
 
         $this->user = User::factory()->create();
@@ -35,7 +35,7 @@ class WorkSiteContractTest extends TestCase
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->companyId]);
 
         $this->workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
     }

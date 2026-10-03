@@ -4,10 +4,10 @@ namespace Tests\Feature;
 
 use App\Enums\CustomerType;
 use App\Enums\SubjectType;
-use App\Models\Company;
 use App\Models\Config;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\User;
 use App\Services\CustomerGroupService;
@@ -20,15 +20,15 @@ class FiscalYearCopySubjectableIntegrityTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function setActive(Company $company): void
+    private function setActive(FiscalYear $company): void
     {
-        config(['active-company-id' => $company->id]);
+        config(['active-fiscal-year-id' => $company->id]);
         foreach (Config::withoutGlobalScopes()->where('company_id', $company->id)->get() as $c) {
             config(['amir.'.$c->key => $c->value]);
         }
     }
 
-    private function buildCustomerSubjectTree(Company $company): void
+    private function buildCustomerSubjectTree(FiscalYear $company): void
     {
         $this->setActive($company);
 
@@ -52,15 +52,15 @@ class FiscalYearCopySubjectableIntegrityTest extends TestCase
         config(['amir.cust_subject' => $root->id]);
     }
 
-    private function newYearData(Company $source, int $fiscalYear): array
+    private function newYearData(FiscalYear $source, int $fiscalYear): array
     {
         return collect($source->getAttributes())->except(['id', 'closed_at', 'closed_by', 'fiscal_year'])->merge(['fiscal_year' => $fiscalYear])->toArray();
     }
 
-    private function seedSource(): Company
+    private function seedSource(): FiscalYear
     {
         $user = User::factory()->create();
-        $source = Company::factory()->create(['fiscal_year' => 1402]);
+        $source = FiscalYear::factory()->create(['fiscal_year' => 1402]);
         $source->users()->attach($user);
         $this->actingAs($user);
         $this->buildCustomerSubjectTree($source);

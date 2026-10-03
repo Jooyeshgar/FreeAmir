@@ -8,9 +8,9 @@ use App\Enums\InvoiceType;
 use App\Enums\SubjectType;
 use App\Models\AncillaryCost;
 use App\Models\AncillaryCostItem;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -30,9 +30,9 @@ class FiscalYearTransferTest extends TestCase
 
     private User $user;
 
-    private Company $source;
+    private FiscalYear $source;
 
-    private Company $target;
+    private FiscalYear $target;
 
     private int $sequence = 1000;
 
@@ -46,8 +46,8 @@ class FiscalYearTransferTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create();
-        $this->source = Company::factory()->create(['fiscal_year' => 1402]);
-        $this->target = Company::factory()->create(['fiscal_year' => 1403]);
+        $this->source = FiscalYear::factory()->create(['fiscal_year' => 1402]);
+        $this->target = FiscalYear::factory()->create(['fiscal_year' => 1403]);
         $this->source->users()->attach($this->user);
         $this->target->users()->attach($this->user);
 
@@ -60,12 +60,12 @@ class FiscalYearTransferTest extends TestCase
         );
     }
 
-    private function activate(Company $company): void
+    private function activate(FiscalYear $company): void
     {
-        config(['active-company-id' => $company->id]);
+        config(['active-fiscal-year-id' => $company->id]);
     }
 
-    private function makeSubject(Company $company, string $code, string $name, ?Subject $parent = null): Subject
+    private function makeSubject(FiscalYear $company, string $code, string $name, ?Subject $parent = null): Subject
     {
         return Subject::create([
             'code' => $code,
@@ -76,12 +76,12 @@ class FiscalYearTransferTest extends TestCase
         ]);
     }
 
-    private function makeCustomer(Company $company, string $name): Customer
+    private function makeCustomer(FiscalYear $company, string $name): Customer
     {
         return Customer::create(['name' => $name, 'company_id' => $company->id]);
     }
 
-    private function makeProduct(Company $company, string $name, string $code): Product
+    private function makeProduct(FiscalYear $company, string $name, string $code): Product
     {
         return Product::create([
             'code' => $code,
@@ -94,7 +94,7 @@ class FiscalYearTransferTest extends TestCase
         ]);
     }
 
-    private function makeService(Company $company, string $name, string $code): Service
+    private function makeService(FiscalYear $company, string $name, string $code): Service
     {
         return Service::create([
             'code' => $code,
@@ -105,7 +105,7 @@ class FiscalYearTransferTest extends TestCase
         ]);
     }
 
-    private function makeInvoice(Company $company, array $attributes = []): Invoice
+    private function makeInvoice(FiscalYear $company, array $attributes = []): Invoice
     {
         $invoice = new Invoice;
         $invoice->forceFill(array_merge([
@@ -121,12 +121,12 @@ class FiscalYearTransferTest extends TestCase
             'company_id' => $company->id,
         ], $attributes));
 
-        $previous = config('active-company-id');
-        config(['active-company-id' => $company->id]);
+        $previous = config('active-fiscal-year-id');
+        config(['active-fiscal-year-id' => $company->id]);
         try {
             $invoice->save();
         } finally {
-            config(['active-company-id' => $previous]);
+            config(['active-fiscal-year-id' => $previous]);
         }
 
         return $invoice;
@@ -160,7 +160,7 @@ class FiscalYearTransferTest extends TestCase
         ]);
     }
 
-    private function makeDocument(Company $company, array $lines, ?int $number = null, $documentable = null): Document
+    private function makeDocument(FiscalYear $company, array $lines, ?int $number = null, $documentable = null): Document
     {
         $document = Document::create([
             'number' => $number ?? (Document::withoutGlobalScopes()->max('number') ?? 0) + 1,
@@ -185,7 +185,7 @@ class FiscalYearTransferTest extends TestCase
         return $document;
     }
 
-    private function makeAncillaryCost(Company $company, Invoice $invoice, Product $product, array $attributes = []): AncillaryCost
+    private function makeAncillaryCost(FiscalYear $company, Invoice $invoice, Product $product, array $attributes = []): AncillaryCost
     {
         $ac = AncillaryCost::create(array_merge([
             'number' => $this->nextNumber(),
@@ -618,7 +618,7 @@ class FiscalYearTransferTest extends TestCase
 
     public function test_document_transfer_endpoint_forbids_a_target_company_the_user_cannot_access(): void
     {
-        $foreign = Company::factory()->create(['fiscal_year' => 1404]);
+        $foreign = FiscalYear::factory()->create(['fiscal_year' => 1404]);
         $foreign->users()->detach($this->user);
         $cash = $this->makeSubject($this->source, '101', 'Cash');
         $document = $this->makeDocument($this->source, [[$cash, 100]]);
@@ -631,7 +631,7 @@ class FiscalYearTransferTest extends TestCase
 
     public function test_invoice_transfer_endpoint_forbids_a_target_company_the_user_cannot_access(): void
     {
-        $foreign = Company::factory()->create(['fiscal_year' => 1404]);
+        $foreign = FiscalYear::factory()->create(['fiscal_year' => 1404]);
         $foreign->users()->detach($this->user);
         $customer = $this->makeCustomer($this->source, 'ACME');
         $product = $this->makeProduct($this->source, 'Widget', 'P1');

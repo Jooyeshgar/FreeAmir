@@ -12,7 +12,7 @@ class ConfigSeeder extends Seeder
 {
     public function run(?int $companyId = null): void
     {
-        $companyId ??= (int) getActiveCompany();
+        $companyId ??= (int) getActiveFiscalYear();
         $configs = [
             ['type' => 3, 'category' => 1, 'key' => 'payroll', 'value' => '10', 'desc' => 'حقوق و دستمزد', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'cust_subject', 'value' => '4', 'desc' => 'مشتریان', 'company_id' => 1],

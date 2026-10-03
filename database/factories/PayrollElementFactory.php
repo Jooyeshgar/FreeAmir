@@ -5,7 +5,7 @@ namespace Database\Factories;
 use App\Enums\PayrollElementCalcType;
 use App\Enums\PayrollElementCategory;
 use App\Enums\PayrollElementSystemCode;
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\PayrollElement;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -16,7 +16,7 @@ class PayrollElementFactory extends Factory
     public function definition(): array
     {
         return [
-            'company_id' => Company::factory(),
+            'company_id' => FiscalYear::factory(),
             'title' => $this->faker->words(3, true),
             'system_code' => $this->faker->randomElement(PayrollElementSystemCode::cases()),
             'category' => $this->faker->randomElement(PayrollElementCategory::cases()),

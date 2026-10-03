@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Product;
 use App\Models\User;
 use App\Notifications\ReportExportNotification;
@@ -19,18 +19,18 @@ class ReportEmailTest extends TestCase
 
     private User $user;
 
-    private Company $company;
+    private FiscalYear $company;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         app()->setLocale('en');
-        $this->company = Company::factory()->create();
+        $this->company = FiscalYear::factory()->create();
         $this->user = User::factory()->create();
         $this->company->users()->attach($this->user);
-        $this->withCookies(['active-company-id' => $this->company->id]);
-        config(['active-company-id' => $this->company->id]);
+        $this->withCookies(['active-fiscal-year-id' => $this->company->id]);
+        config(['active-fiscal-year-id' => $this->company->id]);
     }
 
     public function test_user_can_email_an_authorized_csv_export_to_their_own_address(): void

@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Enums\SubjectType;
-use App\Models\Company;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use App\Models\Subject;
 use App\Models\Transaction;
@@ -24,7 +24,7 @@ class DocumentImportExportTest extends TestCase
 
     private User $user;
 
-    private Company $company;
+    private FiscalYear $company;
 
     private DocumentImportExportService $service;
 
@@ -62,10 +62,10 @@ class DocumentImportExportTest extends TestCase
         return ob_get_clean() ?: '';
     }
 
-    private function runCsvImport(UploadedFile $file, string $format = 'free_amir', ?Company $company = null): array
+    private function runCsvImport(UploadedFile $file, string $format = 'free_amir', ?FiscalYear $company = null): array
     {
         $targetCompany = $company ?? $this->company;
-        config(['active-company-id' => $targetCompany->id]);
+        config(['active-fiscal-year-id' => $targetCompany->id]);
 
         return $this->service->importCsv($file, $this->user, $format);
     }
@@ -74,7 +74,7 @@ class DocumentImportExportTest extends TestCase
     {
         parent::setUp();
 
-        $this->company = Company::factory()->create();
+        $this->company = FiscalYear::factory()->create();
         $this->user = User::factory()->create();
         $this->company->users()->attach($this->user);
 
@@ -83,8 +83,8 @@ class DocumentImportExportTest extends TestCase
         }
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => (string) $this->company->id]);
-        config(['active-company-id' => $this->company->id]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->company->id]);
+        config(['active-fiscal-year-id' => $this->company->id]);
 
         $this->service = new DocumentImportExportService;
         $this->resolver = new ImportSubjectResolver;
@@ -316,8 +316,8 @@ class DocumentImportExportTest extends TestCase
 
         $csv = $this->exportCsvViaService([]);
 
-        $newCompany = Company::factory()->create();
-        config(['active-company-id' => $newCompany->id]);
+        $newCompany = FiscalYear::factory()->create();
+        config(['active-fiscal-year-id' => $newCompany->id]);
         Subject::factory()->create(['company_id' => $newCompany->id, 'code' => '001', 'name' => 'Assets']);
 
         $result = $this->runCsvImport($this->makeCsvFile($csv), 'free_amir', $newCompany);
@@ -1056,7 +1056,7 @@ class DocumentImportExportTest extends TestCase
 
         $csv = $this->exportCsvViaService([]);
 
-        $newCompany = Company::factory()->create();
+        $newCompany = FiscalYear::factory()->create();
         Subject::create(['company_id' => $newCompany->id, 'code' => '001',       'name' => 'L1', 'parent_id' => null,  'type' => SubjectType::BOTH]);
         Subject::create(['company_id' => $newCompany->id, 'code' => '001001',    'name' => 'L2', 'parent_id' => null,  'type' => SubjectType::BOTH]);
         Subject::create(['company_id' => $newCompany->id, 'code' => '001001001', 'name' => 'L3', 'parent_id' => null,  'type' => SubjectType::BOTH]);

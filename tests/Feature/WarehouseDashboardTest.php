@@ -4,9 +4,9 @@ namespace Tests\Feature;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -33,15 +33,15 @@ class WarehouseDashboardTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create(['fiscal_year' => 1405]);
+        $company = FiscalYear::factory()->create(['fiscal_year' => 1405]);
         $this->companyId = $company->id;
 
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
 
-        $this->withCookies(['active-company-id' => (string) $this->companyId]);
-        $_COOKIE['active-company-id'] = (string) $this->companyId;
-        config(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->companyId]);
+        $_COOKIE['active-fiscal-year-id'] = (string) $this->companyId;
+        config(['active-fiscal-year-id' => $this->companyId]);
         $this->importSubjects($this->companyId);
         $this->importConfigs($this->companyId);
 

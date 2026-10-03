@@ -3,7 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\SubjectType;
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -13,9 +13,9 @@ class SubjectFactory extends Factory
     {
         return [
             'company_id' => function () {
-                $companyId = (int) getActiveCompany();
+                $companyId = (int) getActiveFiscalYear();
 
-                if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
+                if (! FiscalYear::withoutGlobalScopes()->whereKey($companyId)->exists()) {
                     throw new \LogicException('An active company is required to create a subject.');
                 }
 

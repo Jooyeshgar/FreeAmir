@@ -24,7 +24,7 @@ class UpdateServiceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'code' => ['nullable', Rule::unique('services', 'code')->ignore($this->route('service'))->where('company_id', getActiveCompany())],
+            'code' => ['nullable', Rule::unique('services', 'code')->ignore($this->route('service'))->where('company_id', getActiveFiscalYear())],
             'name' => 'required|max:20|string|regex:/^[\w\d\s\-\:\.]*$/u',
             'group' => 'required|exists:service_groups,id|integer',
             'selling_price' => [

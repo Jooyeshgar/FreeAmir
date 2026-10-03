@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use App\Enums\CommercialLedgerType;
 use App\Models\CommercialLedgerExport;
-use App\Models\Company;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
@@ -20,7 +20,7 @@ class CommercialLedgerTest extends TestCase
 {
     use RefreshDatabase;
 
-    private Company $company;
+    private FiscalYear $company;
 
     private User $user;
 
@@ -36,7 +36,7 @@ class CommercialLedgerTest extends TestCase
 
         app()->setLocale('fa');
         Storage::fake('local');
-        $this->company = Company::factory()->create(['fiscal_year' => 1403]);
+        $this->company = FiscalYear::factory()->create(['fiscal_year' => 1403]);
         $this->user = User::factory()->create();
         $this->company->users()->syncWithoutDetaching([$this->user->id]);
 
@@ -45,8 +45,8 @@ class CommercialLedgerTest extends TestCase
         }
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => (string) $this->company->id]);
-        config(['active-company-id' => $this->company->id]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->company->id]);
+        config(['active-fiscal-year-id' => $this->company->id]);
 
         $this->general = Subject::create([
             'company_id' => $this->company->id,
@@ -228,11 +228,11 @@ class CommercialLedgerTest extends TestCase
         $this->assertMatchesRegularExpression('/title="[^"]+">\s*۱\s*<\/span>/', $index->getContent());
         $this->get(route('commercial-ledgers.download', $export))->assertDownload();
 
-        $otherCompany = Company::factory()->create(['fiscal_year' => 1403]);
-        config(['active-company-id' => $otherCompany->id]);
+        $otherCompany = FiscalYear::factory()->create(['fiscal_year' => 1403]);
+        config(['active-fiscal-year-id' => $otherCompany->id]);
         $this->get(route('commercial-ledgers.show', $export->id))->assertNotFound();
 
-        config(['active-company-id' => $this->company->id]);
+        config(['active-fiscal-year-id' => $this->company->id]);
         $path = $export->file_path;
         $this->delete(route('commercial-ledgers.destroy', $export))->assertRedirect();
         $this->assertDatabaseMissing('commercial_ledger_exports', ['id' => $export->id]);

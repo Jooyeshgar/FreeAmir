@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\User;
 use App\Models\WorkShift;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,7 +21,7 @@ class WorkShiftTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
+        $company = FiscalYear::factory()->create();
         $this->companyId = $company->id;
 
         $this->user = User::factory()->create();
@@ -32,7 +32,7 @@ class WorkShiftTest extends TestCase
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->companyId]);
     }
 
     private function makeWorkShift(array $overrides = []): WorkShift
@@ -73,7 +73,7 @@ class WorkShiftTest extends TestCase
 
     public function test_index_does_not_show_other_company_work_shifts(): void
     {
-        $otherCompany = Company::factory()->create();
+        $otherCompany = FiscalYear::factory()->create();
         WorkShift::factory()->create(['company_id' => $otherCompany->id, 'name' => 'Other Shift']);
 
         $response = $this->get(route('attendance.work-shifts.index'));
@@ -214,7 +214,7 @@ class WorkShiftTest extends TestCase
 
     public function test_cannot_edit_other_company_work_shift(): void
     {
-        $otherCompany = Company::factory()->create();
+        $otherCompany = FiscalYear::factory()->create();
         $otherShift = WorkShift::factory()->create(['company_id' => $otherCompany->id]);
 
         $response = $this->get(route('attendance.work-shifts.edit', $otherShift));
@@ -240,7 +240,7 @@ class WorkShiftTest extends TestCase
 
     public function test_cannot_delete_other_company_work_shift(): void
     {
-        $otherCompany = Company::factory()->create();
+        $otherCompany = FiscalYear::factory()->create();
         $otherShift = WorkShift::factory()->create(['company_id' => $otherCompany->id]);
 
         $response = $this->delete(route('attendance.work-shifts.destroy', $otherShift));

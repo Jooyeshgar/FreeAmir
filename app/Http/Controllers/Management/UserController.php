@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Management;
 
 use App\Http\Controllers\Controller;
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
@@ -32,10 +32,10 @@ class UserController extends Controller
 
         $users = User::query()
             ->unless($actor->can('access-super-admin-panel'), function ($query) use ($actor) {
-                $companyIds = $actor->companies()->pluck('companies.id');
+                $companyIds = $actor->companies()->pluck('fiscal_years.id');
 
-                $query->whereHas('companies', fn ($query) => $query->where('companies.id', getActiveCompany()))
-                    ->whereDoesntHave('companies', fn ($query) => $query->whereNotIn('companies.id', $companyIds));
+                $query->whereHas('companies', fn ($query) => $query->where('fiscal_years.id', getActiveFiscalYear()))
+                    ->whereDoesntHave('companies', fn ($query) => $query->whereNotIn('fiscal_years.id', $companyIds));
             })
             ->unless($isManagementUserIndex, fn ($query) => $query
                 ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'Super-Admin'))
@@ -85,7 +85,7 @@ class UserController extends Controller
             'role' => 'required|array|min:1',
             'role.*' => 'required|string|exists:roles,name',
             'company' => 'required|array|min:1',
-            'company.*' => 'required|integer|exists:companies,id',
+            'company.*' => 'required|integer|exists:fiscal_years,id',
         ]);
 
         $this->validateAssignments($request);
@@ -124,7 +124,8 @@ class UserController extends Controller
         $this->ensureUserAccess($user);
         $user->load([
             'roles:id,name',
-            'companies' => fn ($query) => $query->orderByDesc('fiscal_year')->orderBy('name'),
+            'companies' => fn ($query) => $query->join('companies', 'fiscal_years.company_id', '=', 'companies.id')
+                ->orderByDesc('fiscal_years.fiscal_year')->orderBy('companies.name')->select('fiscal_years.*'),
         ]);
 
         return view('users.show', compact('user'));
@@ -162,7 +163,7 @@ class UserController extends Controller
             'role' => 'required|array|min:1',
             'role.*' => 'required|string|exists:roles,name',
             'company' => 'required|array|min:1',
-            'company.*' => 'required|integer|exists:companies,id',
+            'company.*' => 'required|integer|exists:fiscal_years,id',
         ]);
 
         $this->validateAssignments($request);
@@ -260,7 +261,7 @@ class UserController extends Controller
     {
         $this->ensureUserAccess($user);
 
-        $companyId = getActiveCompany();
+        $companyId = getActiveFiscalYear();
 
         $existingEmployee = $user->employee()->first();
         if ($existingEmployee) {
@@ -316,7 +317,7 @@ class UserController extends Controller
     {
         $user = auth()->user();
 
-        return ($user->can('access-super-admin-panel') ? Company::query() : $user->companies())->get();
+        return ($user->can('access-super-admin-panel') ? FiscalYear::query() : $user->companies())->get();
     }
 
     private function validateAssignments(Request $request): void
@@ -350,9 +351,9 @@ class UserController extends Controller
             return;
         }
 
-        $companyIds = $actor->companies()->pluck('companies.id');
-        $hasActiveCompany = $user->companies()->where('companies.id', getActiveCompany())->exists();
-        $hasInaccessibleCompany = $user->companies()->whereNotIn('companies.id', $companyIds)->exists();
+        $companyIds = $actor->companies()->pluck('fiscal_years.id');
+        $hasActiveCompany = $user->companies()->where('fiscal_years.id', getActiveFiscalYear())->exists();
+        $hasInaccessibleCompany = $user->companies()->whereNotIn('fiscal_years.id', $companyIds)->exists();
 
         abort_unless($hasActiveCompany && ! $hasInaccessibleCompany, 403);
     }

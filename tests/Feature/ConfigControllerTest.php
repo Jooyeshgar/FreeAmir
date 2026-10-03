@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use App\Enums\ConfigTitle;
 use App\Enums\SubjectType;
-use App\Models\Company;
 use App\Models\Config;
+use App\Models\FiscalYear;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -18,14 +18,14 @@ class ConfigControllerTest extends TestCase
 
     private User $user;
 
-    private Company $company;
+    private FiscalYear $company;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->user = User::factory()->create();
-        $this->company = Company::factory()->create();
+        $this->company = FiscalYear::factory()->create();
         $this->company->users()->syncWithoutDetaching([$this->user->id]);
         $this->user->givePermissionTo([
             Permission::firstOrCreate(['name' => 'configs.index']),
@@ -34,8 +34,8 @@ class ConfigControllerTest extends TestCase
         ]);
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => (string) $this->company->id]);
-        config(['active-company-id' => $this->company->id]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->company->id]);
+        config(['active-fiscal-year-id' => $this->company->id]);
     }
 
     public function test_index_lists_supported_settings_without_unused_cash_setting(): void

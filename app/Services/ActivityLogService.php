@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Activity;
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -246,7 +246,9 @@ class ActivityLogService
             'metrics' => $this->metrics(),
             'users' => User::query()->whereIn('id', Activity::query()->whereNotNull('user_id')->select('user_id'))->orderBy('name')->get(['id', 'name', 'email']),
             'impersonatedUsers' => User::query()->whereIn('id', $impersonatedUserIds)->get(['id', 'name', 'email'])->keyBy('id'),
-            'companies' => Company::query()->orderByDesc('fiscal_year')->orderBy('name')->get(['id', 'name', 'fiscal_year']),
+            'companies' => FiscalYear::query()->join('companies', 'fiscal_years.company_id', '=', 'companies.id')
+                ->orderByDesc('fiscal_years.fiscal_year')->orderBy('companies.name')
+                ->get(['fiscal_years.id', 'fiscal_years.company_id', 'fiscal_years.fiscal_year']),
             'modelTypes' => $this->availableModelTypes(),
             'filters' => $filters,
         ];
@@ -541,7 +543,7 @@ class ActivityLogService
             return null;
         }
 
-        $companyId = config('active-company-id') ?? $request->cookie('active-company-id');
+        $companyId = config('active-fiscal-year-id') ?? $request->cookie('active-fiscal-year-id') ?? $request->cookie('active-company-id');
 
         return $companyId ? (int) $companyId : null;
     }

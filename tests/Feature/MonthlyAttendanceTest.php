@@ -6,8 +6,8 @@ use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\MonthlyAttendance;
 use App\Models\PersonnelRequest;
 use App\Models\User;
@@ -34,7 +34,7 @@ class MonthlyAttendanceTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create(['fiscal_year' => 1402]);
+        $company = FiscalYear::factory()->create(['fiscal_year' => 1402]);
         $this->companyId = $company->id;
 
         $this->user = User::factory()->create();
@@ -45,8 +45,8 @@ class MonthlyAttendanceTest extends TestCase
         );
 
         $this->actingAs($this->user);
-        request()->cookies->set('active-company-id', $this->companyId);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        request()->cookies->set('active-fiscal-year-id', $this->companyId);
+        $this->withCookies(['active-fiscal-year-id' => $this->companyId]);
 
         $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
         $workShift = WorkShift::factory()->create(['company_id' => $this->companyId]);
@@ -132,7 +132,7 @@ class MonthlyAttendanceTest extends TestCase
 
     public function test_index_does_not_show_other_company_records(): void
     {
-        $otherCompany = Company::factory()->create();
+        $otherCompany = FiscalYear::factory()->create();
         $otherWorkSite = WorkSite::factory()->create(['company_id' => $otherCompany->id]);
         $otherEmployee = Employee::factory()->create([
             'company_id' => $otherCompany->id,

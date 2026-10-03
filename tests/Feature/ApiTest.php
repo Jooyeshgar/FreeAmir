@@ -3,9 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\AttendanceLog;
-use App\Models\Company;
 use App\Models\Document;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\User;
 use App\Models\WorkShift;
@@ -13,6 +13,7 @@ use App\Models\WorkSite;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use RuntimeException;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -23,7 +24,7 @@ class ApiTest extends TestCase
 
     protected User $user;
 
-    protected Company $company;
+    protected FiscalYear $company;
 
     protected string $token;
 
@@ -31,7 +32,7 @@ class ApiTest extends TestCase
     {
         parent::setUp();
 
-        $this->company = Company::factory()->create();
+        $this->company = FiscalYear::factory()->create();
         $this->user = User::factory()->create();
         $this->company->users()->attach($this->user);
 
@@ -182,7 +183,7 @@ class ApiTest extends TestCase
 
     public function test_company_scoped_api_rejects_unattached_company_id(): void
     {
-        $otherCompany = Company::factory()->create();
+        $otherCompany = FiscalYear::factory()->create();
 
         $this->getJson('/api/companies/'.$otherCompany->id.'/employees', $this->apiHeaders())
             ->assertForbidden()
@@ -191,8 +192,8 @@ class ApiTest extends TestCase
 
     public function test_api_lists_available_companies(): void
     {
-        $secondCompany = Company::factory()->create(['name' => 'Second API Company']);
-        $unattachedCompany = Company::factory()->create(['name' => 'Hidden API Company']);
+        $secondCompany = FiscalYear::factory()->create(['name' => 'Second API Company']);
+        $unattachedCompany = FiscalYear::factory()->create(['name' => 'Hidden API Company']);
         $this->company->update(['name' => 'First API Company']);
         $this->user->companies()->attach($secondCompany);
 
@@ -222,7 +223,7 @@ class ApiTest extends TestCase
         ])->assertForbidden();
     }
 
-    #[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+    #[RunInSeparateProcess]
     public function test_attendance_batch_rolls_back_when_one_insert_fails(): void
     {
         $workSite = WorkSite::factory()->create(['company_id' => $this->company->id]);

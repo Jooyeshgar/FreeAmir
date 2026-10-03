@@ -5,9 +5,9 @@ namespace Tests\Feature;
 use App\Enums\FiscalYearSection;
 use App\Models\Bank;
 use App\Models\BankAccount;
-use App\Models\Company;
 use App\Models\Document;
 use App\Models\DocumentFile;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,17 +23,17 @@ class CompanyAccessTest extends TestCase
 
     private User $user;
 
-    private Company $accessibleCompany;
+    private FiscalYear $accessibleCompany;
 
-    private Company $inaccessibleCompany;
+    private FiscalYear $inaccessibleCompany;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->user = User::factory()->create();
-        $this->accessibleCompany = Company::factory()->create(['name' => 'Accessible Source']);
-        $this->inaccessibleCompany = Company::factory()->create(['name' => 'Inaccessible Source']);
+        $this->accessibleCompany = FiscalYear::factory()->create(['name' => 'Accessible Source']);
+        $this->inaccessibleCompany = FiscalYear::factory()->create(['name' => 'Inaccessible Source']);
 
         $this->accessibleCompany->users()->syncWithoutDetaching([$this->user->id]);
         $this->inaccessibleCompany->users()->detach($this->user->id);
@@ -44,7 +44,7 @@ class CompanyAccessTest extends TestCase
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => (string) $this->accessibleCompany->id]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->accessibleCompany->id]);
     }
 
     public function test_create_form_lists_only_companies_accessible_to_user(): void
@@ -73,7 +73,7 @@ class CompanyAccessTest extends TestCase
 
         $response->assertRedirect(route('companies.index'));
 
-        $company = Company::where('name', 'First Company')->firstOrFail();
+        $company = FiscalYear::whereHas('company', fn ($query) => $query->where('name', 'First Company'))->firstOrFail();
         $this->assertTrue($company->users()->whereKey($superAdmin->id)->exists());
     }
 
@@ -120,7 +120,7 @@ class CompanyAccessTest extends TestCase
     {
         Storage::fake('public');
         $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'companies.destroy']));
-        config(['active-company-id' => $this->accessibleCompany->id]);
+        config(['active-fiscal-year-id' => $this->accessibleCompany->id]);
         $document = Document::factory()->create(['company_id' => $this->accessibleCompany->id]);
         $path = "documents/{$document->id}/attachment.pdf";
         Storage::disk('public')->put($path, 'attachment');
@@ -135,15 +135,15 @@ class CompanyAccessTest extends TestCase
 
         $response->assertRedirect(route('companies.index'));
         $response->assertSessionHas('success', __('Company deleted successfully.'));
-        $this->assertDatabaseMissing('companies', ['id' => $this->accessibleCompany->id]);
-        $this->assertDatabaseMissing('company_user', ['company_id' => $this->accessibleCompany->id]);
+        $this->assertDatabaseMissing('fiscal_years', ['id' => $this->accessibleCompany->id]);
+        $this->assertDatabaseMissing('fiscal_year_user', ['fiscal_year_id' => $this->accessibleCompany->id]);
         Storage::disk('public')->assertMissing($path);
     }
 
     public function test_storage_cleanup_error_does_not_prevent_company_deletion(): void
     {
         $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'companies.destroy']));
-        config(['active-company-id' => $this->accessibleCompany->id]);
+        config(['active-fiscal-year-id' => $this->accessibleCompany->id]);
         $document = Document::factory()->create(['company_id' => $this->accessibleCompany->id]);
         DocumentFile::create([
             'document_id' => $document->id,
@@ -157,13 +157,13 @@ class CompanyAccessTest extends TestCase
 
         $response->assertRedirect(route('companies.index'));
         $response->assertSessionHas('success', __('Company deleted successfully.'));
-        $this->assertDatabaseMissing('companies', ['id' => $this->accessibleCompany->id]);
+        $this->assertDatabaseMissing('fiscal_years', ['id' => $this->accessibleCompany->id]);
     }
 
     public function test_company_deletion_shows_validation_exception(): void
     {
         $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'companies.destroy']));
-        Company::deleting(function (): never {
+        FiscalYear::deleting(function (): never {
             throw ValidationException::withMessages([
                 'company' => ['Imported company data is invalid.'],
             ]);
@@ -175,12 +175,12 @@ class CompanyAccessTest extends TestCase
         $response->assertSessionHasErrors([
             'company' => 'Imported company data is invalid.',
         ]);
-        $this->assertDatabaseHas('companies', ['id' => $this->accessibleCompany->id]);
+        $this->assertDatabaseHas('fiscal_years', ['id' => $this->accessibleCompany->id]);
     }
 
     public function test_store_rejects_inaccessible_source_company(): void
     {
-        $companyCount = Company::count();
+        $companyCount = FiscalYear::count();
 
         $response = $this->post(route('companies.store'), [
             'name' => 'Unauthorized Copy',
@@ -190,7 +190,7 @@ class CompanyAccessTest extends TestCase
         ]);
 
         $response->assertSessionHasErrors('source_year_id');
-        $this->assertSame($companyCount, Company::count());
+        $this->assertSame($companyCount, FiscalYear::count());
         $this->assertDatabaseMissing('companies', ['name' => 'Unauthorized Copy']);
     }
 
@@ -208,7 +208,7 @@ class CompanyAccessTest extends TestCase
 
     public function test_store_copies_bank_accounts_with_same_iban_into_new_company(): void
     {
-        config(['active-company-id' => $this->accessibleCompany->id]);
+        config(['active-fiscal-year-id' => $this->accessibleCompany->id]);
 
         $bank = Bank::create([
             'name' => 'Source Bank',
@@ -258,7 +258,7 @@ class CompanyAccessTest extends TestCase
 
         $response->assertRedirect(route('companies.index'));
 
-        $newCompany = Company::where('name', 'Copied Company')->firstOrFail();
+        $newCompany = FiscalYear::whereHas('company', fn ($query) => $query->where('name', 'Copied Company'))->firstOrFail();
 
         $this->assertDatabaseHas('bank_accounts', [
             'company_id' => $this->accessibleCompany->id,

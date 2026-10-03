@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\SalaryDecree;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -16,7 +16,7 @@ class SalaryDecreeFactory extends Factory
         $startDate = $this->faker->dateTimeBetween('-1 year', 'now');
 
         return [
-            'company_id' => Company::factory(),
+            'company_id' => FiscalYear::factory(),
             'employee_id' => Employee::factory(),
             'name' => $this->faker->optional()->bothify('Decree-####'),
             'start_date' => $startDate,

@@ -4,9 +4,9 @@ namespace Database\Factories;
 
 use App\Enums\CustomerType;
 use App\Models\Bank;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -16,8 +16,8 @@ class CustomerFactory extends Factory
 
     public function definition()
     {
-        $companyId = (int) getActiveCompany();
-        if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
+        $companyId = (int) getActiveFiscalYear();
+        if (! FiscalYear::withoutGlobalScopes()->whereKey($companyId)->exists()) {
             throw new \LogicException('An active company is required to create a customer.');
         }
 

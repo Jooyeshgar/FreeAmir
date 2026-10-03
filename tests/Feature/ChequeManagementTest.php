@@ -11,10 +11,10 @@ use App\Models\BankAccount;
 use App\Models\Cheque;
 use App\Models\Chequebook;
 use App\Models\ChequeHistory;
-use App\Models\Company;
 use App\Models\Config;
 use App\Models\Customer;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Transaction;
@@ -55,10 +55,10 @@ class ChequeManagementTest extends TestCase
     {
         parent::setUp();
 
-        $companyId = Company::firstOrCreate(['id' => 1], ['name' => 'Cheque Test', 'fiscal_year' => 1405])->id;
+        $companyId = FiscalYear::firstOrCreate(['id' => 1], ['name' => 'Cheque Test', 'fiscal_year' => 1405])->id;
         Cache::forever('active_company_id', $companyId);
-        Cookie::queue('active-company-id', (string) $companyId);
-        $_COOKIE['active-company-id'] = (string) $companyId;
+        Cookie::queue('active-fiscal-year-id', (string) $companyId);
+        $_COOKIE['active-fiscal-year-id'] = (string) $companyId;
 
         DB::table('subjects')->insert([
             ['id' => 1, 'code' => '010', 'name' => 'Banks', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
@@ -182,7 +182,7 @@ class ChequeManagementTest extends TestCase
 
     public function test_account_side_subject_must_belong_to_cheque_company(): void
     {
-        $otherCompany = Company::create(['name' => 'Other Company', 'fiscal_year' => 1405]);
+        $otherCompany = FiscalYear::create(['name' => 'Other Company', 'fiscal_year' => 1405]);
         DB::table('subjects')->insert([
             'id' => 999,
             'code' => '012001999',

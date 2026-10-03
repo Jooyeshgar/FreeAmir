@@ -6,6 +6,7 @@ use App\Models\Activity;
 use App\Models\Company;
 use App\Models\Config;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use App\Models\Subject;
 use App\Models\Transaction;
@@ -157,9 +158,9 @@ class ActivityLogTest extends TestCase
         $actor = User::factory()->create();
 
         Route::post('/test/activity-log/aggregate', function () {
-            $first = Company::factory()->create(['name' => 'Before']);
+            $first = FiscalYear::factory()->create(['name' => 'Before']);
             $first->update(['name' => 'After']);
-            Company::factory()->create(['name' => 'Second']);
+            FiscalYear::factory()->create(['name' => 'Second']);
 
             return response()->noContent();
         })->middleware('web');
@@ -173,11 +174,11 @@ class ActivityLogTest extends TestCase
 
         $this->assertSame('request', $activity->source);
         $this->assertSame('POST', $activity->details->get('method'));
-        $this->assertCount(2, $models);
-        $this->assertTrue($models->every(fn (array $model): bool => $model['model_type'] === Company::class));
-        $this->assertSame('created', $models->first()['event']);
-        $this->assertSame('After', $models->first()['attributes']['name']);
-        $this->assertArrayNotHasKey('name', $models->first()['old']);
+        $this->assertCount(4, $models);
+        $this->assertSame(2, $models->where('model_type', FiscalYear::class)->count());
+        $this->assertSame(2, $models->where('model_type', Company::class)->count());
+        $this->assertTrue($models->contains(fn (array $model): bool => $model['model_type'] === Company::class
+            && ($model['attributes']['name'] ?? null) === 'After'));
     }
 
     public function test_activity_log_listing_does_not_load_request_model_snapshots(): void
@@ -188,7 +189,7 @@ class ActivityLogTest extends TestCase
             'description' => 'POST test',
             'event' => 'post',
             'user_id' => $actor->id,
-            'properties' => ['route' => 'test', 'models' => [['model_type' => Company::class, 'model_id' => 1]]],
+            'properties' => ['route' => 'test', 'models' => [['model_type' => FiscalYear::class, 'model_id' => 1]]],
         ]);
 
         $service = app(ActivityLogService::class);
@@ -211,7 +212,7 @@ class ActivityLogTest extends TestCase
             'properties' => [
                 'route' => 'test',
                 'models' => [[
-                    'model_type' => Company::class,
+                    'model_type' => FiscalYear::class,
                     'model_id' => 1,
                     'event' => 'created',
                     'attributes' => ['name' => 'Acme'],
@@ -229,14 +230,14 @@ class ActivityLogTest extends TestCase
     {
         $actor = User::factory()->create();
         $actor->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
-        $company = Company::factory()->create(['name' => 'Seeded company']);
+        $company = FiscalYear::factory()->create(['name' => 'Seeded company']);
 
         $activity = Activity::create([
             'log_name' => 'model',
             'description' => 'created',
             'event' => 'created',
             'user_id' => $actor->id,
-            'subject_type' => Company::class,
+            'subject_type' => FiscalYear::class,
             'subject_id' => $company->id,
             'properties' => [
                 'model_label' => $company->name,
@@ -278,9 +279,9 @@ class ActivityLogTest extends TestCase
     public function test_document_delete_request_records_the_document_and_every_transaction(): void
     {
         $actor = User::factory()->create();
-        $company = Company::factory()->create(['fiscal_year' => 1403]);
+        $company = FiscalYear::factory()->create(['fiscal_year' => 1403]);
         $actor->companies()->syncWithoutDetaching([$company->id]);
-        config(['active-company-id' => $company->id, 'active-company-fiscal-year' => 1403]);
+        config(['active-fiscal-year-id' => $company->id, 'active-company-fiscal-year' => 1403]);
 
         $subject = Subject::withoutGlobalScopes()->create([
             'company_id' => $company->id,
@@ -328,9 +329,9 @@ class ActivityLogTest extends TestCase
     public function test_subject_transfer_request_records_every_updated_transaction(): void
     {
         $actor = User::factory()->create();
-        $company = Company::factory()->create(['fiscal_year' => 1403]);
+        $company = FiscalYear::factory()->create(['fiscal_year' => 1403]);
         $actor->companies()->syncWithoutDetaching([$company->id]);
-        config(['active-company-id' => $company->id, 'active-company-fiscal-year' => 1403]);
+        config(['active-fiscal-year-id' => $company->id, 'active-company-fiscal-year' => 1403]);
 
         $source = Subject::withoutGlobalScopes()->create([
             'company_id' => $company->id,
@@ -383,7 +384,7 @@ class ActivityLogTest extends TestCase
         $actor = User::factory()->create();
 
         Route::post('/test/activity-log/failure', function () {
-            Company::factory()->create();
+            FiscalYear::factory()->create();
 
             throw new \RuntimeException('request failed');
         })->middleware('web');
@@ -404,7 +405,7 @@ class ActivityLogTest extends TestCase
     {
         $superAdmin = User::factory()->create();
         $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
-        $company = Company::factory()->create(['name' => 'Audit Company']);
+        $company = FiscalYear::factory()->create(['name' => 'Audit Company']);
 
         activity('model')
             ->causedBy($superAdmin)
@@ -430,7 +431,7 @@ class ActivityLogTest extends TestCase
             ->assertDontSee('POST locale')
             ->assertViewHas('activities', fn ($activities): bool => $activities->getCollection()->first()['changes']->contains(fn (array $change): bool => $change['field'] === 'name'))
             ->assertViewHas('modelOptions', fn ($options): bool => $options->contains(fn (array $option): bool => $option === [
-                'value' => Company::class,
+                'value' => FiscalYear::class,
                 'label' => __('Company'),
             ]));
 
@@ -481,7 +482,7 @@ class ActivityLogTest extends TestCase
     {
         $superAdmin = User::factory()->create();
         $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
-        $company = Company::factory()->create(['name' => 'Merged Company']);
+        $company = FiscalYear::factory()->create(['name' => 'Merged Company']);
 
         activity('model')
             ->causedBy($superAdmin)
@@ -526,7 +527,7 @@ class ActivityLogTest extends TestCase
     {
         $superAdmin = User::factory()->create();
         $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
-        $company = Company::factory()->create(['name' => 'Created Company']);
+        $company = FiscalYear::factory()->create(['name' => 'Created Company']);
 
         activity('model')
             ->causedBy($superAdmin)
@@ -610,8 +611,8 @@ class ActivityLogTest extends TestCase
     {
         $superAdmin = User::factory()->create();
         $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
-        $firstCompany = Company::factory()->create(['name' => 'First related model']);
-        $secondCompany = Company::factory()->create(['name' => 'Second related model']);
+        $firstCompany = FiscalYear::factory()->create(['name' => 'First related model']);
+        $secondCompany = FiscalYear::factory()->create(['name' => 'Second related model']);
 
         foreach ([$firstCompany, $secondCompany] as $company) {
             activity('model')
@@ -660,8 +661,8 @@ class ActivityLogTest extends TestCase
     {
         $superAdmin = User::factory()->create();
         $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
-        $firstCompany = Company::factory()->create();
-        $secondCompany = Company::factory()->create();
+        $firstCompany = FiscalYear::factory()->create();
+        $secondCompany = FiscalYear::factory()->create();
 
         foreach ([$firstCompany, $secondCompany] as $company) {
             activity('model')
@@ -705,8 +706,8 @@ class ActivityLogTest extends TestCase
     {
         $superAdmin = User::factory()->create();
         $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
-        $firstCompany = Company::factory()->create();
-        $secondCompany = Company::factory()->create();
+        $firstCompany = FiscalYear::factory()->create();
+        $secondCompany = FiscalYear::factory()->create();
 
         foreach ([$firstCompany, $secondCompany] as $company) {
             activity('model')
@@ -750,7 +751,7 @@ class ActivityLogTest extends TestCase
     {
         $superAdmin = User::factory()->create();
         $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
-        $company = Company::factory()->create();
+        $company = FiscalYear::factory()->create();
 
         activity('model')
             ->causedBy($superAdmin)
@@ -776,7 +777,7 @@ class ActivityLogTest extends TestCase
     {
         $superAdmin = User::factory()->create();
         $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
-        $company = Company::factory()->create();
+        $company = FiscalYear::factory()->create();
 
         activity('model')
             ->causedBy($superAdmin)
@@ -831,7 +832,7 @@ class ActivityLogTest extends TestCase
     {
         $superAdmin = User::factory()->create(['name' => 'Audit Administrator']);
         $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
-        $company = Company::factory()->create(['name' => 'Dashboard Audit Company']);
+        $company = FiscalYear::factory()->create(['name' => 'Dashboard Audit Company']);
 
         activity('model')
             ->causedBy($superAdmin)
@@ -905,10 +906,10 @@ class ActivityLogTest extends TestCase
         $this->assertNotSame($impersonated->id, $requestActivity->user_id);
         $this->assertSame($impersonated->id, $requestActivity->details->get('impersonated_user_id'));
 
-        $company = Company::factory()->create();
+        $company = FiscalYear::factory()->create();
         $modelActivity = Activity::query()
             ->where('source', 'model')
-            ->where('model_type', Company::class)
+            ->where('model_type', FiscalYear::class)
             ->where('model_id', $company->id)
             ->latest('id')
             ->firstOrFail();
@@ -937,7 +938,7 @@ class ActivityLogTest extends TestCase
         $this->assertTrue($impersonator->impersonate($impersonated));
 
         Route::post('/test/activity-log/multiple-model-events', function () {
-            Company::factory()->count(3)->create();
+            FiscalYear::factory()->count(3)->create();
 
             return response()->noContent();
         })->middleware('web');

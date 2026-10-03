@@ -5,8 +5,8 @@ namespace Tests\Feature;
 use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Models\AttendanceLog;
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\PersonnelRequest;
 use App\Models\PublicHoliday;
 use App\Models\WorkShift;
@@ -34,7 +34,7 @@ class AttendanceServiceCalculationTest extends TestCase
 
     private AttendanceService $service;
 
-    private Company $company;
+    private FiscalYear $company;
 
     private WorkSite $workSite;
 
@@ -47,11 +47,11 @@ class AttendanceServiceCalculationTest extends TestCase
         parent::setUp();
 
         $this->service = new AttendanceService;
-        $this->company = Company::factory()->create();
+        $this->company = FiscalYear::factory()->create();
         $this->workSite = WorkSite::factory()->create(['company_id' => $this->company->id]);
 
-        request()->cookies->set('active-company-id', $this->company->id);
-        $this->withCookies(['active-company-id' => $this->company->id]);
+        request()->cookies->set('active-fiscal-year-id', $this->company->id);
+        $this->withCookies(['active-fiscal-year-id' => $this->company->id]);
 
         $this->startDate = Carbon::create(2025, 3, 1);
         $this->durationDays = 31;

@@ -74,7 +74,7 @@ class AttendanceLogController extends Controller
         AttendanceLog::create(array_merge(
             $validated,
             [
-                'company_id' => getActiveCompany(),
+                'company_id' => getActiveFiscalYear(),
                 'log_date' => $gregorianLogDate,
                 'is_manual' => $request->boolean('is_manual'),
             ]
@@ -335,7 +335,7 @@ class AttendanceLogController extends Controller
 
         $startDate = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($validated['start_date']));
         $endDate = $startDate->copy()->addDays((int) $validated['duration'] - 1);
-        $companyId = getActiveCompany();
+        $companyId = getActiveFiscalYear();
 
         $holidayDates = PublicHoliday::withoutGlobalScopes()
             ->where('company_id', $companyId)
@@ -454,7 +454,7 @@ class AttendanceLogController extends Controller
         $preview = $importService->preview(
             $request->file('file'),
             $type,
-            getActiveCompany(),
+            getActiveFiscalYear(),
             $dateFrom,
             $dateTo
         );
@@ -488,7 +488,7 @@ class AttendanceLogController extends Controller
         $result = $importService->import(
             $tmpPath,
             $type,
-            getActiveCompany(),
+            getActiveFiscalYear(),
             $dateFrom,
             $dateTo,
             $duplicateMode

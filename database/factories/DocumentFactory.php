@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\Company;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -12,7 +12,7 @@ class DocumentFactory extends Factory
     public function definition(): array
     {
         $creator = User::inRandomOrder()->first() ?? User::factory()->create();
-        $company = Company::withoutGlobalScopes()->find(getActiveCompany());
+        $company = FiscalYear::withoutGlobalScopes()->find(getActiveFiscalYear());
 
         if (! $company) {
             throw new \LogicException('An active company is required to create a document.');

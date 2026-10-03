@@ -43,7 +43,7 @@ class Cheque extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function (Cheque $cheque) {
-            $cheque->company_id ??= getActiveCompany();
+            $cheque->company_id ??= getActiveFiscalYear();
         });
     }
 

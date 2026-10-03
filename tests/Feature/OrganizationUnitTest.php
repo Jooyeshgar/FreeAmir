@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\OrganizationUnit;
 use App\Models\User;
 use App\Models\WorkShift;
@@ -24,7 +24,7 @@ class OrganizationUnitTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
+        $company = FiscalYear::factory()->create();
         $this->companyId = $company->id;
 
         $this->user = User::factory()->create();
@@ -35,7 +35,7 @@ class OrganizationUnitTest extends TestCase
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->companyId]);
     }
 
     public function test_index_lists_units_for_active_company(): void
@@ -45,7 +45,7 @@ class OrganizationUnitTest extends TestCase
             'name' => 'Finance',
         ]);
         OrganizationUnit::factory()->create([
-            'company_id' => Company::factory()->create()->id,
+            'company_id' => FiscalYear::factory()->create()->id,
             'name' => 'Foreign Unit',
         ]);
 
@@ -76,7 +76,7 @@ class OrganizationUnitTest extends TestCase
     public function test_store_rejects_parent_from_another_company(): void
     {
         $foreignParent = OrganizationUnit::factory()->create([
-            'company_id' => Company::factory()->create()->id,
+            'company_id' => FiscalYear::factory()->create()->id,
         ]);
 
         $response = $this->post(route('hr.organization-units.store'), [
@@ -121,7 +121,7 @@ class OrganizationUnitTest extends TestCase
     public function test_employee_cannot_be_assigned_to_organization_unit_from_another_company(): void
     {
         $foreignUnit = OrganizationUnit::factory()->create([
-            'company_id' => Company::factory()->create()->id,
+            'company_id' => FiscalYear::factory()->create()->id,
         ]);
         $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
         $workShift = WorkShift::factory()->create(['company_id' => $this->companyId]);

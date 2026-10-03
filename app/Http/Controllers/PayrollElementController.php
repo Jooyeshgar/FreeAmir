@@ -63,7 +63,7 @@ class PayrollElementController extends Controller
 
         PayrollElement::create(array_merge(
             $validated,
-            ['company_id' => getActiveCompany()]
+            ['company_id' => getActiveFiscalYear()]
         ));
 
         return redirect()->route('salary.payroll-elements.index')

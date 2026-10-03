@@ -6,10 +6,10 @@ use App\Enums\FiscalYearSection;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Http\Requests\StoreInvoiceRequest;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -34,7 +34,7 @@ class WarehouseInvoiceStockTest extends TestCase
 {
     use RefreshDatabase, SeederHelper;
 
-    private Company $company;
+    private FiscalYear $company;
 
     private User $user;
 
@@ -52,8 +52,8 @@ class WarehouseInvoiceStockTest extends TestCase
     {
         parent::setUp();
 
-        $this->company = Company::factory()->create();
-        config(['active-company-id' => $this->company->id]);
+        $this->company = FiscalYear::factory()->create();
+        config(['active-fiscal-year-id' => $this->company->id]);
 
         $this->user = User::factory()->create();
         $this->company->users()->attach($this->user);
@@ -147,7 +147,7 @@ class WarehouseInvoiceStockTest extends TestCase
 
     public function test_recalculate_quantity_uses_approved_beginning_inventory_instead_of_previous_fiscal_year_stock(): void
     {
-        $previousCompany = Company::factory()->create([
+        $previousCompany = FiscalYear::factory()->create([
             'name' => $this->company->name,
             'fiscal_year' => (int) $this->company->fiscal_year - 1,
         ]);
@@ -384,7 +384,7 @@ class WarehouseInvoiceStockTest extends TestCase
 
     public function test_invoice_form_rejects_missing_and_cross_company_warehouse(): void
     {
-        $foreignCompany = Company::factory()->create();
+        $foreignCompany = FiscalYear::factory()->create();
         $foreignWarehouse = Warehouse::withoutGlobalScopes()->create([
             'company_id' => $foreignCompany->id,
             'name' => 'Foreign',

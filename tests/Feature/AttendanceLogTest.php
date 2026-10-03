@@ -7,8 +7,8 @@ use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\PersonnelRequest;
 use App\Models\PublicHoliday;
 use App\Models\User;
@@ -35,7 +35,7 @@ class AttendanceLogTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
+        $company = FiscalYear::factory()->create();
         $this->companyId = $company->id;
 
         $this->user = User::factory()->create();
@@ -46,8 +46,8 @@ class AttendanceLogTest extends TestCase
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
-        config(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->companyId]);
+        config(['active-fiscal-year-id' => $this->companyId]);
 
         $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
 

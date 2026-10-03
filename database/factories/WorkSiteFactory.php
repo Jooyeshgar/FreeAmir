@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\WorkSite;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -13,7 +13,7 @@ class WorkSiteFactory extends Factory
     public function definition(): array
     {
         return [
-            'company_id' => Company::factory(),
+            'company_id' => FiscalYear::factory(),
             'name' => $this->faker->company(),
             'code' => strtoupper($this->faker->unique()->lexify('WS-???')),
             'address' => $this->faker->optional()->address(),

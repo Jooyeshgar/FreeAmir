@@ -33,7 +33,6 @@ use App\Models\Cheque;
 use App\Models\Chequebook;
 use App\Models\ChequeHistory;
 use App\Models\Comment;
-use App\Models\Company;
 use App\Models\Config;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
@@ -41,6 +40,7 @@ use App\Models\DecreeBenefit;
 use App\Models\Document;
 use App\Models\DocumentFile;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\MonthlyAttendance;
@@ -117,9 +117,23 @@ class FiscalYearService
      *
      * @throws Exception
      */
-    public static function createWithCopiedData(array $newFiscalYearData, int $sourceYearId, array $sectionsToCopy): Company
+    public static function createWithCopiedData(array $newFiscalYearData, int $sourceYearId, array $sectionsToCopy): FiscalYear
     {
         $sectionsToCopy = self::filterValidSections($sectionsToCopy);
+
+        $sourceYear = FiscalYear::findOrFail($sourceYearId);
+        $newFiscalYearData['name'] ??= $sourceYear->name;
+        if ($newFiscalYearData['name'] === $sourceYear->company->name) {
+            $newFiscalYearData['company_id'] = $sourceYear->company_id;
+
+            if ($sourceYear->company->fiscalYears()->where('fiscal_year', $newFiscalYearData['fiscal_year'])->exists()) {
+                throw ValidationException::withMessages([
+                    'fiscal_year' => [__('This fiscal year already exists for the company.')],
+                ]);
+            }
+        } else {
+            unset($newFiscalYearData['company_id']);
+        }
 
         $sourceData = self::fetchSourceData($sourceYearId, $sectionsToCopy);
 
@@ -139,7 +153,7 @@ class FiscalYearService
 
         $exportData = self::fetchSourceData($sourceYearId, $sectionsToExport);
 
-        $sourceCompany = Company::find($sourceYearId);
+        $sourceCompany = FiscalYear::find($sourceYearId);
         $exportData['meta'] = [
             'source_company_id' => $sourceYearId,
             'source_company_name' => $sourceCompany?->name,
@@ -262,7 +276,7 @@ class FiscalYearService
      *
      * @throws Exception
      */
-    public static function importData(array $importData, array $newFiscalYearData): Company
+    public static function importData(array $importData, array $newFiscalYearData): FiscalYear
     {
         $sectionsToImport = array_intersect(
             array_keys(self::getAvailableSections()),
@@ -275,13 +289,19 @@ class FiscalYearService
             }
             Model::unguard();
 
-            $newFiscalYear = Company::create($newFiscalYearData);
+            $newFiscalYear = FiscalYear::create($newFiscalYearData);
             $newFiscalYear->users()->attach(Auth::id());
             $targetYearId = $newFiscalYear->id;
 
-            $originalCompanyId = getActiveCompany();
-            Cookie::expire('active-company-id');
-            Cookie::queue('active-company-id', $targetYearId);
+            $originalCompanyId = getActiveFiscalYear();
+            $originalConfiguredYearId = config('active-fiscal-year-id');
+            $originalConfiguredCompanyId = config('active-company-id');
+            config([
+                'active-fiscal-year-id' => $targetYearId,
+                'active-company-id' => $newFiscalYear->company_id,
+            ]);
+            Cookie::expire('active-fiscal-year-id');
+            Cookie::queue('active-fiscal-year-id', $targetYearId);
 
             $idMappings = [];
 
@@ -732,8 +752,12 @@ class FiscalYearService
                     'import' => [__('Fiscal year import failed: :error', ['error' => $e->getMessage()])],
                 ]);
             } finally {
-                Cookie::expire('active-company-id');
-                Cookie::queue('active-company-id', $originalCompanyId);
+                config([
+                    'active-fiscal-year-id' => $originalConfiguredYearId,
+                    'active-company-id' => $originalConfiguredCompanyId,
+                ]);
+                Cookie::expire('active-fiscal-year-id');
+                Cookie::queue('active-fiscal-year-id', $originalCompanyId);
                 if (DB::getDriverName() === 'mysql') {
                     DB::statement('SET FOREIGN_KEY_CHECKS=1;');
                 }
@@ -2730,7 +2754,7 @@ class FiscalYearService
         return $mapping;
     }
 
-    protected static function validateClosingFiscalYear(Company $company): array
+    protected static function validateClosingFiscalYear(FiscalYear $company): array
     {
         $errors = [];
 
@@ -2754,7 +2778,7 @@ class FiscalYearService
         return $errors;
     }
 
-    protected static function balanceCurrentProfitAndLoss(Company $company, Collection $transactions, User $user): Collection
+    protected static function balanceCurrentProfitAndLoss(FiscalYear $company, Collection $transactions, User $user): Collection
     {
         $difference = (float) $transactions->sum('value');
 
@@ -2782,7 +2806,7 @@ class FiscalYearService
         return $transactions;
     }
 
-    protected static function createOpeningDocument(Company $company, Document $closeDocument, User $user): void
+    protected static function createOpeningDocument(FiscalYear $company, Document $closeDocument, User $user): void
     {
         $documentData = [
             'number' => 1,
@@ -2839,7 +2863,7 @@ class FiscalYearService
         DocumentService::createDocument($user, $documentData, $transactions);
     }
 
-    protected static function createClosingDocument(Company $company, User $user): Document
+    protected static function createClosingDocument(FiscalYear $company, User $user): Document
     {
         $documentData = [
             'number' => Document::where('company_id', $company->id)->max('number') + 1,
@@ -2854,7 +2878,7 @@ class FiscalYearService
         return DocumentService::createDocument($user, $documentData, self::closingTransactions($company, $user));
     }
 
-    protected static function closingTransactions(Company $company, User $user): array
+    protected static function closingTransactions(FiscalYear $company, User $user): array
     {
         return Transaction::query()
             ->whereHas('document', fn ($doc) => $doc->where('company_id', $company->id))
@@ -2874,10 +2898,10 @@ class FiscalYearService
     /**
      * Reopen the three-step closing workflow while preserving generated document numbers.
      */
-    public static function recalculateClosingDocument(Company $company, User $user): Document
+    public static function recalculateClosingDocument(FiscalYear $company, User $user): Document
     {
         return DB::transaction(function () use ($company) {
-            $lockedCompany = Company::query()->lockForUpdate()->findOrFail($company->id);
+            $lockedCompany = FiscalYear::query()->lockForUpdate()->findOrFail($company->id);
 
             $recalculationInProgress = in_array($lockedCompany->closing_recalculation_step, [1, 2], true);
 
@@ -2918,9 +2942,9 @@ class FiscalYearService
         });
     }
 
-    protected static function newFiscalYear(Company $company): Company
+    protected static function newFiscalYear(FiscalYear $company): FiscalYear
     {
-        $newFiscalYearData = collect($company->getAttributes())->except([
+        $newFiscalYearData = collect($company->company->getAttributes())->except(['id'])->merge(collect($company->getAttributes())->except([
             'id',
             'fiscal_year',
             'closed_at',
@@ -2928,13 +2952,11 @@ class FiscalYearService
             'pl_document_id',
             'closing_document_id',
             'closing_recalculation_step',
-        ])
+        ]))
             ->merge(['fiscal_year' => $company->fiscal_year + 1])->toArray();
 
         $sectionsToCopy = ['subjects', 'configs', 'banks', 'customers', 'products', 'warehouses', 'services', 'employees']; // Sections to copy to the new fiscal year
         $newFiscalYear = self::createWithCopiedData($newFiscalYearData, $company->id, $sectionsToCopy);
-
-        self::copyMoadianKeys($company, $newFiscalYear);
 
         $userIds = $company->users()->pluck('users.id')->toArray();
         $newFiscalYear->users()->attach($userIds);
@@ -2943,35 +2965,13 @@ class FiscalYearService
     }
 
     /**
-     * Duplicate the encrypted Moadian certificate/private key files so the new fiscal year
-     * owns independent copies rather than sharing the source year's files on disk.
-     */
-    protected static function copyMoadianKeys(Company $source, Company $target): void
-    {
-        $updates = [];
-
-        foreach (['certificate_path', 'private_key_path'] as $attr) {
-            $old = $source->{$attr};
-            if ($old && Storage::exists($old)) {
-                $new = 'keys/'.uniqid().'.'.pathinfo($old, PATHINFO_EXTENSION);
-                Storage::copy($old, $new);
-                $updates[$attr] = $new;
-            }
-        }
-
-        if ($updates) {
-            $target->forceFill($updates)->save();
-        }
-    }
-
-    /**
      * Step 1 – Close temporary (income/expense) accounts into the Income Summary account.
      * Saves the resulting document ID onto the company as `pl_document_id`.
      */
-    public static function closeTemporaryAccounts(Company $company, User $user): Document
+    public static function closeTemporaryAccounts(FiscalYear $company, User $user): Document
     {
         $document = DB::transaction(function () use ($company, $user) {
-            $company = Company::query()->lockForUpdate()->findOrFail($company->id);
+            $company = FiscalYear::query()->lockForUpdate()->findOrFail($company->id);
 
             if ($company->closing_recalculation_step === 1) {
                 $document = Document::query()->where('company_id', $company->id)->findOrFail($company->pl_document_id);
@@ -3012,12 +3012,12 @@ class FiscalYearService
      *
      * @throws Exception
      */
-    public static function stepThreeCloseAndOpenNewYear(Company $company, User $user): Company
+    public static function stepThreeCloseAndOpenNewYear(FiscalYear $company, User $user): FiscalYear
     {
         $newFiscalYear = null;
 
         DB::transaction(function () use ($company, $user, &$newFiscalYear) {
-            $company = Company::query()->lockForUpdate()->findOrFail($company->id);
+            $company = FiscalYear::query()->lockForUpdate()->findOrFail($company->id);
 
             if ($company->closing_recalculation_step === 1) {
                 throw ValidationException::withMessages([
@@ -3060,7 +3060,7 @@ class FiscalYearService
      * Returns the current balance of the Income Summary (خلاصه سود و زیان جاری) subject.
      * Used to gate Step 3: balance must be 0 before closing permanent accounts.
      */
-    public static function getIncomeSummaryBalance(Company $company): float
+    public static function getIncomeSummaryBalance(FiscalYear $company): float
     {
         $subject = Subject::where('company_id', $company->id)
             ->where('name', __('Current Profit and Loss Summary'))
@@ -3082,7 +3082,7 @@ class FiscalYearService
      *
      * @return array{draft_docs: array, negative_inventory: array, gaps_in_numbers: array}
      */
-    public static function getWizardValidations(Company $company): array
+    public static function getWizardValidations(FiscalYear $company): array
     {
         // 1. Draft (unapproved) documents
         $draftCount = Document::withoutGlobalScope(FiscalYearScope::class)
@@ -3135,7 +3135,7 @@ class FiscalYearService
     /**
      * @deprecated Use stepOneCloseTemporaryAccounts / stepThreeCloseAndOpenNewYear instead.
      */
-    public static function closeFiscalYear(Company $company, User $user): array
+    public static function closeFiscalYear(FiscalYear $company, User $user): array
     {
         $newFiscalYear = null;
         $validationErrors = [];
@@ -3165,7 +3165,7 @@ class FiscalYearService
         return [$newFiscalYear, $validationErrors];
     }
 
-    protected static function currentProfitAndLoss(Company $company, User $user): Document
+    protected static function currentProfitAndLoss(FiscalYear $company, User $user): Document
     {
         $documentData = [
             'number' => Document::where('company_id', $company->id)->max('number') + 1,
@@ -3180,7 +3180,7 @@ class FiscalYearService
         return DocumentService::createDocument($user, $documentData, self::currentProfitAndLossTransactions($company, $user)->toArray());
     }
 
-    protected static function currentProfitAndLossTransactions(Company $company, User $user): Collection
+    protected static function currentProfitAndLossTransactions(FiscalYear $company, User $user): Collection
     {
         $incomeSummarySubject = Subject::where('company_id', $company->id)
             ->where('name', __('Current Profit and Loss Summary'))

@@ -9,10 +9,10 @@ use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\Bank;
 use App\Models\BankAccount;
 use App\Models\Chequebook;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\ProductGroup;
@@ -343,9 +343,9 @@ class InvoiceController extends Controller
         $ancillaryCostProductIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->unique()->values()->all();
         $canCreateAncillaryCost = $invoice->invoice_type === InvoiceType::BUY && ! $isServiceBuy && empty(InvoiceService::notAllowedInvoiceForAncillaryCosts($invoice, $ancillaryCostProductIds));
 
-        $fiscalYears = Company::whereHas('users', function ($q) {
+        $fiscalYears = FiscalYear::whereHas('users', function ($q) {
             $q->where('users.id', auth()->id());
-        })->where('id', '!=', getActiveCompany())->get();
+        })->where('id', '!=', getActiveFiscalYear())->get();
 
         return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects', 'paidAmount', 'remainingAmount', 'chequeDirection', 'chequeBanks', 'chequeBankAccounts', 'chequebooks', 'fiscalYears', 'canCreateAncillaryCost'));
     }
@@ -826,13 +826,13 @@ class InvoiceController extends Controller
 
     public function transfer(Request $request, Invoice $invoice): RedirectResponse
     {
-        $request->validate(['target_company_id' => 'required|integer|exists:companies,id']);
+        $request->validate(['target_company_id' => 'required|integer|exists:fiscal_years,id']);
 
         if (! Auth::user()->companies->contains((int) $request->target_company_id)) {
             abort(403);
         }
 
-        if ((int) $request->target_company_id === getActiveCompany()) {
+        if ((int) $request->target_company_id === getActiveFiscalYear()) {
             return redirect()->route('invoices.show', $invoice)->with('error', __('Cannot transfer to the same fiscal year.'));
         }
 

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\FiscalYearSection;
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Services\FiscalYearService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,7 +25,7 @@ class BackupController extends Controller
         $validated = $request->validate([
             'source_id' => [
                 'required',
-                Rule::exists('company_user', 'company_id')->where('user_id', auth()->user()->id),
+                Rule::exists('fiscal_year_user', 'fiscal_year_id')->where('user_id', auth()->user()->id),
             ],
         ]);
 
@@ -39,7 +39,7 @@ class BackupController extends Controller
         $validated = $request->validate([
             'source_id' => [
                 'required',
-                Rule::exists('company_user', 'company_id')->where('user_id', auth()->user()->id),
+                Rule::exists('fiscal_year_user', 'fiscal_year_id')->where('user_id', auth()->user()->id),
             ],
             'tables_to_backup' => 'required|array',
             'tables_to_backup.*' => 'string|in:'.implode(',', array_map(fn ($case) => $case->value, FiscalYearSection::cases())),
@@ -55,7 +55,7 @@ class BackupController extends Controller
 
         $includeDocumentFiles = in_array($documentFilesVal, $tables);
 
-        $company = Company::findOrFail($validated['source_id']);
+        $company = FiscalYear::findOrFail($validated['source_id']);
         $exportData = FiscalYearService::exportData($validated['source_id'], $tables);
 
         if ($includeDocumentFiles) {

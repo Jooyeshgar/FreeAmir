@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\OrgChart;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,7 +21,7 @@ class OrgChartTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
+        $company = FiscalYear::factory()->create();
         $this->companyId = $company->id;
 
         $this->user = User::factory()->create();
@@ -32,7 +32,7 @@ class OrgChartTest extends TestCase
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->companyId]);
     }
 
     private function makeNode(array $overrides = []): OrgChart
@@ -81,7 +81,7 @@ class OrgChartTest extends TestCase
 
     public function test_index_does_not_show_nodes_from_other_companies(): void
     {
-        $otherCompany = Company::factory()->create();
+        $otherCompany = FiscalYear::factory()->create();
         OrgChart::factory()->create([
             'company_id' => $otherCompany->id,
             'title' => 'Foreign Node',

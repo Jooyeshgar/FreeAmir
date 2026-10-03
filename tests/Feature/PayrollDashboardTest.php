@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Enums\PayrollStatus;
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\Payroll;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -25,7 +25,7 @@ class PayrollDashboardTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create(['fiscal_year' => 1405]);
+        $company = FiscalYear::factory()->create(['fiscal_year' => 1405]);
         $this->companyId = $company->id;
 
         $this->user = User::factory()->create();
@@ -39,7 +39,7 @@ class PayrollDashboardTest extends TestCase
         ]);
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->companyId]);
     }
 
     public function test_payroll_dashboard_permission_can_view_dashboard(): void

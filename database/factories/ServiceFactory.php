@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Service;
 use App\Models\ServiceGroup;
 use App\Models\Subject;
@@ -14,8 +14,8 @@ class ServiceFactory extends Factory
 
     public function definition(): array
     {
-        $companyId = (int) getActiveCompany();
-        if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
+        $companyId = (int) getActiveFiscalYear();
+        if (! FiscalYear::withoutGlobalScopes()->whereKey($companyId)->exists()) {
             throw new \LogicException('An active company is required to create a service.');
         }
 
@@ -45,7 +45,7 @@ class ServiceFactory extends Factory
     public function withGroup(?ServiceGroup $group = null): static
     {
         return $this->state(function (array $attributes) use ($group) {
-            $companyId = $attributes['company_id'] ?? Company::withoutGlobalScopes()->inRandomOrder()->value('id') ?? Company::factory()->create()->id;
+            $companyId = $attributes['company_id'] ?? FiscalYear::withoutGlobalScopes()->inRandomOrder()->value('id') ?? FiscalYear::factory()->create()->id;
 
             $groupToUse = $group;
 

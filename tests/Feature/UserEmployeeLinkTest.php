@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
@@ -15,7 +15,7 @@ class UserEmployeeLinkTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected Company $company;
+    protected FiscalYear $company;
 
     protected User $user;
 
@@ -27,7 +27,7 @@ class UserEmployeeLinkTest extends TestCase
     {
         parent::setUp();
 
-        $this->company = Company::factory()->create();
+        $this->company = FiscalYear::factory()->create();
         $this->user = User::factory()->create();
         $this->company->users()->attach($this->user);
 
@@ -36,7 +36,7 @@ class UserEmployeeLinkTest extends TestCase
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->company->id]);
+        $this->withCookies(['active-fiscal-year-id' => $this->company->id]);
 
         $this->workSite = WorkSite::factory()->create(['company_id' => $this->company->id]);
         $this->workShift = WorkShift::factory()->create(['company_id' => $this->company->id]);

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\InvoiceType;
 use App\Models\Company;
 use App\Models\Customer;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Carbon;
@@ -40,7 +41,10 @@ class InvoicePrintViewTest extends TestCase
             'vat' => 0,
             'description' => '',
         ]);
-        $invoice->setRelation('company', $company);
+        $year = new FiscalYear(['fiscal_year' => 1405]);
+        $year->setRelation('company', $company);
+        $year->exists = true;
+        $invoice->setRelation('company', $year);
         $invoice->setRelation('customer', new Customer(['name' => 'مشتری نمونه']));
         $invoice->setRelation('items', new Collection);
 

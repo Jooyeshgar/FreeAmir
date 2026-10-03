@@ -7,6 +7,7 @@ use App\Enums\InvoiceType;
 use App\Models\Activity;
 use App\Models\Company;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -34,7 +35,10 @@ class ManagementCompanyOverviewTest extends TestCase
             'national_code' => '10101010101',
             'economical_code' => '20202020202',
         ]);
-        $oldFiscalYear = $this->company('Grouped Business', 1403, ['closed_at' => now()]);
+        $oldFiscalYear = $this->company('Grouped Business', 1403, [
+            'company_id' => $newFiscalYear->company_id,
+            'closed_at' => now(),
+        ]);
         $otherCompany = $this->company('Other Business', 1404);
         $accountant = User::factory()->create(['name' => 'Grouped Accountant', 'email' => 'accountant@grouped.test']);
         $accountant->assignRole(Role::create(['name' => 'Business Accountant']));
@@ -53,7 +57,7 @@ class ManagementCompanyOverviewTest extends TestCase
         $response = $this->actingAs($admin)->get(route('companies.show', $oldFiscalYear));
 
         $response->assertOk()
-            ->assertViewHas('business', fn (Company $company): bool => $company->is($newFiscalYear))
+            ->assertViewHas('business', fn (Company $company): bool => $company->is($newFiscalYear->company))
             ->assertViewHas('fiscalYears', fn ($companies): bool => $companies->pluck('id')->all() === [$newFiscalYear->id, $oldFiscalYear->id]
                 && (int) $companies->firstWhere('id', $newFiscalYear->id)->documents_count === 2
                 && (int) $companies->firstWhere('id', $oldFiscalYear->id)->invoices_count === 1)
@@ -138,9 +142,9 @@ class ManagementCompanyOverviewTest extends TestCase
         return $admin;
     }
 
-    private function company(string $name, int $fiscalYear, array $attributes = []): Company
+    private function company(string $name, int $fiscalYear, array $attributes = []): FiscalYear
     {
-        return Company::create([
+        return FiscalYear::create([
             'name' => $name,
             'fiscal_year' => $fiscalYear,
             'currency' => 'Rial',
@@ -148,7 +152,7 @@ class ManagementCompanyOverviewTest extends TestCase
         ]);
     }
 
-    private function document(Company $company, User $creator, int $number): void
+    private function document(FiscalYear $company, User $creator, int $number): void
     {
         Document::withoutGlobalScopes()->create([
             'number' => $number,
@@ -158,7 +162,7 @@ class ManagementCompanyOverviewTest extends TestCase
         ]);
     }
 
-    private function invoice(Company $company, int $number): void
+    private function invoice(FiscalYear $company, int $number): void
     {
         $customerId = DB::table('customers')->insertGetId([
             'name' => 'Customer '.$number,

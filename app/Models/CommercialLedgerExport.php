@@ -43,6 +43,6 @@ class CommercialLedgerExport extends Model
 
     public function company()
     {
-        return $this->belongsTo(Company::class, 'company_id');
+        return $this->belongsTo(FiscalYear::class, 'company_id');
     }
 }

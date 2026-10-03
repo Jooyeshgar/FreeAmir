@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Subject;
@@ -30,7 +30,7 @@ class ProductImportExportTest extends TestCase
 
         app()->setLocale('en');
 
-        $company = Company::factory()->create();
+        $company = FiscalYear::factory()->create();
         $this->companyId = $company->id;
 
         $this->user = User::factory()->create();
@@ -44,8 +44,8 @@ class ProductImportExportTest extends TestCase
             Permission::firstOrCreate(['name' => 'products.import.store']),
         ]);
 
-        $this->withCookies(['active-company-id' => $this->companyId]);
-        config(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->companyId]);
+        config(['active-fiscal-year-id' => $this->companyId]);
 
         $this->productGroup = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId]);
     }

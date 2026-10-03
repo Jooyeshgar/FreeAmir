@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
 use App\Models\DecreeBenefit;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\OrgChart;
 use App\Models\PayrollElement;
 use App\Models\SalaryDecree;
@@ -32,7 +32,7 @@ class SalaryDecreeTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
+        $company = FiscalYear::factory()->create();
         $this->companyId = $company->id;
 
         $this->user = User::factory()->create();
@@ -43,7 +43,7 @@ class SalaryDecreeTest extends TestCase
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->companyId]);
 
         $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
 
@@ -111,7 +111,7 @@ class SalaryDecreeTest extends TestCase
 
     public function test_index_does_not_show_decrees_from_other_companies(): void
     {
-        $otherCompany = Company::factory()->create();
+        $otherCompany = FiscalYear::factory()->create();
         $otherWorkSite = WorkSite::factory()->create(['company_id' => $otherCompany->id]);
         $otherEmployee = Employee::factory()->create([
             'company_id' => $otherCompany->id,

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\User;
 use App\Models\WorkSite;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,7 +21,7 @@ class WorkSiteTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
+        $company = FiscalYear::factory()->create();
         $this->companyId = $company->id;
 
         $this->user = User::factory()->create();
@@ -32,7 +32,7 @@ class WorkSiteTest extends TestCase
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->companyId]);
     }
 
     private function makeWorkSite(array $overrides = []): WorkSite
@@ -71,7 +71,7 @@ class WorkSiteTest extends TestCase
 
     public function test_index_does_not_show_other_company_work_sites(): void
     {
-        $otherCompany = Company::factory()->create();
+        $otherCompany = FiscalYear::factory()->create();
         WorkSite::factory()->create(['company_id' => $otherCompany->id, 'name' => 'Other Site']);
 
         $response = $this->get(route('salary.work-sites.index'));

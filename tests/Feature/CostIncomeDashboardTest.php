@@ -3,10 +3,10 @@
 namespace Tests\Feature;
 
 use App\Enums\SubjectType;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\MonthlyBudget;
 use App\Models\Subject;
 use App\Models\Transaction;
@@ -39,15 +39,15 @@ class CostIncomeDashboardTest extends TestCase
         config(['app.locale' => 'fa']);
         app()->setLocale('fa');
 
-        $company = Company::factory()->create(['fiscal_year' => 1405]);
+        $company = FiscalYear::factory()->create(['fiscal_year' => 1405]);
         $this->companyId = $company->id;
 
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
 
-        $this->withCookies(['active-company-id' => (string) $this->companyId]);
-        $_COOKIE['active-company-id'] = (string) $this->companyId;
-        config(['active-company-id' => $this->companyId, 'active-company-fiscal-year' => 1405]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->companyId]);
+        $_COOKIE['active-fiscal-year-id'] = (string) $this->companyId;
+        config(['active-fiscal-year-id' => $this->companyId, 'active-company-fiscal-year' => 1405]);
 
         $this->importSubjects($this->companyId);
         $this->importConfigs($this->companyId);
@@ -416,7 +416,7 @@ class CostIncomeDashboardTest extends TestCase
 
     private function setFiscalYear(int $year): void
     {
-        Company::withoutGlobalScopes()->findOrFail($this->companyId)->update(['fiscal_year' => $year]);
+        FiscalYear::withoutGlobalScopes()->findOrFail($this->companyId)->update(['fiscal_year' => $year]);
         config(['active-company-fiscal-year' => $year]);
     }
 

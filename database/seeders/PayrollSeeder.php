@@ -18,7 +18,7 @@ class PayrollSeeder extends Seeder
 {
     public function run(): void
     {
-        $companyId = (int) getActiveCompany();
+        $companyId = (int) getActiveFiscalYear();
         $adminId = User::withoutGlobalScopes()->first()?->id;
 
         $employees = Employee::withoutGlobalScopes()->where('company_id', $companyId)->get();

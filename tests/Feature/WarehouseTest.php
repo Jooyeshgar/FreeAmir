@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Requests\StoreInvoiceRequest;
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\User;
@@ -32,7 +32,7 @@ class WarehouseTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
+        $company = FiscalYear::factory()->create();
         $this->companyId = $company->id;
 
         $this->user = User::factory()->create();
@@ -46,8 +46,8 @@ class WarehouseTest extends TestCase
         ]);
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
-        config(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->companyId]);
+        config(['active-fiscal-year-id' => $this->companyId]);
     }
 
     private function makeWarehouse(array $overrides = []): Warehouse
@@ -253,7 +253,7 @@ class WarehouseTest extends TestCase
         ]);
 
         $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId]);
-        $otherCompany = Company::factory()->create();
+        $otherCompany = FiscalYear::factory()->create();
         $foreignWarehouse = Warehouse::withoutGlobalScopes()->create([
             'company_id' => $otherCompany->id,
             'name' => 'Foreign Warehouse',
@@ -280,7 +280,7 @@ class WarehouseTest extends TestCase
 
     public function test_invoice_requires_company_warehouse(): void
     {
-        $otherCompany = Company::factory()->create();
+        $otherCompany = FiscalYear::factory()->create();
         $foreignWarehouse = Warehouse::withoutGlobalScopes()->create([
             'company_id' => $otherCompany->id,
             'name' => 'Foreign Invoice Warehouse',

@@ -74,7 +74,7 @@ class CustomerGroupService
 
     public function create(array $data): CustomerGroup
     {
-        $data['company_id'] ??= getActiveCompany();
+        $data['company_id'] ??= getActiveFiscalYear();
 
         $customerGroup = CustomerGroup::create($data);
 
@@ -108,7 +108,7 @@ class CustomerGroupService
 
     protected function syncSubject(CustomerGroup $customerGroup): void
     {
-        $companyId = $customerGroup->company_id ?? getActiveCompany();
+        $companyId = $customerGroup->company_id ?? getActiveFiscalYear();
 
         $relation = 'subject';
         $parentId = config('amir.cust_subject');

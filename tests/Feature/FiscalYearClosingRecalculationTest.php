@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
@@ -24,10 +24,10 @@ class FiscalYearClosingRecalculationTest extends TestCase
         $user->givePermissionTo(Permission::firstOrCreate([
             'name' => 'companies.closing-wizard.recalculate',
         ]));
-        $company = Company::factory()->create([
+        $company = FiscalYear::factory()->create([
             'fiscal_year' => 1403,
         ]);
-        config(['active-company-id' => $company->id]);
+        config(['active-fiscal-year-id' => $company->id]);
 
         $cash = Subject::factory()->create(['name' => 'Cash', 'is_permanent' => true]);
         $revenue = Subject::factory()->create(['name' => 'Revenue', 'is_permanent' => false]);
@@ -98,7 +98,7 @@ class FiscalYearClosingRecalculationTest extends TestCase
         $this->assertSame($closingDocumentId, $company->closing_document_id);
         $this->assertNull($company->closing_recalculation_step);
         $this->assertNotNull($company->closed_at);
-        $this->assertSame(2, Company::count());
+        $this->assertSame(2, FiscalYear::count());
 
         $closingValues = Document::findOrFail($closingDocumentId)->transactions()->pluck('value', 'subject_id');
         $this->assertEquals(-100, $closingValues[$cash->id]);
@@ -113,7 +113,7 @@ class FiscalYearClosingRecalculationTest extends TestCase
     public function test_it_rejects_recalculation_for_an_open_fiscal_year(): void
     {
         $user = User::factory()->create();
-        $company = Company::factory()->create(['closed_at' => null]);
+        $company = FiscalYear::factory()->create(['closed_at' => null]);
 
         $this->expectException(ValidationException::class);
 
@@ -126,12 +126,12 @@ class FiscalYearClosingRecalculationTest extends TestCase
         $user->givePermissionTo(Permission::firstOrCreate([
             'name' => 'companies.closing-wizard.recalculate',
         ]));
-        $company = Company::factory()->create([
+        $company = FiscalYear::factory()->create([
             'closed_at' => now(),
             'closed_by' => $user->id,
             'closing_document_id' => null,
         ]);
-        config(['active-company-id' => $company->id]);
+        config(['active-fiscal-year-id' => $company->id]);
 
         $response = $this->actingAs($user)
             ->post(route('companies.closing-wizard.recalculate', $company));
@@ -140,7 +140,7 @@ class FiscalYearClosingRecalculationTest extends TestCase
         $response->assertSessionHasErrors('company');
     }
 
-    private function createDocument(Company $company, User $user, int $number, array $values): Document
+    private function createDocument(FiscalYear $company, User $user, int $number, array $values): Document
     {
         $document = Document::create([
             'number' => $number,

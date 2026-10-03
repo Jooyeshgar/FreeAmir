@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use App\Enums\FiscalYearSection;
 use App\Enums\SubjectType;
-use App\Models\Company;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\MonthlyBudget;
 use App\Models\Subject;
 use App\Models\Transaction;
@@ -25,7 +25,7 @@ class MonthlyBudgetTest extends TestCase
 {
     use RefreshDatabase;
 
-    private Company $company;
+    private FiscalYear $company;
 
     private User $user;
 
@@ -38,16 +38,16 @@ class MonthlyBudgetTest extends TestCase
         config(['cache.default' => 'array']);
         Cache::flush();
 
-        $this->company = Company::factory()->create(['fiscal_year' => 1405]);
+        $this->company = FiscalYear::factory()->create(['fiscal_year' => 1405]);
         $this->user = User::factory()->create();
         $this->company->users()->syncWithoutDetaching([$this->user->id]);
 
         $this->service = new MonthlyBudgetService;
 
-        $this->withCookies(['active-company-id' => (string) $this->company->id]);
-        $_COOKIE['active-company-id'] = (string) $this->company->id;
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->company->id]);
+        $_COOKIE['active-fiscal-year-id'] = (string) $this->company->id;
         config([
-            'active-company-id' => $this->company->id,
+            'active-fiscal-year-id' => $this->company->id,
             'active-company-fiscal-year' => 1405,
         ]);
     }
@@ -252,7 +252,7 @@ class MonthlyBudgetTest extends TestCase
             'name' => 'Budget permanent asset',
             'is_permanent' => true,
         ]);
-        $otherCompany = Company::factory()->create(['fiscal_year' => 1405]);
+        $otherCompany = FiscalYear::factory()->create(['fiscal_year' => 1405]);
         Subject::withoutGlobalScopes()->create([
             'company_id' => $otherCompany->id,
             'parent_id' => null,
@@ -673,7 +673,7 @@ class MonthlyBudgetTest extends TestCase
             'company_id' => $this->company->id,
             'is_permanent' => true,
         ]);
-        $otherCompany = Company::factory()->create(['fiscal_year' => 1405]);
+        $otherCompany = FiscalYear::factory()->create(['fiscal_year' => 1405]);
         $otherSubject = Subject::withoutGlobalScopes()->create([
             'company_id' => $otherCompany->id,
             'parent_id' => null,

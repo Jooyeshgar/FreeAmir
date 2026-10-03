@@ -5,8 +5,8 @@ namespace Tests\Feature;
 use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Enums\ThursdayStatus;
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\PersonnelRequest;
 use App\Models\User;
 use App\Models\WorkShift;
@@ -31,7 +31,7 @@ class PersonnelRequestTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
+        $company = FiscalYear::factory()->create();
         $this->companyId = $company->id;
 
         $this->user = User::factory()->create();
@@ -42,7 +42,7 @@ class PersonnelRequestTest extends TestCase
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->companyId]);
 
         $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
         $this->workShift = WorkShift::factory()->create([
@@ -542,7 +542,7 @@ class PersonnelRequestTest extends TestCase
 
     public function test_cannot_see_another_companys_requests(): void
     {
-        $otherCompany = Company::factory()->create();
+        $otherCompany = FiscalYear::factory()->create();
         $otherWorkSite = WorkSite::factory()->create(['company_id' => $otherCompany->id]);
         $otherEmployee = Employee::factory()->create([
             'company_id' => $otherCompany->id,

@@ -4,9 +4,9 @@ namespace Tests\Feature;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\MoadianHistory;
 use App\Models\ProductGroup;
@@ -39,11 +39,11 @@ class VoidSellInvoiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->companyId = Company::firstOrCreate(['id' => 1], ['name' => 'Test Company', 'fiscal_year' => 1405])->id;
+        $this->companyId = FiscalYear::firstOrCreate(['id' => 1], ['name' => 'Test Company', 'fiscal_year' => 1405])->id;
 
         Cache::forever('active_company_id', $this->companyId);
-        Cookie::queue('active-company-id', (string) $this->companyId);
-        $_COOKIE['active-company-id'] = (string) $this->companyId;
+        Cookie::queue('active-fiscal-year-id', (string) $this->companyId);
+        $_COOKIE['active-fiscal-year-id'] = (string) $this->companyId;
 
         $this->user = User::factory()->create();
 
@@ -186,7 +186,7 @@ class VoidSellInvoiceTest extends TestCase
     public function test_product_stock_can_be_recalculated_from_invoices_in_all_companies(): void
     {
         $product = $this->createProduct();
-        $otherCompany = Company::create(['name' => 'Other Company', 'fiscal_year' => 1404]);
+        $otherCompany = FiscalYear::create(['name' => 'Other Company', 'fiscal_year' => 1404]);
 
         $invoice = $this->buy([$this->productItem($product, 10, 100)], true, 7024, '2026-07-01')['invoice'];
         $invoice->updateQuietly(['company_id' => $otherCompany->id]);

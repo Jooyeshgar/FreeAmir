@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
@@ -22,7 +22,7 @@ class CustomerGroupTest extends TestCase
     {
         parent::setUp();
 
-        $this->company = Company::factory()->create();
+        $this->company = FiscalYear::factory()->create();
         $this->user = User::factory()->create();
         $this->company->users()->attach($this->user);
 
@@ -36,7 +36,7 @@ class CustomerGroupTest extends TestCase
             Permission::firstOrCreate(['name' => 'customer-groups.destroy']),
         ]);
 
-        $this->withCookies(['active-company-id' => $this->company->id]);
+        $this->withCookies(['active-fiscal-year-id' => $this->company->id]);
     }
 
     public function test_it_displays_customer_group_index_page()

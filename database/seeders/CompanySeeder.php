@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use RuntimeException;
@@ -11,14 +11,14 @@ class CompanySeeder extends Seeder
 {
     public function run(): void
     {
-        $companyId = (int) getActiveCompany();
+        $companyId = (int) getActiveFiscalYear();
         $fiscalYear = jdate('Y', tr_num: 'en');
 
-        $company = $companyId === 1 ? Company::updateOrCreate(['id' => $companyId], [
+        $company = $companyId === 1 ? FiscalYear::updateOrCreate(['id' => $companyId], [
             'id' => $companyId,
             'name' => 'نام شرکت',
             'fiscal_year' => $fiscalYear,
-        ]) : Company::find($companyId);
+        ]) : FiscalYear::find($companyId);
 
         if (! $company) {
             throw new RuntimeException("Company with ID {$companyId} does not exist.");

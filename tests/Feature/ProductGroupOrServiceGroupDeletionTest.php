@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Service;
@@ -27,15 +27,15 @@ class ProductGroupOrServiceGroupDeletionTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create(['fiscal_year' => 1405]);
+        $company = FiscalYear::factory()->create(['fiscal_year' => 1405]);
         $this->companyId = $company->id;
 
         config([
-            'active-company-id' => $this->companyId,
+            'active-fiscal-year-id' => $this->companyId,
             'active-company-fiscal-year' => $company->fiscal_year,
         ]);
 
-        $this->withCookies(['active-company-id' => (string) $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->companyId]);
 
         $this->importSubjects($this->companyId);
         $this->importConfigs($this->companyId);

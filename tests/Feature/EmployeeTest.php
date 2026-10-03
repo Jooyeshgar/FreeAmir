@@ -5,8 +5,8 @@ namespace Tests\Feature;
 use App\Enums\EmployeeEmploymentType;
 use App\Enums\EmployeeGender;
 use App\Enums\EmployeeNationality;
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\MonthlyAttendance;
 use App\Models\Payroll;
 use App\Models\SalaryDecree;
@@ -33,7 +33,7 @@ class EmployeeTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
+        $company = FiscalYear::factory()->create();
         $this->companyId = $company->id;
 
         $this->user = User::factory()->create();
@@ -44,7 +44,7 @@ class EmployeeTest extends TestCase
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->companyId]);
 
         $this->workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
         $this->workShift = WorkShift::factory()->create(['company_id' => $this->companyId]);
@@ -96,7 +96,7 @@ class EmployeeTest extends TestCase
 
     public function test_index_does_not_show_employees_from_other_companies(): void
     {
-        $otherCompany = Company::factory()->create();
+        $otherCompany = FiscalYear::factory()->create();
         $otherSite = WorkSite::factory()->create(['company_id' => $otherCompany->id]);
         Employee::factory()->create([
             'company_id' => $otherCompany->id,
@@ -250,7 +250,7 @@ class EmployeeTest extends TestCase
     {
         $this->makeEmployee(['code' => 'EMP-MINE']);
 
-        $otherCompany = Company::factory()->create();
+        $otherCompany = FiscalYear::factory()->create();
         $otherSite = WorkSite::factory()->create(['company_id' => $otherCompany->id]);
         Employee::factory()->create([
             'company_id' => $otherCompany->id,

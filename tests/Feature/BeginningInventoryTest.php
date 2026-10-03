@@ -6,10 +6,10 @@ use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Enums\SubjectType;
 use App\Http\Requests\StoreInvoiceRequest;
-use App\Models\Company;
 use App\Models\Config;
 use App\Models\Customer;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\Subject;
@@ -29,7 +29,7 @@ class BeginningInventoryTest extends TestCase
 {
     use RefreshDatabase;
 
-    private Company $company;
+    private FiscalYear $company;
 
     private User $user;
 
@@ -48,8 +48,8 @@ class BeginningInventoryTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create();
-        $this->company = Company::factory()->create();
-        config(['active-company-id' => $this->company->id]);
+        $this->company = FiscalYear::factory()->create();
+        config(['active-fiscal-year-id' => $this->company->id]);
         $this->actingAs($this->user);
 
         foreach (['create', 'edit', 'index', 'show', 'store', 'update', 'destroy', 'approve'] as $ability) {

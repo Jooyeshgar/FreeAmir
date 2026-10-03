@@ -5,9 +5,9 @@ namespace Tests\Feature;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -41,11 +41,11 @@ class ReturnInvoiceCOGSTest extends TestCase
     {
         parent::setUp();
 
-        $this->companyId = Company::firstOrCreate(['id' => 1], ['name' => 'Test Company', 'fiscal_year' => 1405])->id;
+        $this->companyId = FiscalYear::firstOrCreate(['id' => 1], ['name' => 'Test Company', 'fiscal_year' => 1405])->id;
 
         Cache::forever('active_company_id', $this->companyId);
-        Cookie::queue('active-company-id', (string) $this->companyId);
-        $_COOKIE['active-company-id'] = (string) $this->companyId;
+        Cookie::queue('active-fiscal-year-id', (string) $this->companyId);
+        $_COOKIE['active-fiscal-year-id'] = (string) $this->companyId;
 
         $this->user = User::factory()->create();
         $this->actingAs($this->user);

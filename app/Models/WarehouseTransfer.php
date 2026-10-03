@@ -31,7 +31,7 @@ class WarehouseTransfer extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function (WarehouseTransfer $transfer) {
-            $transfer->company_id ??= getActiveCompany();
+            $transfer->company_id ??= getActiveFiscalYear();
         });
     }
 

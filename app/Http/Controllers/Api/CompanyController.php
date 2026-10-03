@@ -12,8 +12,9 @@ class CompanyController extends Controller
     {
         $companies = $request->user()
             ->companies()
-            ->orderBy('name')
-            ->get(['companies.id', 'name', 'fiscal_year', 'currency', 'closed_at'])
+            ->join('companies', 'fiscal_years.company_id', '=', 'companies.id')
+            ->orderBy('companies.name')
+            ->get(['fiscal_years.id', 'fiscal_years.company_id', 'fiscal_years.fiscal_year', 'fiscal_years.closed_at'])
             ->map(fn ($company) => [
                 'id' => $company->id,
                 'name' => $company->name,

@@ -12,7 +12,7 @@ class DatabaseSeeder extends Seeder
      */
     public function run(?int $companyId = null): void
     {
-        $companyId ??= (int) getActiveCompany();
+        $companyId ??= (int) getActiveFiscalYear();
         $previousActiveCompanyId = config('active-company-id');
         config(['active-company-id' => $companyId]);
 

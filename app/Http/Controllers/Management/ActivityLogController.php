@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Management;
 
 use App\Http\Controllers\Controller;
 use App\Models\Activity;
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Services\ActivityLogService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -72,7 +72,7 @@ class ActivityLogController extends Controller
             $activity->setAttribute('details', $details->put('models', $models->all()));
         }
 
-        $row = $this->activityRow($activity->load('user:id,name,email'), Company::query()->get()->keyBy('id'), collect());
+        $row = $this->activityRow($activity->load('user:id,name,email'), FiscalYear::query()->get()->keyBy('id'), collect());
 
         return response()->json([
             'html' => view('super-admin.activity-logs._details', ['activity' => $row])->render(),
@@ -111,7 +111,7 @@ class ActivityLogController extends Controller
             'activeFilterCount' => $activeFilterCount,
             'activeFilterCountLabel' => localizeNumber($activeFilterCount),
             'actionOptions' => $this->actionOptions(),
-            'companyOptions' => $data['companies']->map(fn (Company $company): array => [
+            'companyOptions' => $data['companies']->map(fn (FiscalYear $company): array => [
                 'value' => $company->id,
                 'label' => $company->name.' - '.localizeNumber($company->fiscal_year),
             ]),

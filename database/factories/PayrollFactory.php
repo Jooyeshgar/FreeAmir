@@ -3,8 +3,8 @@
 namespace Database\Factories;
 
 use App\Enums\PayrollStatus;
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\Payroll;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -21,7 +21,7 @@ class PayrollFactory extends Factory
         $totalDeductions = round($incomeTaxAmount + $otherDeductions, 2);
 
         return [
-            'company_id' => Company::factory(),
+            'company_id' => FiscalYear::factory(),
             'employee_id' => fn (array $attributes) => Employee::factory()->create(['company_id' => $attributes['company_id']])->id,
             'decree_id' => null,
             'monthly_attendance_id' => null,

@@ -5,9 +5,9 @@ namespace App\Services;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Enums\PersonnelRequestStatus;
-use App\Models\Company;
 use App\Models\Document;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\MonthlyAttendance;
@@ -29,21 +29,21 @@ class CompanyOverviewService
      *
      * @return array<string, mixed>
      */
-    public function build(Company $company): array
+    public function build(FiscalYear $company): array
     {
-        $fiscalYears = Company::query()
-            ->where('name', $company->name)
-            ->select('companies.*')
+        $fiscalYears = FiscalYear::query()
+            ->where('company_id', $company->company_id)
+            ->select('fiscal_years.*')
             ->selectSub(
                 Document::withoutGlobalScopes()
                     ->selectRaw('COUNT(*)')
-                    ->whereColumn('documents.company_id', 'companies.id'),
+                    ->whereColumn('documents.company_id', 'fiscal_years.id'),
                 'documents_count'
             )
             ->selectSub(
                 Invoice::withoutGlobalScopes()
                     ->selectRaw('COUNT(*)')
-                    ->whereColumn('invoices.company_id', 'companies.id'),
+                    ->whereColumn('invoices.company_id', 'fiscal_years.id'),
                 'invoices_count'
             )
             ->withCount('users')
@@ -53,14 +53,14 @@ class CompanyOverviewService
 
         $companyIds = $fiscalYears->pluck('id');
         $users = User::query()
-            ->whereHas('companies', fn ($query) => $query->whereIn('companies.id', $companyIds))
+            ->whereHas('companies', fn ($query) => $query->whereIn('fiscal_years.id', $companyIds))
             ->with('roles:id,name')
             ->orderBy('name')
             ->orderBy('id')
             ->get();
 
         return [
-            'business' => $fiscalYears->firstOrFail(),
+            'business' => $company->company,
             'fiscalYears' => $fiscalYears,
             'users' => $users,
             'metrics' => [

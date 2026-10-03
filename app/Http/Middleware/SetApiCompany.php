@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\FiscalYear;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -30,7 +31,11 @@ class SetApiCompany
             ], 403);
         }
 
-        config(['active-company-id' => (int) $companyId]);
+        $year = FiscalYear::findOrFail($companyId);
+        config([
+            'active-company-id' => $year->company_id,
+            'active-fiscal-year-id' => $year->id,
+        ]);
 
         return $next($request);
     }

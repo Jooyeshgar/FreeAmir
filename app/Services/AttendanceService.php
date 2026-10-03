@@ -377,7 +377,7 @@ class AttendanceService
      */
     public function calculateAndStore(int $employeeId, Carbon $startDate, int $durationDays, int $jalaliYear, int $jalaliMonth): MonthlyAttendance
     {
-        $companyId = getActiveCompany();
+        $companyId = getActiveFiscalYear();
         $endDate = $startDate->copy()->addDays($durationDays - 1);
 
         $employee = Employee::with('workShift')->find($employeeId);

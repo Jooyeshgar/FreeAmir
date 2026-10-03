@@ -2,12 +2,12 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Services\FiscalYearService;
+use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
-use Exception; // Added
+use Illuminate\Support\Facades\Storage; // Added
 
 class FiscalYearExportCommand extends Command
 {
@@ -40,40 +40,42 @@ class FiscalYearExportCommand extends Command
         $sectionsInput = $this->option('sections');
 
         // Validate source year
-        if (!Company::find($sourceYearId)) {
+        if (! FiscalYear::find($sourceYearId)) {
             $this->error("Source fiscal year with ID {$sourceYearId} not found.");
+
             return Command::FAILURE;
         }
 
         // Determine sections to export
         $sectionsToExport = null;
-        if (!empty($sectionsInput)) {
+        if (! empty($sectionsInput)) {
             $sectionsToExport = explode(',', $sectionsInput);
             $sectionsToExport = array_map('trim', $sectionsToExport); // Trim whitespace
             // Optional: Validate sections against FiscalYearService::getAvailableSections()
             $validSections = array_keys(FiscalYearService::getAvailableSections());
             $invalidSections = array_diff($sectionsToExport, $validSections);
-            if (!empty($invalidSections)) {
-                $this->warn("Ignoring invalid sections: " . implode(', ', $invalidSections));
+            if (! empty($invalidSections)) {
+                $this->warn('Ignoring invalid sections: '.implode(', ', $invalidSections));
                 $sectionsToExport = array_intersect($sectionsToExport, $validSections);
             }
             if (empty($sectionsToExport)) {
-                $this->error("No valid sections provided for export.");
+                $this->error('No valid sections provided for export.');
+
                 return Command::FAILURE;
             }
         }
 
         // Determine output file path
         if (empty($outputFile)) {
-            $outputFile = 'exports/fiscal_year_' . $sourceYearId . '_' . now()->format('YmdHis') . '.json';
+            $outputFile = 'exports/fiscal_year_'.$sourceYearId.'_'.now()->format('YmdHis').'.json';
             $this->info("Output file not specified, using default: {$outputFile}");
         }
 
         $this->info("Starting export for fiscal year ID: {$sourceYearId}");
         if ($sectionsToExport) {
-            $this->info("Exporting sections: " . implode(', ', $sectionsToExport));
+            $this->info('Exporting sections: '.implode(', ', $sectionsToExport));
         } else {
-            $this->info("Exporting all available sections.");
+            $this->info('Exporting all available sections.');
         }
 
         try {
@@ -82,23 +84,24 @@ class FiscalYearExportCommand extends Command
             $jsonContent = json_encode($exportData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 
             if (json_last_error() !== JSON_ERROR_NONE) {
-                throw new Exception("JSON encoding failed: " . json_last_error_msg());
+                throw new Exception('JSON encoding failed: '.json_last_error_msg());
             }
 
             Storage::disk('local')->put($outputFile, $jsonContent); // Using 'local' disk
 
             $fullPath = Storage::disk('local')->path($outputFile);
-            $this->info("Fiscal year data exported successfully!");
+            $this->info('Fiscal year data exported successfully!');
             $this->info("File saved to: {$fullPath}");
 
             return Command::SUCCESS;
         } catch (Exception $e) {
-            Log::error("Fiscal Year Export Command Failed: " . $e->getMessage(), [
+            Log::error('Fiscal Year Export Command Failed: '.$e->getMessage(), [
                 'source_id' => $sourceYearId,
                 'output_file' => $outputFile,
-                'exception' => $e
+                'exception' => $e,
             ]);
-            $this->error("Export failed: " . $e->getMessage());
+            $this->error('Export failed: '.$e->getMessage());
+
             return Command::FAILURE;
         }
     }

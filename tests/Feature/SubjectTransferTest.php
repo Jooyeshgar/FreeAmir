@@ -6,10 +6,10 @@ use App\Enums\BankAccountType;
 use App\Enums\SubjectType;
 use App\Models\Bank;
 use App\Models\BankAccount;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
@@ -22,7 +22,7 @@ class SubjectTransferTest extends TestCase
 {
     use RefreshDatabase;
 
-    private Company $company;
+    private FiscalYear $company;
 
     private User $user;
 
@@ -33,7 +33,7 @@ class SubjectTransferTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create();
-        $this->company = Company::factory()->create(['fiscal_year' => 1403]);
+        $this->company = FiscalYear::factory()->create(['fiscal_year' => 1403]);
         $this->user->companies()->attach([$this->company->id]);
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'subjects.index']),
@@ -42,7 +42,7 @@ class SubjectTransferTest extends TestCase
         );
 
         $this->actingAs($this->user);
-        config(['active-company-id' => $this->company->id, 'active-company-fiscal-year' => $this->company->fiscal_year]);
+        config(['active-fiscal-year-id' => $this->company->id, 'active-company-fiscal-year' => $this->company->fiscal_year]);
         $this->subjectService = app(SubjectService::class);
     }
 

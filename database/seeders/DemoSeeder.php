@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use Illuminate\Database\Seeder;
 use RuntimeException;
 
@@ -13,9 +13,9 @@ class DemoSeeder extends Seeder
      */
     public function run(?int $companyId = null): void
     {
-        $companyId ??= (int) getActiveCompany();
+        $companyId ??= (int) getActiveFiscalYear();
 
-        if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
+        if (! FiscalYear::withoutGlobalScopes()->whereKey($companyId)->exists()) {
             throw new RuntimeException("Company with ID {$companyId} does not exist.");
         }
 

@@ -44,7 +44,7 @@ class OrganizationUnitController extends Controller
     {
         OrganizationUnit::create(array_merge(
             $this->validatePayload($request),
-            ['company_id' => getActiveCompany()]
+            ['company_id' => getActiveFiscalYear()]
         ));
 
         return redirect()->route('hr.organization-units.index')
@@ -89,7 +89,7 @@ class OrganizationUnitController extends Controller
 
     private function validatePayload(Request $request, ?OrganizationUnit $organizationUnit = null): array
     {
-        $companyId = getActiveCompany();
+        $companyId = getActiveFiscalYear();
         $codeRule = Rule::unique('organization_units', 'code')
             ->where('company_id', $companyId);
 

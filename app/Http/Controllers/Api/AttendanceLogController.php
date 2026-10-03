@@ -18,7 +18,7 @@ class AttendanceLogController extends Controller
             'employee_id' => [
                 'required',
                 'integer',
-                Rule::exists('employees', 'id')->where('company_id', getActiveCompany()),
+                Rule::exists('employees', 'id')->where('company_id', getActiveFiscalYear()),
             ],
             'date_from' => ['required', 'date_format:Y-m-d'],
             'date_to' => ['required', 'date_format:Y-m-d', 'after_or_equal:date_from'],
@@ -37,7 +37,7 @@ class AttendanceLogController extends Controller
     {
         $logs = DB::transaction(fn () => collect($request->validated('logs'))
             ->map(fn (array $log) => AttendanceLog::create(array_merge($log, [
-                'company_id' => getActiveCompany(),
+                'company_id' => getActiveFiscalYear(),
                 'is_manual' => $log['is_manual'] ?? false,
             ]))));
 

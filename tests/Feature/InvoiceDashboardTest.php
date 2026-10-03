@@ -4,9 +4,9 @@ namespace Tests\Feature;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -35,15 +35,15 @@ class InvoiceDashboardTest extends TestCase
 
         Carbon::setTestNow(Carbon::parse('2026-09-03 12:00:00', config('app.timezone')));
 
-        $company = Company::factory()->create(['fiscal_year' => 1405]);
+        $company = FiscalYear::factory()->create(['fiscal_year' => 1405]);
         $this->companyId = $company->id;
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
 
-        $this->withCookies(['active-company-id' => (string) $this->companyId]);
-        $_COOKIE['active-company-id'] = (string) $this->companyId;
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->companyId]);
+        $_COOKIE['active-fiscal-year-id'] = (string) $this->companyId;
         config([
-            'active-company-id' => $this->companyId,
+            'active-fiscal-year-id' => $this->companyId,
             'active-company-fiscal-year' => 1405,
         ]);
 
@@ -57,7 +57,7 @@ class InvoiceDashboardTest extends TestCase
     protected function tearDown(): void
     {
         Carbon::setTestNow();
-        unset($_COOKIE['active-company-id']);
+        unset($_COOKIE['active-fiscal-year-id']);
 
         parent::tearDown();
     }
@@ -225,7 +225,7 @@ class InvoiceDashboardTest extends TestCase
         $old = $this->invoice(InvoiceType::SELL, InvoiceStatus::APPROVED, 2, '2026-06-01', 700);
         $this->item($old, $product, 1, 700, 700);
 
-        $otherCompany = Company::factory()->create(['fiscal_year' => 1405]);
+        $otherCompany = FiscalYear::factory()->create(['fiscal_year' => 1405]);
         Invoice::withoutGlobalScopes()->insert([
             'number' => 3,
             'date' => '2026-08-28',

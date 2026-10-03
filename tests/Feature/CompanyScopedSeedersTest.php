@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Enums\SubjectType;
-use App\Models\Company;
 use App\Models\Config;
+use App\Models\FiscalYear;
 use App\Models\ProductGroup;
 use App\Models\ServiceGroup;
 use App\Models\Subject;
@@ -21,7 +21,7 @@ class CompanyScopedSeedersTest extends TestCase
 
     private function seedCompany(int $companyId): void
     {
-        config(['active-company-id' => $companyId]);
+        config(['active-fiscal-year-id' => $companyId]);
 
         $this->seed(SubjectSeeder::class);
         $this->seed(ConfigSeeder::class);
@@ -59,8 +59,8 @@ class CompanyScopedSeedersTest extends TestCase
 
     public function test_subjects_and_configs_are_seeded_equally_for_a_specific_company(): void
     {
-        Company::factory()->create(['id' => 1]);
-        Company::factory()->create(['id' => 42]);
+        FiscalYear::factory()->create(['id' => 1]);
+        FiscalYear::factory()->create(['id' => 42]);
 
         $this->seedCompany(1);
 
@@ -86,7 +86,7 @@ class CompanyScopedSeedersTest extends TestCase
 
     public function test_specific_company_parent_and_config_references_are_company_scoped(): void
     {
-        Company::factory()->create(['id' => 42]);
+        FiscalYear::factory()->create(['id' => 42]);
         $this->seedCompany(42);
 
         $subjectIds = Subject::withoutGlobalScopes()->where('company_id', 42)->pluck('id');
@@ -103,7 +103,7 @@ class CompanyScopedSeedersTest extends TestCase
 
     public function test_payroll_config_uses_payroll_key_and_translation(): void
     {
-        Company::factory()->create(['id' => 1]);
+        FiscalYear::factory()->create(['id' => 1]);
         $this->seedCompany(1);
 
         $payrollSubject = Subject::withoutGlobalScopes()
@@ -126,7 +126,7 @@ class CompanyScopedSeedersTest extends TestCase
 
     public function test_profit_and_loss_subjects_and_seeded_group_children_use_their_normal_balance_types(): void
     {
-        Company::factory()->create(['id' => 1]);
+        FiscalYear::factory()->create(['id' => 1]);
         $this->seedCompany(1);
 
         $expectedTypes = [

@@ -15,7 +15,7 @@ class HomeSeeder extends Seeder
 {
     public function run(): void
     {
-        $companyId = (int) getActiveCompany();
+        $companyId = (int) getActiveFiscalYear();
         $this->hydrateAmirConfig();
         $subjects = $this->existingCashAndBankSubjects($companyId);
 
@@ -25,7 +25,7 @@ class HomeSeeder extends Seeder
     private function hydrateAmirConfig(): void
     {
         Config::withoutGlobalScopes()->where('category', 1)->where(function ($query) {
-            $query->whereNull('company_id')->orWhere('company_id', getActiveCompany());
+            $query->whereNull('company_id')->orWhere('company_id', getActiveFiscalYear());
         })->get()->each(function (Config $config) {
             config(['amir.'.$config->key => $config->value]);
         });

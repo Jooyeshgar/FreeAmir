@@ -25,13 +25,13 @@ class Warehouse extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function (Warehouse $warehouse) {
-            $warehouse->company_id ??= getActiveCompany();
+            $warehouse->company_id ??= getActiveFiscalYear();
         });
     }
 
     public function company(): BelongsTo
     {
-        return $this->belongsTo(Company::class);
+        return $this->belongsTo(FiscalYear::class, 'company_id');
     }
 
     public function products(): BelongsToMany

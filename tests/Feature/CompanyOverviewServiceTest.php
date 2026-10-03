@@ -5,10 +5,10 @@ namespace Tests\Feature;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Enums\SubjectType;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -36,14 +36,14 @@ class CompanyOverviewServiceTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create(['fiscal_year' => 1405]);
+        $company = FiscalYear::factory()->create(['fiscal_year' => 1405]);
         $this->companyId = $company->id;
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
 
-        $this->withCookies(['active-company-id' => (string) $this->companyId]);
-        $_COOKIE['active-company-id'] = (string) $this->companyId;
-        config(['active-company-id' => $this->companyId, 'active-company-fiscal-year' => 1405]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->companyId]);
+        $_COOKIE['active-fiscal-year-id'] = (string) $this->companyId;
+        config(['active-fiscal-year-id' => $this->companyId, 'active-company-fiscal-year' => 1405]);
 
         $this->importSubjects($this->companyId);
         $this->importConfigs($this->companyId);

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -25,7 +25,7 @@ class UserImpersonationTest extends TestCase
         config(['app.email_verification' => false]);
     }
 
-    private function userWithRole(string $roleName, ?Company $company = null, bool $canImpersonate = false, bool $canViewUsers = false, array $attributes = []): User
+    private function userWithRole(string $roleName, ?FiscalYear $company = null, bool $canImpersonate = false, bool $canViewUsers = false, array $attributes = []): User
     {
         $user = User::factory()->create($attributes);
         $role = $this->role($roleName);
@@ -59,9 +59,9 @@ class UserImpersonationTest extends TestCase
         return Permission::firstOrCreate(['name' => 'users.impersonate']);
     }
 
-    private function setActiveCompany(Company $company): void
+    private function setActiveCompany(FiscalYear $company): void
     {
-        config(['active-company-id' => $company->id]);
+        config(['active-fiscal-year-id' => $company->id]);
     }
 
     private function assertImpersonationSessionIsClear(): void
@@ -71,9 +71,9 @@ class UserImpersonationTest extends TestCase
         $this->assertFalse(session()->exists('impersonator_guard_using'));
     }
 
-    private function company(string $name): Company
+    private function company(string $name): FiscalYear
     {
-        return Company::create([
+        return FiscalYear::create([
             'name' => $name,
             'fiscal_year' => (int) toEnglish(jdate('Y')),
             'currency' => 'Rial',
@@ -548,7 +548,7 @@ class UserImpersonationTest extends TestCase
         $target = $this->userWithRole('Employee', $secondCompany);
         $this->setActiveCompany($activeCompany);
 
-        $this->actingAs($admin)->withCookie('active-company-id', (string) $activeCompany->id)
+        $this->actingAs($admin)->withCookie('active-fiscal-year-id', (string) $activeCompany->id)
             ->post(route('users.impersonate', $target))->assertForbidden();
 
         $this->assertAuthenticatedAs($admin);
@@ -578,7 +578,7 @@ class UserImpersonationTest extends TestCase
         $target->companies()->attach($secondCompany);
         $this->setActiveCompany($activeCompany);
 
-        $this->actingAs($admin)->withCookie('active-company-id', (string) $activeCompany->id)
+        $this->actingAs($admin)->withCookie('active-fiscal-year-id', (string) $activeCompany->id)
             ->post(route('users.impersonate', $target))->assertRedirect(route('about'));
 
         $this->assertAuthenticatedAs($target);

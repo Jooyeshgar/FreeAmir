@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Services\InvoiceDashboardService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -25,7 +25,7 @@ class InvoiceDashboardController extends Controller
             }
         }
 
-        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
+        $company = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
         [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
 
         $start = isset($validated['start_date']) ? $validated['start_date'] : $fiscalStart->toDateString();

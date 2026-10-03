@@ -4,10 +4,10 @@ namespace Tests\Feature;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -28,7 +28,7 @@ class InventoryTurnoverReportTest extends TestCase
 {
     use RefreshDatabase, SeederHelper;
 
-    private Company $company;
+    private FiscalYear $company;
 
     private User $user;
 
@@ -47,11 +47,11 @@ class InventoryTurnoverReportTest extends TestCase
         parent::setUp();
 
         app()->setLocale('en');
-        $this->company = Company::factory()->create(['name' => 'Test Company', 'fiscal_year' => 1405]);
+        $this->company = FiscalYear::factory()->create(['name' => 'Test Company', 'fiscal_year' => 1405]);
         $this->user = User::factory()->create();
         $this->company->users()->attach($this->user);
-        $this->withCookies(['active-company-id' => (string) $this->company->id]);
-        config(['active-company-id' => $this->company->id]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->company->id]);
+        config(['active-fiscal-year-id' => $this->company->id]);
         $this->importSubjects($this->company->id);
         $this->importConfigs($this->company->id);
 

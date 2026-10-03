@@ -85,7 +85,12 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function companies()
     {
-        return $this->belongsToMany(Company::class);
+        return $this->belongsToMany(FiscalYear::class, 'fiscal_year_user', 'user_id', 'fiscal_year_id');
+    }
+
+    public function fiscalYears()
+    {
+        return $this->companies();
     }
 
     public function employee(): HasOne

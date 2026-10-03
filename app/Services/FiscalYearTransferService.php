@@ -7,6 +7,7 @@ use App\Models\AncillaryCost;
 use App\Models\AncillaryCostItem;
 use App\Models\Customer;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -107,13 +108,20 @@ class FiscalYearTransferService
 
     private static function _withActiveCompany(int $companyId, callable $callback): mixed
     {
-        $previous = config('active-company-id');
-        config(['active-company-id' => $companyId]);
+        $previousYear = config('active-fiscal-year-id');
+        $previousCompany = config('active-company-id');
+        config([
+            'active-fiscal-year-id' => $companyId,
+            'active-company-id' => FiscalYear::findOrFail($companyId)->company_id,
+        ]);
 
         try {
             return $callback();
         } finally {
-            config(['active-company-id' => $previous]);
+            config([
+                'active-fiscal-year-id' => $previousYear,
+                'active-company-id' => $previousCompany,
+            ]);
         }
     }
 

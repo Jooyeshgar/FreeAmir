@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
@@ -11,7 +11,7 @@ class InvoiceSeeder extends Seeder
 {
     public function run(): void
     {
-        $company = Company::withoutGlobalScopes()->find(getActiveCompany());
+        $company = FiscalYear::withoutGlobalScopes()->find(getActiveFiscalYear());
 
         if (! $company) {
             return;

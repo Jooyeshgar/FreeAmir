@@ -10,7 +10,7 @@ class CustomerSeeder extends Seeder
 {
     public function run()
     {
-        $groups = CustomerGroup::withoutGlobalScopes()->where('company_id', getActiveCompany())->get();
+        $groups = CustomerGroup::withoutGlobalScopes()->where('company_id', getActiveFiscalYear())->get();
 
         foreach ($groups as $group) {
             Customer::factory()->count(10)->withGroup($group)->withSubject()->create();

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Blade;
@@ -98,12 +98,12 @@ class ContextualUserGuideTest extends TestCase
     {
         config([
             'app.user_guide_url' => 'https://guides.example.test/base',
-            'active-company-id' => null,
+            'active-fiscal-year-id' => null,
         ]);
         app()->setLocale('fa');
 
         $user = User::factory()->create();
-        $company = Company::factory()->create();
+        $company = FiscalYear::factory()->create();
         $company->users()->syncWithoutDetaching([$user->id]);
         $user->givePermissionTo(...collect([
             'home',
@@ -114,9 +114,9 @@ class ContextualUserGuideTest extends TestCase
             'companies.closing-wizard',
         ])->map(fn (string $name) => Permission::firstOrCreate(['name' => $name]))->all());
 
-        config(['active-company-id' => $company->id]);
+        config(['active-fiscal-year-id' => $company->id]);
 
-        $this->actingAs($user)->withCookie('active-company-id', (string) $company->id);
+        $this->actingAs($user)->withCookie('active-fiscal-year-id', (string) $company->id);
 
         foreach ([
             route('home'),

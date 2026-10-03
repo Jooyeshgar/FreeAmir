@@ -17,12 +17,12 @@ use App\Models\BankAccount;
 use App\Models\Cheque;
 use App\Models\Chequebook;
 use App\Models\ChequeHistory;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
 use App\Models\DocumentFile;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\OrganizationUnit;
 use App\Models\Payment;
@@ -54,13 +54,13 @@ class BackupControllerTest extends TestCase
 
     protected User $user;
 
-    protected Company $company;
+    protected FiscalYear $company;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->company = Company::factory()->create();
+        $this->company = FiscalYear::factory()->create();
 
         $this->user = User::factory()->create();
         $this->company->users()->attach($this->user);
@@ -73,7 +73,7 @@ class BackupControllerTest extends TestCase
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => (string) $this->company->id]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->company->id]);
     }
 
     private function makeZipUpload(array|string $payload, string $archiveName = 'backup.zip', string $entryName = 'backup.json'): UploadedFile
@@ -102,8 +102,8 @@ class BackupControllerTest extends TestCase
     {
         $currentYear = (int) toEnglish(jdate('Y'));
 
-        $currentYearCompany = Company::factory()->create(['fiscal_year' => $currentYear]);
-        $otherCompany = Company::factory()->create(['fiscal_year' => $currentYear - 1]);
+        $currentYearCompany = FiscalYear::factory()->create(['fiscal_year' => $currentYear]);
+        $otherCompany = FiscalYear::factory()->create(['fiscal_year' => $currentYear - 1]);
         $currentYearCompany->users()->syncWithoutDetaching([$this->user->id]);
         $otherCompany->users()->syncWithoutDetaching([$this->user->id]);
 
@@ -116,8 +116,8 @@ class BackupControllerTest extends TestCase
 
     public function test_create_lists_only_companies_accessible_to_user(): void
     {
-        $accessibleCompany = Company::factory()->create(['name' => 'Accessible Company']);
-        $inaccessibleCompany = Company::factory()->create(['name' => 'Inaccessible Company']);
+        $accessibleCompany = FiscalYear::factory()->create(['name' => 'Accessible Company']);
+        $inaccessibleCompany = FiscalYear::factory()->create(['name' => 'Inaccessible Company']);
         $accessibleCompany->users()->syncWithoutDetaching([$this->user->id]);
         $inaccessibleCompany->users()->detach($this->user->id);
 
@@ -130,7 +130,7 @@ class BackupControllerTest extends TestCase
 
     public function test_export_rejects_company_not_accessible_to_user(): void
     {
-        $inaccessibleCompany = Company::factory()->create();
+        $inaccessibleCompany = FiscalYear::factory()->create();
         $inaccessibleCompany->users()->detach($this->user->id);
 
         $response = $this->post(route('backups.export'), [
@@ -143,7 +143,7 @@ class BackupControllerTest extends TestCase
 
     public function test_document_files_size_rejects_company_not_accessible_to_user(): void
     {
-        $inaccessibleCompany = Company::factory()->create();
+        $inaccessibleCompany = FiscalYear::factory()->create();
         $inaccessibleCompany->users()->detach($this->user->id);
 
         $response = $this->getJson(route('backups.document-files-size', [
@@ -362,7 +362,7 @@ class BackupControllerTest extends TestCase
 
     public function test_sayad_number_can_be_reused_in_another_company_only(): void
     {
-        $otherCompany = Company::factory()->create();
+        $otherCompany = FiscalYear::factory()->create();
         $customerId = DB::table('customers')->insertGetId([
             'company_id' => $this->company->id,
             'name' => 'Source cheque customer',
@@ -472,7 +472,7 @@ class BackupControllerTest extends TestCase
 
     public function test_import_rejects_invalid_json_inside_zip_upload(): void
     {
-        $existingCompanies = Company::count();
+        $existingCompanies = FiscalYear::count();
 
         $response = $this->post(route('backups.import'), [
             'file' => $this->makeZipUpload('{"meta": invalid json}'),
@@ -482,12 +482,12 @@ class BackupControllerTest extends TestCase
 
         $response->assertRedirect();
         $response->assertSessionHas('error');
-        $this->assertSame($existingCompanies, Company::count());
+        $this->assertSame($existingCompanies, FiscalYear::count());
     }
 
     public function test_import_rejects_zip_upload_without_json_file(): void
     {
-        $existingCompanies = Company::count();
+        $existingCompanies = FiscalYear::count();
 
         $response = $this->post(route('backups.import'), [
             'file' => $this->makeZipUpload('plain text file', 'backup.zip', 'backup.txt'),
@@ -497,7 +497,7 @@ class BackupControllerTest extends TestCase
 
         $response->assertRedirect();
         $response->assertSessionHas('error');
-        $this->assertSame($existingCompanies, Company::count());
+        $this->assertSame($existingCompanies, FiscalYear::count());
     }
 
     public function test_import_rejects_empty_json(): void
@@ -621,7 +621,7 @@ class BackupControllerTest extends TestCase
 
     public function test_document_relation_sync_ignores_active_company_scope(): void
     {
-        $targetCompany = Company::factory()->create();
+        $targetCompany = FiscalYear::factory()->create();
         $usesLegacyEnumSchema = DB::connection()->getDriverName() === 'sqlite';
         $customerId = DB::table('customers')->insertGetId([
             'name' => 'Imported invoice customer',
@@ -660,7 +660,7 @@ class BackupControllerTest extends TestCase
 
     public function test_export_filename_replaces_spaces_with_hyphens(): void
     {
-        $company = Company::factory()->create(['name' => 'My Test Company']);
+        $company = FiscalYear::factory()->create(['name' => 'My Test Company']);
         $company->users()->syncWithoutDetaching([$this->user->id]);
 
         $response = $this->post(route('backups.export'), [
@@ -812,7 +812,7 @@ class BackupControllerTest extends TestCase
             'company_name' => 'Base64 Import Co',
         ])->assertRedirect(route('home'));
 
-        $newCompany = Company::where('name', 'Base64 Import Co')->firstOrFail();
+        $newCompany = FiscalYear::whereHas('company', fn ($query) => $query->where('name', 'Base64 Import Co'))->firstOrFail();
 
         $documentIds = Document::withoutGlobalScope(FiscalYearScope::class)
             ->where('company_id', $newCompany->id)
@@ -1224,7 +1224,7 @@ class BackupControllerTest extends TestCase
 
         $response->assertRedirect(route('home'));
 
-        $newCompany = Company::where('name', 'No Docs Import Co')->firstOrFail();
+        $newCompany = FiscalYear::whereHas('company', fn ($query) => $query->where('name', 'No Docs Import Co'))->firstOrFail();
 
         $documentIds = Document::withoutGlobalScope(FiscalYearScope::class)
             ->where('company_id', $newCompany->id)
@@ -1267,7 +1267,7 @@ class BackupControllerTest extends TestCase
             $fileIds[] = DocumentFile::factory()->withDocument($document)->create(['path' => $path])->id;
         }
 
-        config(['active-company-id' => $this->company->id]);
+        config(['active-fiscal-year-id' => $this->company->id]);
         DocumentService::deleteDocument($document->id);
 
         foreach ($paths as $path) {

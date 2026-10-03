@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
 use App\Models\Config;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use App\Models\User;
 use App\Notifications\ResetPasswordNotification;
@@ -37,7 +37,7 @@ class AuthLifecycleTest extends TestCase
         config([
             'app.registration' => true,
             'app.email_verification' => true,
-            'active-company-id' => null,
+            'active-fiscal-year-id' => null,
         ]);
     }
 
@@ -61,7 +61,7 @@ class AuthLifecycleTest extends TestCase
         $admin = User::factory()->create();
         $admin->companies()->attach($ownCompany);
         $admin->assignRole($adminRole);
-        config(['active-company-id' => $ownCompany->id]);
+        config(['active-fiscal-year-id' => $ownCompany->id]);
 
         $ownUser = User::factory()->create(['name' => 'Own Company User']);
         $ownUser->companies()->attach($ownCompany);
@@ -123,7 +123,7 @@ class AuthLifecycleTest extends TestCase
         $viewer = User::factory()->create();
         $viewer->companies()->attach($company);
         $viewer->assignRole($viewerRole);
-        config(['active-company-id' => $company->id]);
+        config(['active-fiscal-year-id' => $company->id]);
 
         $workspace = $this->actingAs($viewer)->get(route('about'));
         $workspace->assertOk();
@@ -180,7 +180,7 @@ class AuthLifecycleTest extends TestCase
             Permission::firstOrCreate(['name' => 'permissions.index']),
         );
 
-        $company = Company::create([
+        $company = FiscalYear::create([
             'name' => 'Current Workspace',
             'fiscal_year' => (int) toEnglish(jdate('Y')),
             'currency' => 'Rial',
@@ -188,7 +188,7 @@ class AuthLifecycleTest extends TestCase
         $user->companies()->attach($company);
 
         $workspace = $this->actingAs($user)
-            ->withCookie('active-company-id', (string) $company->id)
+            ->withCookie('active-fiscal-year-id', (string) $company->id)
             ->get(route('home'));
 
         $workspace->assertOk();
@@ -198,7 +198,7 @@ class AuthLifecycleTest extends TestCase
         $workspace->assertSee('w-[min(18rem,calc(100vw-1rem))]', false);
         $workspace->assertDontSee(route('roles.index'), false);
         $workspace->assertDontSee(route('permissions.index'), false);
-        $this->assertSame($company->id, config('active-company-id'));
+        $this->assertSame($company->id, config('active-fiscal-year-id'));
 
         $about = $this->get(route('about'));
         $about->assertOk();
@@ -387,7 +387,7 @@ class AuthLifecycleTest extends TestCase
     {
         $actor = User::factory()->create();
         $actor->assignRole(Role::create(['name' => 'Super-Admin']));
-        $company = Company::create([
+        $company = FiscalYear::create([
             'name' => 'Profile Company',
             'fiscal_year' => 1405,
             'currency' => 'Rial',
@@ -577,9 +577,9 @@ class AuthLifecycleTest extends TestCase
         $this->assertTrue($superAdminTarget->fresh()->hasRole('Super-Admin'));
     }
 
-    private function company(string $name): Company
+    private function company(string $name): FiscalYear
     {
-        return Company::create([
+        return FiscalYear::create([
             'name' => $name,
             'fiscal_year' => 1405,
             'currency' => 'Rial',
@@ -589,7 +589,7 @@ class AuthLifecycleTest extends TestCase
     public function test_verified_user_with_a_company_can_login_with_a_normalized_email(): void
     {
         $user = User::factory()->create(['email' => 'login@example.com']);
-        $company = Company::create([
+        $company = FiscalYear::create([
             'name' => 'Login Company',
             'fiscal_year' => 1405,
             'currency' => 'Rial',
@@ -654,7 +654,7 @@ class AuthLifecycleTest extends TestCase
     public function test_remember_cookie_restores_authentication_without_the_original_session(): void
     {
         $user = User::factory()->create();
-        $company = Company::create([
+        $company = FiscalYear::create([
             'name' => 'Remember Me Company',
             'fiscal_year' => 1405,
             'currency' => 'Rial',
@@ -912,13 +912,13 @@ class AuthLifecycleTest extends TestCase
         $admin = Role::firstOrCreate(['name' => __('Admin')]);
         $admin->syncPermissions(Permission::firstOrCreate(['name' => 'users.index']));
 
-        $previousCompany = Company::create([
+        $previousCompany = FiscalYear::create([
             'name' => 'Existing Company',
             'fiscal_year' => 1404,
             'currency' => 'Rial',
         ]);
         $user = User::factory()->create();
-        config(['active-company-id' => $previousCompany->id]);
+        config(['active-fiscal-year-id' => $previousCompany->id]);
 
         $response = $this->actingAs($user)->post(route('registered-user.company.store'), [
             'name' => 'New Company',
@@ -931,9 +931,9 @@ class AuthLifecycleTest extends TestCase
         $response->assertSessionHas('success');
         $this->assertDatabaseHas('companies', ['name' => 'New Company']);
 
-        $company = Company::where('name', 'New Company')->firstOrFail();
+        $company = FiscalYear::whereHas('company', fn ($query) => $query->where('name', 'New Company'))->firstOrFail();
 
-        $this->assertSame($previousCompany->id, config('active-company-id'));
+        $this->assertSame($previousCompany->id, config('active-fiscal-year-id'));
         $this->assertTrue($company->users()->whereKey($user->id)->exists());
         $this->assertTrue($user->fresh()->hasRole(__('Admin')));
         $this->assertFalse($user->fresh()->hasRole('Super-Admin'));
@@ -957,7 +957,7 @@ class AuthLifecycleTest extends TestCase
 
     public function test_company_registration_bootstraps_missing_admin_permissions(): void
     {
-        Company::create(['name' => 'Existing Company', 'fiscal_year' => 1404, 'currency' => 'Rial']);
+        FiscalYear::create(['name' => 'Existing Company', 'fiscal_year' => 1404, 'currency' => 'Rial']);
         $user = User::factory()->create();
 
         $response = $this->actingAs($user)->post(route('registered-user.company.store'), [
@@ -969,11 +969,11 @@ class AuthLifecycleTest extends TestCase
 
         $response->assertRedirect(route('home'));
 
-        $company = Company::where('name', 'Registered Company')->firstOrFail();
+        $company = FiscalYear::whereHas('company', fn ($query) => $query->where('name', 'Registered Company'))->firstOrFail();
 
         $this->assertTrue($user->fresh()->can('home'));
         $this->assertTrue($user->fresh()->can('documents.show'));
-        $this->withCookie('active-company-id', (string) $company->id)->get(route('home'))->assertOk();
+        $this->withCookie('active-fiscal-year-id', (string) $company->id)->get(route('home'))->assertOk();
     }
 
     public function test_user_can_request_a_password_reset_email_and_reset_their_password(): void

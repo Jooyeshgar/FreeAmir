@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -26,7 +26,7 @@ class CustomerImportExportTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
+        $company = FiscalYear::factory()->create();
         $this->companyId = $company->id;
 
         $this->user = User::factory()->create();
@@ -39,10 +39,10 @@ class CustomerImportExportTest extends TestCase
             Permission::firstOrCreate(['name' => 'customers.import.store']),
         ]);
 
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->companyId]);
         // Mirror the active company for direct model access in the test body
         // (the cookie alone only takes effect during HTTP requests).
-        config(['active-company-id' => $this->companyId]);
+        config(['active-fiscal-year-id' => $this->companyId]);
 
         $this->customerGroup = CustomerGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
     }

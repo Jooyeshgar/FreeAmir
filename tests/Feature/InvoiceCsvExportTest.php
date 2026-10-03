@@ -4,9 +4,9 @@ namespace Tests\Feature;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\User;
@@ -29,7 +29,7 @@ class InvoiceCsvExportTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
+        $company = FiscalYear::factory()->create();
         $this->companyId = $company->id;
 
         $this->user = User::factory()->create();
@@ -38,8 +38,8 @@ class InvoiceCsvExportTest extends TestCase
             Permission::firstOrCreate(['name' => 'invoices.export'])
         );
 
-        $this->withCookies(['active-company-id' => $this->companyId]);
-        config(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->companyId]);
+        config(['active-fiscal-year-id' => $this->companyId]);
         App::setLocale('en');
 
         $this->customer = Customer::create(['name' => 'Alpha Customer', 'company_id' => $this->companyId]);

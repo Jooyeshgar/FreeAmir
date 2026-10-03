@@ -5,11 +5,11 @@ namespace Tests\Feature;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Enums\SubjectType;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Payroll;
 use App\Models\Product;
@@ -38,14 +38,14 @@ class HomeServiceChartTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create(['fiscal_year' => 1405]);
+        $company = FiscalYear::factory()->create(['fiscal_year' => 1405]);
         $this->companyId = $company->id;
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
 
-        $this->withCookies(['active-company-id' => (string) $this->companyId]);
-        $_COOKIE['active-company-id'] = (string) $this->companyId;
-        config(['active-company-id' => $this->companyId, 'active-company-fiscal-year' => 1405]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->companyId]);
+        $_COOKIE['active-fiscal-year-id'] = (string) $this->companyId;
+        config(['active-fiscal-year-id' => $this->companyId, 'active-company-fiscal-year' => 1405]);
 
         $this->importSubjects($this->companyId);
         $this->importConfigs($this->companyId);
@@ -69,11 +69,11 @@ class HomeServiceChartTest extends TestCase
     {
         $this->makeInvoice(jalali_to_gregorian(1405, 2, 1, '-'), InvoiceType::SELL, InvoiceStatus::APPROVED, amount: 400);
 
-        $otherCompany = Company::factory()->create(['fiscal_year' => 1405]);
-        config(['active-company-id' => $otherCompany->id]);
+        $otherCompany = FiscalYear::factory()->create(['fiscal_year' => 1405]);
+        config(['active-fiscal-year-id' => $otherCompany->id]);
         $this->makeInvoice(jalali_to_gregorian(1405, 2, 2, '-'), InvoiceType::SELL, InvoiceStatus::APPROVED, amount: 9000);
 
-        config(['active-company-id' => $this->companyId]);
+        config(['active-fiscal-year-id' => $this->companyId]);
 
         $this->assertSame(400.0, $this->service()->totalSellAmount());
     }
@@ -605,7 +605,7 @@ class HomeServiceChartTest extends TestCase
     private function signInWith(array $permissions): User
     {
         $user = User::factory()->create();
-        Company::find($this->companyId)->users()->attach($user);
+        FiscalYear::find($this->companyId)->users()->attach($user);
 
         $permissionModels = collect(['home', ...$permissions])->unique()->map(fn (string $name) => Permission::firstOrCreate(['name' => $name]));
 

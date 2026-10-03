@@ -6,9 +6,9 @@ use App\Enums\PayrollStatus;
 use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Enums\ThursdayStatus;
-use App\Models\Company;
 use App\Models\DecreeBenefit;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\MonthlyAttendance;
 use App\Models\OrgChart;
 use App\Models\Payroll;
@@ -72,7 +72,7 @@ class PayrollServiceTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
+        $company = FiscalYear::factory()->create();
         $this->companyId = $company->id;
 
         $user = User::factory()->create();
@@ -81,8 +81,8 @@ class PayrollServiceTest extends TestCase
             Permission::firstOrCreate(['name' => 'payrolls.*'])
         );
         $this->actingAs($user);
-        request()->cookies->set('active-company-id', $this->companyId);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        request()->cookies->set('active-fiscal-year-id', $this->companyId);
+        $this->withCookies(['active-fiscal-year-id' => $this->companyId]);
 
         $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
         $this->orgChart = OrgChart::factory()->create(['company_id' => $this->companyId]);

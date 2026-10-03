@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Service;
 use App\Models\ServiceGroup;
 use App\Models\Subject;
@@ -29,7 +29,7 @@ class ServiceImportExportTest extends TestCase
 
         app()->setLocale('en');
 
-        $company = Company::factory()->create();
+        $company = FiscalYear::factory()->create();
         $this->companyId = $company->id;
 
         $this->user = User::factory()->create();
@@ -42,8 +42,8 @@ class ServiceImportExportTest extends TestCase
             Permission::firstOrCreate(['name' => 'services.import.store']),
         ]);
 
-        $this->withCookies(['active-company-id' => $this->companyId]);
-        config(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->companyId]);
+        config(['active-fiscal-year-id' => $this->companyId]);
 
         $this->serviceGroup = ServiceGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
     }

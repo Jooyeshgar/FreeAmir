@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Enums\PayrollStatus;
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\MonthlyAttendance;
 use App\Models\Payroll;
 use App\Models\User;
@@ -28,13 +28,13 @@ class PayrollWorkflowTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
+        $company = FiscalYear::factory()->create();
         $this->companyId = $company->id;
 
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->companyId]);
 
         $this->employee = Employee::factory()->create([
             'company_id' => $this->companyId,
