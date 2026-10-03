@@ -4,7 +4,7 @@
 
 **[English version](fiscal-year.en.md)**
 
-**[بازگشت به فهرست مستندات](../../../README.md)**
+**[بازگشت به فهرست مستندات](../../../menu/README.md)**
 
 **[راهنمای عملی شروع کار و بستن سال مالی](getting-started-fiscal-year.md)**
 

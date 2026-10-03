@@ -1,6 +1,6 @@
 # Invoices guide
 
-**[Documentation index](../README.en.md)** · **[نسخه فارسی](README.md)**
+**[Documentation index](../menu/README.en.md)** · **[نسخه فارسی](README.md)**
 
 This page maps the invoice workflows. Each invoice type and related action has its own guide.
 
