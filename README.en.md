@@ -87,9 +87,9 @@ Before changing accounting logic, read the [programmer guide](docs/developer/REA
 | FAQ | [faq.md](docs/product/faq.md) | [faq.en.md](docs/product/faq.en.md) |
 | Roadmap | [roadmap.md](docs/product/roadmap.md) | [roadmap.en.md](docs/product/roadmap.en.md) |
 | Screenshots | [screenshots.md](docs/product/screenshots.md) | [screenshots.en.md](docs/product/screenshots.en.md) |
-| Documentation index | [docs/menu/README.md](docs/menu/README.md) | [docs/menu/README.en.md](docs/menu/README.en.md) |
+| Documentation index | [docs/menu/documentation.md](docs/menu/documentation.md) | [docs/menu/documentation.en.md](docs/menu/documentation.en.md) |
 | Installation guide | [docs/deployment/INSTALLATION.md](docs/deployment/INSTALLATION.md) | [docs/deployment/INSTALLATION.en.md](docs/deployment/INSTALLATION.en.md) |
-| User guide | [docs/menu/README.md](docs/menu/README.md) | [docs/menu/README.en.md](docs/menu/README.en.md) |
+| User guide | [docs/menu/documentation.md](docs/menu/documentation.md) | [docs/menu/documentation.en.md](docs/menu/documentation.en.md) |
 | HR management | [docs/hr/README.md](docs/hr/README.md) | [docs/hr/README.en.md](docs/hr/README.en.md) |
 | Accounting concepts | [docs/accounting/README.md](docs/accounting/README.md) | [docs/accounting/README.en.md](docs/accounting/README.en.md) |
 | Programmer guide | [docs/developer/README.md](docs/developer/README.md) | [docs/developer/README.en.md](docs/developer/README.en.md) |

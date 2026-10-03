@@ -1,6 +1,6 @@
 # Employee Portal Guide
 
-[Documentation index](../menu/README.en.md) · [فارسی](README.md)
+[Documentation index](../menu/documentation.en.md) · [فارسی](README.md)
 
 My Portal is for viewing your own employee information. Access requires a signed-in user account linked to an employee record and the email-verification feature to be enabled. These pages show only that employee's data; managers process requests in [HR](../hr/README.en.md).
 

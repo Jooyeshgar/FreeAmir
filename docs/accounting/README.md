@@ -1,6 +1,6 @@
 # راهنمای حسابداری
 
-**[English](README.en.md)** · [فهرست مستندات](../menu/README.md)
+**[English](README.en.md)** · [فهرست مستندات](../menu/documentation.md)
 
 راهنماها به ترتیب منوی حسابداری آمده‌اند:
 

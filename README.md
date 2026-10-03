@@ -94,9 +94,9 @@ sail npm run dev
 | سوالات متداول | [faq.md](docs/product/faq.md) | [faq.en.md](docs/product/faq.en.md) |
 | نقشه راه | [roadmap.md](docs/product/roadmap.md) | [roadmap.en.md](docs/product/roadmap.en.md) |
 | نمایشگاه | [screenshots.md](docs/product/screenshots.md) | [screenshots.en.md](docs/product/screenshots.en.md) |
-| فهرست مستندات | [docs/menu/README.md](docs/menu/README.md) | [docs/menu/README.en.md](docs/menu/README.en.md) |
+| فهرست مستندات | [docs/menu/documentation.md](docs/menu/documentation.md) | [docs/menu/documentation.en.md](docs/menu/documentation.en.md) |
 | راهنمای نصب | [docs/deployment/INSTALLATION.md](docs/deployment/INSTALLATION.md) | [docs/deployment/INSTALLATION.en.md](docs/deployment/INSTALLATION.en.md) |
-| راهنمای استفاده‌کنندگان | [docs/menu/README.md](docs/menu/README.md) | [docs/menu/README.en.md](docs/menu/README.en.md) |
+| راهنمای استفاده‌کنندگان | [docs/menu/documentation.md](docs/menu/documentation.md) | [docs/menu/documentation.en.md](docs/menu/documentation.en.md) |
 | مدیریت منابع انسانی | [docs/hr/README.md](docs/hr/README.md) | [docs/hr/README.en.md](docs/hr/README.en.md) |
 | مفاهیم حسابداری | [docs/accounting/README.md](docs/accounting/README.md) | [docs/accounting/README.en.md](docs/accounting/README.en.md) |
 | راهنمای برنامه‌نویس | [docs/developer/README.md](docs/developer/README.md) | [docs/developer/README.en.md](docs/developer/README.en.md) |

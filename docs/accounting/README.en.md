@@ -1,6 +1,6 @@
 # Accounting guide
 
-**[فارسی](README.md)** · [Documentation index](../menu/README.en.md)
+**[فارسی](README.md)** · [Documentation index](../menu/documentation.en.md)
 
 Guides follow the Accounting menu order:
 
