@@ -7,7 +7,9 @@
 
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
-            <span class="card-title">{{ __('Backup') }}</span>
+            <span class="card-title">{{ __('Backup') }}
+                <x-user-guide-link source="management/system/backups/backups.md" />
+            </span>
             <form action="{{ route('backups.export') }}" method="POST" enctype="multipart/form-data"
                 x-data="{
                     docFileSizeMb: null,

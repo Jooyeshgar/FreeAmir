@@ -11,7 +11,7 @@
                             {{ __('Trial Balance at General Level') }}
                         @endif
                     </h3>
-                    <x-user-guide-link source="user/accounting-reports.md" />
+                    <x-user-guide-link source="reports/accounting/documents/accounting-reports.md" />
                 </div>
                 <div class="flex items-center gap-2">
                     @if($currentParent)

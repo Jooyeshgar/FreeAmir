@@ -1,37 +1,37 @@
 # Amir Programmer Guide
 
 **[نسخه فارسی](README.md)**  
-**[Back to documentation index](../README.en.md)**
+**[Back to documentation index](../menu/documentation.en.md)**
 
 This index is for developers and contributors. If you plan to change Laravel code, the database, tests, services, or accounting logic, start here.
 
 ## Suggested Reading Path
 
-1. [Project structure](../project-structure.md)
-2. [Database guide](../database-guide.md)
-3. [Testing guide](../testing-guide.md)
-4. [Accounting basics](../accounting-basics.md)
-5. [Fiscal year](../fiscal-year.en.md)
-6. [Fiscal-year export/import](../FiscalYearExportImport.en.md)
+1. [Project structure](project-structure.en.md)
+2. [Database guide](database-guide.en.md)
+3. [Testing guide](testing-guide.en.md)
+4. [Accounting basics](accounting-basics.en.md)
+5. [Fiscal year](../management/system/companies/fiscal-year.en.md)
+6. [Fiscal-year export/import](FiscalYearExportImport.en.md)
 
 ## Technical Documentation
 
 | File | Purpose |
 |---|---|
-| [project-structure.md](../project-structure.md) | Laravel architecture, folders, and code organization |
-| [database-guide.md](../database-guide.md) | Tables, relationships, and database notes |
-| [testing-guide.md](../testing-guide.md) | Running tests and writing Feature and Unit tests |
+| [project-structure.md](project-structure.en.md) | Laravel architecture, folders, and code organization |
+| [database-guide.md](database-guide.en.md) | Tables, relationships, and database notes |
+| [testing-guide.md](testing-guide.en.md) | Running tests and writing Feature and Unit tests |
 | [../script/README.md](../../script/README.md) | Data migration and utility scripts |
 
 ## Accounting Domain Documentation for Development
 
 | File | Purpose |
 |---|---|
-| [accounting-basics.md](../accounting-basics.md) | Debit/credit concepts, balanced documents, and transaction storage |
-| [user/inventory-costing.en.md](../user/inventory-costing.en.md) | User-facing explanation of COGS and the moving weighted average method |
-| [return-sell-return-buy.md](../return-sell-return-buy.md) | Recording sales returns and purchase returns |
-| [fiscal-year.en.md](../fiscal-year.en.md) | Fiscal-year concept and creation flow |
-| [FiscalYearExportImport.en.md](../FiscalYearExportImport.en.md) | Fiscal-year export and import commands |
+| [accounting-basics.md](accounting-basics.en.md) | Debit/credit concepts, balanced documents, and transaction storage |
+| [user/inventory-costing.en.md](../warehouse/products/inventory-costing.en.md) | User-facing explanation of COGS and the moving weighted average method |
+| [return-sell-return-buy.md](../invoices/sells/return-sell/return-sell-return-buy.en.md) | Recording sales returns and purchase returns |
+| [fiscal-year.en.md](../management/system/companies/fiscal-year.en.md) | Fiscal-year concept and creation flow |
+| [FiscalYearExportImport.en.md](FiscalYearExportImport.en.md) | Fiscal-year export and import commands |
 
 ## Important Rules for Code Changes
 

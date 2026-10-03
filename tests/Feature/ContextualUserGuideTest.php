@@ -13,14 +13,14 @@ class ContextualUserGuideTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const GUIDE_PATH = 'user/getting-started-fiscal-year.html';
+    private const GUIDE_PATH = 'management/system/companies/getting-started-fiscal-year.html';
 
     public function test_user_guide_component_builds_a_public_html_url_with_accessible_new_tab_attributes(): void
     {
         config(['app.user_guide_url' => 'https://guides.example.test/base/']);
         app()->setLocale('fa');
 
-        $html = Blade::render('<x-user-guide-link source="/user/getting-started-fiscal-year.md" />');
+        $html = Blade::render('<x-user-guide-link source="/management/system/companies/getting-started-fiscal-year.md" />');
 
         $this->assertStringContainsString('href="https://guides.example.test/base/'.self::GUIDE_PATH.'"', $html);
         $this->assertStringContainsString('target="_blank"', $html);
@@ -29,27 +29,40 @@ class ContextualUserGuideTest extends TestCase
         $this->assertStringNotContainsString('FiscalYearExportImport', $html);
     }
 
+    public function test_user_guide_component_uses_the_english_counterpart_for_english_locale(): void
+    {
+        config(['app.user_guide_url' => 'https://guides.example.test/base/']);
+        app()->setLocale('en');
+
+        $html = Blade::render('<x-user-guide-link source="/invoices/sells/moadian-histories/how-to-use-moadian.md" />');
+
+        $this->assertStringContainsString(
+            'href="https://guides.example.test/base/invoices/sells/moadian-histories/how-to-use-moadian.en.html"',
+            $html,
+        );
+    }
+
     public function test_financial_report_pages_reference_their_contextual_user_guides(): void
     {
         $guideViews = [
-            'user/accounting-reports.md' => [
+            'reports/accounting/documents/accounting-reports.md' => [
                 'reports/documents.blade.php',
                 'reports/journal.blade.php',
                 'reports/ledger.blade.php',
                 'reports/subLedger.blade.php',
                 'reports/trialBalance.blade.php',
             ],
-            'user/company-overview.md' => ['reports/company-overview.blade.php'],
-            'user/cost-income-dashboard.md' => ['reports/cost-income/index.blade.php'],
-            'user/monthly-income-expense-forecasting.md' => ['monthly-budgets/index.blade.php'],
+            'reports/company-overview/company-overview.md' => ['reports/company-overview.blade.php'],
+            'reports/cost-income/cost-income.md' => ['reports/cost-income/index.blade.php'],
+            'reports/budgets/budgets.md' => ['monthly-budgets/index.blade.php'],
         ];
-        $guideIndex = file_get_contents(base_path('docs/user/README.md'));
 
         foreach ($guideViews as $guideSource => $views) {
-            $guideName = basename($guideSource);
+            $guidePath = substr($guideSource, strpos($guideSource, '/') + 1);
+            $guideIndex = file_get_contents(base_path('docs/'.strtok($guideSource, '/').'/README.md'));
 
             $this->assertFileExists(base_path('docs/'.$guideSource));
-            $this->assertStringContainsString('['.$guideName.']('.$guideName.')', $guideIndex);
+            $this->assertStringContainsString(']('.$guidePath.')', $guideIndex);
 
             foreach ($views as $view) {
                 $this->assertStringContainsString(
@@ -64,25 +77,25 @@ class ContextualUserGuideTest extends TestCase
     public function test_warehouse_pages_reference_their_split_contextual_user_guides(): void
     {
         $guideViews = [
-            'user/products-and-services.md' => [
+            'warehouse/products/products.md' => [
                 'products/index.blade.php',
                 'services/index.blade.php',
                 'productGroups/index.blade.php',
                 'serviceGroups/index.blade.php',
             ],
-            'user/warehouses-and-transfers.md' => [
+            'warehouse/warehouses/warehouses.md' => [
                 'warehouses/index.blade.php',
                 'warehouses/transfer.blade.php',
             ],
-            'user/warehouse-dashboard-reports.md' => ['warehouse/dashboard.blade.php'],
+            'warehouse/dashboard/dashboard.md' => ['warehouse/dashboard.blade.php'],
         ];
-        $guideIndex = file_get_contents(base_path('docs/user/README.md'));
 
         foreach ($guideViews as $guideSource => $views) {
-            $guideName = basename($guideSource);
+            $guidePath = substr($guideSource, strpos($guideSource, '/') + 1);
+            $guideIndex = file_get_contents(base_path('docs/'.strtok($guideSource, '/').'/README.md'));
 
             $this->assertFileExists(base_path('docs/'.$guideSource));
-            $this->assertStringContainsString('['.$guideName.']('.$guideName.')', $guideIndex);
+            $this->assertStringContainsString(']('.$guidePath.')', $guideIndex);
 
             foreach ($views as $view) {
                 $this->assertStringContainsString(
@@ -152,6 +165,27 @@ class ContextualUserGuideTest extends TestCase
             ->get(route('registered-user.company.create'))
             ->assertOk()
             ->assertSee($this->guideLink(), false);
+    }
+
+    public function test_moadian_setup_and_history_views_link_to_the_bilingual_guide(): void
+    {
+        $source = 'invoices/sells/moadian-histories/how-to-use-moadian.md';
+
+        $this->assertFileExists(base_path('docs/'.$source));
+        $this->assertFileExists(base_path('docs/'.str_replace('.md', '.en.md', $source)));
+
+        foreach ([
+            'companies/create.blade.php',
+            'companies/edit.blade.php',
+            'moadian-histories/index.blade.php',
+            'moadian-histories/show.blade.php',
+        ] as $view) {
+            $this->assertStringContainsString(
+                'source="'.$source.'"',
+                file_get_contents(resource_path('views/'.$view)),
+                $view,
+            );
+        }
     }
 
     private function guideLink(): string

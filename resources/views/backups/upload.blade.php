@@ -1,5 +1,6 @@
 <x-app-layout :title="__('Upload Backup')">
     <x-show-message-bags />
+    <x-user-guide-link source="management/system/upload-backup/upload-backup.md" />
 
     <div class="card bg-base-100 ">
         <div class="card-body">

@@ -1,4 +1,5 @@
 <x-app-layout :title="__('Configs')">
+    <x-user-guide-link source="management/system/configs/configs.md" />
     <div class="card bg-base-100 shadow-xl">
         <x-card class="bg-yellow-50 border-l-4 border-yellow-400 mb-5">
             <div class="flex">

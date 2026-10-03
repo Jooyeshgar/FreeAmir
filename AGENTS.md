@@ -81,6 +81,7 @@ and `npm`.
 - Follow RESTful controller method conventions: `index`, `create`, `store`, `show`, `edit`, `update`, `destroy`.
 - Use Laravel Pint (`./vendor/bin/pint`) with default config (no `pint.json` is present).
 - Preserve existing Persian business/domain comments where they provide accounting context.
+- Reuse the user's exact Persian wording, especially specialist accounting and business terms, in this Persian-first app; translate or replace those terms only when the user explicitly requests it.
 - Preserve accounting invariants: balanced debit/credit postings and company data separation.
 
 ## Architecture Notes
@@ -107,7 +108,7 @@ fiscal scoping are enforced through middleware/session context and model scopes 
 services for data migration and fiscal-year operations.
 
 ## Project Patterns & Reference Files
-- Read `README.md` and `docs/project-structure.md` first for high-level onboarding.
+- Read `README.md` and `docs/developer/project-structure.md` first for high-level onboarding.
 - Service layer examples: `app/Services/` (for example `InvoiceService`, `FiscalYearService`,
   `CostOfGoodsService`).
 - Transaction/invariant logic: `app/Services/*TransactionBuilder.php`.
@@ -118,7 +119,7 @@ services for data migration and fiscal-year operations.
   `app/Console/Commands/FiscalYearImportCommand.php`.
 - Scoping rules: `app/Models/Scopes/FiscalYearScope.php` and middleware such as
   `app/Http/Middleware/DefaultCompany.php`.
-- Testing expectations and examples: `docs/testing-guide.md`, `tests/`.
+- Testing expectations and examples: `docs/developer/testing-guide.md`, `tests/`.
 - Data migration scripts: `script/README.md` and `script/`.
 
 ## Security & Compliance

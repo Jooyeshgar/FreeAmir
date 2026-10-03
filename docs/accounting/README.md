@@ -1,26 +1,18 @@
-<div dir="rtl">
+# راهنمای حسابداری
 
-# مفاهیم حسابداری
+**[English](README.en.md)** · [فهرست مستندات](../menu/documentation.md)
 
-**[English version](README.en.md)**  
-**[بازگشت به فهرست مستندات](../README.md)**
+راهنماها به ترتیب منوی حسابداری آمده‌اند:
 
-این پوشه برای مفاهیم حسابداری قابل استفاده در امیر است. هدف این بخش توضیح مفاهیم دامنه حسابداری است؛ راهنمای روزمره کار با منوها در [راهنمای کاربران](../user/README.md) و مستندات فنی در [راهنمای توسعه‌دهندگان](../developer/README.md) نگهداری می‌شود.
+- [ایجاد سند](create-document/documents.create.md)
+- [فهرست اسناد](document-list/accounting-documents.md)
+- [مدیریت چک](cheque-management/cheques.md)
 
-## مسیر پیشنهادی
+برای شناخت روند کامل چک، [راهنمای چرخهٔ چک](cheque-management/cheque-management.md) را نیز بخوانید. سرفصل‌ها، حساب‌های بانکی، بانک‌ها و دسته‌چک‌ها در [مدیریت ← مالی](../management/README.md#مالی) قرار دارند.
 
-1. [مبانی حسابداری](../accounting-basics.md)
-2. [بهای تمام‌شده کالا و روش محاسبه در امیر](../user/inventory-costing.md)
-3. [برگشت از فروش و برگشت از خرید](../return-sell-return-buy.md)
-4. [سال مالی](../fiscal-year.md)
+## راهنماهای مرتبط
 
-## فایل‌های مرتبط
-
-| فایل | موضوع |
-|---|---|
-| [accounting-basics.md](../accounting-basics.md) | بدهکار، بستانکار، سند حسابداری و گزارش‌های پایه |
-| [inventory-costing.md](../user/inventory-costing.md) | بهای تمام‌شده، روش‌های FIFO/LIFO/میانگین و روش مورد استفاده امیر |
-| [return-sell-return-buy.md](../return-sell-return-buy.md) | ثبت حسابداری برگشت از فروش و برگشت از خرید |
-| [fiscal-year.md](../fiscal-year.md) | مفهوم سال مالی و ایجاد آن در امیر |
-
-</div>
+- [مبانی حسابداری](../developer/accounting-basics.md)
+- [بهای تمام‌شدهٔ موجودی](../warehouse/products/inventory-costing.md)
+- [برگشت از فروش](../invoices/sells/return-sell/return-sell.md) و [برگشت از خرید](../invoices/purchases/return-buy/return-buy.md)
+- [سال مالی](../management/system/companies/fiscal-year.md)

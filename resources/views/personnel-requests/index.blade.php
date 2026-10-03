@@ -3,7 +3,7 @@
         <div class="card-body p-4 sm:p-6">
             <div class="flex items-center gap-2">
                 <h1 class="text-xl font-bold text-base-content">{{ __('Personnel Requests') }}</h1>
-                <x-user-guide-link source="hr/personnel-requests.md" />
+                <x-user-guide-link source="hr/personnel-requests/personnel-requests.md" />
             </div>
 
             {{-- Tabs --}}
