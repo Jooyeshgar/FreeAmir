@@ -81,6 +81,7 @@ and `npm`.
 - Follow RESTful controller method conventions: `index`, `create`, `store`, `show`, `edit`, `update`, `destroy`.
 - Use Laravel Pint (`./vendor/bin/pint`) with default config (no `pint.json` is present).
 - Preserve existing Persian business/domain comments where they provide accounting context.
+- Reuse the user's exact Persian wording, especially specialist accounting and business terms, in this Persian-first app; translate or replace those terms only when the user explicitly requests it.
 - Preserve accounting invariants: balanced debit/credit postings and company data separation.
 
 ## Architecture Notes
