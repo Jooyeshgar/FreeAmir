@@ -1,6 +1,11 @@
 title: امیر
 description: نرم‌افزار آزاد حسابداری لاراول برای کسب‌وکارهای ایرانی
 
+# Keep README.md pages at README.html. Otherwise jekyll-readme-index tries to
+# replace the existing handcrafted index.html and the Persian docs link 404s.
+readme_index:
+  enabled: false
+
 kramdown:
   parse_block_html: true
 
