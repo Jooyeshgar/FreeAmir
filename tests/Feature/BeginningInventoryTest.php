@@ -50,6 +50,7 @@ class BeginningInventoryTest extends TestCase
         $this->user = User::factory()->create();
         $this->company = FiscalYear::factory()->create();
         config(['active-fiscal-year-id' => $this->company->id]);
+        $this->withCookie('active-fiscal-year-id', (string) $this->company->id);
         $this->actingAs($this->user);
 
         foreach (['create', 'edit', 'index', 'show', 'store', 'update', 'destroy', 'approve'] as $ability) {

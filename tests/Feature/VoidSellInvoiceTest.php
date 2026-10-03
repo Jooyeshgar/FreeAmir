@@ -46,6 +46,7 @@ class VoidSellInvoiceTest extends TestCase
         $_COOKIE['active-fiscal-year-id'] = (string) $this->companyId;
 
         $this->user = User::factory()->create();
+        $this->user->companies()->syncWithoutDetaching([$this->companyId]);
 
         $this->user->givePermissionTo([
             Permission::firstOrCreate(['name' => 'invoices.index']),

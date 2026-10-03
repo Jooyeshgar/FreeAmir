@@ -9,6 +9,16 @@ use Tests\TestCase;
 
 class FiscalYearSeparationMigrationTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // This test builds the pre-migration schema itself; CI's migrated MySQL
+        // database is not a suitable starting point for that fixture.
+        config(['database.default' => 'sqlite', 'database.connections.sqlite.database' => ':memory:']);
+        DB::purge('sqlite');
+    }
+
     public function test_existing_years_are_grouped_by_exact_name_without_changing_year_ids_or_access(): void
     {
         Schema::create('companies', function (Blueprint $table) {

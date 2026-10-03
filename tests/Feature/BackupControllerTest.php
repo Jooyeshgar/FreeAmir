@@ -17,6 +17,7 @@ use App\Models\BankAccount;
 use App\Models\Cheque;
 use App\Models\Chequebook;
 use App\Models\ChequeHistory;
+use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
@@ -418,8 +419,9 @@ class BackupControllerTest extends TestCase
         $response->assertRedirect(route('home'));
         $response->assertSessionHas('success');
 
-        $this->assertDatabaseHas('companies', [
-            'name' => 'Imported Company',
+        $this->assertDatabaseHas('companies', ['name' => 'Imported Company']);
+        $this->assertDatabaseHas('fiscal_years', [
+            'company_id' => Company::where('name', 'Imported Company')->firstOrFail()->id,
             'fiscal_year' => 1410,
         ]);
     }

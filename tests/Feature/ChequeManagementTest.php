@@ -90,6 +90,7 @@ class ChequeManagementTest extends TestCase
         }
 
         $this->user = User::factory()->create();
+        $this->user->companies()->syncWithoutDetaching([$companyId]);
         $this->actingAs($this->user);
 
         $this->customer = Customer::create(['company_id' => $companyId, 'name' => 'Customer', 'subject_id' => 201]);

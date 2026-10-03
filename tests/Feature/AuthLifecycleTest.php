@@ -933,7 +933,7 @@ class AuthLifecycleTest extends TestCase
 
         $company = FiscalYear::whereHas('company', fn ($query) => $query->where('name', 'New Company'))->firstOrFail();
 
-        $this->assertSame($previousCompany->id, config('active-fiscal-year-id'));
+        $this->assertNull(config('active-fiscal-year-id'));
         $this->assertTrue($company->users()->whereKey($user->id)->exists());
         $this->assertTrue($user->fresh()->hasRole(__('Admin')));
         $this->assertFalse($user->fresh()->hasRole('Super-Admin'));

@@ -28,6 +28,7 @@ class FiscalYearClosingRecalculationTest extends TestCase
             'fiscal_year' => 1403,
         ]);
         config(['active-fiscal-year-id' => $company->id]);
+        $this->withCookie('active-fiscal-year-id', (string) $company->id);
 
         $cash = Subject::factory()->create(['name' => 'Cash', 'is_permanent' => true]);
         $revenue = Subject::factory()->create(['name' => 'Revenue', 'is_permanent' => false]);
@@ -132,6 +133,7 @@ class FiscalYearClosingRecalculationTest extends TestCase
             'closing_document_id' => null,
         ]);
         config(['active-fiscal-year-id' => $company->id]);
+        $this->withCookie('active-fiscal-year-id', (string) $company->id);
 
         $response = $this->actingAs($user)
             ->post(route('companies.closing-wizard.recalculate', $company));

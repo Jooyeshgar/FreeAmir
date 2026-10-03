@@ -93,7 +93,7 @@ class FiscalYearAccessSeparationTest extends TestCase
 
         $this->assertSame('New Business', $first->company->fresh()->name);
         $this->assertSame('New Business', $second->fresh()->name);
-        $this->assertDatabaseMissing('fiscal_years', ['id' => $first->id, 'name' => 'Old Business']);
+        $this->assertDatabaseMissing('companies', ['id' => $first->company_id, 'name' => 'Old Business']);
     }
 
     public function test_export_and_import_keep_year_boundaries_and_create_a_company_for_an_external_year(): void

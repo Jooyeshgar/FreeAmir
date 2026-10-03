@@ -63,6 +63,7 @@ class FiscalYearTransferTest extends TestCase
     private function activate(FiscalYear $company): void
     {
         config(['active-fiscal-year-id' => $company->id]);
+        $this->withCookie('active-fiscal-year-id', (string) $company->id);
     }
 
     private function makeSubject(FiscalYear $company, string $code, string $name, ?Subject $parent = null): Subject
