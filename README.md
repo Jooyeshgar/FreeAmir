@@ -58,7 +58,7 @@ cp .env.example .env
 docker compose up -d
 ```
 
-> راهنمای کامل نصب در [docs/general/deployment/INSTALLATION.md](docs/general/deployment/INSTALLATION.md) قرار دارد.
+> راهنمای کامل نصب در [docs/deployment/INSTALLATION.md](docs/deployment/INSTALLATION.md) قرار دارد.
 
 ### اطلاعات ورود پیش‌فرض
 
@@ -82,7 +82,7 @@ sail artisan test
 sail npm run dev
 ```
 
-پیش از تغییر در منطق حسابداری، [راهنمای برنامه‌نویس](docs/general/developer/README.md) را بخوانید. تغییرات اثرگذار بر محاسبات مالی باید تست داشته باشند.
+پیش از تغییر در منطق حسابداری، [راهنمای برنامه‌نویس](docs/developer/README.md) را بخوانید. تغییرات اثرگذار بر محاسبات مالی باید تست داشته باشند.
 
 
 ## مستندات
@@ -94,12 +94,12 @@ sail npm run dev
 | سوالات متداول | [faq.md](docs/product/faq.md) | [faq.en.md](docs/product/faq.en.md) |
 | نقشه راه | [roadmap.md](docs/product/roadmap.md) | [roadmap.en.md](docs/product/roadmap.en.md) |
 | نمایشگاه | [screenshots.md](docs/product/screenshots.md) | [screenshots.en.md](docs/product/screenshots.en.md) |
-| فهرست مستندات | [docs/general/README.md](docs/general/README.md) | [docs/general/README.en.md](docs/general/README.en.md) |
-| راهنمای نصب | [docs/general/deployment/INSTALLATION.md](docs/general/deployment/INSTALLATION.md) | [docs/general/deployment/INSTALLATION.en.md](docs/general/deployment/INSTALLATION.en.md) |
-| راهنمای استفاده‌کنندگان | [docs/general/README.md](docs/general/README.md) | [docs/general/README.en.md](docs/general/README.en.md) |
+| فهرست مستندات | [docs/README.md](docs/README.md) | [docs/README.en.md](docs/README.en.md) |
+| راهنمای نصب | [docs/deployment/INSTALLATION.md](docs/deployment/INSTALLATION.md) | [docs/deployment/INSTALLATION.en.md](docs/deployment/INSTALLATION.en.md) |
+| راهنمای استفاده‌کنندگان | [docs/README.md](docs/README.md) | [docs/README.en.md](docs/README.en.md) |
 | مدیریت منابع انسانی | [docs/hr/README.md](docs/hr/README.md) | [docs/hr/README.en.md](docs/hr/README.en.md) |
 | مفاهیم حسابداری | [docs/accounting/README.md](docs/accounting/README.md) | [docs/accounting/README.en.md](docs/accounting/README.en.md) |
-| راهنمای برنامه‌نویس | [docs/general/developer/README.md](docs/general/developer/README.md) | [docs/general/developer/README.en.md](docs/general/developer/README.en.md) |
+| راهنمای برنامه‌نویس | [docs/developer/README.md](docs/developer/README.md) | [docs/developer/README.en.md](docs/developer/README.en.md) |
 
 
 ## مشارکت

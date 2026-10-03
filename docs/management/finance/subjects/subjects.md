@@ -8,7 +8,7 @@
 
 - سال مالی فعال را کنترل کنید. سرفصل‌ها در محدوده سال مالی فعال نمایش داده می‌شوند.
 - مسیر این بخش **مدیریت ← امور مالی ← سرفصل‌ها** است. نمایش گزینه سرفصل‌ها در منو و انجام عملیات‌های مرتبط با سرفصل‌ها به مجوز کاربر بستگی دارد.
-- برای مرور بدهکار و بستانکار، [مبانی حسابداری](../../../general/developer/accounting-basics.md) را بخوانید. برای کنترل سندهای ساخته‌شده به [راهنمای اسناد حسابداری](../../../accounting/document-list/accounting-documents.md) مراجعه کنید.
+- برای مرور بدهکار و بستانکار، [مبانی حسابداری](../../../developer/accounting-basics.md) را بخوانید. برای کنترل سندهای ساخته‌شده به [راهنمای اسناد حسابداری](../../../accounting/document-list/accounting-documents.md) مراجعه کنید.
 
 ## ساختار سرفصل‌ها در امیر
 
@@ -89,7 +89,7 @@
 - [راهنمای بانک‌ها](../banks/banks.md)
 - [راهنمای حساب‌های بانکی](../bank-accounts/bank-accounts.md)
 - [راهنمای اسناد حسابداری](../../../accounting/document-list/accounting-documents.md)
-- [مبانی حسابداری](../../../general/developer/accounting-basics.md)
+- [مبانی حسابداری](../../../developer/accounting-basics.md)
 - [راهنمای گزارش‌های حسابداری](../../../accounting/document-list/accounting-documents.md#یافتن-سند-و-بررسی-تراکنشها)
 
 </div>

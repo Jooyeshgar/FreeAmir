@@ -21,6 +21,6 @@ Task guides follow Amir's main application menus. Installation, development, and
 
 | Section | Contents |
 |---|---|
-| [Installation](general/deployment/INSTALLATION.en.md) | Windows, Docker, and Docker Compose installation |
-| [Programmer guide](general/developer/README.en.md) | Project structure, database, and testing |
+| [Installation](deployment/INSTALLATION.en.md) | Windows, Docker, and Docker Compose installation |
+| [Programmer guide](developer/README.en.md) | Project structure, database, and testing |
 | [Product overview](product/features.en.md) | Features, comparison, FAQ, roadmap, and screenshots |
