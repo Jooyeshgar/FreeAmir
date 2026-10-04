@@ -198,7 +198,7 @@ class AuthLifecycleTest extends TestCase
         $workspace->assertSee('w-[min(18rem,calc(100vw-1rem))]', false);
         $workspace->assertDontSee(route('roles.index'), false);
         $workspace->assertDontSee(route('permissions.index'), false);
-        $this->assertSame($company->id, config('active-company-id'));
+        $this->assertSame($company->fiscalYear->company_identity_id, config('active-company-id'));
 
         $about = $this->get(route('about'));
         $about->assertOk();
@@ -933,7 +933,7 @@ class AuthLifecycleTest extends TestCase
 
         $company = Company::where('name', 'New Company')->firstOrFail();
 
-        $this->assertSame($previousCompany->id, config('active-company-id'));
+        $this->assertSame(0, config('active-company-id'));
         $this->assertTrue($company->users()->whereKey($user->id)->exists());
         $this->assertTrue($user->fresh()->hasRole(__('Admin')));
         $this->assertFalse($user->fresh()->hasRole('Super-Admin'));

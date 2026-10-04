@@ -53,6 +53,7 @@ class FiscalYearTransferTest extends TestCase
 
         $this->actingAs($this->user);
         $this->activate($this->source);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->source->fiscalYear->id]);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'documents.transfer']),
@@ -62,7 +63,11 @@ class FiscalYearTransferTest extends TestCase
 
     private function activate(Company $company): void
     {
-        config(['active-company-id' => $company->id]);
+        config([
+            'active-company-id' => $company->fiscalYear->company_identity_id,
+            'active-legacy-company-id' => $company->id,
+            'active-fiscal-year-id' => $company->fiscalYear->id,
+        ]);
     }
 
     private function makeSubject(Company $company, string $code, string $name, ?Subject $parent = null): Subject
@@ -121,12 +126,12 @@ class FiscalYearTransferTest extends TestCase
             'company_id' => $company->id,
         ], $attributes));
 
-        $previous = config('active-company-id');
-        config(['active-company-id' => $company->id]);
+        $previous = config('active-legacy-company-id');
+        config(['active-legacy-company-id' => $company->id]);
         try {
             $invoice->save();
         } finally {
-            config(['active-company-id' => $previous]);
+            config(['active-legacy-company-id' => $previous]);
         }
 
         return $invoice;
