@@ -35,7 +35,6 @@ class ApiTest extends TestCase
         $this->company = Company::factory()->create();
         $this->user = User::factory()->create();
         $this->company->users()->attach($this->user);
-        $this->company->fiscalYear->users()->attach($this->user);
 
         $permissions = [
             'api.access',
@@ -72,7 +71,6 @@ class ApiTest extends TestCase
     {
         $user = User::factory()->create();
         $this->company->users()->attach($user);
-        $this->company->fiscalYear->users()->attach($user);
         $user->givePermissionTo(Permission::firstOrCreate(['name' => 'hr.employees.index']));
         $token = $user->createToken('limited', ['hr.employees.index'])->plainTextToken;
 
@@ -198,7 +196,6 @@ class ApiTest extends TestCase
         $unattachedCompany = Company::factory()->create(['name' => 'Hidden API Company']);
         $this->company->update(['name' => 'First API Company']);
         $this->user->companies()->attach($secondCompany);
-        $secondCompany->fiscalYear->users()->attach($this->user);
 
         $this->getJson('/api/companies', $this->apiHeaders())
             ->assertOk()
@@ -218,7 +215,6 @@ class ApiTest extends TestCase
 
         $userWithoutPermission = User::factory()->create();
         $this->company->users()->attach($userWithoutPermission);
-        $this->company->fiscalYear->users()->attach($userWithoutPermission);
         $userWithoutPermission->givePermissionTo(Permission::firstOrCreate(['name' => 'api.access']));
         $token = $userWithoutPermission->createToken('companies', ['companies.index'])->plainTextToken;
 

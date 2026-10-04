@@ -22,12 +22,21 @@ class Company extends Model
     {
         static::created(function (Company $company): void {
             $identityId = CompanyIdentity::where('name', $company->name)->get()
-                ->first(fn (CompanyIdentity $identity) => strcmp($identity->name, $company->name) === 0)?->id;
+                ->first(fn(CompanyIdentity $identity) => strcmp($identity->name, $company->name) === 0)?->id;
             if (! $identityId) {
                 $identityId = CompanyIdentity::create($company->only([
-                    'name', 'logo', 'address', 'economical_code', 'national_code', 'postal_code',
-                    'phone_number', 'currency', 'certificate_path', 'private_key_path',
-                    'moadian_username', 'tax_id',
+                    'name',
+                    'logo',
+                    'address',
+                    'economical_code',
+                    'national_code',
+                    'postal_code',
+                    'phone_number',
+                    'currency',
+                    'certificate_path',
+                    'private_key_path',
+                    'moadian_username',
+                    'tax_id',
                 ]))->id;
             }
 
