@@ -277,7 +277,9 @@ class FiscalYearService
 
             $newFiscalYear = Company::create($newFiscalYearData);
             $newFiscalYear->users()->attach(Auth::id());
-            $newFiscalYear->fiscalYear->users()->syncWithoutDetaching([Auth::id()]);
+            if (Auth::id() !== null) {
+                $newFiscalYear->fiscalYear->users()->syncWithoutDetaching([Auth::id()]);
+            }
             $targetYearId = $newFiscalYear->id;
 
             $originalCompanyId = getActiveLegacyCompany();

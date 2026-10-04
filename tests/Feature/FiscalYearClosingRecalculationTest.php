@@ -28,6 +28,8 @@ class FiscalYearClosingRecalculationTest extends TestCase
             'fiscal_year' => 1403,
         ]);
         config(['active-company-id' => $company->id]);
+        $company->users()->attach($user);
+        $this->withCookies(['active-fiscal-year-id' => (string) $company->fiscalYear->id]);
 
         $cash = Subject::factory()->create(['name' => 'Cash', 'is_permanent' => true]);
         $revenue = Subject::factory()->create(['name' => 'Revenue', 'is_permanent' => false]);

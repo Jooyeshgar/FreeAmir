@@ -148,7 +148,7 @@ class MonthlyAttendanceTest extends TestCase
         $response = $this->get(route('attendance.monthly-attendances.index'));
 
         $response->assertStatus(200);
-        $response->assertDontSee($otherEmployee->first_name);
+        $response->assertViewHas('monthlyAttendances', fn ($rows) => ! $rows->pluck('employee_id')->contains($otherEmployee->id));
     }
 
     // ----------------------------------------------------------------
