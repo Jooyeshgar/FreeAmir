@@ -87,7 +87,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function companies()
     {
-        return $this->belongsToMany(Company::class);
+        return $this->belongsToMany(Company::class)->using(CompanyUserPivot::class);
     }
 
     public function fiscalYears(): BelongsToMany

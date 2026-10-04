@@ -36,7 +36,6 @@ class CompanyAccessTest extends TestCase
         $this->inaccessibleCompany = Company::factory()->create(['name' => 'Inaccessible Source']);
 
         $this->accessibleCompany->users()->syncWithoutDetaching([$this->user->id]);
-        $this->accessibleCompany->fiscalYear->users()->syncWithoutDetaching([$this->user->id]);
         $this->inaccessibleCompany->users()->detach($this->user->id);
 
         $this->user->givePermissionTo(
@@ -92,7 +91,6 @@ class CompanyAccessTest extends TestCase
         $superAdmin = User::factory()->create();
         $superAdmin->assignRole(Role::firstOrCreate(['name' => 'Super-Admin']));
         $this->accessibleCompany->users()->attach($superAdmin);
-        $this->accessibleCompany->fiscalYear->users()->attach($superAdmin);
 
         $response = $this->actingAs($superAdmin)->withCookies(['active-company-id' => null])->withSession(['interface_mode' => 'management'])->get(route('companies.index'));
         $response->assertOk()->assertDontSee('data-testid="create-first-company"', false);
