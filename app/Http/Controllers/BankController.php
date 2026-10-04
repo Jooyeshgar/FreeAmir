@@ -27,7 +27,7 @@ class BankController extends Controller
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
         ]);
 
-        $validatedData['company_id'] = getActiveCompany();
+        $validatedData['company_id'] = getActiveLegacyCompany();
         Models\Bank::create($validatedData);
 
         return redirect()->route('banks.index')->with('success', __('Bank created successfully.'));

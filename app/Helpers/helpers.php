@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Company;
+use App\Models\FiscalYear;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Str;
@@ -8,6 +9,36 @@ use Illuminate\Validation\ValidationException;
 
 function getActiveCompany(): int
 {
+    $configuredCompanyId = config('active-company-id');
+    if ($configuredCompanyId !== null) {
+        return (int) $configuredCompanyId;
+    }
+
+    // Compatibility for CLI and tests that establish a legacy year context directly.
+    $legacyId = getActiveLegacyCompany();
+    try {
+        return (int) (FiscalYear::where('legacy_company_id', $legacyId)->value('company_identity_id') ?? $legacyId);
+    } catch (Throwable) {
+        return $legacyId;
+    }
+}
+
+function getActiveFiscalYear(): ?int
+{
+    return config('active-fiscal-year-id') === null ? null : (int) config('active-fiscal-year-id');
+}
+
+function getActiveLegacyCompany(): int
+{
+    $configuredLegacyId = config('active-legacy-company-id');
+    if ($configuredLegacyId !== null) {
+        return (int) $configuredLegacyId;
+    }
+
+    if (getActiveFiscalYear() !== null) {
+        return (int) (FiscalYear::whereKey(getActiveFiscalYear())->value('legacy_company_id') ?? 0);
+    }
+
     $configuredCompanyId = config('active-company-id');
     if ($configuredCompanyId !== null) {
         return (int) $configuredCompanyId;

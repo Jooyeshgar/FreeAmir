@@ -144,7 +144,7 @@ class PersonnelRequestController extends Controller
 
         PersonnelRequest::create([
             'employee_id' => $request->employee_id,
-            'company_id' => getActiveCompany(),
+            'company_id' => getActiveLegacyCompany(),
             'request_type' => PersonnelRequestType::fromName($request->request_type),
             'start_date' => $startDatetime,
             'end_date' => $endDatetime,

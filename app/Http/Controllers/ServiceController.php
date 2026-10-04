@@ -107,7 +107,7 @@ class ServiceController extends Controller
             'file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
         ]);
 
-        $result = $importService->import($request->file('file'), getActiveCompany());
+        $result = $importService->import($request->file('file'), getActiveLegacyCompany());
 
         return redirect()->route('services.index')->with('success', __('Import complete: :imported services imported, :updated updated, :groups groups created.', [
             'imported' => $result['imported'],

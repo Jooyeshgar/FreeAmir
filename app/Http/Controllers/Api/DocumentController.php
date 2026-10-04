@@ -29,7 +29,7 @@ class DocumentController extends Controller
     {
         $document = Document::withoutGlobalScopes()
             ->with(['transactions', 'documentFiles'])
-            ->where('company_id', getActiveCompany())
+            ->where('company_id', getActiveLegacyCompany())
             ->findOrFail($documentId);
 
         return response()->json(['data' => $document]);
@@ -42,7 +42,7 @@ class DocumentController extends Controller
         int $documentId
     ): JsonResponse {
         $document = Document::withoutGlobalScopes()
-            ->where('company_id', getActiveCompany())
+            ->where('company_id', getActiveLegacyCompany())
             ->findOrFail($documentId);
         $data = $request->validated();
         $data['document_id'] = $document->id;

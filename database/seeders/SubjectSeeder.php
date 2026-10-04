@@ -20,7 +20,7 @@ class SubjectSeeder extends Seeder
      */
     public function run(?int $companyId = null): void
     {
-        $companyId ??= (int) getActiveCompany();
+        $companyId ??= (int) getActiveLegacyCompany();
         // Root subjects classified as non-permanent (income statement / temporary).
         // Their children inherit the same flag.
         $nonPermanentRoots = [

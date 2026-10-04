@@ -277,11 +277,16 @@ class FiscalYearService
 
             $newFiscalYear = Company::create($newFiscalYearData);
             $newFiscalYear->users()->attach(Auth::id());
+            if (Auth::id() !== null) {
+                $newFiscalYear->fiscalYear->users()->syncWithoutDetaching([Auth::id()]);
+            }
             $targetYearId = $newFiscalYear->id;
 
-            $originalCompanyId = getActiveCompany();
+            $originalCompanyId = getActiveLegacyCompany();
+            $originalFiscalYearId = getActiveFiscalYear();
             Cookie::expire('active-company-id');
             Cookie::queue('active-company-id', $targetYearId);
+            Cookie::queue('active-fiscal-year-id', $newFiscalYear->fiscalYear->id);
 
             $idMappings = [];
 
@@ -734,6 +739,7 @@ class FiscalYearService
             } finally {
                 Cookie::expire('active-company-id');
                 Cookie::queue('active-company-id', $originalCompanyId);
+                Cookie::queue('active-fiscal-year-id', $originalFiscalYearId);
                 if (DB::getDriverName() === 'mysql') {
                     DB::statement('SET FOREIGN_KEY_CHECKS=1;');
                 }
@@ -2936,8 +2942,9 @@ class FiscalYearService
 
         self::copyMoadianKeys($company, $newFiscalYear);
 
-        $userIds = $company->users()->pluck('users.id')->toArray();
+        $userIds = $company->fiscalYear->users()->pluck('users.id')->toArray();
         $newFiscalYear->users()->attach($userIds);
+        $newFiscalYear->fiscalYear->users()->syncWithoutDetaching($userIds);
 
         return $newFiscalYear;
     }

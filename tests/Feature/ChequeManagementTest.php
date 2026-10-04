@@ -90,6 +90,8 @@ class ChequeManagementTest extends TestCase
         }
 
         $this->user = User::factory()->create();
+        Company::findOrFail($companyId)->users()->attach($this->user);
+        $this->withCookies(['active-fiscal-year-id' => (string) Company::findOrFail($companyId)->fiscalYear->id]);
         $this->actingAs($this->user);
 
         $this->customer = Customer::create(['company_id' => $companyId, 'name' => 'Customer', 'subject_id' => 201]);

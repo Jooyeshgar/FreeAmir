@@ -41,7 +41,7 @@ class WorkSiteController extends Controller
         WorkSite::create(array_merge(
             $validated,
             [
-                'company_id' => getActiveCompany(),
+                'company_id' => getActiveLegacyCompany(),
                 'is_active' => $request->boolean('is_active', true),
             ]
         ));

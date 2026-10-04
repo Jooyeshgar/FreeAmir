@@ -25,7 +25,7 @@ class StoreProductRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'code' => ['nullable', Rule::unique('products', 'code')->where('company_id', getActiveCompany())],
+            'code' => ['nullable', Rule::unique('products', 'code')->where('company_id', getActiveLegacyCompany())],
             'name' => 'required|max:20|string|regex:/^[\w\d\s\-\:\.]*$/u',
             'group' => 'required|exists:product_groups,id|integer',
             'location' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
@@ -72,7 +72,7 @@ class StoreProductRequest extends FormRequest
         $validatedData = $this->validated();
 
         if (empty($validatedData['code'])) {
-            $maxCode = Product::where('company_id', getActiveCompany())->whereRaw('code REGEXP "^[0-9]+$"')
+            $maxCode = Product::where('company_id', getActiveLegacyCompany())->whereRaw('code REGEXP "^[0-9]+$"')
                 ->selectRaw('MAX(CAST(code AS UNSIGNED)) AS max_code')->value('max_code');
 
             $validatedData['code'] = ($maxCode ?: 0) + 1;

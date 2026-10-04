@@ -19,6 +19,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class CompanyOverviewService
 {
@@ -32,7 +33,7 @@ class CompanyOverviewService
     public function build(Company $company): array
     {
         $fiscalYears = Company::query()
-            ->where('name', $company->name)
+            ->whereIn('companies.id', $company->fiscalYear->companyIdentity->fiscalYears()->select('legacy_company_id'))
             ->select('companies.*')
             ->selectSub(
                 Document::withoutGlobalScopes()
@@ -46,14 +47,18 @@ class CompanyOverviewService
                     ->whereColumn('invoices.company_id', 'companies.id'),
                 'invoices_count'
             )
-            ->withCount('users')
+            ->selectSub(
+                DB::table('fiscal_year_user')->join('fiscal_years', 'fiscal_year_user.fiscal_year_id', '=', 'fiscal_years.id')
+                    ->selectRaw('COUNT(*)')->whereColumn('fiscal_years.legacy_company_id', 'companies.id'),
+                'users_count'
+            )
             ->orderByDesc('fiscal_year')
             ->orderByDesc('id')
             ->get();
 
-        $companyIds = $fiscalYears->pluck('id');
+        $yearIds = $company->fiscalYear->companyIdentity->fiscalYears()->pluck('id');
         $users = User::query()
-            ->whereHas('companies', fn ($query) => $query->whereIn('companies.id', $companyIds))
+            ->whereHas('fiscalYears', fn ($query) => $query->whereIn('fiscal_years.id', $yearIds))
             ->with('roles:id,name')
             ->orderBy('name')
             ->orderBy('id')

@@ -91,7 +91,7 @@ class EmployeeController extends Controller
     {
         Employee::create(array_merge(
             $request->validated(),
-            ['company_id' => getActiveCompany()]
+            ['company_id' => getActiveLegacyCompany()]
         ));
 
         return redirect()->route('hr.employees.index')

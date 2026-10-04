@@ -38,7 +38,7 @@ class BankAccount extends Model
 
         static::creating(function ($bankAccount) {
             if (! isset($bankAccount->company_id)) {
-                $bankAccount->company_id = getActiveCompany();
+                $bankAccount->company_id = getActiveLegacyCompany();
             }
         });
     }

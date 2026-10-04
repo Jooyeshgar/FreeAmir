@@ -42,7 +42,7 @@ class PublicHolidayController extends Controller
 
         PublicHoliday::create(array_merge(
             $validated,
-            ['company_id' => getActiveCompany()]
+            ['company_id' => getActiveLegacyCompany()]
         ));
 
         return redirect()->route('salary.public-holidays.index')

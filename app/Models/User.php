@@ -6,7 +6,9 @@ use App\Notifications\ResetPasswordNotification;
 use App\Notifications\UserVerificationNotification;
 use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailTrait;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -85,7 +87,22 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function companies()
     {
-        return $this->belongsToMany(Company::class);
+        return $this->belongsToMany(Company::class)->using(CompanyUserPivot::class);
+    }
+
+    public function fiscalYears(): BelongsToMany
+    {
+        return $this->belongsToMany(FiscalYear::class);
+    }
+
+    public function canAccessFiscalYear(Company $company): bool
+    {
+        return $this->fiscalYears()->where('legacy_company_id', $company->id)->exists();
+    }
+
+    public function accessibleCompanies(): Builder
+    {
+        return Company::query()->whereIn('companies.id', $this->fiscalYears()->select('legacy_company_id'));
     }
 
     public function employee(): HasOne
@@ -100,7 +117,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function canBeImpersonated(): bool
     {
-        return $this->companies()->exists() && ! $this->can('access-super-admin-panel');
+        return $this->fiscalYears()->exists() && ! $this->can('access-super-admin-panel');
     }
 
     public function canImpersonateUser(User $user): bool

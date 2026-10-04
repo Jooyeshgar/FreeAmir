@@ -300,7 +300,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
     private function seedDemoUsersAndEmployees(): void
     {
-        $companyId = (int) getActiveCompany();
+        $companyId = (int) getActiveLegacyCompany();
         $users = [
             'super-admin' => [
                 'roles' => ['Super-Admin', __('Admin'), __('Employee')],

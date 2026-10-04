@@ -10,7 +10,7 @@ class ServiceService
 
     public function create(array $data): Service
     {
-        $data['company_id'] ??= getActiveCompany();
+        $data['company_id'] ??= getActiveLegacyCompany();
 
         $service = Service::create($data);
 
@@ -47,7 +47,7 @@ class ServiceService
         $service->loadMissing('subject', 'cogsSubject', 'salesReturnsSubject');
 
         $group = $service->serviceGroup;
-        $companyId = $service->company_id ?? $group?->company_id ?? getActiveCompany();
+        $companyId = $service->company_id ?? $group?->company_id ?? getActiveLegacyCompany();
 
         if (! $companyId) {
             throw new \RuntimeException('Unable to determine company for service subject synchronization.');

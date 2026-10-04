@@ -9,7 +9,7 @@ class BankSeeder extends Seeder
 {
     public function run(?int $companyId = null): void
     {
-        $companyId ??= (int) getActiveCompany();
+        $companyId ??= (int) getActiveLegacyCompany();
         $bankNames = [
             'بانک پارسیان',
             'بانک دی',
