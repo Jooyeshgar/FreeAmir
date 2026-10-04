@@ -25,7 +25,7 @@ class Warehouse extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function (Warehouse $warehouse) {
-            $warehouse->company_id ??= getActiveCompany();
+            $warehouse->company_id ??= getActiveLegacyCompany();
         });
     }
 

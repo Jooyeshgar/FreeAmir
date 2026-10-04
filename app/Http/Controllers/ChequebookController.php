@@ -14,7 +14,7 @@ class ChequebookController extends Controller
     {
         $filters = $request->validate([
             'serial_prefix' => ['nullable', 'string', 'max:50'],
-            'bank_account_id' => ['nullable', Rule::exists('bank_accounts', 'id')->where('company_id', getActiveCompany())],
+            'bank_account_id' => ['nullable', Rule::exists('bank_accounts', 'id')->where('company_id', getActiveLegacyCompany())],
             'availability' => ['nullable', Rule::in(['available', 'exhausted'])],
         ]);
 
@@ -42,7 +42,7 @@ class ChequebookController extends Controller
     {
         $chequebook = Chequebook::create([
             ...$this->validatedData($request),
-            'company_id' => getActiveCompany(),
+            'company_id' => getActiveLegacyCompany(),
         ]);
 
         return redirect()->route('chequebooks.show', $chequebook)->with('success', __('Chequebook created successfully.'));
@@ -88,7 +88,7 @@ class ChequebookController extends Controller
         }
 
         $validated = $request->validate([
-            'bank_account_id' => ['required', Rule::exists('bank_accounts', 'id')->where('company_id', getActiveCompany())],
+            'bank_account_id' => ['required', Rule::exists('bank_accounts', 'id')->where('company_id', getActiveLegacyCompany())],
             'serial_prefix' => ['nullable', 'string', 'max:50'],
             'first_leaf' => ['required', 'integer', 'min:0'],
             'last_leaf' => ['required', 'integer', 'gte:first_leaf'],

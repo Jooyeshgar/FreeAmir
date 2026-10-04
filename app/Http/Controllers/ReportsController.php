@@ -34,7 +34,7 @@ class ReportsController extends Controller
         $user = auth()->user();
 
         if ($user->can('access-super-admin-panel')) {
-            $hasCurrentWorkspace = $user->companies()->whereKey(getActiveCompany())->where('fiscal_year', toEnglish(jdate('Y')))->exists();
+            $hasCurrentWorkspace = $user->fiscalYears()->whereKey(getActiveFiscalYear())->where('year', toEnglish(jdate('Y')))->exists();
 
             if (! $hasCurrentWorkspace) {
                 return redirect()->route('management.dashboard');
@@ -147,7 +147,7 @@ class ReportsController extends Controller
             }
         }
 
-        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
+        $company = Company::withoutGlobalScopes()->findOrFail(getActiveLegacyCompany());
         [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
         $startDate = $validated['start_date'] ?? null;
         $endDate = $validated['end_date'] ?? null;
@@ -182,17 +182,17 @@ class ReportsController extends Controller
     {
         abort_if(! config('app.debug') || config('app.env') === 'production', 404);
 
-        $companyId = (int) getActiveCompany();
+        $companyId = (int) getActiveLegacyCompany();
         $user = auth()->user();
 
-        abort_unless($user->can('access-super-admin-panel') || $user->companies()->whereKey($companyId)->exists(), 403);
+        abort_unless($user->fiscalYears()->where('legacy_company_id', $companyId)->exists(), 403);
 
         if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
             return redirect()->route('home')->with('error', __('Please select a valid company first.'));
         }
 
         // Seeders use this value when no HTTP cookie is available (for example when they are invoked through Artisan from this request).
-        config(['active-company-id' => $companyId]);
+        config(['active-legacy-company-id' => $companyId]);
 
         if (Document::withoutGlobalScopes()->where('company_id', $companyId)->exists()) {
             return redirect()->route('home')->with('error', __('Cannot add demo data to a non-empty database.'));

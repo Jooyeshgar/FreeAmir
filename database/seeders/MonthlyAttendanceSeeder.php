@@ -12,7 +12,7 @@ class MonthlyAttendanceSeeder extends Seeder
 {
     public function run(): void
     {
-        $companyId = (int) getActiveCompany();
+        $companyId = (int) getActiveLegacyCompany();
         $employees = Employee::withoutGlobalScopes()->where('company_id', $companyId)->get();
         if ($employees->isEmpty()) {
             return;

@@ -30,7 +30,7 @@ class Chequebook extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function (Chequebook $chequebook) {
-            $chequebook->company_id ??= getActiveCompany();
+            $chequebook->company_id ??= getActiveLegacyCompany();
         });
     }
 

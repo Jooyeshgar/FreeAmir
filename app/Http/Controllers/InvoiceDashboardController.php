@@ -25,7 +25,7 @@ class InvoiceDashboardController extends Controller
             }
         }
 
-        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
+        $company = Company::withoutGlobalScopes()->findOrFail(getActiveLegacyCompany());
         [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
 
         $start = isset($validated['start_date']) ? $validated['start_date'] : $fiscalStart->toDateString();

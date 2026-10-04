@@ -24,7 +24,7 @@ class UpdateProductRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'code' => ['nullable', Rule::unique('products', 'code')->ignore($this->route('product'))->where('company_id', getActiveCompany())],
+            'code' => ['nullable', Rule::unique('products', 'code')->ignore($this->route('product'))->where('company_id', getActiveLegacyCompany())],
             'name' => 'required|max:20|string|regex:/^[\w\d\s\-\:\.]*$/u',
             'group' => 'required|exists:product_groups,id|integer',
             'location' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',

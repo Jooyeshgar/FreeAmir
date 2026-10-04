@@ -56,7 +56,7 @@ class ChequeService
             $status = $this->initialStatus($direction, $purpose);
 
             $cheque = Cheque::create([
-                'company_id' => getActiveCompany(),
+                'company_id' => getActiveLegacyCompany(),
                 'title' => filled($data['title'] ?? null) ? trim($data['title']) : __('Cheque #').($data['cheque_number'] ?? ''),
                 'amount' => $data['amount'],
                 'write_date' => $data['issue_date'],
@@ -377,7 +377,7 @@ class ChequeService
         if (! preg_match('/^\d{16}$/', (string) ($data['sayad_number'] ?? ''))) {
             throw ValidationException::withMessages(['sayad_number' => __('validation.regex', ['attribute' => __('16-digit Sayad number')])]);
         }
-        $companyId = $except?->company_id ?? getActiveCompany();
+        $companyId = $except?->company_id ?? getActiveLegacyCompany();
         $duplicateSayad = Cheque::withoutGlobalScopes()
             ->where('company_id', $companyId)
             ->where('sayad_number', $data['sayad_number'])
@@ -515,7 +515,7 @@ class ChequeService
     private function subject(string $configKey): int
     {
         $subjectId = (int) config('amir.'.$configKey);
-        $subject = $subjectId ? Subject::where('company_id', getActiveCompany())->find($subjectId) : null;
+        $subject = $subjectId ? Subject::where('company_id', getActiveLegacyCompany())->find($subjectId) : null;
         if (! $subject) {
             throw ValidationException::withMessages(['accounting' => __('Accounting subject configuration :key is missing or invalid.', ['key' => $configKey])]);
         }

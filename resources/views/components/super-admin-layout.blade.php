@@ -4,9 +4,9 @@
     $user = auth()->user();
     $isRtl = app()->getLocale() === 'fa';
     $hasCurrentWorkspace = $user
-        ->companies()
-        ->whereKey(getActiveCompany())
-        ->where('fiscal_year', toEnglish(jdate('Y')))
+        ->fiscalYears()
+        ->whereKey(getActiveFiscalYear())
+        ->where('year', toEnglish(jdate('Y')))
         ->exists();
     $navigation = [
         [

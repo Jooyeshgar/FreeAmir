@@ -45,7 +45,7 @@ class LoginController extends Controller
             return redirect()->intended(route('management.dashboard'));
         }
 
-        if (! $user->companies()->exists()) {
+        if (! $user->fiscalYears()->exists()) {
             return redirect()->route('registered-user.company.create');
         }
 

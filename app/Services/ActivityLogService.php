@@ -541,7 +541,7 @@ class ActivityLogService
             return null;
         }
 
-        $companyId = config('active-company-id') ?? $request->cookie('active-company-id');
+        $companyId = config('active-legacy-company-id') ?: $request->cookie('active-company-id');
 
         return $companyId ? (int) $companyId : null;
     }

@@ -39,8 +39,11 @@ class ManagementCompanyOverviewTest extends TestCase
         $accountant = User::factory()->create(['name' => 'Grouped Accountant', 'email' => 'accountant@grouped.test']);
         $accountant->assignRole(Role::create(['name' => 'Business Accountant']));
         $accountant->companies()->attach([$newFiscalYear->id, $oldFiscalYear->id]);
+        $newFiscalYear->fiscalYear->users()->attach($accountant);
+        $oldFiscalYear->fiscalYear->users()->attach($accountant);
         $rolelessUser = User::factory()->create(['name' => 'Roleless Operator', 'email' => 'roleless@grouped.test']);
         $rolelessUser->companies()->attach($oldFiscalYear);
+        $oldFiscalYear->fiscalYear->users()->attach($rolelessUser);
         $outsider = User::factory()->create(['name' => 'Outside User']);
         $outsider->companies()->attach($otherCompany);
 
@@ -106,6 +109,7 @@ class ManagementCompanyOverviewTest extends TestCase
         $company = $this->company('Linked Business', 1404);
         $target = User::factory()->create(['name' => 'Linked User']);
         $target->companies()->attach($company);
+        $company->fiscalYear->users()->attach($target);
         $this->document($company, $admin, 1);
         Activity::create([
             'log_name' => 'request',

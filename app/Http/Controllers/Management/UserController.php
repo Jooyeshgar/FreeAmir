@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Management;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
@@ -32,10 +33,10 @@ class UserController extends Controller
 
         $users = User::query()
             ->unless($actor->can('access-super-admin-panel'), function ($query) use ($actor) {
-                $companyIds = $actor->companies()->pluck('companies.id');
+                $companyIds = $actor->fiscalYears()->pluck('fiscal_years.id');
 
-                $query->whereHas('companies', fn ($query) => $query->where('companies.id', getActiveCompany()))
-                    ->whereDoesntHave('companies', fn ($query) => $query->whereNotIn('companies.id', $companyIds));
+                $query->whereHas('fiscalYears', fn ($query) => $query->where('fiscal_years.id', getActiveFiscalYear()))
+                    ->whereDoesntHave('fiscalYears', fn ($query) => $query->whereNotIn('fiscal_years.id', $companyIds));
             })
             ->unless($isManagementUserIndex, fn ($query) => $query
                 ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'Super-Admin'))
@@ -51,7 +52,7 @@ class UserController extends Controller
             ->when($request->input('verification') === 'verified', fn ($query) => $query->whereNotNull('email_verified_at'))
             ->when($request->input('verification') === 'pending', fn ($query) => $query->whereNull('email_verified_at'))
             ->with(['employee', 'roles:id,name'])
-            ->withCount('companies')
+            ->withCount(['fiscalYears as companies_count'])
             ->latest()
             ->paginate(12)
             ->withQueryString();
@@ -101,6 +102,7 @@ class UserController extends Controller
 
             $user->syncRoles($role);
             $user->companies()->sync($company);
+            $user->fiscalYears()->sync(FiscalYear::whereIn('legacy_company_id', $company)->pluck('id'));
         });
 
         try {
@@ -122,10 +124,8 @@ class UserController extends Controller
         abort_unless(auth()->user()->can('access-super-admin-panel'), 403);
 
         $this->ensureUserAccess($user);
-        $user->load([
-            'roles:id,name',
-            'companies' => fn ($query) => $query->orderByDesc('fiscal_year')->orderBy('name'),
-        ]);
+        $user->load('roles:id,name');
+        $user->setRelation('companies', $user->accessibleCompanies()->orderByDesc('fiscal_year')->orderBy('name')->get());
 
         return view('users.show', compact('user'));
     }
@@ -137,6 +137,8 @@ class UserController extends Controller
     {
         $this->ensureUserRoleManagementAccess($user);
         $this->ensureUserAccess($user);
+
+        $user->setRelation('companies', $user->accessibleCompanies()->get());
 
         $roles = $this->assignableRoles();
         $companies = $this->assignableCompanies();
@@ -197,6 +199,7 @@ class UserController extends Controller
 
             $user->syncRoles($role);
             $user->companies()->sync($company);
+            $user->fiscalYears()->sync(FiscalYear::whereIn('legacy_company_id', $company)->pluck('id'));
         });
 
         return redirect()->route('users.index')->with('success', __('User updated successfully!'));
@@ -260,7 +263,7 @@ class UserController extends Controller
     {
         $this->ensureUserAccess($user);
 
-        $companyId = getActiveCompany();
+        $companyId = getActiveLegacyCompany();
 
         $existingEmployee = $user->employee()->first();
         if ($existingEmployee) {
@@ -316,7 +319,7 @@ class UserController extends Controller
     {
         $user = auth()->user();
 
-        return ($user->can('access-super-admin-panel') ? Company::query() : $user->companies())->get();
+        return ($user->can('access-super-admin-panel') ? Company::query() : $user->accessibleCompanies())->get();
     }
 
     private function validateAssignments(Request $request): void
@@ -350,9 +353,9 @@ class UserController extends Controller
             return;
         }
 
-        $companyIds = $actor->companies()->pluck('companies.id');
-        $hasActiveCompany = $user->companies()->where('companies.id', getActiveCompany())->exists();
-        $hasInaccessibleCompany = $user->companies()->whereNotIn('companies.id', $companyIds)->exists();
+        $companyIds = $actor->fiscalYears()->pluck('fiscal_years.id');
+        $hasActiveCompany = $user->fiscalYears()->where('fiscal_years.id', getActiveFiscalYear())->exists();
+        $hasInaccessibleCompany = $user->fiscalYears()->whereNotIn('fiscal_years.id', $companyIds)->exists();
 
         abort_unless($hasActiveCompany && ! $hasInaccessibleCompany, 403);
     }
@@ -377,7 +380,7 @@ class UserController extends Controller
 
     private function impersonationLandingPage(User $user): string
     {
-        if ($user->companies()->exists() && $user->can('home')) {
+        if ($user->fiscalYears()->exists() && $user->can('home')) {
             return route('home');
         }
 
