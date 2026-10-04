@@ -241,6 +241,7 @@ class CompanyOverviewService
 
             $balance = (float) Transaction::query()
                 ->join('documents', 'documents.id', '=', 'transactions.document_id')
+                ->where('documents.fiscal_year_id', getScopedFiscalYear())
                 ->whereIn('transactions.subject_id', $subjectIds)
                 ->when($startDate, fn ($query, string $date) => $query->where('documents.date', '>=', $date))
                 ->when($endDate, fn ($query, string $date) => $query->where('documents.date', '<=', $date))
@@ -331,6 +332,7 @@ class CompanyOverviewService
 
         $invoiceItems = \DB::table('invoice_items')
             ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
+            ->where('invoices.fiscal_year_id', getScopedFiscalYear())
             ->select('invoices.date', 'invoice_items.itemable_id', 'invoice_items.quantity_at')
             ->where('invoice_items.itemable_type', Product::class)
             ->whereBetween('invoices.date', [$startDate, $endDate])
@@ -411,6 +413,7 @@ class CompanyOverviewService
 
         $dailyTransactions = (clone $transactionQuery)
             ->join('documents', 'documents.id', '=', 'transactions.document_id')
+            ->where('documents.fiscal_year_id', getScopedFiscalYear())
             ->whereBetween('documents.date', [$startDate, $endDate])
             ->selectRaw('DATE(documents.date) as date, SUM(transactions.value) as total')
             ->groupBy('date')

@@ -179,20 +179,20 @@ class ChequeController extends Controller
                     'required',
                     'regex:/^\d{16}$/',
                     Rule::unique('cheques', 'sayad_number')
-                        ->where('company_id', getActiveLegacyCompany())
+                        ->where('fiscal_year_id', getScopedFiscalYear())
                         ->ignore($cheque?->id),
                 ],
                 'cheque_number' => ['nullable', 'string', 'max:50'],
-                'customer_id' => ['required', Rule::exists('customers', 'id')->where('company_id', getActiveLegacyCompany())],
+                'customer_id' => ['required', Rule::exists('customers', 'id')->where('fiscal_year_id', getScopedFiscalYear())],
                 'bank_account_id' => [
                     Rule::requiredIf($direction === ChequeType::PAYABLE->value),
                     'nullable',
-                    Rule::exists('bank_accounts', 'id')->where('company_id', getActiveLegacyCompany()),
+                    Rule::exists('bank_accounts', 'id')->where('fiscal_year_id', getScopedFiscalYear()),
                 ],
                 'chequebook_id' => [
                     'nullable',
                     'exclude_unless:direction,'.ChequeType::PAYABLE->value,
-                    Rule::exists('chequebooks', 'id')->where('company_id', getActiveLegacyCompany()),
+                    Rule::exists('chequebooks', 'id')->where('fiscal_year_id', getScopedFiscalYear()),
                 ],
                 'description' => ['nullable', 'string', 'max:1000'],
             ],
@@ -223,8 +223,8 @@ class ChequeController extends Controller
         return $request->validate(
             [
                 'date' => ['nullable', 'date'],
-                'bank_account_id' => ['nullable', Rule::exists('bank_accounts', 'id')->where('company_id', getActiveLegacyCompany())],
-                'customer_id' => ['nullable', Rule::exists('customers', 'id')->where('company_id', getActiveLegacyCompany())],
+                'bank_account_id' => ['nullable', Rule::exists('bank_accounts', 'id')->where('fiscal_year_id', getScopedFiscalYear())],
+                'customer_id' => ['nullable', Rule::exists('customers', 'id')->where('fiscal_year_id', getScopedFiscalYear())],
                 'description' => ['nullable', 'string', 'max:1000'],
             ],
         );

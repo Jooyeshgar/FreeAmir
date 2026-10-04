@@ -99,6 +99,7 @@ class TrialBalanceExportTest extends TestCase
         $createSubject = function (string $code, string $name, ?int $parentId = null) use ($subjectType): Subject {
             $id = DB::table('subjects')->insertGetId([
                 'company_id' => $this->company->id,
+                'fiscal_year_id' => $this->company->fiscalYear->id,
                 'code' => $code,
                 'name' => $name,
                 'parent_id' => $parentId,

@@ -66,7 +66,7 @@ class StoreEmployeeRequest extends FormRequest
             'organization_unit_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('organization_units', 'id')->where('company_id', getActiveLegacyCompany()),
+                Rule::exists('organization_units', 'id')->where('fiscal_year_id', getScopedFiscalYear()),
             ],
             'work_site_id' => ['required', 'integer', 'exists:work_sites,id'],
             'work_shift_id' => ['required', 'integer', 'exists:work_shifts,id'],

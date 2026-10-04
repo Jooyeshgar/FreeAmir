@@ -388,6 +388,7 @@ class BeginningInventoryTest extends TestCase
         $opening = $this->createBeginningInventory($product, 5, $this->mainWarehouse, 100, true, $openingNumber, '2026-01-01');
         $subjectId = DB::table('subjects')->insertGetId([
             'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->company->fiscalYear->id,
             'parent_id' => null,
             'code' => '100',
             'name' => 'Inventory test subject',
@@ -505,6 +506,7 @@ class BeginningInventoryTest extends TestCase
 
         return DB::table('subjects')->insertGetId([
             'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->company->fiscalYear->id,
             'parent_id' => null,
             'code' => $code,
             'name' => $name,

@@ -69,7 +69,7 @@ class StoreTransactionRequest extends FormRequest
                 'decimal:0,2',
                 Rule::unique('documents', 'number')
                     ->where(function ($query) {
-                        return $query->where('company_id', getActiveLegacyCompany());
+                        return $query->where('fiscal_year_id', getScopedFiscalYear());
                     })
                     ->ignore($this->request->get('document_id')), // Ignore the current document ID if updating
             ],
