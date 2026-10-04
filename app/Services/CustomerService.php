@@ -14,7 +14,7 @@ class CustomerService
     public function create(array $data): Customer
     {
         return DB::transaction(function () use ($data) {
-            $data['company_id'] ??= getActiveCompany();
+            $data['company_id'] ??= getActiveLegacyCompany();
             $subjectCode = $data['subject_code'] ?? null;
             unset($data['subject_code']);
 
@@ -54,7 +54,7 @@ class CustomerService
         $customer->loadMissing('group', 'subject');
 
         $group = $customer->group;
-        $companyId = $customer->company_id ?? $group?->company_id ?? getActiveCompany();
+        $companyId = $customer->company_id ?? $group?->company_id ?? getActiveLegacyCompany();
 
         if (! $companyId) {
             throw new \RuntimeException('Unable to determine company for customer subject synchronization.');

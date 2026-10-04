@@ -36,7 +36,7 @@ class ConfigController extends Controller
         // If config doesn't exist, create a new instance (not saved yet)
         if (! $config) {
             $config = new Config;
-            $config->company_id = getActiveCompany();
+            $config->company_id = getActiveLegacyCompany();
             $config->key = $key;
             $config->value = 0;
             $config->type = '2';

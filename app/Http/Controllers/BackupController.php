@@ -14,7 +14,7 @@ class BackupController extends Controller
 {
     public function create()
     {
-        $previousYears = auth()->user()->companies()->orderByDesc('fiscal_year')->get();
+        $previousYears = auth()->user()->accessibleCompanies()->orderByDesc('fiscal_year')->get();
         $currentYear = toEnglish(jdate('Y'));
 
         return view('backups.create', compact('previousYears', 'currentYear'));
@@ -25,7 +25,7 @@ class BackupController extends Controller
         $validated = $request->validate([
             'source_id' => [
                 'required',
-                Rule::exists('company_user', 'company_id')->where('user_id', auth()->user()->id),
+                Rule::exists('fiscal_years', 'legacy_company_id')->whereIn('id', auth()->user()->fiscalYears()->pluck('fiscal_years.id')),
             ],
         ]);
 
@@ -39,7 +39,7 @@ class BackupController extends Controller
         $validated = $request->validate([
             'source_id' => [
                 'required',
-                Rule::exists('company_user', 'company_id')->where('user_id', auth()->user()->id),
+                Rule::exists('fiscal_years', 'legacy_company_id')->whereIn('id', auth()->user()->fiscalYears()->pluck('fiscal_years.id')),
             ],
             'tables_to_backup' => 'required|array',
             'tables_to_backup.*' => 'string|in:'.implode(',', array_map(fn ($case) => $case->value, FiscalYearSection::cases())),

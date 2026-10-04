@@ -28,11 +28,11 @@ class UpdateEmployeeRequest extends FormRequest
 
         return [
             // Identity
-            'code' => ['required', 'string', 'max:20', Rule::unique('employees', 'code')->ignore($employee->id)->where('company_id', getActiveCompany())],
+            'code' => ['required', 'string', 'max:20', Rule::unique('employees', 'code')->ignore($employee->id)->where('company_id', getActiveLegacyCompany())],
             'first_name' => ['required', 'string', 'max:100'],
             'last_name' => ['required', 'string', 'max:100'],
             'father_name' => ['nullable', 'string', 'max:100'],
-            'national_code' => ['nullable', 'string', 'size:10', Rule::unique('employees', 'national_code')->ignore($employee->id)->where('company_id', getActiveCompany())],
+            'national_code' => ['nullable', 'string', 'size:10', Rule::unique('employees', 'national_code')->ignore($employee->id)->where('company_id', getActiveLegacyCompany())],
             'passport_number' => ['nullable', 'string', 'max:20'],
             'nationality' => ['required', Rule::in(EmployeeNationality::valueNames())],
             'gender' => ['nullable', Rule::in(EmployeeGender::valueNames())],
@@ -70,7 +70,7 @@ class UpdateEmployeeRequest extends FormRequest
             'organization_unit_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('organization_units', 'id')->where('company_id', getActiveCompany()),
+                Rule::exists('organization_units', 'id')->where('company_id', getActiveLegacyCompany()),
             ],
             'work_site_id' => ['required', 'integer', 'exists:work_sites,id'],
             'work_shift_id' => ['required', 'integer', 'exists:work_shifts,id'],

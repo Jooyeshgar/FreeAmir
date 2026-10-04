@@ -9,7 +9,7 @@ class WarehouseSeeder extends Seeder
 {
     public function run(?int $companyId = null): void
     {
-        $companyId ??= (int) getActiveCompany();
+        $companyId ??= (int) getActiveLegacyCompany();
 
         foreach ([
             ['name' => 'انبار اصلی', 'code' => 'MAIN'],

@@ -234,7 +234,7 @@ class SubjectService
             $parentId = null; // normalize to null for roots
         }
 
-        $companyId = $data['company_id'] ?? getActiveCompany();
+        $companyId = $data['company_id'] ?? getActiveLegacyCompany();
         if (! $companyId) {
             throw new \InvalidArgumentException('The company_id is required or must be available in session.');
         }

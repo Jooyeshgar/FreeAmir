@@ -13,7 +13,7 @@ class DemoSeeder extends Seeder
      */
     public function run(?int $companyId = null): void
     {
-        $companyId ??= (int) getActiveCompany();
+        $companyId ??= (int) getActiveLegacyCompany();
 
         if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
             throw new RuntimeException("Company with ID {$companyId} does not exist.");

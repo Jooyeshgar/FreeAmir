@@ -36,7 +36,7 @@ class Subject extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function ($subject) {
-            $subject->company_id ??= getActiveCompany();
+            $subject->company_id ??= getActiveLegacyCompany();
         });
 
         static::deleting(function ($subject) {

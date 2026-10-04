@@ -107,13 +107,13 @@ class FiscalYearTransferService
 
     private static function _withActiveCompany(int $companyId, callable $callback): mixed
     {
-        $previous = config('active-company-id');
-        config(['active-company-id' => $companyId]);
+        $previous = config('active-legacy-company-id');
+        config(['active-legacy-company-id' => $companyId]);
 
         try {
             return $callback();
         } finally {
-            config(['active-company-id' => $previous]);
+            config(['active-legacy-company-id' => $previous]);
         }
     }
 

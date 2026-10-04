@@ -24,7 +24,7 @@ class TaxSlabController extends Controller
     {
         TaxSlab::create(array_merge(
             $request->validated(),
-            ['company_id' => getActiveCompany()]
+            ['company_id' => getActiveLegacyCompany()]
         ));
 
         return redirect()->route('salary.tax-slabs.index')->with('success', __('Tax slab created successfully.'));

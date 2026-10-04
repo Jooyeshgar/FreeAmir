@@ -33,7 +33,7 @@ class ProductGroup extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function ($model) {
-            $model->company_id ??= getActiveCompany();
+            $model->company_id ??= getActiveLegacyCompany();
         });
     }
 

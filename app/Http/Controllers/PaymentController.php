@@ -65,14 +65,14 @@ class PaymentController extends Controller
             'sayad_number' => [
                 'required',
                 'regex:/^\d{16}$/',
-                Rule::unique('cheques', 'sayad_number')->where('company_id', getActiveCompany()),
+                Rule::unique('cheques', 'sayad_number')->where('company_id', getActiveLegacyCompany()),
             ],
             'bank_account_id' => [
                 Rule::requiredIf($direction === ChequeType::PAYABLE),
                 'nullable',
-                Rule::exists('bank_accounts', 'id')->where('company_id', getActiveCompany()),
+                Rule::exists('bank_accounts', 'id')->where('company_id', getActiveLegacyCompany()),
             ],
-            'chequebook_id' => $direction === ChequeType::PAYABLE ? ['nullable', Rule::exists('chequebooks', 'id')->where('company_id', getActiveCompany())] : ['exclude'],
+            'chequebook_id' => $direction === ChequeType::PAYABLE ? ['nullable', Rule::exists('chequebooks', 'id')->where('company_id', getActiveLegacyCompany())] : ['exclude'],
             'description' => ['nullable', 'string', 'max:1000'],
         ])->validate();
 

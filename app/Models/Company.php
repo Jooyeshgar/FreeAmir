@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 
@@ -17,9 +18,55 @@ class Company extends Model
 
     protected $guarded = [];
 
+    protected static function booted(): void
+    {
+        static::created(function (Company $company): void {
+            $identityId = CompanyIdentity::where('name', $company->name)->get()
+                ->first(fn (CompanyIdentity $identity) => strcmp($identity->name, $company->name) === 0)?->id;
+            if (! $identityId) {
+                $identityId = CompanyIdentity::create($company->only([
+                    'name', 'logo', 'address', 'economical_code', 'national_code', 'postal_code',
+                    'phone_number', 'currency', 'certificate_path', 'private_key_path',
+                    'moadian_username', 'tax_id',
+                ]))->id;
+            }
+
+            FiscalYear::create([
+                'company_identity_id' => $identityId,
+                'legacy_company_id' => $company->id,
+                'year' => $company->fiscal_year,
+                'closed_at' => $company->closed_at,
+                'closed_by' => $company->closed_by,
+                'pl_document_id' => $company->pl_document_id,
+                'closing_document_id' => $company->closing_document_id,
+                'closing_recalculation_step' => $company->closing_recalculation_step,
+            ]);
+        });
+
+        static::updated(function (Company $company): void {
+            $company->fiscalYear()->update([
+                'year' => $company->fiscal_year,
+                'closed_at' => $company->closed_at,
+                'closed_by' => $company->closed_by,
+                'pl_document_id' => $company->pl_document_id,
+                'closing_document_id' => $company->closing_document_id,
+                'closing_recalculation_step' => $company->closing_recalculation_step,
+            ]);
+        });
+
+        static::deleting(function (Company $company): void {
+            $company->fiscalYear()->delete();
+        });
+    }
+
     public function users()
     {
         return $this->belongsToMany(User::class);
+    }
+
+    public function fiscalYear(): HasOne
+    {
+        return $this->hasOne(FiscalYear::class, 'legacy_company_id');
     }
 
     public function documents()
