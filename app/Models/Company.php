@@ -69,6 +69,11 @@ class Company extends Model
         return $this->hasOne(FiscalYear::class, 'legacy_company_id');
     }
 
+    public function fiscalYear(): HasOne
+    {
+        return $this->hasOne(FiscalYear::class, 'legacy_company_id');
+    }
+
     public function documents()
     {
         return $this->hasMany(Document::class);

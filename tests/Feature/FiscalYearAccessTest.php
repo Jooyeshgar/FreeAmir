@@ -34,9 +34,9 @@ class FiscalYearAccessTest extends TestCase
         $this->assertSame($first->fiscalYear->company_identity_id, $second->fiscalYear->company_identity_id);
         $this->get(route('companies.create'))->assertOk()->assertSee('Shared Business - 1403')->assertDontSee('Shared Business - 1404');
         $this->get(route('companies.index'))->assertOk()
-            ->assertViewHas('companies', fn ($companies) => $companies->pluck('id')->all() === [$first->id]);
+            ->assertViewHas('companies', fn($companies) => $companies->pluck('id')->all() === [$first->id]);
         $this->get(route('users.create'))->assertOk()
-            ->assertViewHas('companies', fn ($companies) => $companies->pluck('id')->all() === [$first->id]);
+            ->assertViewHas('companies', fn($companies) => $companies->pluck('id')->all() === [$first->id]);
         $role = Role::firstOrCreate(['name' => 'Year Operator']);
         $this->post(route('users.store'), [
             'name' => 'Unauthorized Operator',
@@ -54,7 +54,7 @@ class FiscalYearAccessTest extends TestCase
 
         auth('web')->logout();
         $token = $user->createToken('test', ['api.access', 'companies.index', 'hr.employees.index'])->plainTextToken;
-        $headers = ['Authorization' => 'Bearer '.$token];
+        $headers = ['Authorization' => 'Bearer ' . $token];
         $this->getJson(route('api.companies.index'), $headers)->assertOk()->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.company_id', $first->fiscalYear->company_identity_id)
             ->assertJsonPath('data.0.fiscal_year_id', $first->fiscalYear->id);
