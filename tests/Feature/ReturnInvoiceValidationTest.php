@@ -43,6 +43,8 @@ class ReturnInvoiceValidationTest extends TestCase
         $_COOKIE['active-company-id'] = (string) $this->companyId;
 
         $this->user = User::factory()->create();
+        Company::findOrFail($this->companyId)->users()->attach($this->user);
+        $this->withCookies(['active-fiscal-year-id' => (string) Company::findOrFail($this->companyId)->fiscalYear->id]);
         $this->user->givePermissionTo([
             Permission::firstOrCreate(['name' => 'invoices.store']),
         ]);
