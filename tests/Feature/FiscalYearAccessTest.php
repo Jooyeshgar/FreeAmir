@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\Document;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -20,8 +21,7 @@ class FiscalYearAccessTest extends TestCase
         $second = Company::factory()->create(['name' => 'Shared Business', 'fiscal_year' => 1404]);
         $user = User::factory()->create();
         $first->users()->attach($user);
-        $second->users()->attach($user); // Legacy company grants must not authorize the other year.
-        $first->fiscalYear->users()->attach($user);
+        DB::table('company_user')->insert(['company_id' => $second->id, 'user_id' => $user->id]);
         $user->givePermissionTo(Permission::firstOrCreate(['name' => 'companies.index']));
         $user->givePermissionTo(Permission::firstOrCreate(['name' => 'api.access']));
         $user->givePermissionTo(Permission::firstOrCreate(['name' => 'hr.employees.index']));
@@ -61,7 +61,7 @@ class FiscalYearAccessTest extends TestCase
         $this->getJson(route('api.employees.index', $first), $headers)->assertOk();
         $this->getJson(route('api.employees.index', $second), $headers)->assertForbidden();
 
-        $second->fiscalYear->users()->attach($user);
+        $second->fiscalYear->users()->syncWithoutDetaching($user);
         $this->actingAs($user)->get(route('change-company', $second))->assertRedirect(route('home'));
         $this->assertSame($second->fiscalYear->company_identity_id, getActiveCompany());
         $this->assertSame($second->fiscalYear->id, getActiveFiscalYear());
@@ -73,7 +73,7 @@ class FiscalYearAccessTest extends TestCase
         $allowed = Company::factory()->create(['name' => 'Shared Business', 'fiscal_year' => 1403]);
         $revoked = Company::factory()->create(['name' => 'Shared Business', 'fiscal_year' => 1404]);
         $user = User::factory()->create();
-        $allowed->fiscalYear->users()->attach($user);
+        $allowed->fiscalYear->users()->syncWithoutDetaching($user);
         $user->givePermissionTo(Permission::firstOrCreate(['name' => 'documents.index']));
         $user->givePermissionTo(Permission::firstOrCreate(['name' => 'companies.index']));
         Document::factory()->create(['company_id' => $revoked->id]);
@@ -86,5 +86,17 @@ class FiscalYearAccessTest extends TestCase
         $this->withCookies(['active-fiscal-year-id' => (string) $allowed->fiscalYear->id]);
         $this->get(route('documents.index'))->assertOk();
         $this->get(route('companies.index'))->assertOk();
+    }
+
+    public function test_legacy_assignment_changes_keep_year_grants_in_sync(): void
+    {
+        $company = Company::factory()->create();
+        $user = User::factory()->create();
+
+        $user->companies()->attach($company);
+        $this->assertTrue($user->canAccessFiscalYear($company));
+
+        $user->companies()->detach($company);
+        $this->assertFalse($user->canAccessFiscalYear($company));
     }
 }
