@@ -109,9 +109,14 @@ class FiscalYearIdentityMigrationTest extends TestCase
 
     private function dropMappingTables(): void
     {
-        Schema::dropIfExists('fiscal_year_user');
-        Schema::dropIfExists('fiscal_years');
-        Schema::dropIfExists('company_identities');
+        Schema::disableForeignKeyConstraints();
+        try {
+            Schema::dropIfExists('fiscal_year_user');
+            Schema::dropIfExists('fiscal_years');
+            Schema::dropIfExists('company_identities');
+        } finally {
+            Schema::enableForeignKeyConstraints();
+        }
     }
 
     private function migration(): object
