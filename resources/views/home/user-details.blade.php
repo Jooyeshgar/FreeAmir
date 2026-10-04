@@ -18,7 +18,7 @@
             <div class="flex mt-1 max-[850px]:mb-4">
                 <div class="w-1/2 ms-4 mb-4 max-[850px]:text-xs">
                     <span class="text-slate-500 dark:text-slate-400">{{ __('Companies') }}:</span>
-                    @foreach (auth()->user()->companies as $company)
+                    @foreach (auth()->user()->accessibleCompanies()->orderByDesc('fiscal_year')->get() as $company)
                         <a href="{{ route('change-company', ['company' => $company->id]) }}">
                             {{ $company->name . ' - ' . $company->fiscal_year }}
                         </a>

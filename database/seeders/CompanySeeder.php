@@ -11,7 +11,7 @@ class CompanySeeder extends Seeder
 {
     public function run(): void
     {
-        $companyId = (int) getActiveCompany();
+        $companyId = (int) getActiveLegacyCompany();
         $fiscalYear = jdate('Y', tr_num: 'en');
 
         $company = $companyId === 1 ? Company::updateOrCreate(['id' => $companyId], [

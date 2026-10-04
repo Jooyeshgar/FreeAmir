@@ -10,6 +10,7 @@ class SetApiCompany
 {
     public function handle(Request $request, Closure $next): Response
     {
+        config(['active-company-id' => 0, 'active-fiscal-year-id' => null, 'active-legacy-company-id' => 0]);
         $companyId = $request->route('company');
 
         if ($companyId === null || $companyId === '') {
@@ -24,13 +25,14 @@ class SetApiCompany
             ], 422);
         }
 
-        if (! $request->user()->companies()->whereKey($companyId)->exists()) {
+        $year = $request->user()->fiscalYears()->where('legacy_company_id', $companyId)->first();
+        if (! $year) {
             return response()->json([
                 'message' => __('You do not have access to this company.'),
             ], 403);
         }
 
-        config(['active-company-id' => (int) $companyId]);
+        DefaultCompany::activate($year);
 
         return $next($request);
     }

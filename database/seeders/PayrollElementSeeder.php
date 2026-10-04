@@ -12,7 +12,7 @@ class PayrollElementSeeder extends Seeder
 {
     public function run(): void
     {
-        $companyId = (int) getActiveCompany();
+        $companyId = (int) getActiveLegacyCompany();
         $elements = [
             [
                 'title' => 'حق مسکن',

@@ -336,7 +336,7 @@ class StoreInvoiceRequest extends FormRequest
                 'decimal:0,2',
                 Rule::unique('documents', 'number')
                     ->where(function ($query) {
-                        return $query->where('company_id', getActiveCompany());
+                        return $query->where('company_id', getActiveLegacyCompany());
                     })
                     ->ignore($isEditing ? $invoice->document_id : null),
             ],
@@ -345,7 +345,7 @@ class StoreInvoiceRequest extends FormRequest
                 'integer',
                 Rule::unique('invoices', 'number')
                     ->where(function ($query) {
-                        return $query->where('company_id', getActiveCompany())
+                        return $query->where('company_id', getActiveLegacyCompany())
                             ->where('invoice_type', InvoiceType::fromName($this->effectiveInvoiceType()));
                     })
                     ->ignore($isEditing ? $invoice->id : null),
@@ -356,7 +356,7 @@ class StoreInvoiceRequest extends FormRequest
             'warehouse_id' => [
                 'required',
                 'integer',
-                Rule::exists('warehouses', 'id')->where('company_id', getActiveCompany()),
+                Rule::exists('warehouses', 'id')->where('company_id', getActiveLegacyCompany()),
             ],
 
             'transactions' => 'required|array|min:1',

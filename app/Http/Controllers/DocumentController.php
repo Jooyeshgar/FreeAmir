@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreTransactionRequest;
 use App\Models\CommercialLedgerExport;
-use App\Models\Company;
 use App\Models\Document;
 use App\Models\Subject;
 use App\Models\Transaction;
@@ -139,9 +138,7 @@ class DocumentController extends Controller
 
     public function show(Document $document)
     {
-        $fiscalYears = Company::whereHas('users', function ($q) {
-            $q->where('users.id', Auth::id());
-        })->where('id', '!=', getActiveCompany())->get();
+        $fiscalYears = auth()->user()->accessibleCompanies()->where('id', '!=', getActiveLegacyCompany())->get();
 
         return view('documents.show', compact('document', 'fiscalYears'));
     }
@@ -407,11 +404,11 @@ class DocumentController extends Controller
     {
         $request->validate(['target_company_id' => 'required|integer|exists:companies,id']);
 
-        if (! Auth::user()->companies->contains((int) $request->target_company_id)) {
+        if (! Auth::user()->accessibleCompanies()->whereKey((int) $request->target_company_id)->exists()) {
             abort(403);
         }
 
-        if ((int) $request->target_company_id === getActiveCompany()) {
+        if ((int) $request->target_company_id === getActiveLegacyCompany()) {
             return redirect()->route('documents.show', $document)->with('error', __('Cannot transfer to the same fiscal year.'));
         }
 

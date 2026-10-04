@@ -8,7 +8,7 @@ use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\CustomerGroup>
+ * @extends Factory<CustomerGroup>
  */
 class CustomerGroupFactory extends Factory
 {
@@ -19,7 +19,7 @@ class CustomerGroupFactory extends Factory
      */
     public function definition(): array
     {
-        $companyId = Company::withoutGlobalScopes()->inRandomOrder()->value('id') ?? getActiveCompany() ?? Company::factory()->create()->id;
+        $companyId = Company::withoutGlobalScopes()->inRandomOrder()->value('id') ?? getActiveLegacyCompany() ?? Company::factory()->create()->id;
 
         return [
             'name' => $this->faker?->name,

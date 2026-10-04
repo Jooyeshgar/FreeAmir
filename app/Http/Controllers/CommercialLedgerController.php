@@ -22,7 +22,7 @@ class CommercialLedgerController extends Controller
 
     public function index(): View
     {
-        $company = Company::query()->findOrFail(getActiveCompany());
+        $company = Company::query()->findOrFail(getActiveLegacyCompany());
         [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
 
         $unapprovedDocumentsCount = Document::query()

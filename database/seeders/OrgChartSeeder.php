@@ -9,7 +9,7 @@ class OrgChartSeeder extends Seeder
 {
     public function run(): void
     {
-        $companyId = (int) getActiveCompany();
+        $companyId = (int) getActiveLegacyCompany();
 
         $tree = [
             [

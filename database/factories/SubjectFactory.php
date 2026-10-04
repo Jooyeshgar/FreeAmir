@@ -13,7 +13,7 @@ class SubjectFactory extends Factory
     {
         return [
             'company_id' => function () {
-                $companyId = (int) getActiveCompany();
+                $companyId = (int) getActiveLegacyCompany();
 
                 if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
                     throw new \LogicException('An active company is required to create a subject.');
