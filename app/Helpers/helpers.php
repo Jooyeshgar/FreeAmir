@@ -28,6 +28,11 @@ function getActiveFiscalYear(): ?int
     return config('active-fiscal-year-id') === null ? null : (int) config('active-fiscal-year-id');
 }
 
+function getScopedFiscalYear(): int
+{
+    return getActiveFiscalYear() ?? (int) (FiscalYear::query()->where('legacy_company_id', getActiveLegacyCompany())->value('id') ?? 0);
+}
+
 function getActiveLegacyCompany(): int
 {
     $configuredLegacyId = config('active-legacy-company-id');

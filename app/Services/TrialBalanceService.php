@@ -154,7 +154,9 @@ class TrialBalanceService
     {
         $ids = $subject->getAllDescendantIds();
 
-        $query = Transaction::query()->whereIn('transactions.subject_id', $ids)->join('documents', 'documents.id', '=', 'transactions.document_id');
+        $query = Transaction::query()->whereIn('transactions.subject_id', $ids)
+            ->join('documents', 'documents.id', '=', 'transactions.document_id')
+            ->where('documents.fiscal_year_id', getScopedFiscalYear());
 
         if ($documentNumbers !== null) {
             $query->whereIn('documents.number', $documentNumbers);

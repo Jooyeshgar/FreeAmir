@@ -515,7 +515,7 @@ class ChequeService
     private function subject(string $configKey): int
     {
         $subjectId = (int) config('amir.'.$configKey);
-        $subject = $subjectId ? Subject::where('company_id', getActiveLegacyCompany())->find($subjectId) : null;
+        $subject = $subjectId ? Subject::where('fiscal_year_id', getScopedFiscalYear())->find($subjectId) : null;
         if (! $subject) {
             throw ValidationException::withMessages(['accounting' => __('Accounting subject configuration :key is missing or invalid.', ['key' => $configKey])]);
         }

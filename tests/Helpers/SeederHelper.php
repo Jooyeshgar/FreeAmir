@@ -3,6 +3,7 @@
 namespace Tests\Helpers;
 
 use App\Models\Config;
+use App\Models\FiscalYear;
 use DB;
 
 trait SeederHelper
@@ -29,7 +30,13 @@ trait SeederHelper
             ['type' => 3, 'category' => 1, 'key' => 'beginning_inventory', 'value' => '29', 'desc' => 'تراز افتتاحیه', 'company_id' => $companyId],
         ];
 
-        Config::upsert($configs, ['key', 'company_id'], ['value']);
+        $fiscalYearId = FiscalYear::query()->where('legacy_company_id', $companyId)->value('id');
+        foreach ($configs as &$row) {
+            $row['fiscal_year_id'] = $fiscalYearId;
+        }
+        unset($row);
+
+        Config::upsert($configs, ['key', 'company_id'], ['value', 'fiscal_year_id']);
 
         foreach ($configs as $config) {
             config(['amir.'.$config['key'] => $config['value']]);
@@ -70,7 +77,13 @@ trait SeederHelper
             ['id' => 29, 'code' => '067001', 'name' => 'تراز افتتاحیه', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
         ];
 
-        DB::table('subjects')->upsert($subjectData, ['id'], ['code', 'name', 'parent_id', 'type', 'company_id']);
+        $fiscalYearId = FiscalYear::query()->where('legacy_company_id', $companyId)->value('id');
+        foreach ($subjectData as &$row) {
+            $row['fiscal_year_id'] = $fiscalYearId;
+        }
+        unset($row);
+
+        DB::table('subjects')->upsert($subjectData, ['id'], ['code', 'name', 'parent_id', 'type', 'company_id', 'fiscal_year_id']);
     }
 
     public function importConfigs(int $companyId): void

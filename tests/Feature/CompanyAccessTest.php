@@ -241,6 +241,7 @@ class CompanyAccessTest extends TestCase
             'company_id' => $this->accessibleCompany->id,
             'subject_id' => $accountSubject->id,
             'iban' => 'IR163212724891703088374062',
+            'fiscal_year_id' => $this->accessibleCompany->fiscalYear->id,
         ])->saveQuietly();
 
         $accountSubject->subjectable()->associate($sourceAccount);
@@ -267,6 +268,7 @@ class CompanyAccessTest extends TestCase
 
         $this->assertDatabaseHas('bank_accounts', [
             'company_id' => $newCompany->id,
+            'fiscal_year_id' => $newCompany->fiscalYear->id,
             'iban' => 'IR163212724891703088374062',
         ]);
     }

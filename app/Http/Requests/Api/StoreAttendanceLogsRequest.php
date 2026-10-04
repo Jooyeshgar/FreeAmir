@@ -26,7 +26,7 @@ class StoreAttendanceLogsRequest extends FormRequest
             'logs.*.employee_id' => [
                 'required',
                 'integer',
-                Rule::exists('employees', 'id')->where('company_id', getActiveLegacyCompany()),
+                Rule::exists('employees', 'id')->where('fiscal_year_id', getScopedFiscalYear()),
             ],
             'logs.*.log_date' => ['required', 'date_format:Y-m-d'],
             'logs.*.entry_time' => ['nullable', 'date_format:H:i'],

@@ -568,7 +568,7 @@ class MonthlyBudgetService
     {
         return $this->approvedSubjectBalances ??= Transaction::query()
             ->join('documents', 'documents.id', '=', 'transactions.document_id')
-            ->where('documents.company_id', getActiveLegacyCompany())
+            ->where('documents.fiscal_year_id', getScopedFiscalYear())
             ->whereNotNull('documents.approved_at')
             ->selectRaw('transactions.subject_id, SUM(transactions.value) as balance')
             ->groupBy('transactions.subject_id')
@@ -653,7 +653,7 @@ class MonthlyBudgetService
 
             $this->monthlyBalances[$month] = Transaction::query()
                 ->join('documents', 'documents.id', '=', 'transactions.document_id')
-                ->where('documents.company_id', getActiveLegacyCompany())
+                ->where('documents.fiscal_year_id', getScopedFiscalYear())
                 ->whereNotNull('documents.approved_at')
                 ->whereBetween('documents.date', [$startDate, $endDate])
                 ->whereIn('transactions.subject_id', $this->balanceSubjectIds())
@@ -687,7 +687,7 @@ class MonthlyBudgetService
 
         [$startDate, $endDate] = $this->monthDateRange($month);
 
-        return $this->monthlyDocumentCounts[$month] = Document::query()->where('company_id', getActiveLegacyCompany())->whereNotNull('approved_at')->whereBetween('date', [$startDate, $endDate])->count();
+        return $this->monthlyDocumentCounts[$month] = Document::query()->where('fiscal_year_id', getScopedFiscalYear())->whereNotNull('approved_at')->whereBetween('date', [$startDate, $endDate])->count();
     }
 
     private function monthDateRange(int $month): array
