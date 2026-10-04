@@ -262,7 +262,7 @@ class FreeAmirImportFormat extends DocumentImportFormat
             return;
         }
 
-        if (Document::where('number', $number)->where('date', $date)->exists()) {
+        if (Document::where('number', $number)->whereDate('date', $date)->exists()) {
             $this->result['documents_skipped']++;
             $this->result['errors'][] = __('Document number :num (:date) already exists and was skipped.', [
                 'num' => trim((string) ($first['doc_number'] ?? '')),

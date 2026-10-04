@@ -128,7 +128,7 @@ class ParsianImportFormat extends DocumentImportFormat
 
         $date = jalali_to_gregorian_date($jalaliDate, '-');
 
-        if ($date === '' || Document::where('number', $number)->where('date', $date)->exists()) {
+        if ($date === '' || Document::where('number', $number)->whereDate('date', $date)->exists()) {
             $this->result['documents_skipped']++;
 
             return;

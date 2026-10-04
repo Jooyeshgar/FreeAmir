@@ -19,14 +19,14 @@ class StoreDocumentRequest extends FormRequest
             'number' => [
                 'nullable',
                 'decimal:0,2',
-                Rule::unique('documents', 'number')->where('company_id', getActiveLegacyCompany()),
+                Rule::unique('documents', 'number')->where('fiscal_year_id', getScopedFiscalYear()),
             ],
             'date' => ['required', 'date_format:Y-m-d'],
             'transactions' => ['required', 'array', 'min:2'],
             'transactions.*.subject_id' => [
                 'required',
                 'integer',
-                Rule::exists('subjects', 'id')->where('company_id', getActiveLegacyCompany()),
+                Rule::exists('subjects', 'id')->where('fiscal_year_id', getScopedFiscalYear()),
             ],
             'transactions.*.value' => ['required', 'decimal:0,2'],
             'transactions.*.desc' => ['nullable', 'string'],

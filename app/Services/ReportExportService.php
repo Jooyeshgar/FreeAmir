@@ -446,8 +446,8 @@ class ReportExportService
     {
         $serviceBuy = in_array($type, [InvoiceType::BUY, InvoiceType::RETURN_BUY], true) && $request->boolean('service_buy');
         $query->when($type, fn ($q) => $q->where('invoice_type', $type))->when($request->filled('number'), fn ($q) => $q->where('number', $request->number));
-        $query->when($request->filled('start_date'), fn ($q) => $q->where('date', '>=', convertToGregorian($request->start_date)));
-        $query->when($request->filled('end_date'), fn ($q) => $q->where('date', '<=', convertToGregorian($request->end_date)));
+        $query->when($request->filled('start_date'), fn ($q) => $q->whereDate('date', '>=', jalaliInputToGregorian($request->start_date, 'start_date')));
+        $query->when($request->filled('end_date'), fn ($q) => $q->whereDate('date', '<=', jalaliInputToGregorian($request->end_date, 'end_date')));
         $query->when($request->filled('text'), fn ($q) => $q->where(fn ($invoice) => $invoice
             ->whereHas('items', fn ($items) => $items->where('description', 'like', "%{$request->text}%"))
             ->orWhereHas('customer', fn ($customer) => $customer->where('name', 'like', "%{$request->text}%"))));

@@ -16,6 +16,7 @@ class TransactionController extends Controller
         $query = Transaction::with(['document', 'subject', 'user'])
             ->whereHas('document')
             ->join('documents', 'transactions.document_id', '=', 'documents.id')
+            ->where('documents.fiscal_year_id', getScopedFiscalYear())
             ->orderBy('documents.date', 'desc')
             ->orderBy('documents.number', 'desc')
             ->orderBy('transactions.id', 'desc')
@@ -100,7 +101,8 @@ class TransactionController extends Controller
     {
         $query = Transaction::query()
             ->whereHas('document')
-            ->join('documents', 'transactions.document_id', '=', 'documents.id');
+            ->join('documents', 'transactions.document_id', '=', 'documents.id')
+            ->where('documents.fiscal_year_id', getScopedFiscalYear());
 
         if ($request->filled('subject_id')) {
             $subject = Subject::findOrFail($request->integer('subject_id'));
@@ -173,5 +175,4 @@ class TransactionController extends Controller
 
         return view('transactions.show', compact('transaction'));
     }
-
 }

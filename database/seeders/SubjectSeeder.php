@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\SubjectType;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -184,10 +185,16 @@ class SubjectSeeder extends Seeder
             return;
         }
 
+        $fiscalYearId = FiscalYear::query()->where('legacy_company_id', $companyId)->value('id');
+        foreach ($subjectData as &$row) {
+            $row['fiscal_year_id'] = $fiscalYearId;
+        }
+        unset($row);
+
         DB::table('subjects')->upsert(
             $subjectData,
             ['id'],
-            ['code', 'name', 'parent_id', 'type', 'company_id', 'is_permanent']
+            ['code', 'name', 'parent_id', 'type', 'company_id', 'fiscal_year_id', 'is_permanent']
         );
     }
 }

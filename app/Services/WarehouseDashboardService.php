@@ -220,7 +220,7 @@ class WarehouseDashboardService
             ->where('invoice_items.itemable_type', Product::class)
             ->whereIn('invoices.status', array_map(fn (InvoiceStatus $s) => $s->value, InvoiceStatus::approvedOrSettled()))
             ->whereIn('invoices.invoice_type', array_map(fn (InvoiceType $t) => $t->value, array_merge(self::STOCK_IN_TYPES, self::STOCK_OUT_TYPES)))
-            ->where('invoices.company_id', getActiveLegacyCompany())
+            ->where('invoices.fiscal_year_id', getScopedFiscalYear())
             ->when($categoryId, function ($q, int $id) {
                 $q->join('products', 'products.id', '=', 'invoice_items.itemable_id')
                     ->where('products.group', $id);
