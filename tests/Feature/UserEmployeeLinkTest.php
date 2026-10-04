@@ -30,6 +30,7 @@ class UserEmployeeLinkTest extends TestCase
         $this->company = Company::factory()->create();
         $this->user = User::factory()->create();
         $this->company->users()->attach($this->user);
+        $this->company->fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'users.*'])

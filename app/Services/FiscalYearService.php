@@ -526,12 +526,14 @@ class FiscalYearService
                         if (! empty($idMappings['invoices']) && ! empty($customerMapping)) {
                             $idMappings['ancillary_costs'] = self::_importAncillaryCosts($importData['ancillary_costs'], $targetYearId, $idMappings['invoices'], $customerMapping, $documentMapping);
                         } else {
-                            Log::warning('Skipping ancillary cost import due to missing invoice or customer mappings.',
+                            Log::warning(
+                                'Skipping ancillary cost import due to missing invoice or customer mappings.',
                                 [
                                     'target_year_id' => $targetYearId,
                                     'has_invoice_mapping' => ! empty($idMappings['invoices']),
                                     'has_customer_mapping' => ! empty($customerMapping),
-                                ]);
+                                ]
+                            );
                         }
                     }
 
@@ -539,15 +541,16 @@ class FiscalYearService
                         if (! empty($idMappings['ancillary_costs']) && ! empty($productMapping)) {
                             self::_importAncillaryCostItems($importData['ancillary_cost_items'], $idMappings['ancillary_costs'], $productMapping);
                         } else {
-                            Log::warning('Skipping ancillary cost item import due to missing ancillary cost or product mappings.',
+                            Log::warning(
+                                'Skipping ancillary cost item import due to missing ancillary cost or product mappings.',
                                 [
                                     'target_year_id' => $targetYearId,
                                     'has_ancillary_costs_mapping' => ! empty($idMappings['ancillary_costs']),
                                     'has_product_mapping' => ! empty($productMapping),
-                                ]);
+                                ]
+                            );
                         }
                     }
-
                 }
                 if (isset($importData['payments']) && (in_array('invoices', $sectionsToImport) || in_array('cheques', $sectionsToImport))) {
                     $idMappings['payments'] = self::_importPayments(
@@ -605,12 +608,14 @@ class FiscalYearService
                         if (! empty($workSiteMapping) && ! empty($workShiftMapping)) {
                             $idMappings['employees'] = self::_importEmployees($importData['employees'], $targetYearId, $orgChartMapping, $workSiteMapping, $workShiftMapping, $work_site_contracts, $organizationUnitMapping);
                         } else {
-                            Log::warning('Skipping employee import due to missing work site or work shift mappings.',
+                            Log::warning(
+                                'Skipping employee import due to missing work site or work shift mappings.',
                                 [
                                     'target_year_id' => $targetYearId,
                                     'has_work_site_mapping' => ! empty($workSiteMapping),
                                     'has_work_shift_mapping' => ! empty($workShiftMapping),
-                                ]);
+                                ]
+                            );
                         }
                     }
                 }
@@ -637,12 +642,14 @@ class FiscalYearService
                         if (! empty($monthlyAttendanceMapping) && ! empty($employeeMapping)) {
                             $idMappings['attendance_logs'] = self::_importAttendanceLogs($importData['attendance_logs'], $targetYearId, $monthlyAttendanceMapping, $employeeMapping);
                         } else {
-                            Log::warning('Skipping attendance log import due to missing monthly attendance or employee mappings.',
+                            Log::warning(
+                                'Skipping attendance log import due to missing monthly attendance or employee mappings.',
                                 [
                                     'target_year_id' => $targetYearId,
                                     'has_monthly_attendance_mapping' => ! empty($monthlyAttendanceMapping),
                                     'has_employee_mapping' => ! empty($employeeMapping),
-                                ]);
+                                ]
+                            );
                         }
                     }
                     if (isset($importData['payrolls'])) {
@@ -653,13 +660,15 @@ class FiscalYearService
                         if (! empty($salaryDecreeMapping) && ! empty($employeeMapping) && ! empty($monthlyAttendanceMapping)) {
                             $idMappings['payrolls'] = self::_importPayrolls($importData['payrolls'], $targetYearId, $salaryDecreeMapping, $employeeMapping, $monthlyAttendanceMapping);
                         } else {
-                            Log::warning('Skipping payroll import due to missing salary decree or employee or monthly attendance mappings.',
+                            Log::warning(
+                                'Skipping payroll import due to missing salary decree or employee or monthly attendance mappings.',
                                 [
                                     'target_year_id' => $targetYearId,
                                     'has_salary_decree_mapping' => ! empty($salaryDecreeMapping),
                                     'has_employee_mapping' => ! empty($employeeMapping),
                                     'has_monthly_attendance_mapping' => ! empty($monthlyAttendanceMapping),
-                                ]);
+                                ]
+                            );
                         }
                     }
                     if (isset($importData['payroll_elements'])) {
@@ -672,12 +681,14 @@ class FiscalYearService
                         if (! empty($payrollMapping) && ! empty($payrollElementMapping)) {
                             $idMappings['payroll_items'] = self::_importPayrollItems($importData['payroll_items'], $payrollMapping, $payrollElementMapping);
                         } else {
-                            Log::warning('Skipping payroll item import due to missing payroll or payroll element mappings.',
+                            Log::warning(
+                                'Skipping payroll item import due to missing payroll or payroll element mappings.',
                                 [
                                     'target_year_id' => $targetYearId,
                                     'has_payroll_mapping' => ! empty($payrollMapping),
                                     'has_payroll_element_mapping' => ! empty($payrollElementMapping),
-                                ]);
+                                ]
+                            );
                         }
                     }
                     if (isset($importData['decree_benefits'])) {
@@ -687,12 +698,14 @@ class FiscalYearService
                         if (! empty($salaryDecreeMapping) && ! empty($payrollElementMapping)) {
                             $idMappings['decree_benefits'] = self::_importDecreeBenefits($importData['decree_benefits'], $salaryDecreeMapping, $payrollElementMapping);
                         } else {
-                            Log::warning('Skipping decree benefit import due to missing salary decree or payroll element mapping.',
+                            Log::warning(
+                                'Skipping decree benefit import due to missing salary decree or payroll element mapping.',
                                 [
                                     'target_year_id' => $targetYearId,
                                     'has_salary_decree_mapping' => ! empty($salaryDecreeMapping),
                                     'has_payroll_element_mapping' => ! empty($payrollElementMapping),
-                                ]);
+                                ]
+                            );
                         }
                     }
                     if (isset($importData['personnel_requests'])) {
@@ -702,12 +715,14 @@ class FiscalYearService
                         if (! empty($employeeMapping) && ! empty($payrollMapping)) {
                             $idMappings['personnel_requests'] = self::_importPersonnelRequests($importData['personnel_requests'], $targetYearId, $employeeMapping, $payrollMapping);
                         } else {
-                            Log::warning('Skipping personnel request import due to missing employee or payroll mappings.',
+                            Log::warning(
+                                'Skipping personnel request import due to missing employee or payroll mappings.',
                                 [
                                     'target_year_id' => $targetYearId,
                                     'has_employee_mapping' => ! empty($employeeMapping),
                                     'has_payroll_mapping' => ! empty($payrollMapping),
-                                ]);
+                                ]
+                            );
                         }
                     }
                     if (isset($importData['payroll_status_histories'])) {
@@ -723,7 +738,7 @@ class FiscalYearService
 
                 return $newFiscalYear;
             } catch (Throwable $e) {
-                Log::error('Fiscal Year Import Failed: '.$e->getMessage(), [
+                Log::error('Fiscal Year Import Failed: ' . $e->getMessage(), [
                     'exception' => $e,
                     'new_fiscal_year_data' => $newFiscalYearData,
                     'import_data_keys' => array_keys($importData),
@@ -1536,15 +1551,17 @@ class FiscalYearService
 
     private static function _normalizeEmployeeEnumAttributes(array $employeeData): array
     {
-        foreach ([
-            'nationality' => EmployeeNationality::class,
-            'gender' => EmployeeGender::class,
-            'marital_status' => EmployeeMaritalStatus::class,
-            'duty_status' => EmployeeDutyStatus::class,
-            'insurance_type' => EmployeeInsuranceType::class,
-            'education_level' => EmployeeEducationLevel::class,
-            'employment_type' => EmployeeEmploymentType::class,
-        ] as $attribute => $enumClass) {
+        foreach (
+            [
+                'nationality' => EmployeeNationality::class,
+                'gender' => EmployeeGender::class,
+                'marital_status' => EmployeeMaritalStatus::class,
+                'duty_status' => EmployeeDutyStatus::class,
+                'insurance_type' => EmployeeInsuranceType::class,
+                'education_level' => EmployeeEducationLevel::class,
+                'employment_type' => EmployeeEmploymentType::class,
+            ] as $attribute => $enumClass
+        ) {
             if (! array_key_exists($attribute, $employeeData) || $employeeData[$attribute] === null) {
                 continue;
             }
@@ -1675,7 +1692,7 @@ class FiscalYearService
                 $newConfig->value = $oldValue; // Keep original value otherwise
             }
 
-            config(['amir.'.$newConfig->key => $newConfig->value]);
+            config(['amir.' . $newConfig->key => $newConfig->value]);
 
             $newConfig->save();
         }
@@ -2267,7 +2284,7 @@ class FiscalYearService
             $base64Content = $fileData['content'];
             $expectedSha256 = $fileData['sha256'] ?? null;
             $fileName = basename($fileData['name'] ?? ($documentFileData['name'] ?? 'file'));
-            $newRelPath = 'documents/'.$newDocumentId.'/'.$fileName;
+            $newRelPath = 'documents/' . $newDocumentId . '/' . $fileName;
 
             $tempPath = tempnam(sys_get_temp_dir(), 'docfile_import_');
             $tempHandle = fopen($tempPath, 'wb');
@@ -2586,12 +2603,14 @@ class FiscalYearService
             $productCondition = in_array($invoiceItemData['itemable_type'], [Product::class, 'product']) && isset($productMapping[$oldItemableId]);
             $serviceCondition = in_array($invoiceItemData['itemable_type'], [Service::class, 'service']) && isset($serviceMapping[$oldItemableId]);
             if (! $productCondition && ! $serviceCondition) {
-                Log::warning('Skipping invoice item import due to missing product or service mapping.',
+                Log::warning(
+                    'Skipping invoice item import due to missing product or service mapping.',
                     [
                         'old_invoice_item_id' => $invoiceItemData['id'] ?? 'N/A',
                         'old_itemable_id' => $oldItemableId,
                         'item_type' => in_array($invoiceItemData['itemable_type'], [Product::class, 'product']) ? 'product' : 'service',
-                    ]);
+                    ]
+                );
 
                 continue;
             }
@@ -2828,9 +2847,9 @@ class FiscalYearService
                 'subject_id' => $subjectMapping[$transaction->subject_id] ?? null,
                 'value' => -1 * $transaction->value,
                 'user_id' => $user->id,
-                'desc' => __('Fiscal year opening Document').' '.$company->fiscal_year,
+                'desc' => __('Fiscal year opening Document') . ' ' . $company->fiscal_year,
             ];
-        })->filter(fn ($transaction) => $transaction['subject_id'] !== null)->values()->toArray();
+        })->filter(fn($transaction) => $transaction['subject_id'] !== null)->values()->toArray();
 
         if (empty($transactions)) {
             Log::warning('Skipping opening document creation due to missing subject mappings.', [
@@ -2863,17 +2882,17 @@ class FiscalYearService
     protected static function closingTransactions(Company $company, User $user): array
     {
         return Transaction::query()
-            ->whereHas('document', fn ($doc) => $doc->where('company_id', $company->id))
-            ->whereHas('subject', fn ($sub) => $sub->where('company_id', $company->id)->where('is_permanent', true))
+            ->whereHas('document', fn($doc) => $doc->where('company_id', $company->id))
+            ->whereHas('subject', fn($sub) => $sub->where('company_id', $company->id)->where('is_permanent', true))
             ->selectRaw('subject_id, SUM(value) as value')
             ->groupBy('subject_id')
             ->havingRaw('SUM(value) != 0')
             ->get()
-            ->map(fn ($row) => [
+            ->map(fn($row) => [
                 'subject_id' => $row->subject_id,
                 'value' => -1 * $row->value,
                 'user_id' => $user->id,
-                'desc' => __('Fiscal year closing Document').' '.$company->fiscal_year,
+                'desc' => __('Fiscal year closing Document') . ' ' . $company->fiscal_year,
             ])->toArray();
     }
 
@@ -2960,7 +2979,7 @@ class FiscalYearService
         foreach (['certificate_path', 'private_key_path'] as $attr) {
             $old = $source->{$attr};
             if ($old && Storage::exists($old)) {
-                $new = 'keys/'.uniqid().'.'.pathinfo($old, PATHINFO_EXTENSION);
+                $new = 'keys/' . uniqid() . '.' . pathinfo($old, PATHINFO_EXTENSION);
                 Storage::copy($old, $new);
                 $updates[$attr] = $new;
             }
@@ -3078,7 +3097,7 @@ class FiscalYearService
         }
 
         return (float) Transaction::query()
-            ->whereHas('document', fn ($q) => $q->where('company_id', $company->id))
+            ->whereHas('document', fn($q) => $q->where('company_id', $company->id))
             ->where('subject_id', $subject->id)
             ->sum('value');
     }
@@ -3108,7 +3127,7 @@ class FiscalYearService
             ->where('company_id', $company->id)
             ->orderBy('number')
             ->pluck('number')
-            ->map(fn ($n) => (int) $n)
+            ->map(fn($n) => (int) $n)
             ->filter()
             ->values();
 
@@ -3195,17 +3214,17 @@ class FiscalYearService
 
         $temporarySubjects = Subject::where('company_id', $company->id)
             ->where('is_permanent', false)
-            ->when($incomeSummarySubject, fn ($query) => $query->whereKeyNot($incomeSummarySubject->id))
+            ->when($incomeSummarySubject, fn($query) => $query->whereKeyNot($incomeSummarySubject->id))
             ->pluck('id')
             ->toArray();
 
         $transactions = Transaction::query()
-            ->whereHas('document', fn ($document) => $document->where('company_id', $company->id))
+            ->whereHas('document', fn($document) => $document->where('company_id', $company->id))
             ->whereIn('subject_id', $temporarySubjects)
             ->selectRaw('subject_id, SUM(value) as value')->groupBy('subject_id')
             ->havingRaw('SUM(value) != 0') // Remove zero balances
             ->get()
-            ->map(fn ($transaction) => [
+            ->map(fn($transaction) => [
                 'subject_id' => $transaction->subject_id,
                 'value' => -1 * $transaction->value,
                 'user_id' => $user->id,

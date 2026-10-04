@@ -105,6 +105,21 @@ class User extends Authenticatable implements MustVerifyEmail
         return Company::query()->whereIn('companies.id', $this->fiscalYears()->select('legacy_company_id'));
     }
 
+    public function fiscalYears(): BelongsToMany
+    {
+        return $this->belongsToMany(FiscalYear::class);
+    }
+
+    public function canAccessFiscalYear(Company $company): bool
+    {
+        return $this->fiscalYears()->where('legacy_company_id', $company->id)->exists();
+    }
+
+    public function accessibleCompanies(): Builder
+    {
+        return Company::query()->whereIn('companies.id', $this->fiscalYears()->select('legacy_company_id'));
+    }
+
     public function employee(): HasOne
     {
         return $this->hasOne(Employee::class, 'user_id');
