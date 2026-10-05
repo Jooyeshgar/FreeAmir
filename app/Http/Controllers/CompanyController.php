@@ -94,8 +94,7 @@ class CompanyController extends Controller
      */
     public function create(Request $request): View
     {
-        // Get previous fiscal years for the current company
-        $previousYears = $request->user()->accessibleCompanies()->orderByDesc('fiscal_year')->get();
+        $previousYears = $request->user()->fiscalYears()->with('companyIdentity')->orderByDesc('year')->get();
 
         return view('companies.create', [
             'company' => null,
@@ -145,7 +144,7 @@ class CompanyController extends Controller
 
         try {
             $company = $this->createCompany($request->user(), $data);
-            Cookie::queue('active-company-id', $company->id, 362 * 24 * 60);
+            Cookie::queue('active-company-id', $company->fiscalYear->company_identity_id, 362 * 24 * 60);
             Cookie::queue('active-fiscal-year-id', $company->fiscalYear->id, 362 * 24 * 60);
 
             return redirect()->route('home')->with('success', __('Company created successfully.'));
@@ -169,7 +168,7 @@ class CompanyController extends Controller
         $fiscalYearRules = [
             'source_year_id' => [
                 'nullable',
-                Rule::exists('fiscal_years', 'legacy_company_id')->whereIn('id', auth()->user()->fiscalYears()->pluck('fiscal_years.id')),
+                Rule::exists('fiscal_years', 'id')->whereIn('id', auth()->user()->fiscalYears()->pluck('fiscal_years.id')),
             ],
             'tables_to_copy' => 'array',
             'tables_to_copy.*' => 'string|in:'.implode(',', array_map(fn ($case) => $case->value, FiscalYearSection::cases())),
@@ -202,7 +201,7 @@ class CompanyController extends Controller
 
         try {
             $company = $this->createCompany($request->user(), $data, isset($validated['source_year_id']) ? (int) $validated['source_year_id'] : null, $validated['tables_to_copy'] ?? []);
-            Cookie::queue('active-company-id', $company->id, 362 * 24 * 60);
+            Cookie::queue('active-company-id', $company->fiscalYear->company_identity_id, 362 * 24 * 60);
             Cookie::queue('active-fiscal-year-id', $company->fiscalYear->id, 362 * 24 * 60);
         } catch (\Throwable $e) {
             Log::error('Company initialization failed.', [
@@ -478,7 +477,7 @@ class CompanyController extends Controller
             abort(403);
         }
 
-        Cookie::queue('active-company-id', $company->id, 365 * 24 * 60);
+        Cookie::queue('active-company-id', $company->fiscalYear->company_identity_id, 365 * 24 * 60);
         Cookie::queue('active-fiscal-year-id', $company->fiscalYear->id, 365 * 24 * 60);
         DefaultCompany::activate($company->fiscalYear);
 
