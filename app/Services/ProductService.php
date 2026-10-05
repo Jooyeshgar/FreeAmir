@@ -23,7 +23,7 @@ class ProductService
         $websites = $data['websites'] ?? [];
         unset($data['websites']);
 
-        $data['company_id'] ??= getActiveLegacyCompany();
+        $data['company_id'] ??= getActiveCompany();
 
         $product = Product::create($data);
 
@@ -174,7 +174,7 @@ class ProductService
 
         $invoiceWarehouseId = isset($invoiceItem['invoice_id']) ? Invoice::query()->whereKey($invoiceItem['invoice_id'])->value('warehouse_id') : null;
 
-        return $invoiceWarehouseId ?? Warehouse::query()->where('company_id', $product->company_id)->orderBy('id')->value('id');
+        return $invoiceWarehouseId ?? Warehouse::query()->where('fiscal_year_id', $product->fiscal_year_id)->orderBy('id')->value('id');
     }
 
     public static function adjustWarehouseAverageCostForAncillaryCost(AncillaryCost $ancillaryCost, bool $reverse = false): void
@@ -361,7 +361,7 @@ class ProductService
         $product->loadMissing('productGroup', 'incomeSubject', 'salesReturnsSubject', 'cogsSubject', 'inventorySubject');
 
         $group = $product->productGroup;
-        $companyId = $product->company_id ?? $group?->company_id ?? getActiveLegacyCompany();
+        $companyId = $product->company_id ?? $group?->company_id ?? getActiveCompany();
 
         if (! $companyId) {
             throw new \RuntimeException('Unable to determine company for product subject synchronization.');

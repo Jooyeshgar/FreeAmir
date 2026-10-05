@@ -15,6 +15,7 @@ use App\Models\Company;
 use App\Models\Config;
 use App\Models\Customer;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Transaction;
@@ -55,25 +56,24 @@ class ChequeManagementTest extends TestCase
     {
         parent::setUp();
 
-        $companyId = Company::firstOrCreate(['id' => 1], ['name' => 'Cheque Test', 'fiscal_year' => 1405])->id;
+        $companyId = Company::firstOrCreate(['id' => 1], ['name' => 'Cheque Test'])->id;
+        $year = FiscalYear::firstOrCreate(['company_id' => $companyId, 'year' => 1405]);
+        config(['active-company-id' => $companyId, 'active-fiscal-year-id' => $year->id]);
         Cache::forever('active_company_id', $companyId);
         Cookie::queue('active-company-id', (string) $companyId);
         $_COOKIE['active-company-id'] = (string) $companyId;
 
         DB::table('subjects')->insert([
-            ['id' => 1, 'code' => '010', 'name' => 'Banks', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
-            ['id' => 6, 'code' => '013', 'name' => 'Documents receivable', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
-            ['id' => 22, 'code' => '020', 'name' => 'Documents payable', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
-            ['id' => 67, 'code' => '014', 'name' => 'Documents in collection', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
-            ['id' => 44, 'code' => '013001', 'name' => 'Documents receivable detail', 'parent_id' => 6, 'type' => 3, 'company_id' => $companyId],
-            ['id' => 46, 'code' => '020001', 'name' => 'Documents payable detail', 'parent_id' => 22, 'type' => 3, 'company_id' => $companyId],
-            ['id' => 68, 'code' => '014001', 'name' => 'Documents in collection detail', 'parent_id' => 67, 'type' => 3, 'company_id' => $companyId],
-            ['id' => 201, 'code' => '012001001', 'name' => 'Customer subject', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
-            ['id' => 202, 'code' => '012001002', 'name' => 'Vendor subject', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
-            ['id' => 203, 'code' => '010001', 'name' => 'Bank account subject', 'parent_id' => 1, 'type' => 3, 'company_id' => $companyId],
-        ]);
-        DB::table('subjects')->where('company_id', $companyId)->update([
-            'fiscal_year_id' => Company::findOrFail($companyId)->fiscalYear->id,
+            ['id' => 1, 'code' => '010', 'name' => 'Banks', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId, 'fiscal_year_id' => $year->id],
+            ['id' => 6, 'code' => '013', 'name' => 'Documents receivable', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId, 'fiscal_year_id' => $year->id],
+            ['id' => 22, 'code' => '020', 'name' => 'Documents payable', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId, 'fiscal_year_id' => $year->id],
+            ['id' => 67, 'code' => '014', 'name' => 'Documents in collection', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId, 'fiscal_year_id' => $year->id],
+            ['id' => 44, 'code' => '013001', 'name' => 'Documents receivable detail', 'parent_id' => 6, 'type' => 3, 'company_id' => $companyId, 'fiscal_year_id' => $year->id],
+            ['id' => 46, 'code' => '020001', 'name' => 'Documents payable detail', 'parent_id' => 22, 'type' => 3, 'company_id' => $companyId, 'fiscal_year_id' => $year->id],
+            ['id' => 68, 'code' => '014001', 'name' => 'Documents in collection detail', 'parent_id' => 67, 'type' => 3, 'company_id' => $companyId, 'fiscal_year_id' => $year->id],
+            ['id' => 201, 'code' => '012001001', 'name' => 'Customer subject', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId, 'fiscal_year_id' => $year->id],
+            ['id' => 202, 'code' => '012001002', 'name' => 'Vendor subject', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId, 'fiscal_year_id' => $year->id],
+            ['id' => 203, 'code' => '010001', 'name' => 'Bank account subject', 'parent_id' => 1, 'type' => 3, 'company_id' => $companyId, 'fiscal_year_id' => $year->id],
         ]);
 
         foreach ([
@@ -93,12 +93,13 @@ class ChequeManagementTest extends TestCase
         }
 
         $this->user = User::factory()->create();
-        Company::findOrFail($companyId)->users()->attach($this->user);
-        $this->withCookies(['active-fiscal-year-id' => (string) Company::findOrFail($companyId)->fiscalYear->id]);
+        $this->user->companies()->syncWithoutDetaching([$companyId]);
+        $year->users()->syncWithoutDetaching([$this->user->id]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $year->id]);
         $this->actingAs($this->user);
 
-        $this->customer = Customer::create(['company_id' => $companyId, 'name' => 'Customer', 'subject_id' => 201]);
-        $this->vendor = Customer::create(['company_id' => $companyId, 'name' => 'Vendor', 'subject_id' => 202]);
+        $this->customer = Customer::create(['company_id' => $companyId, 'name' => 'Customer', 'subject_id' => 201, 'type' => 1]);
+        $this->vendor = Customer::create(['company_id' => $companyId, 'name' => 'Vendor', 'subject_id' => 202, 'type' => 1]);
 
         $this->bank = Bank::create(['name' => 'Test Bank', 'company_id' => $companyId]);
         $this->account = BankAccount::create(['bank_id' => $this->bank->id, 'name' => 'Main account', 'number' => '123456', 'type' => 1, 'subject_id' => 203]);
@@ -137,12 +138,9 @@ class ChequeManagementTest extends TestCase
     public function test_cheque_postings_use_configured_subjects_instead_of_fixed_codes(): void
     {
         DB::table('subjects')->insert([
-            ['id' => 301, 'code' => '091001', 'name' => 'Configured receivable', 'parent_id' => null, 'type' => 3, 'company_id' => 1],
-            ['id' => 302, 'code' => '091002', 'name' => 'Configured in collection', 'parent_id' => null, 'type' => 3, 'company_id' => 1],
-            ['id' => 303, 'code' => '091003', 'name' => 'Configured payable', 'parent_id' => null, 'type' => 3, 'company_id' => 1],
-        ]);
-        DB::table('subjects')->whereIn('id', [301, 302, 303])->update([
-            'fiscal_year_id' => Company::findOrFail(1)->fiscalYear->id,
+            ['id' => 301, 'code' => '091001', 'name' => 'Configured receivable', 'parent_id' => null, 'type' => 3, 'company_id' => 1, 'fiscal_year_id' => getActiveFiscalYear()],
+            ['id' => 302, 'code' => '091002', 'name' => 'Configured in collection', 'parent_id' => null, 'type' => 3, 'company_id' => 1, 'fiscal_year_id' => getActiveFiscalYear()],
+            ['id' => 303, 'code' => '091003', 'name' => 'Configured payable', 'parent_id' => null, 'type' => 3, 'company_id' => 1, 'fiscal_year_id' => getActiveFiscalYear()],
         ]);
 
         foreach ([
@@ -190,7 +188,8 @@ class ChequeManagementTest extends TestCase
 
     public function test_account_side_subject_must_belong_to_cheque_company(): void
     {
-        $otherCompany = Company::create(['name' => 'Other Company', 'fiscal_year' => 1405]);
+        $otherCompany = Company::create(['name' => 'Other Company']);
+        $otherYear = FiscalYear::create(['company_id' => $otherCompany->id, 'year' => 1405]);
         DB::table('subjects')->insert([
             'id' => 999,
             'code' => '012001999',
@@ -198,6 +197,7 @@ class ChequeManagementTest extends TestCase
             'parent_id' => null,
             'type' => 3,
             'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherYear->id,
         ]);
         DB::table('customers')->where('id', $this->customer->id)->update(['subject_id' => 999]);
 
@@ -362,8 +362,8 @@ class ChequeManagementTest extends TestCase
 
         $cheque = Cheque::latest('id')->firstOrFail();
         $response->assertRedirect(route('cheques.show', $cheque));
-        $this->assertSame('2026-01-01', $cheque->getRawOriginal('write_date'));
-        $this->assertSame('2026-02-01', $cheque->getRawOriginal('due_date'));
+        $this->assertSame('2026-01-01', substr($cheque->getRawOriginal('write_date'), 0, 10));
+        $this->assertSame('2026-02-01', substr($cheque->getRawOriginal('due_date'), 0, 10));
         $this->get(route('cheques.show', $cheque))->assertOk()->assertSee('۱۴۰۴/۱۰/۱۱')->assertSee('۱۴۰۴/۱۱/۱۲');
         $this->get(route('cheques.edit', $cheque))->assertOk()->assertSee('value="1404/10/11"', false)->assertSee('value="1404/11/12"', false);
     }

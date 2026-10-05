@@ -105,8 +105,8 @@ class FiscalYearImportCommand extends Command
             $newFiscalYear = FiscalYearService::importData($importData, $newFiscalYearData);
 
             $this->info('Fiscal year imported successfully!');
-            $this->info("New Fiscal Year ID: {$newFiscalYear->fiscalYear->id}");
-            $this->info("Name: {$newFiscalYear->name}");
+            $this->info("New Fiscal Year ID: {$newFiscalYear->id}");
+            $this->info("Name: {$newFiscalYear->company->name}");
 
             return Command::SUCCESS;
         } catch (Exception $e) {

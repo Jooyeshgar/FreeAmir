@@ -26,7 +26,7 @@
                         <select class="select w-full" id="source_year_id" name="source_year_id">
                             <option value="">{{ __('Select Source Fiscal Year') }}</option>
                             @foreach ($previousYears as $year)
-                                <option value="{{ $year->id }}" {{ old('source_year_id') == $year->id ? 'selected' : '' }}>{{ $year->companyIdentity->name }} - {{ $year->year }}</option>
+                                <option value="{{ $year->id }}" {{ old('source_year_id') == $year->id ? 'selected' : '' }}>{{ $year->company->name }} - {{ $year->year }}</option>
                             @endforeach
                         </select>
                     </div>

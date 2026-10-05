@@ -346,8 +346,8 @@
                     <tbody>
                         @forelse ($recentCompanies as $company)
                             <tr>
-                                <td><a href="{{ route('companies.show', $company) }}" class="font-bold transition hover:text-[#16a394] hover:underline">{{ $company->name }}</a></td>
-                                <td>{{ localizeNumber($company->fiscal_year) }}</td>
+                                <td><a href="{{ route('companies.show', $company->company) }}" class="font-bold transition hover:text-[#16a394] hover:underline">{{ $company->company->name }}</a></td>
+                                <td>{{ localizeNumber($company->year) }}</td>
                                 <td>{{ localizeNumber($company->users_count) }}</td>
                                 <td><span
                                         @class([
@@ -356,7 +356,7 @@
                                             'bg-slate-100 text-slate-500' => $company->closed_at,
                                         ])>{{ $company->closed_at ? __('Closed') : __('Open') }}</span>
                                 </td>
-                                <td><a href="{{ route('companies.edit', $company) }}"
+                                <td><a href="{{ route('companies.edit', $company->company) }}"
                                         class="text-xs text-[#16a394]">{{ __('Edit') }}</a></td>
                             </tr>
                         @empty

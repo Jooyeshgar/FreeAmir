@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\ValidationException;
 
 class Payment extends Model
 {
@@ -17,12 +19,33 @@ class Payment extends Model
         'creator_id',
         'invoice_id',
         'cheque_id',
+        'fiscal_year_id',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
         'date' => 'date',
     ];
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new FiscalYearScope);
+
+        static::saving(function (Payment $payment): void {
+            $invoiceYearId = $payment->invoice_id
+                ? Invoice::withoutGlobalScopes()->whereKey($payment->invoice_id)->value('fiscal_year_id')
+                : null;
+            $yearId = $payment->fiscal_year_id ?? $invoiceYearId ?? getActiveFiscalYear();
+
+            if (! $yearId || ($invoiceYearId && (int) $yearId !== (int) $invoiceYearId)) {
+                throw ValidationException::withMessages([
+                    'fiscal_year_id' => [__('The selected fiscal year is invalid.')],
+                ]);
+            }
+
+            $payment->fiscal_year_id = $yearId;
+        });
+    }
 
     public function payer()
     {

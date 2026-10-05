@@ -74,10 +74,10 @@
                             </svg>
                         </summary>
                         <ul class="app-main-menu-panel z-50 w-auto md:w-max min-w-full max-w-[calc(100vw-2rem)] ltr:right-0 rtl:left-0 text-sm">
-                            @foreach (auth()->user()->accessibleCompanies()->orderByDesc('fiscal_year')->get() as $company)
+                            @foreach (auth()->user()->fiscalYears()->with('company')->orderByDesc('year')->get() as $company)
                                 <li>
-                                    <a href="{{ route('change-company', ['company' => $company]) }}" class="whitespace-nowrap">
-                                        {{ $company->name . ' - ' . $company->fiscal_year }}
+                                    <a href="{{ route('change-company', ['fiscalYear' => $company]) }}" class="whitespace-nowrap">
+                                        {{ $company->company->name . ' - ' . $company->year }}
                                     </a>
                                 </li>
                             @endforeach

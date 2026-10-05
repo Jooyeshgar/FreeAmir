@@ -8,6 +8,7 @@ use App\Enums\PersonnelRequestStatus;
 use App\Models\Company;
 use App\Models\Document;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\MonthlyAttendance;
@@ -26,37 +27,37 @@ class CompanyOverviewService
     public function __construct(private readonly SubjectService $subjectService) {}
 
     /**
-     * Build a business-level overview across every fiscal-year record with the same name.
+     * Build a business-level overview across its fiscal years.
      *
      * @return array<string, mixed>
      */
     public function build(Company $company): array
     {
-        $fiscalYears = Company::query()
-            ->whereIn('companies.id', $company->fiscalYear->companyIdentity->fiscalYears()->select('legacy_company_id'))
-            ->select('companies.*')
+        $fiscalYears = FiscalYear::query()
+            ->where('company_id', $company->id)
+            ->select('fiscal_years.*')
             ->selectSub(
                 Document::withoutGlobalScopes()
                     ->selectRaw('COUNT(*)')
-                    ->whereColumn('documents.company_id', 'companies.id'),
+                    ->whereColumn('documents.fiscal_year_id', 'fiscal_years.id'),
                 'documents_count'
             )
             ->selectSub(
                 Invoice::withoutGlobalScopes()
                     ->selectRaw('COUNT(*)')
-                    ->whereColumn('invoices.company_id', 'companies.id'),
+                    ->whereColumn('invoices.fiscal_year_id', 'fiscal_years.id'),
                 'invoices_count'
             )
             ->selectSub(
-                DB::table('fiscal_year_user')->join('fiscal_years', 'fiscal_year_user.fiscal_year_id', '=', 'fiscal_years.id')
-                    ->selectRaw('COUNT(*)')->whereColumn('fiscal_years.legacy_company_id', 'companies.id'),
+                DB::table('fiscal_year_user')
+                    ->selectRaw('COUNT(*)')->whereColumn('fiscal_year_user.fiscal_year_id', 'fiscal_years.id'),
                 'users_count'
             )
-            ->orderByDesc('fiscal_year')
+            ->orderByDesc('year')
             ->orderByDesc('id')
             ->get();
 
-        $yearIds = $company->fiscalYear->companyIdentity->fiscalYears()->pluck('id');
+        $yearIds = $company->fiscalYears()->pluck('id');
         $users = User::query()
             ->whereHas('fiscalYears', fn ($query) => $query->whereIn('fiscal_years.id', $yearIds))
             ->with('roles:id,name')
@@ -65,7 +66,7 @@ class CompanyOverviewService
             ->get();
 
         return [
-            'business' => $fiscalYears->firstOrFail(),
+            'business' => $company,
             'fiscalYears' => $fiscalYears,
             'users' => $users,
             'metrics' => [
@@ -241,7 +242,7 @@ class CompanyOverviewService
 
             $balance = (float) Transaction::query()
                 ->join('documents', 'documents.id', '=', 'transactions.document_id')
-                ->where('documents.fiscal_year_id', getScopedFiscalYear())
+                ->where('documents.fiscal_year_id', getActiveFiscalYear())
                 ->whereIn('transactions.subject_id', $subjectIds)
                 ->when($startDate, fn ($query, string $date) => $query->where('documents.date', '>=', $date))
                 ->when($endDate, fn ($query, string $date) => $query->where('documents.date', '<=', $date))
@@ -332,7 +333,7 @@ class CompanyOverviewService
 
         $invoiceItems = \DB::table('invoice_items')
             ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
-            ->where('invoices.fiscal_year_id', getScopedFiscalYear())
+            ->where('invoices.fiscal_year_id', getActiveFiscalYear())
             ->select('invoices.date', 'invoice_items.itemable_id', 'invoice_items.quantity_at')
             ->where('invoice_items.itemable_type', Product::class)
             ->whereBetween('invoices.date', [$startDate, $endDate])
@@ -389,7 +390,7 @@ class CompanyOverviewService
 
     public function balanceForSubjectIds(array $subjectIds, int $duration, bool $inverse = true)
     {
-        $year = config('active-company-fiscal-year');
+        $year = (int) (config('active-company-fiscal-year') ?? FiscalYear::query()->findOrFail(getActiveFiscalYear())->year);
 
         $endDate = now();
         $lastDayOfFiscalYear = Carbon::parse(jalali_to_gregorian($year, 12, 29, '/'));
@@ -413,7 +414,7 @@ class CompanyOverviewService
 
         $dailyTransactions = (clone $transactionQuery)
             ->join('documents', 'documents.id', '=', 'transactions.document_id')
-            ->where('documents.fiscal_year_id', getScopedFiscalYear())
+            ->where('documents.fiscal_year_id', getActiveFiscalYear())
             ->whereBetween('documents.date', [$startDate, $endDate])
             ->selectRaw('DATE(documents.date) as date, SUM(transactions.value) as total')
             ->groupBy('date')

@@ -14,7 +14,7 @@ class CustomerService
     public function create(array $data): Customer
     {
         return DB::transaction(function () use ($data) {
-            $data['company_id'] ??= getActiveLegacyCompany();
+            $data['company_id'] ??= getActiveCompany();
             $subjectCode = $data['subject_code'] ?? null;
             unset($data['subject_code']);
 
@@ -54,7 +54,7 @@ class CustomerService
         $customer->loadMissing('group', 'subject');
 
         $group = $customer->group;
-        $companyId = $customer->company_id ?? $group?->company_id ?? getActiveLegacyCompany();
+        $companyId = $customer->company_id ?? $group?->company_id ?? getActiveCompany();
 
         if (! $companyId) {
             throw new \RuntimeException('Unable to determine company for customer subject synchronization.');
@@ -73,7 +73,7 @@ class CustomerService
         $resolvedCode = $this->resolveSubjectCode($subjectCode, $group->subject);
 
         if ($resolvedCode !== null) {
-            $existingSubject = Subject::withoutGlobalScopes()->where('company_id', $companyId)->where('code', $resolvedCode)->first();
+            $existingSubject = Subject::withoutGlobalScopes()->where('company_id', $companyId)->where('fiscal_year_id', getActiveFiscalYear())->where('code', $resolvedCode)->first();
 
             if ($existingSubject) {
                 if ((int) $existingSubject->parent_id !== $parentId) {

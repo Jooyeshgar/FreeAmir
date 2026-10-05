@@ -342,7 +342,7 @@ class ServiceImportService
                 ]));
             }
 
-            $subject = Subject::withoutGlobalScopes()->where('company_id', $companyId)->where('code', $subjectCode)->first();
+            $subject = Subject::withoutGlobalScopes()->where('company_id', $companyId)->where('fiscal_year_id', getActiveFiscalYear())->where('code', $subjectCode)->first();
 
             if ($existing && $existing->{$config['id_column']} && (int) $existing->{$config['id_column']} !== (int) $subject?->id) {
                 $this->fail(__('Line :line: subject code :code does not match the existing service account relation.', [

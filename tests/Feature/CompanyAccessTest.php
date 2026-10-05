@@ -37,7 +37,9 @@ class CompanyAccessTest extends TestCase
         $this->inaccessibleCompany = Company::factory()->create(['name' => 'Inaccessible Source']);
 
         $this->accessibleCompany->users()->syncWithoutDetaching([$this->user->id]);
+        $this->accessibleCompany->fiscalYears()->firstOrFail()->users()->syncWithoutDetaching([$this->user->id]);
         $this->inaccessibleCompany->users()->detach($this->user->id);
+        $this->inaccessibleCompany->fiscalYears()->firstOrFail()->users()->detach($this->user->id);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'companies.create']),
@@ -45,7 +47,7 @@ class CompanyAccessTest extends TestCase
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => (string) $this->accessibleCompany->id]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->accessibleCompany->fiscalYears()->firstOrFail()->id]);
     }
 
     public function test_create_form_lists_only_companies_accessible_to_user(): void
@@ -61,8 +63,14 @@ class CompanyAccessTest extends TestCase
     {
         $superAdmin = User::factory()->create();
         $superAdmin->assignRole(Role::firstOrCreate(['name' => 'Super-Admin']));
+        $superAdmin->givePermissionTo(
+            Permission::firstOrCreate(['name' => 'companies.index']),
+            Permission::firstOrCreate(['name' => 'companies.create']),
+            Permission::firstOrCreate(['name' => 'companies.store']),
+        );
 
-        $form = $this->actingAs($superAdmin)->withCookies(['active-company-id' => null])->get(route('companies.create'));
+        $this->defaultCookies = [];
+        $form = $this->actingAs($superAdmin)->get(route('companies.create'));
 
         $form->assertOk()->assertDontSee('id="previousYears"', false)->assertDontSee('name="source_year_id"', false);
 
@@ -82,8 +90,14 @@ class CompanyAccessTest extends TestCase
     {
         $superAdmin = User::factory()->create();
         $superAdmin->assignRole(Role::firstOrCreate(['name' => 'Super-Admin']));
+        $superAdmin->givePermissionTo(
+            Permission::firstOrCreate(['name' => 'companies.index']),
+            Permission::firstOrCreate(['name' => 'companies.create']),
+            Permission::firstOrCreate(['name' => 'companies.store']),
+        );
 
-        $response = $this->actingAs($superAdmin)->withCookies(['active-company-id' => null])->withSession(['interface_mode' => 'management'])->get(route('companies.index'));
+        $this->defaultCookies = [];
+        $response = $this->actingAs($superAdmin)->withSession(['interface_mode' => 'management'])->get(route('companies.index'));
         $response->assertOk()->assertSee('data-testid="create-first-company"', false);
     }
 
@@ -91,9 +105,16 @@ class CompanyAccessTest extends TestCase
     {
         $superAdmin = User::factory()->create();
         $superAdmin->assignRole(Role::firstOrCreate(['name' => 'Super-Admin']));
+        $superAdmin->givePermissionTo(
+            Permission::firstOrCreate(['name' => 'companies.index']),
+            Permission::firstOrCreate(['name' => 'companies.create']),
+            Permission::firstOrCreate(['name' => 'companies.store']),
+        );
         $this->accessibleCompany->users()->attach($superAdmin);
+        $this->accessibleCompany->fiscalYears()->firstOrFail()->users()->attach($superAdmin);
 
-        $response = $this->actingAs($superAdmin)->withCookies(['active-company-id' => null])->withSession(['interface_mode' => 'management'])->get(route('companies.index'));
+        $this->defaultCookies = [];
+        $response = $this->actingAs($superAdmin)->withSession(['interface_mode' => 'management'])->get(route('companies.index'));
         $response->assertOk()->assertDontSee('data-testid="create-first-company"', false);
     }
 
@@ -104,24 +125,25 @@ class CompanyAccessTest extends TestCase
             Permission::firstOrCreate(['name' => 'companies.close-fiscal-year']),
             Permission::firstOrCreate(['name' => 'companies.closing-wizard']),
         );
-        $this->accessibleCompany->update(['closed_at' => now()]);
+        $this->accessibleCompany->fiscalYears()->firstOrFail()->update(['closed_at' => now()]);
+        $fiscalYear = $this->accessibleCompany->fiscalYears()->firstOrFail();
 
         $response = $this->get(route('companies.index'));
 
         $response->assertOk()
-            ->assertSee(route('companies.closing-wizard', $this->accessibleCompany), false)
+            ->assertSee(route('companies.closing-wizard', $fiscalYear), false)
             ->assertSee(__('Review Fiscal Year Closing'))
             ->assertSee('btn-info btn-outline', false)
             ->assertDontSee('btn-disabled pointer-events-none', false);
 
-        $this->get(route('companies.closing-wizard', $this->accessibleCompany))->assertOk();
+        $this->get(route('companies.closing-wizard', $fiscalYear))->assertOk();
     }
 
     public function test_user_can_delete_an_accessible_company(): void
     {
         Storage::fake('public');
         $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'companies.destroy']));
-        config(['active-company-id' => $this->accessibleCompany->id]);
+        config(['active-company-id' => $this->accessibleCompany->id, 'active-fiscal-year-id' => $this->accessibleCompany->fiscalYears()->firstOrFail()->id]);
         $document = Document::factory()->create(['company_id' => $this->accessibleCompany->id]);
         $path = "documents/{$document->id}/attachment.pdf";
         Storage::disk('public')->put($path, 'attachment');
@@ -144,7 +166,7 @@ class CompanyAccessTest extends TestCase
     public function test_storage_cleanup_error_does_not_prevent_company_deletion(): void
     {
         $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'companies.destroy']));
-        config(['active-company-id' => $this->accessibleCompany->id]);
+        config(['active-company-id' => $this->accessibleCompany->id, 'active-fiscal-year-id' => $this->accessibleCompany->fiscalYears()->firstOrFail()->id]);
         $document = Document::factory()->create(['company_id' => $this->accessibleCompany->id]);
         DocumentFile::create([
             'document_id' => $document->id,
@@ -186,7 +208,7 @@ class CompanyAccessTest extends TestCase
         $response = $this->post(route('companies.store'), [
             'name' => 'Unauthorized Copy',
             'fiscal_year' => 1405,
-            'source_year_id' => $this->inaccessibleCompany->fiscalYear->id,
+            'source_year_id' => $this->inaccessibleCompany->fiscalYears()->firstOrFail()->id,
             'tables_to_copy' => [FiscalYearSection::SUBJECTS->value],
         ]);
 
@@ -199,7 +221,7 @@ class CompanyAccessTest extends TestCase
     {
         $response = $this->post(route('companies.store'), [
             'fiscal_year' => 1405,
-            'source_year_id' => $this->accessibleCompany->fiscalYear->id,
+            'source_year_id' => $this->accessibleCompany->fiscalYears()->firstOrFail()->id,
             'tables_to_copy' => [FiscalYearSection::SUBJECTS->value],
         ]);
 
@@ -209,7 +231,7 @@ class CompanyAccessTest extends TestCase
 
     public function test_store_copies_bank_accounts_with_same_iban_into_new_company(): void
     {
-        config(['active-company-id' => $this->accessibleCompany->id]);
+        config(['active-company-id' => $this->accessibleCompany->id, 'active-fiscal-year-id' => $this->accessibleCompany->fiscalYears()->firstOrFail()->id]);
 
         $bank = Bank::create([
             'name' => 'Source Bank',
@@ -242,7 +264,7 @@ class CompanyAccessTest extends TestCase
             'company_id' => $this->accessibleCompany->id,
             'subject_id' => $accountSubject->id,
             'iban' => 'IR163212724891703088374062',
-            'fiscal_year_id' => $this->accessibleCompany->fiscalYear->id,
+            'fiscal_year_id' => $this->accessibleCompany->fiscalYears()->firstOrFail()->id,
         ])->saveQuietly();
 
         $accountSubject->subjectable()->associate($sourceAccount);
@@ -251,7 +273,7 @@ class CompanyAccessTest extends TestCase
         $response = $this->post(route('companies.store'), [
             'name' => 'Copied Company',
             'fiscal_year' => 1405,
-            'source_year_id' => $this->accessibleCompany->fiscalYear->id,
+            'source_year_id' => $this->accessibleCompany->fiscalYears()->firstOrFail()->id,
             'tables_to_copy' => [
                 FiscalYearSection::SUBJECTS->value,
                 FiscalYearSection::BANKS->value,
@@ -269,7 +291,7 @@ class CompanyAccessTest extends TestCase
 
         $this->assertDatabaseHas('bank_accounts', [
             'company_id' => $newCompany->id,
-            'fiscal_year_id' => $newCompany->fiscalYear->id,
+            'fiscal_year_id' => $newCompany->fiscalYears()->firstOrFail()->id,
             'iban' => 'IR163212724891703088374062',
         ]);
     }

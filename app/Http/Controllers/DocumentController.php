@@ -138,7 +138,7 @@ class DocumentController extends Controller
 
     public function show(Document $document)
     {
-        $fiscalYears = auth()->user()->accessibleCompanies()->where('id', '!=', getActiveLegacyCompany())->get();
+        $fiscalYears = auth()->user()->fiscalYears()->with('company')->where('fiscal_years.id', '!=', getActiveFiscalYear())->get();
 
         return view('documents.show', compact('document', 'fiscalYears'));
     }
@@ -402,17 +402,17 @@ class DocumentController extends Controller
 
     public function transfer(Request $request, Document $document): RedirectResponse
     {
-        $request->validate(['target_company_id' => 'required|integer|exists:companies,id']);
+        $request->validate(['target_fiscal_year_id' => 'required|integer|exists:fiscal_years,id']);
 
-        if (! Auth::user()->accessibleCompanies()->whereKey((int) $request->target_company_id)->exists()) {
+        if (! Auth::user()->fiscalYears()->whereKey((int) $request->target_fiscal_year_id)->exists()) {
             abort(403);
         }
 
-        if ((int) $request->target_company_id === getActiveLegacyCompany()) {
+        if ((int) $request->target_fiscal_year_id === getActiveFiscalYear()) {
             return redirect()->route('documents.show', $document)->with('error', __('Cannot transfer to the same fiscal year.'));
         }
 
-        $result = FiscalYearTransferService::transferDocument($document, $request->target_company_id, $request->user());
+        $result = FiscalYearTransferService::transferDocument($document, $request->target_fiscal_year_id, $request->user());
 
         if (! $result['success']) {
             return redirect()->route('documents.show', $document)->withErrors($result['errors']);

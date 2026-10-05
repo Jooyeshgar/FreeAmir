@@ -22,14 +22,14 @@ class CommercialLedgerController extends Controller
 
     public function index(): View
     {
-        $company = Company::query()->findOrFail(getActiveLegacyCompany());
+        $company = Company::query()->findOrFail(getActiveCompany());
         [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
 
         $unapprovedDocumentsCount = Document::query()
             ->whereNull('approved_at')
             ->whereBetween('date', [$fiscalStart->toDateString(), $fiscalEnd->toDateString()])
             ->count();
-        $exports = CommercialLedgerExport::query()->latest()->paginate(15);
+        $exports = CommercialLedgerExport::query()->with('fiscalYear')->latest()->paginate(15);
         $warningRowsCounts = $exports->getCollection()->mapWithKeys(function (CommercialLedgerExport $export): array {
             $rows = $this->service->rows(
                 $export->from_date->toDateString(),
@@ -93,7 +93,7 @@ class CommercialLedgerController extends Controller
 
     public function show(Request $request, CommercialLedgerExport $commercialLedger): View
     {
-        abort_unless((int) $commercialLedger->fiscal_year_id === getScopedFiscalYear(), 404);
+        abort_unless((int) $commercialLedger->fiscal_year_id === getActiveFiscalYear(), 404);
         $allRows = $this->service->rows(
             $commercialLedger->from_date->toDateString(),
             $commercialLedger->to_date->toDateString(),
@@ -115,7 +115,7 @@ class CommercialLedgerController extends Controller
 
     public function download(CommercialLedgerExport $commercialLedger): StreamedResponse
     {
-        abort_unless((int) $commercialLedger->fiscal_year_id === getScopedFiscalYear(), 404);
+        abort_unless((int) $commercialLedger->fiscal_year_id === getActiveFiscalYear(), 404);
         abort_unless(Storage::disk('local')->exists($commercialLedger->file_path), 404);
 
         return Storage::disk('local')->download(
@@ -129,7 +129,7 @@ class CommercialLedgerController extends Controller
 
     public function destroy(CommercialLedgerExport $commercialLedger): RedirectResponse
     {
-        abort_unless((int) $commercialLedger->fiscal_year_id === getScopedFiscalYear(), 404);
+        abort_unless((int) $commercialLedger->fiscal_year_id === getActiveFiscalYear(), 404);
         $this->service->delete($commercialLedger);
 
         return redirect()->route('commercial-ledgers.index')->with('success', __('Commercial ledger deleted successfully.'));

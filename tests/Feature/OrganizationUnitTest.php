@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\OrganizationUnit;
 use App\Models\User;
 use App\Models\WorkShift;
@@ -29,13 +30,29 @@ class OrganizationUnitTest extends TestCase
 
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
+        $this->activateFiscalYear($company, $this->user);
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'hr.organization-units.*']),
             Permission::firstOrCreate(['name' => 'hr.employees.*'])
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+    }
+
+    private function activateFiscalYear(Company $company, User $user): FiscalYear
+    {
+        $year = $company->fiscalYears()->orderBy('id')->firstOrFail();
+        $year->users()->syncWithoutDetaching([$user->id]);
+
+        config([
+            'active-company-id' => $company->id,
+            'active-fiscal-year-id' => $year->id,
+            'active-company-fiscal-year' => $year->year,
+        ]);
+
+        $this->withCookies(['active-fiscal-year-id' => (string) $year->id]);
+
+        return $year;
     }
 
     public function test_index_lists_units_for_active_company(): void
@@ -44,8 +61,10 @@ class OrganizationUnitTest extends TestCase
             'company_id' => $this->companyId,
             'name' => 'Finance',
         ]);
+        $otherCompany = Company::factory()->create();
         OrganizationUnit::factory()->create([
-            'company_id' => Company::factory()->create()->id,
+            'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherCompany->fiscalYears()->firstOrFail()->id,
             'name' => 'Foreign Unit',
         ]);
 
@@ -75,8 +94,10 @@ class OrganizationUnitTest extends TestCase
 
     public function test_store_rejects_parent_from_another_company(): void
     {
+        $otherCompany = Company::factory()->create();
         $foreignParent = OrganizationUnit::factory()->create([
-            'company_id' => Company::factory()->create()->id,
+            'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherCompany->fiscalYears()->firstOrFail()->id,
         ]);
 
         $response = $this->post(route('hr.organization-units.store'), [
@@ -120,8 +141,10 @@ class OrganizationUnitTest extends TestCase
 
     public function test_employee_cannot_be_assigned_to_organization_unit_from_another_company(): void
     {
+        $otherCompany = Company::factory()->create();
         $foreignUnit = OrganizationUnit::factory()->create([
-            'company_id' => Company::factory()->create()->id,
+            'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherCompany->fiscalYears()->firstOrFail()->id,
         ]);
         $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
         $workShift = WorkShift::factory()->create(['company_id' => $this->companyId]);

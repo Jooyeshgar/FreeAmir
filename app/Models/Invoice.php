@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\Concerns\HasFiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,7 +11,6 @@ use Illuminate\Database\Eloquent\Model;
 class Invoice extends Model
 {
     use HasFactory;
-    use HasFiscalYear;
 
     public $timestamps = true;
 
@@ -35,6 +33,7 @@ class Invoice extends Model
         'title',
         'returned_invoice_id',
         'company_id',
+        'fiscal_year_id',
         'warehouse_id',
         'taxID',
     ];
@@ -50,9 +49,6 @@ class Invoice extends Model
     public static function booted(): void
     {
         static::addGlobalScope(new FiscalYearScope);
-        static::creating(function ($model) {
-            $model->company_id = getActiveLegacyCompany();
-        });
     }
 
     public function document()

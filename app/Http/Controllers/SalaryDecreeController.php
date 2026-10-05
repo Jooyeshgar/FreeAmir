@@ -62,7 +62,8 @@ class SalaryDecreeController extends Controller
             $validated['end_date'] = isset($validated['end_date']) ? jalaliInputToGregorian($validated['end_date'], 'end_date') : null;
 
             $decree = SalaryDecree::create([
-                'company_id' => getActiveLegacyCompany(),
+                'company_id' => getActiveCompany(),
+                'fiscal_year_id' => getActiveFiscalYear(),
                 'employee_id' => $validated['employee_id'],
                 'name' => $validated['name'] ?? null,
                 'start_date' => $validated['start_date'],

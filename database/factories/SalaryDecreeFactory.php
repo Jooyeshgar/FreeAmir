@@ -16,7 +16,7 @@ class SalaryDecreeFactory extends Factory
         $startDate = $this->faker->dateTimeBetween('-1 year', 'now');
 
         return [
-            'company_id' => Company::factory(),
+            'company_id' => getActiveCompany() ?: Company::factory(),
             'employee_id' => Employee::factory(),
             'name' => $this->faker->optional()->bothify('Decree-####'),
             'start_date' => $startDate,

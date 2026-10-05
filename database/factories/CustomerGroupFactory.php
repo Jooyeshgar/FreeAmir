@@ -19,7 +19,7 @@ class CustomerGroupFactory extends Factory
      */
     public function definition(): array
     {
-        $companyId = Company::withoutGlobalScopes()->inRandomOrder()->value('id') ?? getActiveLegacyCompany() ?? Company::factory()->create()->id;
+        $companyId = Company::withoutGlobalScopes()->inRandomOrder()->value('id') ?? getActiveCompany() ?? Company::factory()->create()->id;
 
         return [
             'name' => $this->faker?->name,

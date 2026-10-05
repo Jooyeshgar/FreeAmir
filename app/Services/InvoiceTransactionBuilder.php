@@ -529,7 +529,7 @@ class InvoiceTransactionBuilder
     {
         $subjectId = (int) config('amir.beginning_inventory');
         $subject = $subjectId
-            ? Subject::where('fiscal_year_id', getScopedFiscalYear())->find($subjectId)
+            ? Subject::where('fiscal_year_id', getActiveFiscalYear())->find($subjectId)
             : null;
 
         if (! $subject) {

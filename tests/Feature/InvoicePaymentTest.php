@@ -12,6 +12,7 @@ use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\ProductGroup;
@@ -50,13 +51,17 @@ class InvoicePaymentTest extends TestCase
 
         $this->paymentService = app(PaymentService::class);
 
-        $this->companyId = Company::firstOrCreate(['id' => 1], ['name' => 'Test Company', 'fiscal_year' => 1405])->id;
+        $this->companyId = Company::firstOrCreate(['id' => 1], ['name' => 'Test Company'])->id;
+        $year = FiscalYear::firstOrCreate(['company_id' => $this->companyId, 'year' => 1405]);
+        config(['active-company-id' => $this->companyId, 'active-fiscal-year-id' => $year->id]);
 
         Cache::forever('active_company_id', $this->companyId);
         Cookie::queue('active-company-id', (string) $this->companyId);
         $_COOKIE['active-company-id'] = (string) $this->companyId;
 
         $this->user = User::factory()->create();
+        $this->user->companies()->syncWithoutDetaching([$this->companyId]);
+        $year->users()->syncWithoutDetaching([$this->user->id]);
         $this->actingAs($this->user);
 
         $this->importSubjects($this->companyId);
@@ -347,17 +352,17 @@ class InvoicePaymentTest extends TestCase
             FiscalYearSection::INVOICES->value,
         ];
 
-        $exportData = FiscalYearService::exportData(Company::findOrFail($this->companyId)->fiscalYear->id, $sections);
+        $exportData = FiscalYearService::exportData(getActiveFiscalYear(), $sections);
         $this->assertArrayHasKey('payments', $exportData);
         $this->assertCount(1, $exportData['payments']);
 
-        $newCompany = FiscalYearService::importData($exportData, [
+        $newYear = FiscalYearService::importData($exportData, [
             'name' => 'Next Fiscal Year',
             'fiscal_year' => 1406,
         ]);
 
-        $importedSell = Invoice::withoutGlobalScopes()->where('company_id', $newCompany->id)->where('invoice_type', InvoiceType::SELL)->first();
-        $importedPayments = Payment::where('invoice_id', $importedSell->id)->get();
+        $importedSell = Invoice::withoutGlobalScopes()->where('fiscal_year_id', $newYear->id)->where('invoice_type', InvoiceType::SELL)->first();
+        $importedPayments = Payment::withoutGlobalScopes()->where('invoice_id', $importedSell->id)->get();
         $this->assertCount(1, $importedPayments);
 
         $importedPayment = $importedPayments->first();

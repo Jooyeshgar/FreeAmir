@@ -95,7 +95,7 @@ Http/
 
 زیرپوشه `Scopes/` شامل `FiscalYearScope.php` است که بر روی مدل‌های مرتبط اعمال می‌شود تا داده‌ها به شرکت/سال فعال محدود شوند.
 
-مدل‌های `CompanyIdentity` و `FiscalYear` هویت پایدار شرکت و سال‌های مالی آن را نگه می‌دارند. تا زمان انتقال همهٔ ارجاع‌های حسابداری، `Company` شناسهٔ قدیمی سال مالی را برای داده‌های عملیاتی نگه می‌دارد. `getActiveCompany()` شناسهٔ هویت پایدار شرکت و `getActiveFiscalYear()` شناسهٔ سال مالی انتخاب‌شده را برمی‌گردانند؛ اسکوپ داده‌های قدیمی از `getActiveLegacyCompany()` استفاده می‌کند.
+مدل `Company` هویت پایدار شرکت را نگه می‌دارد و هر شرکت می‌تواند چند رکورد `FiscalYear` داشته باشد. `getActiveCompany()` شناسهٔ شرکت فعال و `getActiveFiscalYear()` شناسهٔ سال مالی انتخاب‌شده را برمی‌گردانند. داده‌های وابسته به سال با ستون `fiscal_year_id` محدود می‌شوند و دسترسی کاربران به هر سال مالی جداگانه ثبت می‌شود.
 
 #### `Services/`
 منطق کسب‌وکار پیچیده:
@@ -354,9 +354,9 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::group(['prefix' => 'management'], function () {
         Route::resource('companies', Controllers\CompanyController::class);
         Route::post('companies/close-fiscal-year/{company}', [Controllers\CompanyController::class, 'closeFiscalYear'])->name('companies.close-fiscal-year');
-        Route::get('companies/{company}/closing-wizard', [Controllers\CompanyController::class, 'closingWizard'])->name('companies.closing-wizard');
-        Route::post('companies/{company}/closing-wizard/step1', [Controllers\CompanyController::class, 'closingWizardStep1'])->name('companies.closing-wizard.step1');
-        Route::post('companies/{company}/closing-wizard/step3', [Controllers\CompanyController::class, 'closingWizardStep3'])->name('companies.closing-wizard.step3');
+        Route::get('companies/{fiscalYear}/closing-wizard', [Controllers\CompanyController::class, 'closingWizard'])->name('companies.closing-wizard');
+        Route::post('companies/{fiscalYear}/closing-wizard/step1', [Controllers\CompanyController::class, 'closingWizardStep1'])->name('companies.closing-wizard.step1');
+        Route::post('companies/{fiscalYear}/closing-wizard/step3', [Controllers\CompanyController::class, 'closingWizardStep3'])->name('companies.closing-wizard.step3');
         Route::post('users/{user}/create-employee', [Controllers\Management\UserController::class, 'createEmployee'])
             ->name('users.create-employee');
         Route::post('users/{user}/impersonate', [Controllers\Management\UserController::class, 'impersonate'])
@@ -468,7 +468,7 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('api.companies.index');
 });
 
-Route::prefix('companies/{company}')->middleware(['auth:sanctum', 'api-company'])->group(function () {
+Route::prefix('fiscal-years/{fiscalYear}')->middleware(['auth:sanctum', 'api-company'])->group(function () {
     Route::post('attendance/logs', [AttendanceLogController::class, 'store'])
         ->middleware('check-permission:attendance.attendance-logs.store')
         ->name('api.attendance-logs.store');

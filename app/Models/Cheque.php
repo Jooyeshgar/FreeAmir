@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\ChequeType;
-use App\Models\Concerns\HasFiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -11,10 +10,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Cheque extends Model
 {
-    use HasFiscalYear;
-
     protected $fillable = [
         'company_id',
+        'fiscal_year_id',
         'title',
         'amount',
         'write_date',
@@ -46,7 +44,7 @@ class Cheque extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function (Cheque $cheque) {
-            $cheque->company_id ??= getActiveLegacyCompany();
+            $cheque->company_id ??= getActiveCompany();
         });
     }
 

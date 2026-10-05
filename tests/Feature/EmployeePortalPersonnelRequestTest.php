@@ -33,6 +33,9 @@ class EmployeePortalPersonnelRequestTest extends TestCase
 
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
+        $fiscalYear = $company->fiscalYears()->firstOrFail();
+        $fiscalYear->users()->attach($this->user);
+        config(['active-company-id' => $this->companyId, 'active-fiscal-year-id' => $fiscalYear->id]);
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'employee-portal.dashboard'])
         );
@@ -51,7 +54,7 @@ class EmployeePortalPersonnelRequestTest extends TestCase
         ]);
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $fiscalYear->id]);
     }
 
     private function validPayload(array $overrides = []): array

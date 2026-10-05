@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
-use App\Models\Concerns\HasFiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,11 +13,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class PersonnelRequest extends Model
 {
     use HasFactory;
-    use HasFiscalYear;
 
     protected $fillable = [
         'employee_id',
         'company_id',
+        'fiscal_year_id',
         'request_type',
         'start_date',
         'end_date',

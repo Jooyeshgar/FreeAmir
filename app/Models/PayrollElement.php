@@ -5,7 +5,6 @@ namespace App\Models;
 use App\Enums\PayrollElementCalcType;
 use App\Enums\PayrollElementCategory;
 use App\Enums\PayrollElementSystemCode;
-use App\Models\Concerns\HasFiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,11 +13,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class PayrollElement extends Model
 {
     use HasFactory;
-    use HasFiscalYear;
 
     protected $fillable = [
         'title',
         'company_id',
+        'fiscal_year_id',
         'system_code',
         'category',
         'calc_type',

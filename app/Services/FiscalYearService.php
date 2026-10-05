@@ -34,7 +34,6 @@ use App\Models\Chequebook;
 use App\Models\ChequeHistory;
 use App\Models\Comment;
 use App\Models\Company;
-use App\Models\CompanyIdentity;
 use App\Models\Config;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
@@ -119,7 +118,7 @@ class FiscalYearService
      *
      * @throws Exception
      */
-    public static function createWithCopiedData(array $newFiscalYearData, int $sourceYearId, array $sectionsToCopy): Company
+    public static function createWithCopiedData(array $newFiscalYearData, int $sourceYearId, array $sectionsToCopy): FiscalYear
     {
         FiscalYear::query()->findOrFail($sourceYearId);
 
@@ -146,12 +145,12 @@ class FiscalYearService
 
         $exportData = self::fetchSourceData($sourceYearId, $sectionsToExport);
 
-        $sourceYear = FiscalYear::with('companyIdentity')->findOrFail($sourceYearId);
+        $sourceYear = FiscalYear::with('company')->findOrFail($sourceYearId);
         $exportData['meta'] = [
             'source_fiscal_year_id' => $sourceYear->id,
             'source_fiscal_year' => $sourceYear->year,
-            'source_company_id' => $sourceYear->company_identity_id,
-            'source_company_name' => $sourceYear->companyIdentity->name,
+            'source_company_id' => $sourceYear->company_id,
+            'source_company_name' => $sourceYear->company->name,
             'exported_at' => now()->toIso8601String(),
             'sections_exported' => $sectionsToExport,
         ];
@@ -276,22 +275,22 @@ class FiscalYearService
      *
      * @param  array  $importData  Data structure (from exportData or similar).
      * @param  array  $newFiscalYearData  Data for the new fiscal year.
-     * @return Company The transitional company row belonging to the new fiscal year.
+     * @return FiscalYear The newly created fiscal year.
      *
      * @throws Exception
      */
-    public static function importData(array $importData, array $newFiscalYearData): Company
+    public static function importData(array $importData, array $newFiscalYearData): FiscalYear
     {
-        $identity = CompanyIdentity::query()->where('name', $newFiscalYearData['name'])->get()
-            ->first(fn($candidate) => strcmp($candidate->name, $newFiscalYearData['name']) === 0);
-        if ($identity && FiscalYear::query()->where('company_identity_id', $identity->id)
+        $identity = Company::query()->where('name', $newFiscalYearData['name'])->get()
+            ->first(fn ($candidate) => strcmp($candidate->name, $newFiscalYearData['name']) === 0);
+        if ($identity && FiscalYear::query()->where('company_id', $identity->id)
             ->where('year', $newFiscalYearData['fiscal_year'])->exists()
         ) {
             throw ValidationException::withMessages(['fiscal_year' => __('This fiscal year already exists for the company.')]);
         }
         if (
             $identity && Auth::check() && ! Auth::user()->can('access-super-admin-panel')
-            && ! Auth::user()->fiscalYears()->where('company_identity_id', $identity->id)->exists()
+            && ! Auth::user()->companies()->whereKey($identity->id)->exists()
         ) {
             throw ValidationException::withMessages(['name' => __('You do not have access to this company.')]);
         }
@@ -301,24 +300,26 @@ class FiscalYearService
             array_keys($importData)
         );
 
-        return DB::transaction(function () use ($importData, $newFiscalYearData, $sectionsToImport) {
+        return DB::transaction(function () use ($importData, $newFiscalYearData, $sectionsToImport, $identity) {
             if (DB::getDriverName() === 'mysql') {
                 DB::statement('SET FOREIGN_KEY_CHECKS=0;');
             }
             Model::unguard();
 
-            $newFiscalYear = Company::create($newFiscalYearData);
-            $newFiscalYear->users()->attach(Auth::id());
+            $company = $identity ?? Company::create(collect($newFiscalYearData)->except(['fiscal_year', 'year'])->toArray());
+            $newFiscalYear = $company->fiscalYears()->create(['year' => $newFiscalYearData['fiscal_year'] ?? $newFiscalYearData['year']]);
             if (Auth::id() !== null) {
-                $newFiscalYear->fiscalYear->users()->syncWithoutDetaching([Auth::id()]);
+                $company->users()->syncWithoutDetaching([Auth::id()]);
+                $newFiscalYear->users()->syncWithoutDetaching([Auth::id()]);
             }
             $targetYearId = $newFiscalYear->id;
 
             $originalCompanyId = getActiveCompany();
             $originalFiscalYearId = getActiveFiscalYear();
+            config(['active-company-id' => $company->id, 'active-fiscal-year-id' => $newFiscalYear->id]);
             Cookie::expire('active-company-id');
-            Cookie::queue('active-company-id', $newFiscalYear->fiscalYear->company_identity_id);
-            Cookie::queue('active-fiscal-year-id', $newFiscalYear->fiscalYear->id);
+            Cookie::queue('active-company-id', $company->id);
+            Cookie::queue('active-fiscal-year-id', $newFiscalYear->id);
 
             $idMappings = [];
 
@@ -592,6 +593,7 @@ class FiscalYearService
                         $idMappings['documents'] ?? [],
                         $idMappings['subjects'] ?? [],
                         $idMappings['cheques'] ?? [],
+                        $targetYearId,
                     );
                 }
                 if (in_array('cheques', $sectionsToImport) && isset($importData['cheque_histories'])) {
@@ -782,7 +784,7 @@ class FiscalYearService
 
                 return $newFiscalYear;
             } catch (Throwable $e) {
-                Log::error('Fiscal Year Import Failed: ' . $e->getMessage(), [
+                Log::error('Fiscal Year Import Failed: '.$e->getMessage(), [
                     'exception' => $e,
                     'new_fiscal_year_data' => $newFiscalYearData,
                     'import_data_keys' => array_keys($importData),
@@ -799,12 +801,22 @@ class FiscalYearService
                 Cookie::expire('active-company-id');
                 Cookie::queue('active-company-id', $originalCompanyId);
                 Cookie::queue('active-fiscal-year-id', $originalFiscalYearId);
+                config(['active-company-id' => $originalCompanyId, 'active-fiscal-year-id' => $originalFiscalYearId]);
                 if (DB::getDriverName() === 'mysql') {
                     DB::statement('SET FOREIGN_KEY_CHECKS=1;');
                 }
                 Model::reguard();
             }
         });
+    }
+
+    private static function targetCompanyId(int $targetYearId): int
+    {
+        if (getActiveFiscalYear() === $targetYearId && getActiveCompany() !== null) {
+            return getActiveCompany();
+        }
+
+        return FiscalYear::query()->findOrFail($targetYearId)->company_id;
     }
 
     /**
@@ -964,9 +976,9 @@ class FiscalYearService
             $workSiteIds = collect($sourceData['work_sites'])->pluck('id')->toArray();
             $sourceData['work_site_contracts'] = ! empty($workSiteIds) ? WorkSiteContract::whereIn('work_site_id', $workSiteIds)->get()->toArray() : [];
 
-            $sourceData['work_shifts'] = WorkShift::withoutGlobalScope(FiscalYearScope::class)
+            $sourceData['work_shifts'] = DB::table('work_shifts')
                 ->where('fiscal_year_id', $sourceFiscalYearId)
-                ->get()->toArray();
+                ->get()->map(fn ($row) => (array) $row)->toArray();
         }
         if (in_array('payrolls', $sections)) {
             $sourceData['salary_decrees'] = SalaryDecree::withoutGlobalScope(FiscalYearScope::class)
@@ -1073,8 +1085,9 @@ class FiscalYearService
     protected static function _createOrgChart(array $orgChartData, int $targetYearId, array &$mapping): OrgChart
     {
         $newOrgChart = new OrgChart;
-        $newOrgChart->fill(collect($orgChartData)->except(['id', 'parent_id', 'company_id', '_lft', '_rgt'])->toArray());
-        $newOrgChart->company_id = $targetYearId;
+        $newOrgChart->fill(collect($orgChartData)->except(['fiscal_year_id', 'id', 'parent_id', 'company_id', '_lft', '_rgt'])->toArray());
+        $newOrgChart->company_id = self::targetCompanyId($targetYearId);
+        $newOrgChart->fiscal_year_id = $targetYearId;
         $newOrgChart->parent_id = ($orgChartData['parent_id'] == 0) ? null : $mapping[$orgChartData['parent_id']];
         $newOrgChart->save();
 
@@ -1119,8 +1132,9 @@ class FiscalYearService
     protected static function _createOrganizationUnit(array $orgUnitData, int $targetYearId, array &$mapping): OrganizationUnit
     {
         $newOrgUnit = new OrganizationUnit;
-        $newOrgUnit->fill(collect($orgUnitData)->except(['id', 'parent_id', 'company_id'])->toArray());
-        $newOrgUnit->company_id = $targetYearId;
+        $newOrgUnit->fill(collect($orgUnitData)->except(['fiscal_year_id', 'id', 'parent_id', 'company_id'])->toArray());
+        $newOrgUnit->company_id = self::targetCompanyId($targetYearId);
+        $newOrgUnit->fiscal_year_id = $targetYearId;
         $newOrgUnit->parent_id = ($orgUnitData['parent_id'] == 0 || $orgUnitData['parent_id'] === null) ? null : ($mapping[$orgUnitData['parent_id']] ?? null);
         $newOrgUnit->save();
 
@@ -1171,10 +1185,11 @@ class FiscalYearService
                 'status' => PersonnelRequestStatus::class,
             ]);
             $newPr = new PersonnelRequest;
-            $newPr->fill(collect($pr)->except(['id', 'payroll_id', 'employee_id'])->toArray());
+            $newPr->fill(collect($pr)->except(['fiscal_year_id', 'id', 'payroll_id', 'employee_id'])->toArray());
             $newPr->employee_id = $employeeMapping[$oldEmployeeId];
             $newPr->payroll_id = $payrollMapping[$oldPayrollId];
-            $newPr->company_id = $targetYearId;
+            $newPr->company_id = self::targetCompanyId($targetYearId);
+            $newPr->fiscal_year_id = $targetYearId;
             $newPr->save();
             $mapping[$pr['id']] = $newPr->id;
         }
@@ -1217,11 +1232,12 @@ class FiscalYearService
 
             $p = self::_normalizeEnumAttributes($p, ['status' => PayrollStatus::class]);
             $newP = new Payroll;
-            $newP->fill(collect($p)->except(['id', 'decree_id', 'employee_id'])->toArray());
+            $newP->fill(collect($p)->except(['fiscal_year_id', 'id', 'decree_id', 'employee_id'])->toArray());
             $newP->employee_id = $employeeMapping[$oldEmployeeId];
             $newP->decree_id = $salaryDecreeMapping[$oldDecreeId];
             $newP->monthly_attendance_id = $monthlyAttendanceMapping[$oldMonthlyAttendanceId];
-            $newP->company_id = $targetYearId;
+            $newP->company_id = self::targetCompanyId($targetYearId);
+            $newP->fiscal_year_id = $targetYearId;
             $newP->save();
             $mapping[$p['id']] = $newP->id;
         }
@@ -1255,7 +1271,7 @@ class FiscalYearService
             }
 
             $newPi = new PayrollItem;
-            $newPi->fill(collect($pi)->except(['id', 'decree_id', 'element_id'])->toArray());
+            $newPi->fill(collect($pi)->except(['fiscal_year_id', 'id', 'decree_id', 'element_id'])->toArray());
             $newPi->payroll_id = $payrollMapping[$oldPayrollId];
             $newPi->element_id = $payrollElementMapping[$oldElementId];
             $newPi->save();
@@ -1285,7 +1301,7 @@ class FiscalYearService
                 'to_status' => PayrollStatus::class,
             ]);
             $newPsh = new PayrollStatusHistory;
-            $newPsh->fill(collect($psh)->except(['id', 'payroll_id'])->toArray());
+            $newPsh->fill(collect($psh)->except(['fiscal_year_id', 'id', 'payroll_id'])->toArray());
             $newPsh->payroll_id = $payrollMapping[$oldPayrollId];
             $newPsh->save();
         }
@@ -1317,7 +1333,7 @@ class FiscalYearService
             }
 
             $newDb = new DecreeBenefit;
-            $newDb->fill(collect($db)->except(['id', 'decree_id', 'element_id'])->toArray());
+            $newDb->fill(collect($db)->except(['fiscal_year_id', 'id', 'decree_id', 'element_id'])->toArray());
             $newDb->decree_id = $salaryDecreeMapping[$oldDecreeId];
             $newDb->element_id = $payrollElementMapping[$oldElementId];
             $newDb->save();
@@ -1353,8 +1369,9 @@ class FiscalYearService
             }
 
             $newAl = new AttendanceLog;
-            $newAl->fill(collect($al)->except(['id', 'employee_id', 'monthly_attendance_id', 'approved_overtime'])->toArray());
-            $newAl->company_id = $targetYearId;
+            $newAl->fill(collect($al)->except(['fiscal_year_id', 'id', 'employee_id', 'monthly_attendance_id', 'approved_overtime'])->toArray());
+            $newAl->company_id = self::targetCompanyId($targetYearId);
+            $newAl->fiscal_year_id = $targetYearId;
             $newAl->employee_id = $employeeMapping[$oldEmployeeId];
             $newAl->monthly_attendance_id = $monthlyAttendanceMapping[$oldMonthlyAttendanceId];
             $newAl->save();
@@ -1382,8 +1399,9 @@ class FiscalYearService
             }
 
             $newMa = new MonthlyAttendance;
-            $newMa->fill(collect($ma)->except(['id', 'employee_id'])->toArray());
-            $newMa->company_id = $targetYearId;
+            $newMa->fill(collect($ma)->except(['fiscal_year_id', 'id', 'employee_id'])->toArray());
+            $newMa->company_id = self::targetCompanyId($targetYearId);
+            $newMa->fiscal_year_id = $targetYearId;
             $newMa->employee_id = $employeeMapping[$oldEmployeeId];
             $newMa->save();
             $mapping[$ma['id']] = $newMa->id;
@@ -1412,7 +1430,9 @@ class FiscalYearService
             $newSd = new SalaryDecree;
             $newSd->fill(collect($sd)->only(['name', 'start_date', 'end_date', 'daily_wage', 'description', 'is_active'])->toArray());
 
-            $newSd->company_id = $targetYearId;
+            $newSd->company_id = self::targetCompanyId($targetYearId);
+
+            $newSd->fiscal_year_id = $targetYearId;
             $newSd->employee_id = $employeeMapping[$oldEmployeeId];
             $newSd->save();
             $mapping[$sd['id']] = $newSd->id;
@@ -1429,7 +1449,8 @@ class FiscalYearService
         foreach ($publicHolidaysData as $ph) {
             $newPh = new PublicHoliday;
             $newPh->fill(collect($ph)->except(['id'])->toArray());
-            $newPh->company_id = $targetYearId;
+            $newPh->company_id = self::targetCompanyId($targetYearId);
+            $newPh->fiscal_year_id = $targetYearId;
             $newPh->save();
         }
     }
@@ -1443,7 +1464,8 @@ class FiscalYearService
             $ts = self::_normalizeEnumAttributes($ts, ['calc_type' => PayrollElementCalcType::class]);
             $newTs = new TaxSlab;
             $newTs->fill(collect($ts)->except(['id'])->toArray());
-            $newTs->company_id = $targetYearId;
+            $newTs->company_id = self::targetCompanyId($targetYearId);
+            $newTs->fiscal_year_id = $targetYearId;
             $newTs->save();
         }
     }
@@ -1487,7 +1509,8 @@ class FiscalYearService
             $ws = self::_normalizeEnumAttributes($ws, ['thursday_status' => ThursdayStatus::class]);
             $newWs = new WorkShift;
             $newWs->fill(collect($ws)->except(['id'])->toArray());
-            $newWs->company_id = $targetYearId;
+            $newWs->company_id = self::targetCompanyId($targetYearId);
+            $newWs->fiscal_year_id = $targetYearId;
             $newWs->save();
             $mapping[$ws['id']] = $newWs->id;
         }
@@ -1506,7 +1529,8 @@ class FiscalYearService
         foreach ($workSitesData as $ws) {
             $newWs = new WorkSite;
             $newWs->fill(collect($ws)->except(['id'])->toArray());
-            $newWs->company_id = $targetYearId;
+            $newWs->company_id = self::targetCompanyId($targetYearId);
+            $newWs->fiscal_year_id = $targetYearId;
             $newWs->save();
             $mapping[$ws['id']] = $newWs->id;
         }
@@ -1530,7 +1554,8 @@ class FiscalYearService
             ]);
             $newPe = new PayrollElement;
             $newPe->fill(collect($pe)->except(['id'])->toArray());
-            $newPe->company_id = $targetYearId;
+            $newPe->company_id = self::targetCompanyId($targetYearId);
+            $newPe->fiscal_year_id = $targetYearId;
             $newPe->save();
             $mapping[$pe['id']] = $newPe->id;
         }
@@ -1580,8 +1605,9 @@ class FiscalYearService
 
             $newEmp = new Employee;
             $employeeData = self::_normalizeEmployeeEnumAttributes($employeeData);
-            $newEmp->fill(collect($employeeData)->except(['id', 'org_chart_id', 'organization_unit_id', 'work_site_id', 'work_shift_id', 'contract_framework_id'])->toArray());
-            $newEmp->company_id = $targetYearId;
+            $newEmp->fill(collect($employeeData)->except(['fiscal_year_id', 'id', 'org_chart_id', 'organization_unit_id', 'work_site_id', 'work_shift_id', 'contract_framework_id'])->toArray());
+            $newEmp->company_id = self::targetCompanyId($targetYearId);
+            $newEmp->fiscal_year_id = $targetYearId;
             $newEmp->org_chart_id = $orgChartMapping[$oldOrgChartId] ?? null;
             $newEmp->organization_unit_id = $oldOrganizationUnitId ? ($organizationUnitMapping[$oldOrganizationUnitId] ?? null) : null;
             $newEmp->work_site_id = $workSiteMapping[$oldWorkSiteId] ?? null;
@@ -1672,8 +1698,9 @@ class FiscalYearService
                 ? SubjectType::BOTH
                 : SubjectType::fromName($subjectData['type']);
         }
-        $newSubject->fill(collect($subjectData)->except(['id', 'parent_id', 'company_id', '_lft', '_rgt', 'subjectable_type', 'subjectable_id'])->toArray());
-        $newSubject->company_id = $targetYearId;
+        $newSubject->fill(collect($subjectData)->except(['fiscal_year_id', 'id', 'parent_id', 'company_id', '_lft', '_rgt', 'subjectable_type', 'subjectable_id'])->toArray());
+        $newSubject->company_id = self::targetCompanyId($targetYearId);
+        $newSubject->fiscal_year_id = $targetYearId;
         $newSubject->parent_id = ($subjectData['parent_id'] == 0) ? null : $mapping[$subjectData['parent_id']];
         $newSubject->subjectable_type = null;
         $newSubject->subjectable_id = null;
@@ -1712,8 +1739,9 @@ class FiscalYearService
             }
 
             $newMonthlyBudget = new MonthlyBudget;
-            $newMonthlyBudget->fill(collect($monthlyBudgetData)->except(['id', 'company_id', 'subject_id'])->toArray());
-            $newMonthlyBudget->company_id = $targetYearId;
+            $newMonthlyBudget->fill(collect($monthlyBudgetData)->except(['fiscal_year_id', 'id', 'company_id', 'subject_id'])->toArray());
+            $newMonthlyBudget->company_id = self::targetCompanyId($targetYearId);
+            $newMonthlyBudget->fiscal_year_id = $targetYearId;
             $newMonthlyBudget->subject_id = $subjectMapping[$oldSubjectId];
             $newMonthlyBudget->save();
         }
@@ -1729,7 +1757,8 @@ class FiscalYearService
         foreach ($configsData as $configData) {
             $newConfig = new Config;
             $newConfig->fill(collect($configData)->except(['id'])->toArray());
-            $newConfig->company_id = $targetYearId;
+            $newConfig->company_id = self::targetCompanyId($targetYearId);
+            $newConfig->fiscal_year_id = $targetYearId;
 
             $oldValue = $configData['value'] ?? null;
             if ($oldValue !== null && isset($subjectMapping[$oldValue])) {
@@ -1738,7 +1767,7 @@ class FiscalYearService
                 $newConfig->value = $oldValue; // Keep original value otherwise
             }
 
-            config(['amir.' . $newConfig->key => $newConfig->value]);
+            config(['amir.'.$newConfig->key => $newConfig->value]);
 
             $newConfig->save();
         }
@@ -1755,7 +1784,8 @@ class FiscalYearService
         foreach ($banksData as $bankData) {
             $newBank = new Bank;
             $newBank->fill(collect($bankData)->except(['id'])->toArray());
-            $newBank->company_id = $targetYearId;
+            $newBank->company_id = self::targetCompanyId($targetYearId);
+            $newBank->fiscal_year_id = $targetYearId;
             $newBank->save();
             $mapping[$bankData['id']] = $newBank->id;
         }
@@ -1791,8 +1821,8 @@ class FiscalYearService
             $newAccount = new BankAccount;
             $newAccount->fill(collect($accountData)->except(['id'])->toArray());
             $newAccount->bank_id = $bankMapping[$oldBankId];
-            $newAccount->company_id = $targetYearId;
-            $newAccount->fiscal_year_id = FiscalYear::query()->where('legacy_company_id', $targetYearId)->value('id');
+            $newAccount->company_id = self::targetCompanyId($targetYearId);
+            $newAccount->fiscal_year_id = $targetYearId;
             $newAccount->subject_id = $subjectMapping[$oldSubjectId];
             $newAccount->saveQuietly();
 
@@ -1820,7 +1850,8 @@ class FiscalYearService
         foreach ($groupsData as $groupData) {
             $newGroup = new CustomerGroup;
             $newGroup->fill(collect($groupData)->except(['id'])->toArray());
-            $newGroup->company_id = $targetYearId;
+            $newGroup->company_id = self::targetCompanyId($targetYearId);
+            $newGroup->fiscal_year_id = $targetYearId;
 
             $oldSubjectId = $groupData['subject_id'] ?? null;
             $newGroup->subject_id = ($oldSubjectId && isset($subjectMapping[$oldSubjectId])) ? $subjectMapping[$oldSubjectId] : null;
@@ -1868,9 +1899,9 @@ class FiscalYearService
             $customerData = self::_normalizeEnumAttributes($customerData, ['type' => CustomerType::class]);
 
             $newCustomer = new Customer;
-            $newCustomer->fill(collect($customerData)->except(['id', 'group_id', 'subject_id', 'company_id', 'introducer_id'])->toArray());
-            $newCustomer->company_id = $targetYearId;
-            $newCustomer->fiscal_year_id = FiscalYear::query()->where('legacy_company_id', $targetYearId)->value('id');
+            $newCustomer->fill(collect($customerData)->except(['fiscal_year_id', 'id', 'group_id', 'subject_id', 'company_id', 'introducer_id'])->toArray());
+            $newCustomer->company_id = self::targetCompanyId($targetYearId);
+            $newCustomer->fiscal_year_id = $targetYearId;
             $newCustomer->introducer_id = $oldIntroducerId ? $mapping[$oldIntroducerId] : null;
             $newCustomer->group_id = $groupMapping[$oldGroupId];
             $newCustomer->subject_id = $subjectMapping[$oldSubjectId];
@@ -1904,7 +1935,7 @@ class FiscalYearService
             }
 
             $newComment = new Comment;
-            $newComment->fill(collect($commentData)->except(['id', 'customer_id'])->toArray());
+            $newComment->fill(collect($commentData)->except(['fiscal_year_id', 'id', 'customer_id'])->toArray());
             $newComment->customer_id = $customerMapping[$oldCustomerId];
             $newComment->save();
         }
@@ -1943,8 +1974,9 @@ class FiscalYearService
             }
 
             $newGroup = new ServiceGroup;
-            $newGroup->fill(collect($groupData)->except(['id', 'subject_id', 'cogs_subject_id', 'sales_returns_subject_id'])->toArray());
-            $newGroup->company_id = $targetYearId;
+            $newGroup->fill(collect($groupData)->except(['fiscal_year_id', 'id', 'subject_id', 'cogs_subject_id', 'sales_returns_subject_id'])->toArray());
+            $newGroup->company_id = self::targetCompanyId($targetYearId);
+            $newGroup->fiscal_year_id = $targetYearId;
             $newGroup->subject_id = $subjectMapping[$oldSubjectId];
             $newGroup->cogs_subject_id = $subjectMapping[$oldCogsSubjectId];
             $newGroup->sales_returns_subject_id = $subjectMapping[$oldSalesReturnsSubjectId];
@@ -2006,12 +2038,13 @@ class FiscalYearService
             }
 
             $newService = new Service;
-            $newService->fill(collect($serviceData)->except(['id', 'group', 'subject_id', 'cogs_subject_id', 'sales_returns_subject_id'])->toArray());
+            $newService->fill(collect($serviceData)->except(['fiscal_year_id', 'id', 'group', 'subject_id', 'cogs_subject_id', 'sales_returns_subject_id'])->toArray());
             $newService->group = $groupMapping[$oldGroupId];
             $newService->subject_id = $subjectMapping[$oldSubjectId];
             $newService->cogs_subject_id = $subjectMapping[$oldCogsSubjectId];
             $newService->sales_returns_subject_id = $subjectMapping[$oldSalesReturnsSubjectId];
-            $newService->company_id = $targetYearId;
+            $newService->company_id = self::targetCompanyId($targetYearId);
+            $newService->fiscal_year_id = $targetYearId;
             $newService->save();
 
             $subjectsArray = [$newService->subject_id, $newService->cogs_subject_id, $newService->sales_returns_subject_id];
@@ -2069,8 +2102,9 @@ class FiscalYearService
             }
 
             $newGroup = new ProductGroup;
-            $newGroup->fill(collect($groupData)->except(['id', 'sales_returns_subject_id', 'income_subject_id', 'cogs_subject_id', 'inventory_subject_id'])->toArray());
-            $newGroup->company_id = $targetYearId;
+            $newGroup->fill(collect($groupData)->except(['fiscal_year_id', 'id', 'sales_returns_subject_id', 'income_subject_id', 'cogs_subject_id', 'inventory_subject_id'])->toArray());
+            $newGroup->company_id = self::targetCompanyId($targetYearId);
+            $newGroup->fiscal_year_id = $targetYearId;
             $newGroup->sales_returns_subject_id = $subjectMapping[$oldSalesReturnsSubjectId];
             $newGroup->income_subject_id = $subjectMapping[$oldIncomeSubjectId];
             $newGroup->cogs_subject_id = $subjectMapping[$oldCogsSubjectId];
@@ -2140,7 +2174,7 @@ class FiscalYearService
             }
 
             $newProduct = new Product;
-            $newProduct->fill(collect($productData)->except(['id', 'group', 'warehouse_id', 'sales_returns_subject_id', 'income_subject_id', 'cogs_subject_id', 'inventory_subject_id'])->toArray());
+            $newProduct->fill(collect($productData)->except(['fiscal_year_id', 'id', 'group', 'warehouse_id', 'sales_returns_subject_id', 'income_subject_id', 'cogs_subject_id', 'inventory_subject_id'])->toArray());
             $newProduct->group = $groupMapping[$oldGroupId];
             $oldWarehouseId = $productData['warehouse_id'] ?? null;
             if ($oldWarehouseId !== null && isset($warehouseMapping[$oldWarehouseId])) {
@@ -2150,7 +2184,8 @@ class FiscalYearService
             $newProduct->income_subject_id = $subjectMapping[$oldIncomeSubjectId];
             $newProduct->cogs_subject_id = $subjectMapping[$oldCogsSubjectId];
             $newProduct->inventory_subject_id = $subjectMapping[$oldInventorySubjectId];
-            $newProduct->company_id = $targetYearId;
+            $newProduct->company_id = self::targetCompanyId($targetYearId);
+            $newProduct->fiscal_year_id = $targetYearId;
             $newProduct->save();
 
             $subjectsArray = [$newProduct->sales_returns_subject_id, $newProduct->income_subject_id, $newProduct->cogs_subject_id, $newProduct->inventory_subject_id];
@@ -2174,8 +2209,9 @@ class FiscalYearService
 
         foreach ($warehousesData as $warehouseData) {
             $warehouse = new Warehouse;
-            $warehouse->fill(collect($warehouseData)->except(['id', 'company_id'])->toArray());
-            $warehouse->company_id = $targetYearId;
+            $warehouse->fill(collect($warehouseData)->except(['fiscal_year_id', 'id', 'company_id'])->toArray());
+            $warehouse->company_id = self::targetCompanyId($targetYearId);
+            $warehouse->fiscal_year_id = $targetYearId;
             $warehouse->save();
             $mapping[$warehouseData['id']] = $warehouse->id;
         }
@@ -2193,7 +2229,7 @@ class FiscalYearService
             }
 
             $stock = new WarehouseProductStock;
-            $stock->fill(collect($stockData)->except(['id', 'warehouse_id', 'product_id'])->toArray());
+            $stock->fill(collect($stockData)->except(['fiscal_year_id', 'id', 'warehouse_id', 'product_id'])->toArray());
             $stock->warehouse_id = $warehouseMapping[$oldWarehouseId];
             $stock->product_id = $productMapping[$oldProductId];
             $stock->save();
@@ -2211,8 +2247,9 @@ class FiscalYearService
             }
 
             $transfer = new WarehouseTransfer;
-            $transfer->fill(collect($transferData)->except(['id', 'company_id', 'product_id', 'from_warehouse_id', 'to_warehouse_id', 'transferred_by'])->toArray());
-            $transfer->company_id = $targetYearId;
+            $transfer->fill(collect($transferData)->except(['fiscal_year_id', 'id', 'company_id', 'product_id', 'from_warehouse_id', 'to_warehouse_id', 'transferred_by'])->toArray());
+            $transfer->company_id = self::targetCompanyId($targetYearId);
+            $transfer->fiscal_year_id = $targetYearId;
             $transfer->product_id = $productMapping[$oldProductId];
             $transfer->from_warehouse_id = $warehouseMapping[$oldFromWarehouseId];
             $transfer->to_warehouse_id = $warehouseMapping[$oldToWarehouseId];
@@ -2237,7 +2274,7 @@ class FiscalYearService
             }
 
             $newProductWebsite = new ProductWebsite;
-            $newProductWebsite->fill(collect($productWebsiteData)->except(['id', 'product_id'])->toArray());
+            $newProductWebsite->fill(collect($productWebsiteData)->except(['fiscal_year_id', 'id', 'product_id'])->toArray());
             $newProductWebsite->product_id = $productMapping[$oldProductId];
             $newProductWebsite->save();
         }
@@ -2254,7 +2291,8 @@ class FiscalYearService
         foreach ($documentsData as $docData) {
             $newDoc = new Document;
             $newDoc->fill(collect($docData)->except(['id'])->toArray());
-            $newDoc->company_id = $targetYearId;
+            $newDoc->company_id = self::targetCompanyId($targetYearId);
+            $newDoc->fiscal_year_id = $targetYearId;
             $newDoc->save();
             $mapping[$docData['id']] = $newDoc->id;
         }
@@ -2332,7 +2370,7 @@ class FiscalYearService
             $base64Content = $fileData['content'];
             $expectedSha256 = $fileData['sha256'] ?? null;
             $fileName = basename($fileData['name'] ?? ($documentFileData['name'] ?? 'file'));
-            $newRelPath = 'documents/' . $newDocumentId . '/' . $fileName;
+            $newRelPath = 'documents/'.$newDocumentId.'/'.$fileName;
 
             $tempPath = tempnam(sys_get_temp_dir(), 'docfile_import_');
             $tempHandle = fopen($tempPath, 'wb');
@@ -2371,7 +2409,7 @@ class FiscalYearService
             }
 
             $newFile = new DocumentFile;
-            $newFile->fill(collect($documentFileData)->except(['id', 'document_id', 'user_id', 'document_file'])->toArray());
+            $newFile->fill(collect($documentFileData)->except(['fiscal_year_id', 'id', 'document_id', 'user_id', 'document_file'])->toArray());
             $newFile->document_id = $newDocumentId;
             $newFile->user_id = $oldUserId;
             $newFile->path = $newRelPath;
@@ -2396,9 +2434,9 @@ class FiscalYearService
             }
 
             $newChequebook = new Chequebook;
-            $newChequebook->fill(collect($chequebookData)->except(['id', 'company_id', 'bank_account_id'])->toArray());
-            $newChequebook->company_id = $targetYearId;
-            $newChequebook->fiscal_year_id = FiscalYear::query()->where('legacy_company_id', $targetYearId)->value('id');
+            $newChequebook->fill(collect($chequebookData)->except(['fiscal_year_id', 'id', 'company_id', 'bank_account_id'])->toArray());
+            $newChequebook->company_id = self::targetCompanyId($targetYearId);
+            $newChequebook->fiscal_year_id = $targetYearId;
             $newChequebook->bank_account_id = $bankAccountMapping[$oldBankAccountId];
             $newChequebook->saveQuietly();
 
@@ -2452,9 +2490,9 @@ class FiscalYearService
                 'status' => ChequeType::class,
             ]);
             $newCheque = new Cheque;
-            $newCheque->fill(collect($chequeData)->except(['id', 'company_id', 'customer_id', 'endorsed_to_id', 'bank_account_id', 'chequebook_id'])->toArray());
-            $newCheque->company_id = $targetYearId;
-            $newCheque->fiscal_year_id = FiscalYear::query()->where('legacy_company_id', $targetYearId)->value('id');
+            $newCheque->fill(collect($chequeData)->except(['fiscal_year_id', 'id', 'company_id', 'customer_id', 'endorsed_to_id', 'bank_account_id', 'chequebook_id'])->toArray());
+            $newCheque->company_id = self::targetCompanyId($targetYearId);
+            $newCheque->fiscal_year_id = $targetYearId;
             $newCheque->customer_id = $customerMapping[$oldCustomerId];
             $newCheque->endorsed_to_id = $oldEndorsedToId !== null ? $customerMapping[$oldEndorsedToId] : null;
             $newCheque->bank_account_id = $oldBankAccountId !== null ? $bankAccountMapping[$oldBankAccountId] : null;
@@ -2519,7 +2557,7 @@ class FiscalYearService
                 'to_status' => ChequeType::class,
             ]);
             $newChequeHistory = new ChequeHistory;
-            $newChequeHistory->fill(collect($chequeHistoryData)->except(['id', 'cheque_id', 'document_id', 'payment_id'])->toArray());
+            $newChequeHistory->fill(collect($chequeHistoryData)->except(['fiscal_year_id', 'id', 'cheque_id', 'document_id', 'payment_id'])->toArray());
             $newChequeHistory->cheque_id = $chequeMapping[$oldChequeId];
             $newChequeHistory->document_id = $oldDocumentId !== null ? ($documentMapping[$oldDocumentId] ?? null) : null;
             $newChequeHistory->payment_id = $oldPaymentId !== null ? ($paymentMapping[$oldPaymentId] ?? null) : null;
@@ -2559,11 +2597,11 @@ class FiscalYearService
                     'status' => InvoiceStatus::class,
                 ]);
                 $newInvoice = new Invoice;
-                $newInvoice->fill(collect($invoiceData)->except(['id', 'customer_id', 'document_id', 'warehouse_id'])->toArray());
+                $newInvoice->fill(collect($invoiceData)->except(['fiscal_year_id', 'id', 'customer_id', 'document_id', 'warehouse_id'])->toArray());
                 $newInvoice->customer_id = $isBeginningInventory ? null : $customerMapping[$oldCustomerId];
                 $newInvoice->document_id = $oldDocumentId ? ($documentMapping[$oldDocumentId] ?? null) : null;
-                $newInvoice->company_id = $targetYearId;
-                $newInvoice->fiscal_year_id = FiscalYear::query()->where('legacy_company_id', $targetYearId)->value('id');
+                $newInvoice->company_id = self::targetCompanyId($targetYearId);
+                $newInvoice->fiscal_year_id = $targetYearId;
                 $newInvoice->warehouse_id = $warehouseMapping[$invoiceData['warehouse_id'] ?? null] ?? null;
                 $newInvoice->saveQuietly();
 
@@ -2599,12 +2637,12 @@ class FiscalYearService
                     'status' => InvoiceStatus::class,
                 ]);
                 $newInvoice = new Invoice;
-                $newInvoice->fill(collect($invoiceData)->except(['id', 'customer_id', 'document_id', 'returned_invoice_id', 'warehouse_id'])->toArray());
+                $newInvoice->fill(collect($invoiceData)->except(['fiscal_year_id', 'id', 'customer_id', 'document_id', 'returned_invoice_id', 'warehouse_id'])->toArray());
                 $newInvoice->customer_id = $customerMapping[$oldCustomerId];
                 $newInvoice->returned_invoice_id = $mapping[$oldReturnedInvoiceId];
                 $newInvoice->document_id = $oldDocumentId ? ($documentMapping[$oldDocumentId] ?? null) : null;
-                $newInvoice->company_id = $targetYearId;
-                $newInvoice->fiscal_year_id = FiscalYear::query()->where('legacy_company_id', $targetYearId)->value('id');
+                $newInvoice->company_id = self::targetCompanyId($targetYearId);
+                $newInvoice->fiscal_year_id = $targetYearId;
                 $newInvoice->warehouse_id = $warehouseMapping[$invoiceData['warehouse_id'] ?? null] ?? null;
                 $newInvoice->saveQuietly();
 
@@ -2668,7 +2706,7 @@ class FiscalYearService
             }
 
             $newInvoiceItem = new InvoiceItem;
-            $newInvoiceItem->fill(collect($invoiceItemData)->except(['id', 'invoice_id', 'itemable_id', 'warehouse_id'])->toArray());
+            $newInvoiceItem->fill(collect($invoiceItemData)->except(['fiscal_year_id', 'id', 'invoice_id', 'itemable_id', 'warehouse_id'])->toArray());
             $newInvoiceItem->invoice_id = $invoiceMapping[$oldInvoiceId];
             $newInvoiceItem->itemable_id = $productCondition ? $productMapping[$oldItemableId] : $serviceMapping[$oldItemableId];
             $newInvoiceItem->save();
@@ -2707,11 +2745,12 @@ class FiscalYearService
                 'status' => InvoiceStatus::class,
             ]);
             $newAncillaryCost = new AncillaryCost;
-            $newAncillaryCost->fill(collect($ancillaryCostData)->except(['id', 'invoice_id', 'document_id', 'customer_id'])->toArray());
+            $newAncillaryCost->fill(collect($ancillaryCostData)->except(['fiscal_year_id', 'id', 'invoice_id', 'document_id', 'customer_id'])->toArray());
             $newAncillaryCost->invoice_id = $invoiceMapping[$oldInvoiceId];
             $newAncillaryCost->document_id = $oldDocumentId && isset($documentMapping[$oldDocumentId]) ? $documentMapping[$oldDocumentId] : null;
             $newAncillaryCost->customer_id = $customerMapping[$oldCustomerId];
-            $newAncillaryCost->company_id = $targetYearId;
+            $newAncillaryCost->company_id = self::targetCompanyId($targetYearId);
+            $newAncillaryCost->fiscal_year_id = $targetYearId;
             $newAncillaryCost->save();
 
             $mapping[$ancillaryCostData['id']] = $newAncillaryCost->id;
@@ -2747,7 +2786,7 @@ class FiscalYearService
 
             $ancillaryCostItemData = self::_normalizeEnumAttributes($ancillaryCostItemData, ['type' => AncillaryCostType::class]);
             $newAncillaryCostItem = new AncillaryCostItem;
-            $newAncillaryCostItem->fill(collect($ancillaryCostItemData)->except(['id', 'ancillary_cost_id', 'product_id'])->toArray());
+            $newAncillaryCostItem->fill(collect($ancillaryCostItemData)->except(['fiscal_year_id', 'id', 'ancillary_cost_id', 'product_id'])->toArray());
             $newAncillaryCostItem->ancillary_cost_id = $ancillaryCostMapping[$oldAncillaryCostId];
             $newAncillaryCostItem->product_id = $productMapping[$oldProductId];
             $newAncillaryCostItem->save();
@@ -2764,7 +2803,7 @@ class FiscalYearService
      * @param  array  $chequeMapping  Mapping of old cheque ID to new cheque ID.
      * @return array<int, int> Mapping of old payment ID to new payment ID.
      */
-    protected static function _importPayments(array $paymentsData, array $invoiceMapping, array $customerMapping, array $documentMapping, array $subjectMapping, array $chequeMapping): array
+    protected static function _importPayments(array $paymentsData, array $invoiceMapping, array $customerMapping, array $documentMapping, array $subjectMapping, array $chequeMapping, int $targetYearId): array
     {
         $mapping = [];
 
@@ -2793,12 +2832,13 @@ class FiscalYearService
             $oldSubjectId = $paymentData['settlement_subject_id'] ?? null;
 
             $newPayment = new Payment;
-            $newPayment->fill(collect($paymentData)->except(['id', 'invoice_id', 'cheque_id', 'payer_id', 'payee_id', 'document_id', 'settlement_subject_id'])->toArray());
+            $newPayment->fill(collect($paymentData)->except(['fiscal_year_id', 'id', 'invoice_id', 'cheque_id', 'payer_id', 'payee_id', 'document_id', 'settlement_subject_id'])->toArray());
             $newPayment->invoice_id = $oldInvoiceId !== null ? $invoiceMapping[$oldInvoiceId] : null;
             $newPayment->cheque_id = $oldChequeId !== null ? $chequeMapping[$oldChequeId] : null;
             $newPayment->payer_id = $oldPayerId !== null ? ($customerMapping[$oldPayerId] ?? null) : null;
             $newPayment->document_id = $oldDocumentId !== null ? ($documentMapping[$oldDocumentId] ?? null) : null;
             $newPayment->settlement_subject_id = $oldSubjectId !== null ? ($subjectMapping[$oldSubjectId] ?? null) : null;
+            $newPayment->fiscal_year_id = $targetYearId;
             $newPayment->save();
 
             $mapping[$paymentData['id']] = $newPayment->id;
@@ -2807,21 +2847,21 @@ class FiscalYearService
         return $mapping;
     }
 
-    protected static function validateClosingFiscalYear(Company $company): array
+    protected static function validateClosingFiscalYear(FiscalYear $year): array
     {
         $errors = [];
 
-        $isCloseYear = $company->closed_at !== null;
+        $isCloseYear = $year->closed_at !== null;
         if ($isCloseYear) {
             $errors[] = __('Cannot close fiscal year because the year is not open.');
         }
 
-        $draftDocsCount = Document::where('company_id', $company->id)->whereNull('approved_at')->count();
+        $draftDocsCount = Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $year->id)->whereNull('approved_at')->count();
         if ($draftDocsCount > 0) {
             $errors[] = __('Cannot close fiscal year with draft documents. Please approve or delete all draft documents before closing the year.');
         }
 
-        // $unbalancedDocsCount = Document::where('company_id', $company->id)->has('transactions')
+        // $unbalancedDocsCount = Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $year->id)->has('transactions')
         //     ->withSum('transactions', 'value')->having('transactions_sum_value', '!=', 0);
 
         // if ($unbalancedDocsCount->count() > 0) {
@@ -2831,19 +2871,20 @@ class FiscalYearService
         return $errors;
     }
 
-    protected static function balanceCurrentProfitAndLoss(Company $company, Collection $transactions, User $user): Collection
+    protected static function balanceCurrentProfitAndLoss(FiscalYear $year, Collection $transactions, User $user): Collection
     {
         $difference = (float) $transactions->sum('value');
 
         if ($difference !== 0.0) {
-            $subject = Subject::where('company_id', $company->id)
+            $subject = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $year->id)
                 ->where('name', __('Current Profit and Loss Summary'))->first();
 
             if (! $subject) {
                 $subjectService = new SubjectService;
                 $subject = $subjectService->createSubject([
                     'name' => __('Current Profit and Loss Summary'),
-                    'company_id' => $company->id,
+                    'company_id' => $year->company_id,
+                    'fiscal_year_id' => $year->id,
                 ]);
             }
 
@@ -2859,14 +2900,15 @@ class FiscalYearService
         return $transactions;
     }
 
-    protected static function createOpeningDocument(Company $company, Document $closeDocument, User $user): void
+    protected static function createOpeningDocument(FiscalYear $year, Document $closeDocument, User $user): void
     {
         $documentData = [
             'number' => 1,
             'date' => now(),
             'title' => __('Fiscal year opening Document'),
             'creator_id' => $user->id,
-            'company_id' => $company->id,
+            'company_id' => $year->company_id,
+            'fiscal_year_id' => $year->id,
             'approved_at' => now(),
             'approver_id' => $user->id,
         ];
@@ -2874,13 +2916,13 @@ class FiscalYearService
         $sourceSubjectIds = $closeDocument->transactions()->pluck('subject_id')->filter()->unique()->values();
 
         $sourceSubjectsById = Subject::withoutGlobalScope(FiscalYearScope::class)
-            ->where('company_id', $closeDocument->company_id)
+            ->where('fiscal_year_id', $closeDocument->fiscal_year_id)
             ->whereIn('id', $sourceSubjectIds)
             ->get(['id', 'code'])
             ->keyBy('id');
 
         $targetSubjectsByCode = Subject::withoutGlobalScope(FiscalYearScope::class)
-            ->where('company_id', $company->id)
+            ->where('fiscal_year_id', $year->id)
             ->whereIn('code', $sourceSubjectsById->pluck('code')->filter()->unique()->values())
             ->pluck('id', 'code')
             ->toArray();
@@ -2894,19 +2936,19 @@ class FiscalYearService
         }
 
         // Reverse the transactions of closing document to create opening document for the new fiscal year
-        $transactions = $closeDocument->transactions()->get()->map(function ($transaction) use ($user, $subjectMapping, $company) {
+        $transactions = $closeDocument->transactions()->get()->map(function ($transaction) use ($user, $subjectMapping, $year) {
             return [
                 'subject_id' => $subjectMapping[$transaction->subject_id] ?? null,
                 'value' => -1 * $transaction->value,
                 'user_id' => $user->id,
-                'desc' => __('Fiscal year opening Document') . ' ' . $company->fiscal_year,
+                'desc' => __('Fiscal year opening Document').' '.$year->year,
             ];
-        })->filter(fn($transaction) => $transaction['subject_id'] !== null)->values()->toArray();
+        })->filter(fn ($transaction) => $transaction['subject_id'] !== null)->values()->toArray();
 
         if (empty($transactions)) {
             Log::warning('Skipping opening document creation due to missing subject mappings.', [
-                'source_company_id' => $closeDocument->company_id,
-                'target_company_id' => $company->id,
+                'source_fiscal_year_id' => $closeDocument->fiscal_year_id,
+                'target_fiscal_year_id' => $year->id,
                 'close_document_id' => $closeDocument->id,
             ]);
 
@@ -2916,63 +2958,64 @@ class FiscalYearService
         DocumentService::createDocument($user, $documentData, $transactions);
     }
 
-    protected static function createClosingDocument(Company $company, User $user): Document
+    protected static function createClosingDocument(FiscalYear $year, User $user): Document
     {
         $documentData = [
-            'number' => Document::where('company_id', $company->id)->max('number') + 1,
+            'number' => Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $year->id)->max('number') + 1,
             'date' => now(),
             'title' => __('Fiscal year closing Document'),
             'creator_id' => $user->id,
-            'company_id' => $company->id,
+            'company_id' => $year->company_id,
+            'fiscal_year_id' => $year->id,
             'approved_at' => now(),
             'approver_id' => $user->id,
         ];
 
-        return DocumentService::createDocument($user, $documentData, self::closingTransactions($company, $user));
+        return DocumentService::createDocument($user, $documentData, self::closingTransactions($year, $user));
     }
 
-    protected static function closingTransactions(Company $company, User $user): array
+    protected static function closingTransactions(FiscalYear $year, User $user): array
     {
         return Transaction::query()
-            ->whereHas('document', fn($doc) => $doc->where('company_id', $company->id))
-            ->whereHas('subject', fn($sub) => $sub->where('company_id', $company->id)->where('is_permanent', true))
+            ->whereHas('document', fn ($doc) => $doc->withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $year->id))
+            ->whereHas('subject', fn ($sub) => $sub->withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $year->id)->where('is_permanent', true))
             ->selectRaw('subject_id, SUM(value) as value')
             ->groupBy('subject_id')
             ->havingRaw('SUM(value) != 0')
             ->get()
-            ->map(fn($row) => [
+            ->map(fn ($row) => [
                 'subject_id' => $row->subject_id,
                 'value' => -1 * $row->value,
                 'user_id' => $user->id,
-                'desc' => __('Fiscal year closing Document') . ' ' . $company->fiscal_year,
+                'desc' => __('Fiscal year closing Document').' '.$year->year,
             ])->toArray();
     }
 
     /**
      * Reopen the three-step closing workflow while preserving generated document numbers.
      */
-    public static function recalculateClosingDocument(Company $company, User $user): Document
+    public static function recalculateClosingDocument(FiscalYear $year, User $user): Document
     {
-        return DB::transaction(function () use ($company) {
-            $lockedCompany = Company::query()->lockForUpdate()->findOrFail($company->id);
+        return DB::transaction(function () use ($year) {
+            $lockedYear = FiscalYear::query()->lockForUpdate()->findOrFail($year->id);
 
-            $recalculationInProgress = in_array($lockedCompany->closing_recalculation_step, [1, 2], true);
+            $recalculationInProgress = in_array($lockedYear->closing_recalculation_step, [1, 2], true);
 
-            if ($lockedCompany->closed_at === null && ! $recalculationInProgress) {
+            if ($lockedYear->closed_at === null && ! $recalculationInProgress) {
                 throw ValidationException::withMessages([
                     'company' => __('Only a closed fiscal year can have its closing document recalculated.'),
                 ]);
             }
 
-            if ($lockedCompany->closing_document_id === null) {
+            if ($lockedYear->closing_document_id === null) {
                 throw ValidationException::withMessages([
                     'company' => __('No fiscal year closing document was found to recalculate.'),
                 ]);
             }
 
-            $closingDocument = Document::query()
-                ->where('company_id', $lockedCompany->id)
-                ->find($lockedCompany->closing_document_id);
+            $closingDocument = Document::withoutGlobalScope(FiscalYearScope::class)
+                ->where('fiscal_year_id', $lockedYear->id)
+                ->find($lockedYear->closing_document_id);
 
             if (! $closingDocument) {
                 throw ValidationException::withMessages([
@@ -2980,80 +3023,48 @@ class FiscalYearService
                 ]);
             }
 
-            if ($lockedCompany->pl_document_id === null || ! $lockedCompany->plDocument) {
+            if ($lockedYear->pl_document_id === null || ! $lockedYear->plDocument) {
                 throw ValidationException::withMessages([
                     'company' => __('No Income Summary document was found to recalculate.'),
                 ]);
             }
 
-            $lockedCompany->closed_at = null;
-            $lockedCompany->closed_by = null;
-            $lockedCompany->closing_recalculation_step = 1;
-            $lockedCompany->save();
+            $lockedYear->closed_at = null;
+            $lockedYear->closed_by = null;
+            $lockedYear->closing_recalculation_step = 1;
+            $lockedYear->save();
 
             return $closingDocument;
         });
     }
 
-    protected static function newFiscalYear(Company $company): Company
+    protected static function newFiscalYear(FiscalYear $year): FiscalYear
     {
-        $newFiscalYearData = collect($company->getAttributes())->except([
-            'id',
-            'fiscal_year',
-            'closed_at',
-            'closed_by',
-            'pl_document_id',
-            'closing_document_id',
-            'closing_recalculation_step',
-        ])
-            ->merge(['fiscal_year' => $company->fiscal_year + 1])->toArray();
+        $newFiscalYearData = ['name' => $year->company->name, 'fiscal_year' => $year->year + 1];
 
         $sectionsToCopy = ['subjects', 'configs', 'banks', 'customers', 'products', 'warehouses', 'services', 'employees']; // Sections to copy to the new fiscal year
-        $newFiscalYear = self::createWithCopiedData($newFiscalYearData, $company->fiscalYear->id, $sectionsToCopy);
+        $newFiscalYear = self::createWithCopiedData($newFiscalYearData, $year->id, $sectionsToCopy);
 
-        $userIds = $company->fiscalYear->users()->pluck('users.id')->toArray();
-        $newFiscalYear->users()->attach($userIds);
-        $newFiscalYear->fiscalYear->users()->syncWithoutDetaching($userIds);
+        $userIds = $year->users()->pluck('users.id')->toArray();
+        $newFiscalYear->users()->syncWithoutDetaching($userIds);
 
         return $newFiscalYear;
     }
 
     /**
-     * Duplicate the encrypted Moadian certificate/private key files so the new fiscal year
-     * owns independent copies rather than sharing the source year's files on disk.
-     */
-    protected static function copyMoadianKeys(Company $source, Company $target): void
-    {
-        $updates = [];
-
-        foreach (['certificate_path', 'private_key_path'] as $attr) {
-            $old = $source->{$attr};
-            if ($old && Storage::exists($old)) {
-                $new = 'keys/' . uniqid() . '.' . pathinfo($old, PATHINFO_EXTENSION);
-                Storage::copy($old, $new);
-                $updates[$attr] = $new;
-            }
-        }
-
-        if ($updates) {
-            $target->forceFill($updates)->save();
-        }
-    }
-
-    /**
      * Step 1 – Close temporary (income/expense) accounts into the Income Summary account.
-     * Saves the resulting document ID onto the company as `pl_document_id`.
+     * Saves the resulting document ID onto the fiscal year as `pl_document_id`.
      */
-    public static function closeTemporaryAccounts(Company $company, User $user): Document
+    public static function closeTemporaryAccounts(FiscalYear $year, User $user): Document
     {
-        $document = DB::transaction(function () use ($company, $user) {
-            $company = Company::query()->lockForUpdate()->findOrFail($company->id);
+        $document = DB::transaction(function () use ($year, $user) {
+            $year = FiscalYear::query()->lockForUpdate()->findOrFail($year->id);
 
-            if ($company->closing_recalculation_step === 1) {
-                $document = Document::query()->where('company_id', $company->id)->findOrFail($company->pl_document_id);
+            if ($year->closing_recalculation_step === 1) {
+                $document = Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $year->id)->findOrFail($year->pl_document_id);
 
-                self::replaceDocumentTransactions($document, function () use ($company, $user) {
-                    return self::currentProfitAndLossTransactions($company, $user);
+                self::replaceDocumentTransactions($document, function () use ($year, $user) {
+                    return self::currentProfitAndLossTransactions($year, $user);
                 });
 
                 $document->forceFill([
@@ -3063,17 +3074,17 @@ class FiscalYearService
                     'approver_id' => $user->id,
                 ])->save();
 
-                $company->closing_recalculation_step = 2;
-                $company->save();
+                $year->closing_recalculation_step = 2;
+                $year->save();
 
                 return $document;
             }
 
-            $doc = self::currentProfitAndLoss($company, $user);
+            $doc = self::currentProfitAndLoss($year, $user);
 
             // Persist the link so the wizard can track progress
-            $company->pl_document_id = $doc->id;
-            $company->save();
+            $year->pl_document_id = $doc->id;
+            $year->save();
 
             return $doc;
         });
@@ -3088,43 +3099,43 @@ class FiscalYearService
      *
      * @throws Exception
      */
-    public static function stepThreeCloseAndOpenNewYear(Company $company, User $user): Company
+    public static function stepThreeCloseAndOpenNewYear(FiscalYear $year, User $user): FiscalYear
     {
         $newFiscalYear = null;
 
-        DB::transaction(function () use ($company, $user, &$newFiscalYear) {
-            $company = Company::query()->lockForUpdate()->findOrFail($company->id);
+        DB::transaction(function () use ($year, $user, &$newFiscalYear) {
+            $year = FiscalYear::query()->lockForUpdate()->findOrFail($year->id);
 
-            if ($company->closing_recalculation_step === 1) {
+            if ($year->closing_recalculation_step === 1) {
                 throw ValidationException::withMessages([
                     'company' => __('You must complete Step 1 before closing permanent accounts.'),
                 ]);
             }
 
-            if ($company->closing_recalculation_step === 2) {
-                $closeDocument = Document::query()->where('company_id', $company->id)->findOrFail($company->closing_document_id);
+            if ($year->closing_recalculation_step === 2) {
+                $closeDocument = Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $year->id)->findOrFail($year->closing_document_id);
 
-                self::replaceDocumentTransactions($closeDocument, function () use ($company, $user) {
-                    return self::closingTransactions($company, $user);
+                self::replaceDocumentTransactions($closeDocument, function () use ($year, $user) {
+                    return self::closingTransactions($year, $user);
                 });
 
-                $newFiscalYear = $company;
-                $company->closed_at = now();
-                $company->closed_by = $user->id;
-                $company->closing_recalculation_step = null;
-                $company->save();
+                $newFiscalYear = $year;
+                $year->closed_at = now();
+                $year->closed_by = $user->id;
+                $year->closing_recalculation_step = null;
+                $year->save();
 
                 return;
             }
 
-            $closeDocument = self::createClosingDocument($company, $user);
+            $closeDocument = self::createClosingDocument($year, $user);
 
-            $company->closing_document_id = $closeDocument->id;
-            $company->closed_at = now();
-            $company->closed_by = $user->id;
-            $company->save();
+            $year->closing_document_id = $closeDocument->id;
+            $year->closed_at = now();
+            $year->closed_by = $user->id;
+            $year->save();
 
-            $newFiscalYear = self::newFiscalYear($company);
+            $newFiscalYear = self::newFiscalYear($year);
 
             self::createOpeningDocument($newFiscalYear, $closeDocument, $user);
         });
@@ -3136,9 +3147,9 @@ class FiscalYearService
      * Returns the current balance of the Income Summary (خلاصه سود و زیان جاری) subject.
      * Used to gate Step 3: balance must be 0 before closing permanent accounts.
      */
-    public static function getIncomeSummaryBalance(Company $company): float
+    public static function getIncomeSummaryBalance(FiscalYear $year): float
     {
-        $subject = Subject::where('company_id', $company->id)
+        $subject = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $year->id)
             ->where('name', __('Current Profit and Loss Summary'))
             ->first();
 
@@ -3147,7 +3158,7 @@ class FiscalYearService
         }
 
         return (float) Transaction::query()
-            ->whereHas('document', fn($q) => $q->where('company_id', $company->id))
+            ->whereHas('document', fn ($q) => $q->withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $year->id))
             ->where('subject_id', $subject->id)
             ->sum('value');
     }
@@ -3158,26 +3169,26 @@ class FiscalYearService
      *
      * @return array{draft_docs: array, negative_inventory: array, gaps_in_numbers: array}
      */
-    public static function getWizardValidations(Company $company): array
+    public static function getWizardValidations(FiscalYear $year): array
     {
         // 1. Draft (unapproved) documents
         $draftCount = Document::withoutGlobalScope(FiscalYearScope::class)
-            ->where('company_id', $company->id)
+            ->where('fiscal_year_id', $year->id)
             ->whereNull('approved_at')
             ->count();
 
         // 2. Negative inventory
         $negativeInventoryCount = Product::withoutGlobalScope(FiscalYearScope::class)
-            ->where('company_id', $company->id)
+            ->where('fiscal_year_id', $year->id)
             ->where('quantity', '<', 0)
             ->count();
 
         // 3. Gaps in document numbers
         $numbers = Document::withoutGlobalScope(FiscalYearScope::class)
-            ->where('company_id', $company->id)
+            ->where('fiscal_year_id', $year->id)
             ->orderBy('number')
             ->pluck('number')
-            ->map(fn($n) => (int) $n)
+            ->map(fn ($n) => (int) $n)
             ->filter()
             ->values();
 
@@ -3211,77 +3222,78 @@ class FiscalYearService
     /**
      * @deprecated Use stepOneCloseTemporaryAccounts / stepThreeCloseAndOpenNewYear instead.
      */
-    public static function closeFiscalYear(Company $company, User $user): array
+    public static function closeFiscalYear(FiscalYear $year, User $user): array
     {
         $newFiscalYear = null;
         $validationErrors = [];
 
-        DB::transaction(function () use ($company, &$newFiscalYear, &$validationErrors, $user) {
-            $validationErrors = self::validateClosingFiscalYear($company);
+        DB::transaction(function () use ($year, &$newFiscalYear, &$validationErrors, $user) {
+            $validationErrors = self::validateClosingFiscalYear($year);
 
             if (! empty($validationErrors)) {
                 return;
             }
 
-            $currentProfitAndLoss = self::currentProfitAndLoss($company, $user);
-            $company->pl_document_id = $currentProfitAndLoss->id;
+            $currentProfitAndLoss = self::currentProfitAndLoss($year, $user);
+            $year->pl_document_id = $currentProfitAndLoss->id;
 
-            $closeDocument = self::createClosingDocument($company, $user);
-            $company->closing_document_id = $closeDocument->id;
+            $closeDocument = self::createClosingDocument($year, $user);
+            $year->closing_document_id = $closeDocument->id;
 
-            $newFiscalYear = self::newFiscalYear($company);
+            $newFiscalYear = self::newFiscalYear($year);
 
             self::createOpeningDocument($newFiscalYear, $closeDocument, $user);
 
-            $company->closed_at = now();
-            $company->closed_by = $user->id;
-            $company->save();
+            $year->closed_at = now();
+            $year->closed_by = $user->id;
+            $year->save();
         });
 
         return [$newFiscalYear, $validationErrors];
     }
 
-    protected static function currentProfitAndLoss(Company $company, User $user): Document
+    protected static function currentProfitAndLoss(FiscalYear $year, User $user): Document
     {
         $documentData = [
-            'number' => Document::where('company_id', $company->id)->max('number') + 1,
+            'number' => Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $year->id)->max('number') + 1,
             'date' => now(),
             'title' => __('Current Profit and Loss Summary'),
             'creator_id' => $user->id,
-            'company_id' => $company->id,
+            'company_id' => $year->company_id,
+            'fiscal_year_id' => $year->id,
             'approved_at' => now(),
             'approver_id' => $user->id,
         ];
 
-        return DocumentService::createDocument($user, $documentData, self::currentProfitAndLossTransactions($company, $user)->toArray());
+        return DocumentService::createDocument($user, $documentData, self::currentProfitAndLossTransactions($year, $user)->toArray());
     }
 
-    protected static function currentProfitAndLossTransactions(Company $company, User $user): Collection
+    protected static function currentProfitAndLossTransactions(FiscalYear $year, User $user): Collection
     {
-        $incomeSummarySubject = Subject::where('company_id', $company->id)
+        $incomeSummarySubject = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $year->id)
             ->where('name', __('Current Profit and Loss Summary'))
             ->first();
 
-        $temporarySubjects = Subject::where('company_id', $company->id)
+        $temporarySubjects = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $year->id)
             ->where('is_permanent', false)
-            ->when($incomeSummarySubject, fn($query) => $query->whereKeyNot($incomeSummarySubject->id))
+            ->when($incomeSummarySubject, fn ($query) => $query->whereKeyNot($incomeSummarySubject->id))
             ->pluck('id')
             ->toArray();
 
         $transactions = Transaction::query()
-            ->whereHas('document', fn($document) => $document->where('company_id', $company->id))
+            ->whereHas('document', fn ($document) => $document->withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $year->id))
             ->whereIn('subject_id', $temporarySubjects)
             ->selectRaw('subject_id, SUM(value) as value')->groupBy('subject_id')
             ->havingRaw('SUM(value) != 0') // Remove zero balances
             ->get()
-            ->map(fn($transaction) => [
+            ->map(fn ($transaction) => [
                 'subject_id' => $transaction->subject_id,
                 'value' => -1 * $transaction->value,
                 'user_id' => $user->id,
                 'desc' => __('Balance for closing fiscal year'),
             ]);
 
-        return self::balanceCurrentProfitAndLoss($company, $transactions, $user);
+        return self::balanceCurrentProfitAndLoss($year, $transactions, $user);
     }
 
     protected static function replaceDocumentTransactions(Document $document, callable $transactions): void

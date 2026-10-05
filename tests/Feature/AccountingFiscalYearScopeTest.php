@@ -5,11 +5,13 @@ namespace Tests\Feature;
 use App\Models\Company;
 use App\Models\Customer;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Product;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\DocumentService;
+use App\Services\SubjectService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -20,24 +22,27 @@ class AccountingFiscalYearScopeTest extends TestCase
 
     public function test_two_years_of_one_business_and_another_business_have_separate_records_and_balanced_reports(): void
     {
+        $business = Company::factory()->withoutFiscalYear()->create(['name' => 'Shared business']);
+        $otherBusiness = Company::factory()->withoutFiscalYear()->create(['name' => 'Other business']);
         $years = [
-            Company::factory()->create(['name' => 'Shared business', 'fiscal_year' => 1402]),
-            Company::factory()->create(['name' => 'Shared business', 'fiscal_year' => 1403]),
-            Company::factory()->create(['name' => 'Other business', 'fiscal_year' => 1403]),
+            FiscalYear::create(['company_id' => $business->id, 'year' => 1402]),
+            FiscalYear::create(['company_id' => $business->id, 'year' => 1403]),
+            FiscalYear::create(['company_id' => $otherBusiness->id, 'year' => 1403]),
         ];
         $user = User::factory()->create();
-        $this->assertSame($years[0]->fiscalYear->company_identity_id, $years[1]->fiscalYear->company_identity_id);
-        $this->assertNotSame($years[0]->fiscalYear->company_identity_id, $years[2]->fiscalYear->company_identity_id);
+        $this->assertSame($years[0]->company_id, $years[1]->company_id);
+        $this->assertNotSame($years[0]->company_id, $years[2]->company_id);
 
-        foreach ($years as $index => $company) {
-            $this->activate($company);
-            $debit = Subject::create(['company_id' => $company->id, 'parent_id' => null, 'code' => '100', 'name' => 'Debit']);
-            $credit = Subject::create(['company_id' => $company->id, 'parent_id' => null, 'code' => '200', 'name' => 'Credit']);
-            Customer::create(['company_id' => $company->id, 'name' => 'Customer '.$index]);
-            Product::factory()->create(['company_id' => $company->id]);
+        foreach ($years as $index => $year) {
+            $this->activate($year);
+            $debit = Subject::create(['company_id' => $year->company_id, 'fiscal_year_id' => $year->id, 'parent_id' => null, 'code' => '100', 'name' => 'Debit']);
+            $credit = Subject::create(['company_id' => $year->company_id, 'fiscal_year_id' => $year->id, 'parent_id' => null, 'code' => '200', 'name' => 'Credit']);
+            Customer::create(['company_id' => $year->company_id, 'fiscal_year_id' => $year->id, 'name' => 'Customer '.$index]);
+            Product::factory()->create(['company_id' => $year->company_id, 'fiscal_year_id' => $year->id]);
 
             $document = DocumentService::createDocument($user, [
-                'company_id' => $company->id,
+                'company_id' => $year->company_id,
+                'fiscal_year_id' => $year->id,
                 'date' => '2024-06-01',
                 'title' => 'Posting '.$index,
                 'approved_at' => now(),
@@ -46,11 +51,11 @@ class AccountingFiscalYearScopeTest extends TestCase
                 ['subject_id' => $debit->id, 'value' => -100 * ($index + 1)],
                 ['subject_id' => $credit->id, 'value' => 100 * ($index + 1)],
             ]);
-            $this->assertSame($company->fiscalYear->id, $document->fiscal_year_id);
+            $this->assertSame($year->id, $document->fiscal_year_id);
         }
 
-        foreach ($years as $index => $company) {
-            $this->activate($company);
+        foreach ($years as $index => $year) {
+            $this->activate($year);
             $this->assertSame(1, Document::count());
             $this->assertSame(2, Subject::count());
             $this->assertSame(1, Customer::count());
@@ -63,16 +68,18 @@ class AccountingFiscalYearScopeTest extends TestCase
 
     public function test_posting_rejects_a_subject_from_another_fiscal_year(): void
     {
-        $first = Company::factory()->create(['name' => 'Shared business', 'fiscal_year' => 1402]);
-        $second = Company::factory()->create(['name' => 'Shared business', 'fiscal_year' => 1403]);
+        $company = Company::factory()->withoutFiscalYear()->create(['name' => 'Shared business']);
+        $first = FiscalYear::create(['company_id' => $company->id, 'year' => 1402]);
+        $second = FiscalYear::create(['company_id' => $company->id, 'year' => 1403]);
         $user = User::factory()->create();
         $this->activate($second);
-        $foreignSubject = Subject::create(['company_id' => $second->id, 'parent_id' => null, 'code' => '100', 'name' => 'Foreign']);
+        $foreignSubject = Subject::create(['company_id' => $company->id, 'fiscal_year_id' => $second->id, 'parent_id' => null, 'code' => '100', 'name' => 'Foreign']);
         $this->activate($first);
 
         try {
             DocumentService::createDocument($user, [
-                'company_id' => $first->id,
+                'company_id' => $company->id,
+                'fiscal_year_id' => $first->id,
                 'date' => '2024-06-01',
                 'title' => 'Rejected',
             ], [['subject_id' => $foreignSubject->id, 'value' => -100]]);
@@ -85,12 +92,30 @@ class AccountingFiscalYearScopeTest extends TestCase
         $this->assertSame(0, Transaction::count());
     }
 
-    private function activate(Company $company): void
+    public function test_subject_codes_and_parents_are_scoped_to_the_fiscal_year(): void
+    {
+        $company = Company::factory()->withoutFiscalYear()->create();
+        $first = FiscalYear::create(['company_id' => $company->id, 'year' => 1402]);
+        $second = FiscalYear::create(['company_id' => $company->id, 'year' => 1403]);
+        $service = app(SubjectService::class);
+
+        $this->activate($first);
+        $priorYearRoot = $service->createSubject(['name' => 'Prior year', 'code' => '100']);
+
+        $this->activate($second);
+        $currentYearRoot = $service->createSubject(['name' => 'Current year', 'code' => '100']);
+        $this->assertSame('100', $currentYearRoot->code);
+        $this->assertNotSame($priorYearRoot->id, $currentYearRoot->id);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $service->createSubject(['name' => 'Invalid child', 'parent_id' => $priorYearRoot->id, 'code' => '001']);
+    }
+
+    private function activate(FiscalYear $year): void
     {
         config([
-            'active-company-id' => $company->fiscalYear->company_identity_id,
-            'active-legacy-company-id' => $company->id,
-            'active-fiscal-year-id' => $company->fiscalYear->id,
+            'active-company-id' => $year->company_id,
+            'active-fiscal-year-id' => $year->id,
         ]);
     }
 }

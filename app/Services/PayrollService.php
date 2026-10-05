@@ -484,7 +484,7 @@ class PayrollService
         $periodStart = $attendance->start_date->copy()->startOfDay();
         $periodEnd = $periodStart->copy()->addDays((int) $attendance->duration - 1)->endOfDay();
 
-        $requests = PersonnelRequest::withoutGlobalScopes()->where('company_id', $attendance->company_id)
+        $requests = PersonnelRequest::withoutGlobalScopes()->where('fiscal_year_id', $attendance->fiscal_year_id)
             ->where('employee_id', $attendance->employee_id)->where('request_type', PersonnelRequestType::MISSION_DAILY->value)
             ->where('status', PersonnelRequestStatus::APPROVED->value)->where('start_date', '<=', $periodEnd)->where('end_date', '>=', $periodStart)
             ->get(['start_date', 'end_date']);
@@ -512,7 +512,7 @@ class PayrollService
         }
 
         $holidayDates = PublicHoliday::withoutGlobalScopes()
-            ->where('company_id', $attendance->company_id)->whereBetween('date', [$periodStart->toDateString(), $periodEnd->toDateString()])
+            ->where('fiscal_year_id', $attendance->fiscal_year_id)->whereBetween('date', [$periodStart->toDateString(), $periodEnd->toDateString()])
             ->pluck('date')->map(fn ($date) => $date instanceof Carbon ? $date->toDateString() : (string) $date)->flip();
 
         $workingDays = 0;

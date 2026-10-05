@@ -39,14 +39,17 @@ class MonthlyAttendanceTest extends TestCase
 
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
+        $fiscalYear = $company->fiscalYears()->firstOrFail();
+        $fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'attendance.monthly-attendances.*'])
         );
 
         $this->actingAs($this->user);
-        request()->cookies->set('active-company-id', $this->companyId);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        request()->cookies->set('active-fiscal-year-id', (string) $fiscalYear->id);
+        $this->withCookies(['active-fiscal-year-id' => (string) $fiscalYear->id]);
+        config(['active-company-id' => $this->companyId, 'active-fiscal-year-id' => $fiscalYear->id]);
 
         $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
         $workShift = WorkShift::factory()->create(['company_id' => $this->companyId]);
@@ -133,13 +136,15 @@ class MonthlyAttendanceTest extends TestCase
     public function test_index_does_not_show_other_company_records(): void
     {
         $otherCompany = Company::factory()->create();
-        $otherWorkSite = WorkSite::factory()->create(['company_id' => $otherCompany->id]);
+        $otherWorkSite = WorkSite::factory()->create(['company_id' => $otherCompany->id, 'fiscal_year_id' => $otherCompany->fiscalYears()->firstOrFail()->id]);
         $otherEmployee = Employee::factory()->create([
             'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherCompany->fiscalYears()->firstOrFail()->id,
             'work_site_id' => $otherWorkSite->id,
         ]);
         MonthlyAttendance::factory()->create([
             'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherCompany->fiscalYears()->firstOrFail()->id,
             'employee_id' => $otherEmployee->id,
             'year' => 1403,
             'month' => 7,

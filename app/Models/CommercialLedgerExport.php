@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\CommercialLedgerType;
-use App\Models\Concerns\HasFiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,10 +10,10 @@ use Illuminate\Database\Eloquent\Model;
 class CommercialLedgerExport extends Model
 {
     use HasFactory;
-    use HasFiscalYear;
 
     protected $fillable = [
         'company_id',
+        'fiscal_year_id',
         'creator_id',
         'from_date',
         'to_date',
@@ -46,5 +45,10 @@ class CommercialLedgerExport extends Model
     public function company()
     {
         return $this->belongsTo(Company::class, 'company_id');
+    }
+
+    public function fiscalYear()
+    {
+        return $this->belongsTo(FiscalYear::class, 'fiscal_year_id');
     }
 }

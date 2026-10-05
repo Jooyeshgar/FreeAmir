@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\CommercialLedgerType;
 use App\Models\CommercialLedgerExport;
 use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -30,7 +31,7 @@ class CommercialLedgerService
 
     public function generate(array $data, int $userId): CommercialLedgerExport
     {
-        $company = Company::query()->findOrFail(getActiveLegacyCompany());
+        $company = Company::query()->findOrFail(getActiveCompany());
         $fromDate = jalali_to_gregorian_date($data['from_date'], '-', '/');
         $toDate = jalali_to_gregorian_date($data['to_date'], '-', '/');
         $type = CommercialLedgerType::from((int) $data['ledger_type']);
@@ -69,10 +70,10 @@ class CommercialLedgerService
         $transactions = DB::table('transactions')
             ->join('documents', 'documents.id', '=', 'transactions.document_id')
             ->leftJoin('subjects', 'subjects.id', '=', 'transactions.subject_id')
-            ->where('documents.fiscal_year_id', getScopedFiscalYear())
+            ->where('documents.fiscal_year_id', getActiveFiscalYear())
             ->whereBetween('documents.date', [$fromDate, $toDate])
             ->whereNotNull('transactions.subject_id')
-            ->where('subjects.fiscal_year_id', getScopedFiscalYear())
+            ->where('subjects.fiscal_year_id', getActiveFiscalYear())
             ->orderBy('documents.date')
             ->orderBy('documents.number')
             ->orderBy('transactions.id')
@@ -127,7 +128,7 @@ class CommercialLedgerService
     {
         return sprintf(
             'commercial-ledger-%s-%s-%s.%s',
-            $export->company->fiscal_year,
+            $export->fiscal_year_id ? FiscalYear::query()->findOrFail($export->fiscal_year_id)->year : '',
             $export->from_date->format('Ymd'),
             $export->to_date->format('Ymd'),
             $export->format
@@ -236,7 +237,7 @@ class CommercialLedgerService
     {
         $unbalancedDocuments = DB::table('documents')
             ->leftJoin('transactions', 'transactions.document_id', '=', 'documents.id')
-            ->where('documents.fiscal_year_id', getScopedFiscalYear())
+            ->where('documents.fiscal_year_id', getActiveFiscalYear())
             ->whereBetween('documents.date', [$fromDate, $toDate])
             ->groupBy('documents.id', 'documents.number')
             ->select('documents.number')

@@ -36,13 +36,16 @@ class PersonnelRequestTest extends TestCase
 
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
+        $fiscalYear = $company->fiscalYears()->firstOrFail();
+        $fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'hr.personnel-requests.*'])
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $fiscalYear->id]);
+        config(['active-company-id' => $this->companyId, 'active-fiscal-year-id' => $fiscalYear->id]);
 
         $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
         $this->workShift = WorkShift::factory()->create([
@@ -543,14 +546,16 @@ class PersonnelRequestTest extends TestCase
     public function test_cannot_see_another_companys_requests(): void
     {
         $otherCompany = Company::factory()->create();
-        $otherWorkSite = WorkSite::factory()->create(['company_id' => $otherCompany->id]);
+        $otherWorkSite = WorkSite::factory()->create(['company_id' => $otherCompany->id, 'fiscal_year_id' => $otherCompany->fiscalYears()->firstOrFail()->id]);
         $otherEmployee = Employee::factory()->create([
             'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherCompany->fiscalYears()->firstOrFail()->id,
             'work_site_id' => $otherWorkSite->id,
         ]);
 
         PersonnelRequest::factory()->create([
             'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherCompany->fiscalYears()->firstOrFail()->id,
             'employee_id' => $otherEmployee->id,
             'request_type' => PersonnelRequestType::LEAVE_DAILY,
             'status' => PersonnelRequestStatus::PENDING,

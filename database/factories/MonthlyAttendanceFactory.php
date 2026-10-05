@@ -18,7 +18,7 @@ class MonthlyAttendanceFactory extends Factory
         $absentDays = $workDays - $presentDays;
 
         return [
-            'company_id' => Company::factory(),
+            'company_id' => getActiveCompany() ?: Company::factory(),
             'employee_id' => Employee::factory(),
             'year' => $this->faker->numberBetween(1401, 1403),
             'month' => $this->faker->numberBetween(1, 12),

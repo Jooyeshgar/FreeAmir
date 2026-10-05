@@ -10,6 +10,7 @@ use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -53,10 +54,12 @@ class WarehouseInvoiceStockTest extends TestCase
         parent::setUp();
 
         $this->company = Company::factory()->create();
-        config(['active-company-id' => $this->company->id]);
+        $fiscalYear = $this->company->fiscalYears()->firstOrFail();
+        config(['active-company-id' => $this->company->id, 'active-fiscal-year-id' => $fiscalYear->id]);
 
         $this->user = User::factory()->create();
         $this->company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
         $this->actingAs($this->user);
 
         $this->importSubjects($this->company->id);
@@ -147,18 +150,23 @@ class WarehouseInvoiceStockTest extends TestCase
 
     public function test_recalculate_quantity_uses_approved_beginning_inventory_instead_of_previous_fiscal_year_stock(): void
     {
-        $previousCompany = Company::factory()->create([
-            'name' => $this->company->name,
-            'fiscal_year' => (int) $this->company->fiscal_year - 1,
+        $previousYear = FiscalYear::create([
+            'company_id' => $this->company->id,
+            'year' => $this->company->fiscalYears()->firstOrFail()->year - 1,
         ]);
-        $previousGroup = ProductGroup::factory()->create(['company_id' => $previousCompany->id]);
+        $previousGroup = ProductGroup::factory()->create([
+            'company_id' => $this->company->id,
+            'fiscal_year_id' => $previousYear->id,
+        ]);
         $previousProduct = Product::factory()->withGroup($previousGroup)->create([
-            'company_id' => $previousCompany->id,
+            'company_id' => $this->company->id,
+            'fiscal_year_id' => $previousYear->id,
             'code' => $this->product->code,
             'quantity' => 12,
         ]);
         $previousMainWarehouse = Warehouse::create([
-            'company_id' => $previousCompany->id,
+            'company_id' => $this->company->id,
+            'fiscal_year_id' => $previousYear->id,
             'name' => $this->mainWarehouse->name,
             'code' => $this->mainWarehouse->code,
         ]);
@@ -311,7 +319,7 @@ class WarehouseInvoiceStockTest extends TestCase
             'amount' => 100,
         ]);
 
-        $exportData = FiscalYearService::exportData($this->company->fiscalYear->id, [
+        $exportData = FiscalYearService::exportData(getActiveFiscalYear(), [
             FiscalYearSection::SUBJECTS->value,
             FiscalYearSection::CUSTOMERS->value,
             FiscalYearSection::PRODUCTS->value,
@@ -324,18 +332,18 @@ class WarehouseInvoiceStockTest extends TestCase
         ]);
 
         $targetWarehouse = Warehouse::withoutGlobalScopes()
-            ->where('company_id', $target->id)
+            ->where('fiscal_year_id', $target->id)
             ->where('code', $this->mainWarehouse->code)
             ->firstOrFail();
         $targetInvoice = Invoice::withoutGlobalScopes()
-            ->where('company_id', $target->id)
+            ->where('fiscal_year_id', $target->id)
             ->where('number', $invoice->number)
             ->firstOrFail();
         $this->assertNotSame($this->mainWarehouse->id, $targetWarehouse->id);
         $this->assertSame($targetWarehouse->id, $targetInvoice->warehouse_id);
         $this->assertSame(
             $target->id,
-            Warehouse::withoutGlobalScopes()->findOrFail($targetInvoice->warehouse_id)->company_id
+            Warehouse::withoutGlobalScopes()->findOrFail($targetInvoice->warehouse_id)->fiscal_year_id
         );
     }
 
@@ -387,6 +395,7 @@ class WarehouseInvoiceStockTest extends TestCase
         $foreignCompany = Company::factory()->create();
         $foreignWarehouse = Warehouse::withoutGlobalScopes()->create([
             'company_id' => $foreignCompany->id,
+            'fiscal_year_id' => $foreignCompany->fiscalYears()->firstOrFail()->id,
             'name' => 'Foreign',
             'code' => 'FOREIGN',
         ]);

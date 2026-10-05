@@ -38,13 +38,16 @@ class EmployeeTest extends TestCase
 
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
+        $fiscalYear = $company->fiscalYears()->firstOrFail();
+        $fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'hr.employees.*'])
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $fiscalYear->id]);
+        config(['active-company-id' => $this->companyId, 'active-fiscal-year-id' => $fiscalYear->id]);
 
         $this->workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
         $this->workShift = WorkShift::factory()->create(['company_id' => $this->companyId]);
@@ -97,9 +100,10 @@ class EmployeeTest extends TestCase
     public function test_index_does_not_show_employees_from_other_companies(): void
     {
         $otherCompany = Company::factory()->create();
-        $otherSite = WorkSite::factory()->create(['company_id' => $otherCompany->id]);
+        $otherSite = WorkSite::factory()->create(['company_id' => $otherCompany->id, 'fiscal_year_id' => $otherCompany->fiscalYears()->firstOrFail()->id]);
         Employee::factory()->create([
             'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherCompany->fiscalYears()->firstOrFail()->id,
             'work_site_id' => $otherSite->id,
             'first_name' => 'Foreign',
             'last_name' => 'Employee',
@@ -251,9 +255,10 @@ class EmployeeTest extends TestCase
         $this->makeEmployee(['code' => 'EMP-MINE']);
 
         $otherCompany = Company::factory()->create();
-        $otherSite = WorkSite::factory()->create(['company_id' => $otherCompany->id]);
+        $otherSite = WorkSite::factory()->create(['company_id' => $otherCompany->id, 'fiscal_year_id' => $otherCompany->fiscalYears()->firstOrFail()->id]);
         Employee::factory()->create([
             'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherCompany->fiscalYears()->firstOrFail()->id,
             'work_site_id' => $otherSite->id,
             'code' => 'EMP-OTHER',
         ]);

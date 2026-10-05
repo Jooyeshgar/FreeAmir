@@ -8,6 +8,7 @@ use App\Models\Company;
 use App\Models\Config;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\User;
 use App\Services\CustomerGroupService;
@@ -20,10 +21,11 @@ class FiscalYearCopySubjectableIntegrityTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function setActive(Company $company): void
+    private function setActive(Company|FiscalYear $company): void
     {
-        config(['active-company-id' => $company->id]);
-        foreach (Config::withoutGlobalScopes()->where('company_id', $company->id)->get() as $c) {
+        $year = $company instanceof FiscalYear ? $company : $company->fiscalYears()->firstOrFail();
+        config(['active-company-id' => $year->company_id, 'active-fiscal-year-id' => $year->id]);
+        foreach (Config::withoutGlobalScopes()->where('fiscal_year_id', $year->id)->get() as $c) {
             config(['amir.'.$c->key => $c->value]);
         }
     }
@@ -35,6 +37,7 @@ class FiscalYearCopySubjectableIntegrityTest extends TestCase
         $root = new Subject;
         $root->forceFill([
             'company_id' => $company->id,
+            'fiscal_year_id' => $company->fiscalYears()->firstOrFail()->id,
             'name' => 'Customers Root',
             'code' => '101',
             'parent_id' => null,
@@ -44,6 +47,7 @@ class FiscalYearCopySubjectableIntegrityTest extends TestCase
 
         Config::create([
             'company_id' => $company->id,
+            'fiscal_year_id' => $company->fiscalYears()->firstOrFail()->id,
             'key' => 'cust_subject',
             'value' => (string) $root->id,
             'type' => 'int',
@@ -54,7 +58,7 @@ class FiscalYearCopySubjectableIntegrityTest extends TestCase
 
     private function newYearData(Company $source, int $fiscalYear): array
     {
-        return collect($source->getAttributes())->except(['id', 'closed_at', 'closed_by', 'fiscal_year'])->merge(['fiscal_year' => $fiscalYear])->toArray();
+        return ['name' => $source->name, 'fiscal_year' => $fiscalYear];
     }
 
     private function seedSource(): Company
@@ -83,27 +87,29 @@ class FiscalYearCopySubjectableIntegrityTest extends TestCase
 
         $target = FiscalYearService::createWithCopiedData(
             $this->newYearData($source, 1403),
-            $source->fiscalYear->id,
+            $source->fiscalYears()->firstOrFail()->id,
             ['subjects', 'configs', 'customers'],
         );
 
-        $groups = CustomerGroup::withoutGlobalScopes()->where('company_id', $target->id)->get();
+        $groups = CustomerGroup::withoutGlobalScopes()->where('fiscal_year_id', $target->id)->get();
         $this->assertCount(2, $groups);
         foreach ($groups as $group) {
             $subject = Subject::withoutGlobalScopes()->find($group->subject_id);
             $this->assertNotNull($subject);
-            $this->assertSame($target->id, (int) $subject->company_id);
+            $this->assertSame($target->company_id, (int) $subject->company_id);
+            $this->assertSame($target->id, (int) $subject->fiscal_year_id);
             $this->assertSame(CustomerGroup::class, $subject->subjectable_type);
             $this->assertSame($group->id, $subject->subjectable_id, 'group subject points back to the new group');
             $this->assertSame($subject->id, $group->subject()->withoutGlobalScopes()->first()?->id);
         }
 
-        $customers = Customer::withoutGlobalScopes()->where('company_id', $target->id)->get();
+        $customers = Customer::withoutGlobalScopes()->where('fiscal_year_id', $target->id)->get();
         $this->assertCount(3, $customers);
         foreach ($customers as $customer) {
             $subject = Subject::withoutGlobalScopes()->find($customer->subject_id);
             $this->assertNotNull($subject);
-            $this->assertSame($target->id, (int) $subject->company_id);
+            $this->assertSame($target->company_id, (int) $subject->company_id);
+            $this->assertSame($target->id, (int) $subject->fiscal_year_id);
             $this->assertSame(Customer::class, $subject->subjectable_type);
             $this->assertSame($customer->id, $subject->subjectable_id, 'customer subject points back to the new customer');
 
@@ -119,19 +125,19 @@ class FiscalYearCopySubjectableIntegrityTest extends TestCase
         $source = $this->seedSource();
         $target = FiscalYearService::createWithCopiedData(
             $this->newYearData($source, 1403),
-            $source->fiscalYear->id,
+            $source->fiscalYears()->firstOrFail()->id,
             ['subjects', 'configs'],
         );
 
-        $leaked = Subject::withoutGlobalScopes()->where('company_id', $target->id)
+        $leaked = Subject::withoutGlobalScopes()->where('fiscal_year_id', $target->id)
             ->whereIn('subjectable_type', [Customer::class, CustomerGroup::class])->get();
 
         $this->assertCount(0, $leaked, 'no stale customer/group subjectable pointers should survive the copy');
 
         $this->setActive($target);
-        $group = app(CustomerGroupService::class)->create(['name' => 'FreshGroup', 'company_id' => $target->id]);
+        $group = app(CustomerGroupService::class)->create(['name' => 'FreshGroup', 'company_id' => $target->company_id, 'fiscal_year_id' => $target->id]);
         $customer = app(CustomerService::class)->create([
-            'name' => 'BrandNew', 'group_id' => $group->id, 'company_id' => $target->id, 'type' => CustomerType::INDIVIDUAL,
+            'name' => 'BrandNew', 'group_id' => $group->id, 'company_id' => $target->company_id, 'fiscal_year_id' => $target->id, 'type' => CustomerType::INDIVIDUAL,
         ]);
         $customer->refresh();
 

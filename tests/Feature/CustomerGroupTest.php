@@ -5,14 +5,16 @@ namespace Tests\Feature;
 use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
+use Tests\Helpers\SeederHelper;
 use Tests\TestCase;
 
 class CustomerGroupTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, SeederHelper;
 
     protected $user;
 
@@ -25,6 +27,9 @@ class CustomerGroupTest extends TestCase
         $this->company = Company::factory()->create();
         $this->user = User::factory()->create();
         $this->company->users()->attach($this->user);
+        $this->activateFiscalYear($this->company, $this->user);
+        $this->importSubjects($this->company->id);
+        $this->importConfigs($this->company->id);
 
         $this->user->givePermissionTo([
             Permission::firstOrCreate(['name' => 'customer-groups.index']),
@@ -35,8 +40,22 @@ class CustomerGroupTest extends TestCase
             Permission::firstOrCreate(['name' => 'customer-groups.update']),
             Permission::firstOrCreate(['name' => 'customer-groups.destroy']),
         ]);
+    }
 
-        $this->withCookies(['active-company-id' => $this->company->id]);
+    private function activateFiscalYear(Company $company, User $user): FiscalYear
+    {
+        $year = $company->fiscalYears()->orderBy('id')->firstOrFail();
+        $year->users()->syncWithoutDetaching([$user->id]);
+
+        config([
+            'active-company-id' => $company->id,
+            'active-fiscal-year-id' => $year->id,
+            'active-company-fiscal-year' => $year->year,
+        ]);
+
+        $this->withCookies(['active-fiscal-year-id' => (string) $year->id]);
+
+        return $year;
     }
 
     public function test_it_displays_customer_group_index_page()

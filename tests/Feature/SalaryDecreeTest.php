@@ -5,11 +5,13 @@ namespace Tests\Feature;
 use App\Models\Company;
 use App\Models\DecreeBenefit;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\OrgChart;
 use App\Models\PayrollElement;
 use App\Models\SalaryDecree;
 use App\Models\User;
 use App\Models\WorkSite;
+use App\Models\WorkShift;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -37,14 +39,13 @@ class SalaryDecreeTest extends TestCase
 
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
+        $this->activateFiscalYear($company, $this->user);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'salary.salary-decrees.*'])
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
-
         $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
 
         $this->orgChart = OrgChart::factory()->create(['company_id' => $this->companyId]);
@@ -57,6 +58,22 @@ class SalaryDecreeTest extends TestCase
         $this->payrollElement = PayrollElement::factory()->create([
             'company_id' => $this->companyId,
         ]);
+    }
+
+    private function activateFiscalYear(Company $company, User $user): FiscalYear
+    {
+        $year = $company->fiscalYears()->orderBy('id')->firstOrFail();
+        $year->users()->syncWithoutDetaching([$user->id]);
+
+        config([
+            'active-company-id' => $company->id,
+            'active-fiscal-year-id' => $year->id,
+            'active-company-fiscal-year' => $year->year,
+        ]);
+
+        $this->withCookies(['active-fiscal-year-id' => (string) $year->id]);
+
+        return $year;
     }
 
     private function makeDecree(array $overrides = []): SalaryDecree
@@ -112,14 +129,25 @@ class SalaryDecreeTest extends TestCase
     public function test_index_does_not_show_decrees_from_other_companies(): void
     {
         $otherCompany = Company::factory()->create();
-        $otherWorkSite = WorkSite::factory()->create(['company_id' => $otherCompany->id]);
+        $otherFiscalYearId = $otherCompany->fiscalYears()->firstOrFail()->id;
+        $otherWorkSite = WorkSite::factory()->create([
+            'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherFiscalYearId,
+        ]);
+        $otherWorkShift = WorkShift::factory()->create([
+            'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherFiscalYearId,
+        ]);
         $otherEmployee = Employee::factory()->create([
             'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherFiscalYearId,
             'work_site_id' => $otherWorkSite->id,
+            'work_shift_id' => $otherWorkShift->id,
         ]);
 
         SalaryDecree::factory()->create([
             'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherFiscalYearId,
             'employee_id' => $otherEmployee->id,
             'name' => 'Foreign Decree',
         ]);

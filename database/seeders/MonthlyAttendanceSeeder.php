@@ -12,14 +12,14 @@ class MonthlyAttendanceSeeder extends Seeder
 {
     public function run(): void
     {
-        $companyId = (int) getActiveLegacyCompany();
-        $employees = Employee::withoutGlobalScopes()->where('company_id', $companyId)->get();
+        $companyId = (int) getActiveCompany();
+        $employees = Employee::withoutGlobalScopes()->where('fiscal_year_id', getActiveFiscalYear())->get();
         if ($employees->isEmpty()) {
             return;
         }
 
         foreach ($employees as $employee) {
-            $logs = AttendanceLog::withoutGlobalScopes()->where('company_id', $companyId)->where('employee_id', $employee->id)->orderBy('log_date')->get();
+            $logs = AttendanceLog::withoutGlobalScopes()->where('fiscal_year_id', getActiveFiscalYear())->where('employee_id', $employee->id)->orderBy('log_date')->get();
             if ($logs->isEmpty()) {
                 continue;
             }
@@ -124,7 +124,7 @@ class MonthlyAttendanceSeeder extends Seeder
                     ]
                 );
 
-                AttendanceLog::withoutGlobalScopes()->where('company_id', $companyId)->where('employee_id', $employee->id)
+                AttendanceLog::withoutGlobalScopes()->where('fiscal_year_id', getActiveFiscalYear())->where('employee_id', $employee->id)
                     ->whereBetween('log_date', [$startDate->toDateString(), $effectiveEnd->toDateString()])
                     ->update(['monthly_attendance_id' => $attendance->id]);
             }

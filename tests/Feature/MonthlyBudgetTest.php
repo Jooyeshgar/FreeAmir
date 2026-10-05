@@ -6,6 +6,7 @@ use App\Enums\FiscalYearSection;
 use App\Enums\SubjectType;
 use App\Models\Company;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\MonthlyBudget;
 use App\Models\Subject;
 use App\Models\Transaction;
@@ -41,15 +42,25 @@ class MonthlyBudgetTest extends TestCase
         $this->company = Company::factory()->create(['fiscal_year' => 1405]);
         $this->user = User::factory()->create();
         $this->company->users()->syncWithoutDetaching([$this->user->id]);
+        $this->activateFiscalYear($this->company, $this->user);
 
         $this->service = new MonthlyBudgetService;
+    }
 
-        $this->withCookies(['active-company-id' => (string) $this->company->id]);
-        $_COOKIE['active-company-id'] = (string) $this->company->id;
+    private function activateFiscalYear(Company $company, User $user): FiscalYear
+    {
+        $year = $company->fiscalYears()->orderBy('id')->firstOrFail();
+        $year->users()->syncWithoutDetaching([$user->id]);
+
         config([
-            'active-company-id' => $this->company->id,
-            'active-company-fiscal-year' => 1405,
+            'active-company-id' => $company->id,
+            'active-fiscal-year-id' => $year->id,
+            'active-company-fiscal-year' => $year->year,
         ]);
+
+        $this->withCookies(['active-fiscal-year-id' => (string) $year->id]);
+
+        return $year;
     }
 
     private function temporarySubject(string $name, SubjectType $type): Subject
@@ -89,7 +100,7 @@ class MonthlyBudgetTest extends TestCase
     {
         $document = Document::create([
             'number' => Document::withoutGlobalScopes()->max('number') + 1,
-            'date' => jalali_to_gregorian((int) $this->company->fiscal_year, $month, 10, '-'),
+            'date' => jalali_to_gregorian((int) FiscalYear::findOrFail(getActiveFiscalYear())->year, $month, 10, '-'),
             'creator_id' => $this->user->id,
             'approved_at' => $approved ? now() : null,
             'approver_id' => $approved ? $this->user->id : null,
@@ -113,7 +124,7 @@ class MonthlyBudgetTest extends TestCase
 
     private function setFiscalYear(int $fiscalYear): void
     {
-        $this->company->update(['fiscal_year' => $fiscalYear]);
+        FiscalYear::findOrFail(getActiveFiscalYear())->update(['year' => $fiscalYear]);
         config(['active-company-fiscal-year' => $fiscalYear]);
     }
 
@@ -253,8 +264,10 @@ class MonthlyBudgetTest extends TestCase
             'is_permanent' => true,
         ]);
         $otherCompany = Company::factory()->create(['fiscal_year' => 1405]);
+        $otherFiscalYear = $otherCompany->fiscalYears()->firstOrFail();
         Subject::withoutGlobalScopes()->create([
             'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherFiscalYear->id,
             'parent_id' => null,
             'code' => '999',
             'name' => 'Budget other company',
@@ -674,8 +687,10 @@ class MonthlyBudgetTest extends TestCase
             'is_permanent' => true,
         ]);
         $otherCompany = Company::factory()->create(['fiscal_year' => 1405]);
+        $otherFiscalYear = $otherCompany->fiscalYears()->firstOrFail();
         $otherSubject = Subject::withoutGlobalScopes()->create([
             'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherFiscalYear->id,
             'parent_id' => null,
             'code' => '999',
             'name' => 'Other company expense',
@@ -1131,7 +1146,7 @@ class MonthlyBudgetTest extends TestCase
             'forecast_amount' => 125000,
         ]);
 
-        $exportData = FiscalYearService::exportData($this->company->fiscalYear->id, [FiscalYearSection::SUBJECTS->value]);
+        $exportData = FiscalYearService::exportData(getActiveFiscalYear(), [FiscalYearSection::SUBJECTS->value]);
 
         $this->assertArrayHasKey('monthly_budgets', $exportData);
         $this->assertCount(1, $exportData['monthly_budgets']);
@@ -1149,11 +1164,11 @@ class MonthlyBudgetTest extends TestCase
             'forecast_amount' => 98765.43,
         ]);
 
-        $exportData = FiscalYearService::exportData($this->company->fiscalYear->id, [FiscalYearSection::SUBJECTS->value]);
+        $exportData = FiscalYearService::exportData(getActiveFiscalYear(), [FiscalYearSection::SUBJECTS->value]);
         $target = FiscalYearService::importData($exportData, ['name' => 'Next Year', 'fiscal_year' => 1404]);
 
-        $importedSubject = Subject::withoutGlobalScopes()->where('company_id', $target->id)->sole();
-        $importedBudget = MonthlyBudget::withoutGlobalScopes()->where('company_id', $target->id)->sole();
+        $importedSubject = Subject::withoutGlobalScopes()->where('fiscal_year_id', $target->id)->sole();
+        $importedBudget = MonthlyBudget::withoutGlobalScopes()->where('fiscal_year_id', $target->id)->sole();
 
         $this->assertSame($importedSubject->id, $importedBudget->subject_id);
         $this->assertSame(7, $importedBudget->month);
@@ -1176,7 +1191,7 @@ class MonthlyBudgetTest extends TestCase
             ]],
         ], ['name' => 'No Subjects', 'fiscal_year' => 1404]);
 
-        $this->assertSame(0, MonthlyBudget::withoutGlobalScopes()->where('company_id', $target->id)->count());
+        $this->assertSame(0, MonthlyBudget::withoutGlobalScopes()->where('fiscal_year_id', $target->id)->count());
         Log::shouldHaveReceived('warning')->once()->with('Skipping monthly budgets import due to missing subject mapping.', ['target_year_id' => $target->id]);
     }
 }

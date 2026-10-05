@@ -113,7 +113,7 @@ class ActivityLogController extends Controller
             'actionOptions' => $this->actionOptions(),
             'companyOptions' => $data['companies']->map(fn (Company $company): array => [
                 'value' => $company->id,
-                'label' => $company->name.' - '.localizeNumber($company->fiscal_year),
+                'label' => $company->name,
             ]),
             'dateFromValue' => $request->input('date_from', ''),
             'dateToValue' => $request->input('date_to', ''),
@@ -213,7 +213,7 @@ class ActivityLogController extends Controller
             'userInitial' => mb_strtoupper(mb_substr($activity->user?->name ?? '?', 0, 1)),
             'userName' => $activity->user?->name ?? __('System'),
             'userUrl' => $activity->user ? route('users.show', $activity->user) : null,
-            'companyLabel' => $company ? $company->name.' - '.localizeNumber($company->fiscal_year) : null,
+            'companyLabel' => $company ? $company->name : null,
             'companyUrl' => $company ? route('companies.show', $company) : null,
             'title' => $isRequest ? ($route ?: $activity->description) : $modelTitle,
             'titleDetail' => $isRequest ? null : $details->get('model_label', $hasNumberColumn ? null : '#'.$activity->model_id),

@@ -7,6 +7,7 @@ use App\Enums\InvoiceType;
 use App\Models\Activity;
 use App\Models\Company;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -30,17 +31,21 @@ class ManagementCompanyOverviewTest extends TestCase
     public function test_super_admin_sees_grouped_fiscal_year_usage_users_roles_and_actions(): void
     {
         $admin = $this->platformAdmin(['companies.edit', 'users.impersonate']);
-        $newFiscalYear = $this->company('Grouped Business', 1404, [
+        $business = Company::create([
+            'name' => 'Grouped Business',
             'national_code' => '10101010101',
             'economical_code' => '20202020202',
         ]);
-        $oldFiscalYear = $this->company('Grouped Business', 1403, ['closed_at' => now()]);
+        $newFiscalYear = $business->fiscalYears()->create(['year' => 1404]);
+        $oldFiscalYear = $business->fiscalYears()->create(['year' => 1403, 'closed_at' => now()]);
         $otherCompany = $this->company('Other Business', 1404);
         $accountant = User::factory()->create(['name' => 'Grouped Accountant', 'email' => 'accountant@grouped.test']);
         $accountant->assignRole(Role::create(['name' => 'Business Accountant']));
-        $accountant->companies()->attach([$newFiscalYear->id, $oldFiscalYear->id]);
+        $accountant->companies()->attach($business);
+        $accountant->fiscalYears()->attach([$newFiscalYear->id, $oldFiscalYear->id]);
         $rolelessUser = User::factory()->create(['name' => 'Roleless Operator', 'email' => 'roleless@grouped.test']);
-        $rolelessUser->companies()->attach($oldFiscalYear);
+        $rolelessUser->companies()->attach($business);
+        $rolelessUser->fiscalYears()->attach($oldFiscalYear);
         $outsider = User::factory()->create(['name' => 'Outside User']);
         $outsider->companies()->attach($otherCompany);
 
@@ -50,10 +55,10 @@ class ManagementCompanyOverviewTest extends TestCase
         $this->invoice($newFiscalYear, 101);
         $this->invoice($oldFiscalYear, 102);
 
-        $response = $this->actingAs($admin)->get(route('companies.show', $oldFiscalYear));
+        $response = $this->actingAs($admin)->get(route('companies.show', $business));
 
         $response->assertOk()
-            ->assertViewHas('business', fn (Company $company): bool => $company->is($newFiscalYear))
+            ->assertViewHas('business', fn (Company $company): bool => $company->is($business))
             ->assertViewHas('fiscalYears', fn ($companies): bool => $companies->pluck('id')->all() === [$newFiscalYear->id, $oldFiscalYear->id]
                 && (int) $companies->firstWhere('id', $newFiscalYear->id)->documents_count === 2
                 && (int) $companies->firstWhere('id', $oldFiscalYear->id)->invoices_count === 1)
@@ -73,7 +78,7 @@ class ManagementCompanyOverviewTest extends TestCase
             ->assertSee(__('No roles assigned'))
             ->assertSee(route('users.show', $accountant), false)
             ->assertSee(route('users.impersonate', $accountant), false)
-            ->assertSee(route('companies.edit', $newFiscalYear), false)
+            ->assertSee(route('companies.edit', $business), false)
             ->assertDontSee('Outside User');
     }
 
@@ -106,6 +111,7 @@ class ManagementCompanyOverviewTest extends TestCase
         $company = $this->company('Linked Business', 1404);
         $target = User::factory()->create(['name' => 'Linked User']);
         $target->companies()->attach($company);
+        $target->fiscalYears()->attach($company->fiscalYears()->firstOrFail());
         $this->document($company, $admin, 1);
         Activity::create([
             'log_name' => 'request',
@@ -140,29 +146,36 @@ class ManagementCompanyOverviewTest extends TestCase
 
     private function company(string $name, int $fiscalYear, array $attributes = []): Company
     {
-        return Company::create([
+        $company = Company::create([
             'name' => $name,
-            'fiscal_year' => $fiscalYear,
             'currency' => 'Rial',
             ...$attributes,
         ]);
+
+        $company->fiscalYears()->create(['year' => $fiscalYear]);
+
+        return $company;
     }
 
-    private function document(Company $company, User $creator, int $number): void
+    private function document(Company|FiscalYear $company, User $creator, int $number): void
     {
+        $year = $company instanceof FiscalYear ? $company : $company->fiscalYears()->firstOrFail();
         Document::withoutGlobalScopes()->create([
             'number' => $number,
             'date' => now()->toDateString(),
             'creator_id' => $creator->id,
-            'company_id' => $company->id,
+            'company_id' => $year->company_id,
+            'fiscal_year_id' => $year->id,
         ]);
     }
 
-    private function invoice(Company $company, int $number): void
+    private function invoice(Company|FiscalYear $company, int $number): void
     {
+        $year = $company instanceof FiscalYear ? $company : $company->fiscalYears()->firstOrFail();
         $customerId = DB::table('customers')->insertGetId([
             'name' => 'Customer '.$number,
-            'company_id' => $company->id,
+            'company_id' => $year->company_id,
+            'fiscal_year_id' => $year->id,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -170,7 +183,8 @@ class ManagementCompanyOverviewTest extends TestCase
         DB::table('invoices')->insert([
             'number' => $number,
             'date' => now()->toDateString(),
-            'company_id' => $company->id,
+            'company_id' => $year->company_id,
+            'fiscal_year_id' => $year->id,
             'customer_id' => $customerId,
             'subtraction' => 0,
             'vat' => 0,

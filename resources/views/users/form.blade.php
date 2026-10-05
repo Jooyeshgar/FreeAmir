@@ -1,6 +1,6 @@
 @php
     $oldRoles = old('role', $user?->roles->pluck('name')->toArray() ?? []);
-    $oldCompanies = old('company', $user?->companies->pluck('id')->map(fn($id) => (string) $id)->toArray() ?? []);
+    $oldCompanies = old('company', $user?->fiscalYears->pluck('id')->map(fn($id) => (string) $id)->toArray() ?? []);
 @endphp
 
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -45,10 +45,10 @@
 @endcanany
 
 <div class="divider"></div>
-<h3 class="label">{{ __('Companies') }}</h3>
+<h3 class="label">{{ __('Fiscal years') }}</h3>
 <div class="grid !grid-cols-2 gap-2 md:!grid-cols-3 lg:!grid-cols-5">
     @foreach ($companies as $company)
-        <x-checkbox :title="$company->name" name="company[]" :value="$company->id" id="company-{{ $company->id }}"
+        <x-checkbox :title="$company->company->name . ' - ' . $company->year" name="company[]" :value="$company->id" id="company-{{ $company->id }}"
             :checked="in_array((string) $company->id, $oldCompanies)" />
     @endforeach
 </div>

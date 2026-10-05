@@ -24,7 +24,7 @@ class EmployeeController extends Controller
     {
         $employee = Employee::create(array_merge(
             $request->validated(),
-            ['company_id' => getActiveLegacyCompany()]
+            ['company_id' => getActiveCompany(), 'fiscal_year_id' => getActiveFiscalYear()]
         ));
 
         return response()->json(['data' => $employee], 201);

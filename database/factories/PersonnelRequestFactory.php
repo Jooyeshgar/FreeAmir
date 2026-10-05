@@ -19,7 +19,7 @@ class PersonnelRequestFactory extends Factory
         $endDate = $this->faker->dateTimeBetween($startDate, '+7 days');
 
         return [
-            'company_id' => Company::factory(),
+            'company_id' => getActiveCompany() ?: Company::factory(),
             'employee_id' => Employee::factory(),
             'request_type' => $this->faker->randomElement(PersonnelRequestType::cases()),
             'start_date' => $startDate,

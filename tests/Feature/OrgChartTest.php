@@ -26,13 +26,16 @@ class OrgChartTest extends TestCase
 
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
+        $fiscalYear = $company->fiscalYears()->firstOrFail();
+        $fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'hr.org-charts.*'])
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $fiscalYear->id]);
+        config(['active-company-id' => $this->companyId, 'active-fiscal-year-id' => $fiscalYear->id]);
     }
 
     private function makeNode(array $overrides = []): OrgChart
@@ -84,6 +87,7 @@ class OrgChartTest extends TestCase
         $otherCompany = Company::factory()->create();
         OrgChart::factory()->create([
             'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherCompany->fiscalYears()->firstOrFail()->id,
             'title' => 'Foreign Node',
         ]);
 

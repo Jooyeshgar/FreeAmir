@@ -38,6 +38,7 @@ class AuthLifecycleTest extends TestCase
             'app.registration' => true,
             'app.email_verification' => true,
             'active-company-id' => null,
+            'active-fiscal-year-id' => null,
         ]);
     }
 
@@ -60,13 +61,16 @@ class AuthLifecycleTest extends TestCase
         $otherCompany = $this->company('Other Company');
         $admin = User::factory()->create();
         $admin->companies()->attach($ownCompany);
+        $admin->fiscalYears()->syncWithoutDetaching([$ownCompany->fiscalYears()->firstOrFail()->id]);
         $admin->assignRole($adminRole);
         config(['active-company-id' => $ownCompany->id]);
 
         $ownUser = User::factory()->create(['name' => 'Own Company User']);
         $ownUser->companies()->attach($ownCompany);
+        $ownUser->fiscalYears()->syncWithoutDetaching([$ownCompany->fiscalYears()->firstOrFail()->id]);
         $otherUser = User::factory()->create(['name' => 'Other Company User']);
         $otherUser->companies()->attach($otherCompany);
+        $otherUser->fiscalYears()->syncWithoutDetaching([$otherCompany->fiscalYears()->firstOrFail()->id]);
 
         $this->actingAs($admin)->get(route('roles.index'))->assertForbidden();
         $this->actingAs($admin)->get(route('permissions.index'))->assertForbidden();
@@ -122,6 +126,7 @@ class AuthLifecycleTest extends TestCase
         $company = $this->company('Viewer Company');
         $viewer = User::factory()->create();
         $viewer->companies()->attach($company);
+        $viewer->fiscalYears()->syncWithoutDetaching([$company->fiscalYears()->firstOrFail()->id]);
         $viewer->assignRole($viewerRole);
         config(['active-company-id' => $company->id]);
 
@@ -180,15 +185,16 @@ class AuthLifecycleTest extends TestCase
             Permission::firstOrCreate(['name' => 'permissions.index']),
         );
 
-        $company = Company::create([
+        $company = Company::factory()->create([
             'name' => 'Current Workspace',
             'fiscal_year' => (int) toEnglish(jdate('Y')),
             'currency' => 'Rial',
         ]);
         $user->companies()->attach($company);
+        $user->fiscalYears()->syncWithoutDetaching([$company->fiscalYears()->firstOrFail()->id]);
 
         $workspace = $this->actingAs($user)
-            ->withCookie('active-company-id', (string) $company->id)
+            ->withCookie('active-fiscal-year-id', (string) $company->fiscalYears()->firstOrFail()->id)
             ->get(route('home'));
 
         $workspace->assertOk();
@@ -198,7 +204,7 @@ class AuthLifecycleTest extends TestCase
         $workspace->assertSee('w-[min(18rem,calc(100vw-1rem))]', false);
         $workspace->assertDontSee(route('roles.index'), false);
         $workspace->assertDontSee(route('permissions.index'), false);
-        $this->assertSame($company->fiscalYear->company_identity_id, config('active-company-id'));
+        $this->assertSame($company->id, config('active-company-id'));
 
         $about = $this->get(route('about'));
         $about->assertOk();
@@ -238,7 +244,7 @@ class AuthLifecycleTest extends TestCase
                 ->assertSee($managementHeading);
         }
 
-        $company->update(['fiscal_year' => (int) toEnglish(jdate('Y')) - 1]);
+        $company->fiscalYears()->firstOrFail()->update(['year' => (int) toEnglish(jdate('Y')) - 1]);
 
         $this->get(route('home'))->assertok();
     }
@@ -268,6 +274,7 @@ class AuthLifecycleTest extends TestCase
         $company = $this->company('Recent Fiscal Company');
         $target = User::factory()->unverified()->create(['name' => 'Recent Unverified User']);
         $target->companies()->attach($company);
+        $target->fiscalYears()->syncWithoutDetaching([$company->fiscalYears()->firstOrFail()->id]);
         $companylessTarget = User::factory()->create(['name' => 'Recent Companyless User']);
 
         $dashboard = $this->actingAs($actor)->get(route('management.dashboard'))->assertOk();
@@ -299,7 +306,7 @@ class AuthLifecycleTest extends TestCase
         User::factory()->count(2)->create(['created_at' => now()->subDays(5)]);
         $openCompany = $this->company('Open Business');
         $closedCompany = $this->company('Closed Business');
-        $closedCompany->update(['closed_at' => now()]);
+        $closedCompany->fiscalYears()->firstOrFail()->update(['closed_at' => now()]);
 
         $response = $this->actingAs($actor)->get(route('management.dashboard'));
 
@@ -346,6 +353,7 @@ class AuthLifecycleTest extends TestCase
                 'date' => now()->toDateString(),
                 'creator_id' => $actor->id,
                 'company_id' => $growingCompany->id,
+                'fiscal_year_id' => $growingCompany->fiscalYears()->firstOrFail()->id,
                 'created_at' => now()->subDays($number),
             ]);
         }
@@ -356,6 +364,7 @@ class AuthLifecycleTest extends TestCase
                 'date' => now()->subDays(35)->toDateString(),
                 'creator_id' => $actor->id,
                 'company_id' => $fallingCompany->id,
+                'fiscal_year_id' => $fallingCompany->fiscalYears()->firstOrFail()->id,
             ]);
             $document->timestamps = false;
             $document->forceFill(['created_at' => now()->subDays(35)])->save();
@@ -366,6 +375,7 @@ class AuthLifecycleTest extends TestCase
             'date' => now()->toDateString(),
             'creator_id' => $actor->id,
             'company_id' => $fallingCompany->id,
+            'fiscal_year_id' => $fallingCompany->fiscalYears()->firstOrFail()->id,
             'created_at' => now()->subDays(2),
         ]);
 
@@ -387,7 +397,7 @@ class AuthLifecycleTest extends TestCase
     {
         $actor = User::factory()->create();
         $actor->assignRole(Role::create(['name' => 'Super-Admin']));
-        $company = Company::create([
+        $company = Company::factory()->create([
             'name' => 'Profile Company',
             'fiscal_year' => 1405,
             'currency' => 'Rial',
@@ -409,6 +419,7 @@ class AuthLifecycleTest extends TestCase
         ]);
         $target->assignRole(Role::create(['name' => 'Profile Auditor']));
         $target->companies()->attach($company);
+        $target->fiscalYears()->syncWithoutDetaching([$company->fiscalYears()->firstOrFail()->id]);
 
         $this->actingAs($actor)->get(route('users.show', $target))->assertOk()
             ->assertSee('<table', false)
@@ -468,9 +479,11 @@ class AuthLifecycleTest extends TestCase
         $otherCompany = $this->company('Other Company');
         $actor = User::factory()->create();
         $actor->companies()->attach($actorCompany);
+        $actor->fiscalYears()->syncWithoutDetaching([$actorCompany->fiscalYears()->firstOrFail()->id]);
         $actor->assignRole(Role::create(['name' => 'Super-Admin']));
         $target = User::factory()->unverified()->create();
         $target->companies()->attach($otherCompany);
+        $target->fiscalYears()->syncWithoutDetaching([$otherCompany->fiscalYears()->firstOrFail()->id]);
 
         $this->actingAs($actor)
             ->from(route('management.dashboard'))
@@ -536,9 +549,11 @@ class AuthLifecycleTest extends TestCase
         $target = User::factory()->create();
         $target->assignRole($adminRole);
         $target->companies()->attach($company);
+        $target->fiscalYears()->syncWithoutDetaching([$company->fiscalYears()->firstOrFail()->id]);
         $superAdminTarget = User::factory()->create();
         $superAdminTarget->assignRole('Super-Admin');
         $superAdminTarget->companies()->attach($company);
+        $superAdminTarget->fiscalYears()->syncWithoutDetaching([$company->fiscalYears()->firstOrFail()->id]);
 
         $this->actingAs($actor)->get(route('users.create'))->assertOk()->assertDontSee('Super-Admin');
         $this->get(route('users.edit', $target))->assertOk()->assertDontSee('Super-Admin');
@@ -579,7 +594,7 @@ class AuthLifecycleTest extends TestCase
 
     private function company(string $name): Company
     {
-        return Company::create([
+        return Company::factory()->create([
             'name' => $name,
             'fiscal_year' => 1405,
             'currency' => 'Rial',
@@ -589,12 +604,13 @@ class AuthLifecycleTest extends TestCase
     public function test_verified_user_with_a_company_can_login_with_a_normalized_email(): void
     {
         $user = User::factory()->create(['email' => 'login@example.com']);
-        $company = Company::create([
+        $company = Company::factory()->create([
             'name' => 'Login Company',
             'fiscal_year' => 1405,
             'currency' => 'Rial',
         ]);
         $user->companies()->attach($company);
+        $user->fiscalYears()->syncWithoutDetaching([$company->fiscalYears()->firstOrFail()->id]);
 
         $response = $this->post(route('login'), [
             'email' => ' LOGIN@EXAMPLE.COM ',
@@ -654,12 +670,13 @@ class AuthLifecycleTest extends TestCase
     public function test_remember_cookie_restores_authentication_without_the_original_session(): void
     {
         $user = User::factory()->create();
-        $company = Company::create([
+        $company = Company::factory()->create([
             'name' => 'Remember Me Company',
             'fiscal_year' => 1405,
             'currency' => 'Rial',
         ]);
         $user->companies()->attach($company);
+        $user->fiscalYears()->syncWithoutDetaching([$company->fiscalYears()->firstOrFail()->id]);
 
         $loginResponse = $this->post(route('login'), ['email' => $user->email, 'password' => 'password', 'remember' => '1']);
 
@@ -912,7 +929,7 @@ class AuthLifecycleTest extends TestCase
         $admin = Role::firstOrCreate(['name' => __('Admin')]);
         $admin->syncPermissions(Permission::firstOrCreate(['name' => 'users.index']));
 
-        $previousCompany = Company::create([
+        $previousCompany = Company::factory()->create([
             'name' => 'Existing Company',
             'fiscal_year' => 1404,
             'currency' => 'Rial',
@@ -933,7 +950,8 @@ class AuthLifecycleTest extends TestCase
 
         $company = Company::where('name', 'New Company')->firstOrFail();
 
-        $this->assertSame(0, config('active-company-id'));
+        $this->assertSame($company->id, config('active-company-id'));
+        $this->assertSame($company->fiscalYears()->firstOrFail()->id, config('active-fiscal-year-id'));
         $this->assertTrue($company->users()->whereKey($user->id)->exists());
         $this->assertTrue($user->fresh()->hasRole(__('Admin')));
         $this->assertFalse($user->fresh()->hasRole('Super-Admin'));
@@ -957,7 +975,7 @@ class AuthLifecycleTest extends TestCase
 
     public function test_company_registration_bootstraps_missing_admin_permissions(): void
     {
-        Company::create(['name' => 'Existing Company', 'fiscal_year' => 1404, 'currency' => 'Rial']);
+        Company::factory()->create(['name' => 'Existing Company', 'fiscal_year' => 1404, 'currency' => 'Rial']);
         $user = User::factory()->create();
 
         $response = $this->actingAs($user)->post(route('registered-user.company.store'), [
@@ -973,7 +991,7 @@ class AuthLifecycleTest extends TestCase
 
         $this->assertTrue($user->fresh()->can('home'));
         $this->assertTrue($user->fresh()->can('documents.show'));
-        $this->withCookie('active-company-id', (string) $company->id)->get(route('home'))->assertOk();
+        $this->withCookie('active-fiscal-year-id', (string) $company->fiscalYears()->firstOrFail()->id)->get(route('home'))->assertOk();
     }
 
     public function test_user_can_request_a_password_reset_email_and_reset_their_password(): void

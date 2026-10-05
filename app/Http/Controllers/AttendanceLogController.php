@@ -74,7 +74,8 @@ class AttendanceLogController extends Controller
         AttendanceLog::create(array_merge(
             $validated,
             [
-                'company_id' => getActiveLegacyCompany(),
+                'company_id' => getActiveCompany(),
+                'fiscal_year_id' => getActiveFiscalYear(),
                 'log_date' => $gregorianLogDate,
                 'is_manual' => $request->boolean('is_manual'),
             ]
@@ -335,10 +336,10 @@ class AttendanceLogController extends Controller
 
         $startDate = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($validated['start_date']));
         $endDate = $startDate->copy()->addDays((int) $validated['duration'] - 1);
-        $companyId = getActiveLegacyCompany();
+        $companyId = getActiveCompany();
 
         $holidayDates = PublicHoliday::withoutGlobalScopes()
-            ->where('company_id', $companyId)
+            ->where('fiscal_year_id', getActiveFiscalYear())
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->pluck('date')
             ->map(fn ($d) => $d instanceof Carbon ? $d->toDateString() : (string) $d)
@@ -405,7 +406,7 @@ class AttendanceLogController extends Controller
                     }
 
                     $log = AttendanceLog::updateOrCreate(
-                        ['employee_id' => $employeeId, 'company_id' => $companyId, 'log_date' => $dateStr],
+                        ['employee_id' => $employeeId, 'company_id' => $companyId, 'fiscal_year_id' => getActiveFiscalYear(), 'log_date' => $dateStr],
                         ['entry_time' => $defaultEntry, 'exit_time' => $exitTime, 'is_manual' => false],
                     );
 
@@ -454,7 +455,7 @@ class AttendanceLogController extends Controller
         $preview = $importService->preview(
             $request->file('file'),
             $type,
-            getActiveLegacyCompany(),
+            getActiveCompany(),
             $dateFrom,
             $dateTo
         );
@@ -488,7 +489,7 @@ class AttendanceLogController extends Controller
         $result = $importService->import(
             $tmpPath,
             $type,
-            getActiveLegacyCompany(),
+            getActiveCompany(),
             $dateFrom,
             $dateTo,
             $duplicateMode

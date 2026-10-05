@@ -10,7 +10,7 @@ class ServiceSeeder extends Seeder
 {
     public function run(): void
     {
-        $groups = ServiceGroup::withoutGlobalScopes()->where('company_id', getActiveLegacyCompany())->get();
+        $groups = ServiceGroup::withoutGlobalScopes()->where('fiscal_year_id', getActiveFiscalYear())->get();
 
         foreach ($groups as $group) {
             Service::factory()->count(10)->withGroup($group)->withSubject()->create();

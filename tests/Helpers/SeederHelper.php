@@ -30,13 +30,13 @@ trait SeederHelper
             ['type' => 3, 'category' => 1, 'key' => 'beginning_inventory', 'value' => '29', 'desc' => 'تراز افتتاحیه', 'company_id' => $companyId],
         ];
 
-        $fiscalYearId = FiscalYear::query()->where('legacy_company_id', $companyId)->value('id');
+        $fiscalYearId = FiscalYear::query()->where('company_id', $companyId)->whereKey(getActiveFiscalYear())->value('id') ?? FiscalYear::query()->where('company_id', $companyId)->orderByDesc('year')->value('id');
         foreach ($configs as &$row) {
             $row['fiscal_year_id'] = $fiscalYearId;
         }
         unset($row);
 
-        Config::upsert($configs, ['key', 'company_id'], ['value', 'fiscal_year_id']);
+        Config::upsert($configs, ['key', 'fiscal_year_id'], ['value', 'fiscal_year_id']);
 
         foreach ($configs as $config) {
             config(['amir.'.$config['key'] => $config['value']]);
@@ -77,7 +77,7 @@ trait SeederHelper
             ['id' => 29, 'code' => '067001', 'name' => 'تراز افتتاحیه', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
         ];
 
-        $fiscalYearId = FiscalYear::query()->where('legacy_company_id', $companyId)->value('id');
+        $fiscalYearId = FiscalYear::query()->where('company_id', $companyId)->whereKey(getActiveFiscalYear())->value('id') ?? FiscalYear::query()->where('company_id', $companyId)->orderByDesc('year')->value('id');
         foreach ($subjectData as &$row) {
             $row['fiscal_year_id'] = $fiscalYearId;
         }

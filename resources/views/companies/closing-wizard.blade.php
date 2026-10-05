@@ -1,4 +1,4 @@
-<x-platform-layout title="{{ __('Year-End Closing Wizard') }} – {{ $company->name }} {{ $company->fiscal_year }}">
+<x-platform-layout title="{{ __('Year-End Closing Wizard') }} – {{ $fiscalYear->company->name }} {{ $fiscalYear->year }}">
     <div class="card bg-base-100 shadow-xl">
 
         {{-- Header --}}
@@ -17,12 +17,12 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
-                            {{ $company->fiscal_year }}
+                            {{ $fiscalYear->year }}
                         </span>
                         <span class="badge badge-lg badge-neutral gap-2">
-                            {{ $company->name }}
+                            {{ $fiscalYear->company->name }}
                         </span>
-                        @if ($company->closed_at)
+                        @if ($fiscalYear->closed_at)
                             <span class="badge badge-lg badge-error gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -146,9 +146,9 @@
                                 </a>
                             </div>
                         </div>
-                        @if ($company->closing_recalculation_step === 2)
+                        @if ($fiscalYear->closing_recalculation_step === 2)
                             @can('companies.closing-wizard.recalculate')
-                                <form action="{{ route('companies.closing-wizard.recalculate', $company) }}" method="POST"
+                                <form action="{{ route('companies.closing-wizard.recalculate', $fiscalYear) }}" method="POST"
                                     onsubmit="return confirm('{{ __('Restart closing recalculation from Step 1?') }}')">
                                     @csrf
                                     <button type="submit" class="btn btn-outline btn-warning gap-2">
@@ -161,10 +161,10 @@
                             @endcan
                         @endif
                     @else
-                        <form action="{{ route('companies.closing-wizard.step1', $company) }}" method="POST">
+                        <form action="{{ route('companies.closing-wizard.step1', $fiscalYear) }}" method="POST">
                             @csrf
-                            <button type="submit" class="btn btn-warning gap-2 {{ !$allPass || $company->closed_at ? 'btn-disabled' : '' }}"
-                                @disabled(!$allPass || $company->closed_at) @if (!$allPass) title="{{ __('Fix all pre-flight checks first.') }}" @endif>
+                            <button type="submit" class="btn btn-warning gap-2 {{ !$allPass || $fiscalYear->closed_at ? 'btn-disabled' : '' }}"
+                                @disabled(!$allPass || $fiscalYear->closed_at) @if (!$allPass) title="{{ __('Fix all pre-flight checks first.') }}" @endif>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -230,17 +230,17 @@
             {{-- ═══════════════════════════════════════════════════════ --}}
             <div>
                 <div class="divider text-lg font-semibold">
-                    <span class="badge badge-lg {{ $company->closed_at ? 'badge-success' : ($step3Enabled ? 'badge-error' : 'badge-neutral') }} me-2">3</span>
-                    {{ $company->closing_recalculation_step ? __('Step 3: Recalculate Closing Document') : __('Step 3: Close Permanent Accounts & Open New Year') }}
-                    @if ($company->closed_at)
+                    <span class="badge badge-lg {{ $fiscalYear->closed_at ? 'badge-success' : ($step3Enabled ? 'badge-error' : 'badge-neutral') }} me-2">3</span>
+                    {{ $fiscalYear->closing_recalculation_step ? __('Step 3: Recalculate Closing Document') : __('Step 3: Close Permanent Accounts & Open New Year') }}
+                    @if ($fiscalYear->closed_at)
                         <span class="badge badge-success badge-sm ms-2">{{ __('Completed') }}</span>
                     @endif
                 </div>
 
                 <div class="bg-base-200 rounded-lg px-4 py-4 text-sm space-y-3">
-                    @if ($company->closing_recalculation_step)
+                    @if ($fiscalYear->closing_recalculation_step)
                         <p class="text-gray-600 dark:text-gray-300">
-                            {{ __('This step recalculates only the Closing Document for fiscal year :year.', ['year' => $company->fiscal_year]) }}
+                            {{ __('This step recalculates only the Closing Document for fiscal year :year.', ['year' => $fiscalYear->year]) }}
                         </p>
                         <p class="text-warning">
                             {{ __('The next fiscal year and its Opening Document will not be changed. Update the Opening Document manually if you have access.') }}
@@ -251,29 +251,29 @@
                         </p>
                         <ol class="list-decimal list-inside space-y-1 text-gray-600 dark:text-gray-300 ms-2">
                             <li>{{ __('Generates the Closing Document (closes all permanent accounts to the Closing Summary).') }}</li>
-                            <li>{{ __('Creates the new Fiscal Year entity for year :year.', ['year' => $company->fiscal_year + 1]) }}</li>
+                            <li>{{ __('Creates the new Fiscal Year entity for year :year.', ['year' => $fiscalYear->year + 1]) }}</li>
                             <li>{{ __('Generates the Opening Document in the new fiscal year.') }}</li>
                         </ol>
                     @endif
 
-                    @if ($company->closed_at)
+                    @if ($fiscalYear->closed_at)
                         <div class="flex items-center gap-3 bg-success/10 border border-success/30 rounded-lg px-4 py-3">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
                             <div>
                                 <span class="font-semibold text-success">{{ __('Fiscal year closed on') }}</span>
-                                <span class="ms-1">{{ formatDate($company->closed_at) }}</span>
-                                @if ($company->closingDocument)
-                                    <a href="{{ route('documents.show', $company->closingDocument) }}" class="link link-primary ms-3">
-                                        {{ __('View Closing Document') }} #{{ $company->closingDocument->number }}
+                                <span class="ms-1">{{ formatDate($fiscalYear->closed_at) }}</span>
+                                @if ($fiscalYear->closingDocument)
+                                    <a href="{{ route('documents.show', $fiscalYear->closingDocument) }}" class="link link-primary ms-3">
+                                        {{ __('View Closing Document') }} #{{ $fiscalYear->closingDocument->number }}
                                     </a>
                                 @endif
                             </div>
                         </div>
                         @can('companies.closing-wizard.recalculate')
-                            @if ($company->closingDocument)
-                                <form action="{{ route('companies.closing-wizard.recalculate', $company) }}" method="POST"
+                            @if ($fiscalYear->closingDocument)
+                                <form action="{{ route('companies.closing-wizard.recalculate', $fiscalYear) }}" method="POST"
                                     onsubmit="return confirm('{{ __('Restart closing recalculation? You must repeat all three closing steps, including the manual Income Summary adjustment.') }}')">
                                     @csrf
                                     <button type="submit" class="btn btn-outline btn-warning gap-2">
@@ -307,15 +307,15 @@
                             </div>
                         @endif
 
-                        <form action="{{ route('companies.closing-wizard.step3', $company) }}" method="POST"
-                            onsubmit="return confirm('{{ $company->closing_recalculation_step ? __('This will recalculate only the Closing Document for fiscal year :year. The next fiscal year will not be changed. Are you sure?', ['year' => $company->fiscal_year]) : __('This will permanently close fiscal year :year and create year :next. Are you absolutely sure?', ['year' => $company->fiscal_year, 'next' => $company->fiscal_year + 1]) }}')">
+                        <form action="{{ route('companies.closing-wizard.step3', $fiscalYear) }}" method="POST"
+                            onsubmit="return confirm('{{ $fiscalYear->closing_recalculation_step ? __('This will recalculate only the Closing Document for fiscal year :year. The next fiscal year will not be changed. Are you sure?', ['year' => $fiscalYear->year]) : __('This will permanently close fiscal year :year and create year :next. Are you absolutely sure?', ['year' => $fiscalYear->year, 'next' => $fiscalYear->year + 1]) }}')">
                             @csrf
                             <button type="submit" class="btn btn-error gap-2 {{ !$step3Enabled ? 'btn-disabled' : '' }}" @disabled(!$step3Enabled)>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                 </svg>
-                                {{ $company->closing_recalculation_step ? __('Recalculate Closing Document') : __('Close Permanent Accounts & Open New Year') }}
+                                {{ $fiscalYear->closing_recalculation_step ? __('Recalculate Closing Document') : __('Close Permanent Accounts & Open New Year') }}
                             </button>
                         </form>
                     @endif

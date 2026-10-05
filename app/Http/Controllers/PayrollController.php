@@ -223,7 +223,7 @@ class PayrollController extends Controller
         $payroll = $this->payrollService->createFromAttendance(
             attendance: $monthlyAttendance,
             decree: $decree,
-            companyId: (int) getActiveLegacyCompany(),
+            companyId: (int) getActiveCompany(),
         );
 
         return redirect()->route('salary.payrolls.show', $payroll)

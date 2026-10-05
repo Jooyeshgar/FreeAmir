@@ -16,7 +16,7 @@ class CustomerFactory extends Factory
 
     public function definition()
     {
-        $companyId = (int) getActiveLegacyCompany();
+        $companyId = (int) getActiveCompany();
         if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
             throw new \LogicException('An active company is required to create a customer.');
         }

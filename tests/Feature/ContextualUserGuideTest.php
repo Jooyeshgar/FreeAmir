@@ -118,6 +118,8 @@ class ContextualUserGuideTest extends TestCase
         $user = User::factory()->create();
         $company = Company::factory()->create();
         $company->users()->syncWithoutDetaching([$user->id]);
+        $fiscalYear = $company->fiscalYears()->firstOrFail();
+        $fiscalYear->users()->syncWithoutDetaching([$user->id]);
         $user->givePermissionTo(...collect([
             'home',
             'documents.show',
@@ -127,16 +129,20 @@ class ContextualUserGuideTest extends TestCase
             'companies.closing-wizard',
         ])->map(fn (string $name) => Permission::firstOrCreate(['name' => $name]))->all());
 
-        config(['active-company-id' => $company->id]);
+        config([
+            'active-company-id' => $company->id,
+            'active-fiscal-year-id' => $fiscalYear->id,
+            'active-company-fiscal-year' => $fiscalYear->year,
+        ]);
 
-        $this->actingAs($user)->withCookie('active-company-id', (string) $company->id);
+        $this->actingAs($user)->withCookie('active-fiscal-year-id', (string) $fiscalYear->id);
 
         foreach ([
             route('home'),
             route('companies.index'),
             route('companies.create'),
             route('companies.edit', $company),
-            route('companies.closing-wizard', $company),
+            route('companies.closing-wizard', $fiscalYear),
         ] as $url) {
             $this->get($url)->assertOk()->assertSee($this->guideLink(), false);
         }

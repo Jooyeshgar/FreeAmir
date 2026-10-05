@@ -12,7 +12,7 @@ class ConfigSeeder extends Seeder
 {
     public function run(?int $companyId = null): void
     {
-        $companyId ??= (int) getActiveLegacyCompany();
+        $companyId ??= (int) getActiveCompany();
         $configs = [
             ['type' => 3, 'category' => 1, 'key' => 'payroll', 'value' => '10', 'desc' => 'حقوق و دستمزد', 'company_id' => 1],
             ['type' => 3, 'category' => 1, 'key' => 'cust_subject', 'value' => '4', 'desc' => 'مشتریان', 'company_id' => 1],
@@ -38,7 +38,7 @@ class ConfigSeeder extends Seeder
         ];
 
         $subjectCodes = $this->subjectCodes();
-        $subjects = Subject::withoutGlobalScopes()->where('company_id', $companyId)->whereIn('code', array_values($subjectCodes))->get()->keyBy('code');
+        $subjects = Subject::withoutGlobalScopes()->where('fiscal_year_id', getActiveFiscalYear())->whereIn('code', array_values($subjectCodes))->get()->keyBy('code');
 
         foreach ($configs as &$config) {
             $subject = $subjects->get($subjectCodes[$config['key']]);
@@ -48,11 +48,12 @@ class ConfigSeeder extends Seeder
             }
 
             $config['company_id'] = $companyId;
+            $config['fiscal_year_id'] = getActiveFiscalYear();
             $config['value'] = (string) $subject->id;
         }
         unset($config);
 
-        Config::upsert($configs, ['key', 'company_id'], ['type', 'category', 'value', 'desc']);
+        Config::upsert($configs, ['key', 'fiscal_year_id'], ['type', 'category', 'value', 'desc']);
         foreach ($configs as $config) {
             config(['amir.'.$config['key'] => $config['value']]);
         }

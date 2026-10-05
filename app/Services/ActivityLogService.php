@@ -246,7 +246,7 @@ class ActivityLogService
             'metrics' => $this->metrics(),
             'users' => User::query()->whereIn('id', Activity::query()->whereNotNull('user_id')->select('user_id'))->orderBy('name')->get(['id', 'name', 'email']),
             'impersonatedUsers' => User::query()->whereIn('id', $impersonatedUserIds)->get(['id', 'name', 'email'])->keyBy('id'),
-            'companies' => Company::query()->orderByDesc('fiscal_year')->orderBy('name')->get(['id', 'name', 'fiscal_year']),
+            'companies' => Company::query()->orderBy('name')->get(['id', 'name']),
             'modelTypes' => $this->availableModelTypes(),
             'filters' => $filters,
         ];
@@ -541,7 +541,7 @@ class ActivityLogService
             return null;
         }
 
-        $companyId = config('active-legacy-company-id') ?: $request->cookie('active-company-id');
+        $companyId = getActiveCompany() ?: $request->cookie('active-company-id');
 
         return $companyId ? (int) $companyId : null;
     }

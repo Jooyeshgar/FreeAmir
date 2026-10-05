@@ -26,13 +26,16 @@ class WorkShiftTest extends TestCase
 
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
+        $fiscalYear = $company->fiscalYears()->firstOrFail();
+        $fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'attendance.work-shifts.*'])
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $fiscalYear->id]);
+        config(['active-company-id' => $this->companyId, 'active-fiscal-year-id' => $fiscalYear->id]);
     }
 
     private function makeWorkShift(array $overrides = []): WorkShift
@@ -74,7 +77,8 @@ class WorkShiftTest extends TestCase
     public function test_index_does_not_show_other_company_work_shifts(): void
     {
         $otherCompany = Company::factory()->create();
-        WorkShift::factory()->create(['company_id' => $otherCompany->id, 'name' => 'Other Shift']);
+        WorkShift::factory()->create(['company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherCompany->fiscalYears()->firstOrFail()->id, 'name' => 'Other Shift']);
 
         $response = $this->get(route('attendance.work-shifts.index'));
 
@@ -215,7 +219,7 @@ class WorkShiftTest extends TestCase
     public function test_cannot_edit_other_company_work_shift(): void
     {
         $otherCompany = Company::factory()->create();
-        $otherShift = WorkShift::factory()->create(['company_id' => $otherCompany->id]);
+        $otherShift = WorkShift::factory()->create(['company_id' => $otherCompany->id, 'fiscal_year_id' => $otherCompany->fiscalYears()->firstOrFail()->id]);
 
         $response = $this->get(route('attendance.work-shifts.edit', $otherShift));
 
@@ -241,7 +245,7 @@ class WorkShiftTest extends TestCase
     public function test_cannot_delete_other_company_work_shift(): void
     {
         $otherCompany = Company::factory()->create();
-        $otherShift = WorkShift::factory()->create(['company_id' => $otherCompany->id]);
+        $otherShift = WorkShift::factory()->create(['company_id' => $otherCompany->id, 'fiscal_year_id' => $otherCompany->fiscalYears()->firstOrFail()->id]);
 
         $response = $this->delete(route('attendance.work-shifts.destroy', $otherShift));
 

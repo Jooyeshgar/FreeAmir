@@ -13,7 +13,7 @@ class OrgChartFactory extends Factory
     public function definition(): array
     {
         return [
-            'company_id' => Company::factory(),
+            'company_id' => getActiveCompany() ?: Company::factory(),
             'title' => $this->faker->jobTitle(),
             'parent_id' => null,
             'description' => $this->faker->optional()->sentence(),

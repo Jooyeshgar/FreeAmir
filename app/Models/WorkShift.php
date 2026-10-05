@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\ThursdayStatus;
-use App\Models\Concerns\HasFiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,10 +12,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class WorkShift extends Model
 {
     use HasFactory;
-    use HasFiscalYear;
 
     protected $fillable = [
         'company_id',
+        'fiscal_year_id',
         'name',
         'start_time',
         'end_time',

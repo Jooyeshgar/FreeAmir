@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Enums\SubjectType;
-use App\Models\Company;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\MonthlyBudget;
 use App\Models\Subject;
 use App\Models\Transaction;
@@ -56,7 +56,7 @@ class MonthlyBudgetService
 
             return MonthlyBudget::updateOrCreate(
                 [
-                    'company_id' => getActiveLegacyCompany(),
+                    'fiscal_year_id' => getActiveFiscalYear(),
                     'month' => $month,
                     'subject_id' => $data['subject_id'],
                 ],
@@ -207,7 +207,7 @@ class MonthlyBudgetService
             MonthlyBudget::query()->where('month', $month)->delete();
 
             return $previousLines->map(fn (MonthlyBudget $line) => MonthlyBudget::create([
-                'company_id' => getActiveLegacyCompany(),
+                'company_id' => getActiveCompany(),
                 'subject_id' => $line->subject_id,
                 'month' => $month,
                 'budget_type' => $line->budget_type,
@@ -546,7 +546,7 @@ class MonthlyBudgetService
     private function monthIsCompleted(int $month): bool
     {
         [$currentYear, $currentMonth] = $this->currentJalaliYearMonth();
-        $fiscalYear = $this->activeFiscalYear ??= (int) Company::query()->findOrFail(getActiveLegacyCompany())->fiscal_year;
+        $fiscalYear = $this->activeFiscalYear ??= (int) FiscalYear::query()->findOrFail(getActiveFiscalYear())->year;
 
         return $fiscalYear < $currentYear || ($fiscalYear === $currentYear && $month < $currentMonth);
     }
@@ -568,7 +568,7 @@ class MonthlyBudgetService
     {
         return $this->approvedSubjectBalances ??= Transaction::query()
             ->join('documents', 'documents.id', '=', 'transactions.document_id')
-            ->where('documents.fiscal_year_id', getScopedFiscalYear())
+            ->where('documents.fiscal_year_id', getActiveFiscalYear())
             ->whereNotNull('documents.approved_at')
             ->selectRaw('transactions.subject_id, SUM(transactions.value) as balance')
             ->groupBy('transactions.subject_id')
@@ -653,7 +653,7 @@ class MonthlyBudgetService
 
             $this->monthlyBalances[$month] = Transaction::query()
                 ->join('documents', 'documents.id', '=', 'transactions.document_id')
-                ->where('documents.fiscal_year_id', getScopedFiscalYear())
+                ->where('documents.fiscal_year_id', getActiveFiscalYear())
                 ->whereNotNull('documents.approved_at')
                 ->whereBetween('documents.date', [$startDate, $endDate])
                 ->whereIn('transactions.subject_id', $this->balanceSubjectIds())
@@ -687,12 +687,12 @@ class MonthlyBudgetService
 
         [$startDate, $endDate] = $this->monthDateRange($month);
 
-        return $this->monthlyDocumentCounts[$month] = Document::query()->where('fiscal_year_id', getScopedFiscalYear())->whereNotNull('approved_at')->whereBetween('date', [$startDate, $endDate])->count();
+        return $this->monthlyDocumentCounts[$month] = Document::query()->where('fiscal_year_id', getActiveFiscalYear())->whereNotNull('approved_at')->whereBetween('date', [$startDate, $endDate])->count();
     }
 
     private function monthDateRange(int $month): array
     {
-        $fiscalYear = $this->activeFiscalYear ??= (int) Company::query()->findOrFail(getActiveLegacyCompany())->fiscal_year;
+        $fiscalYear = $this->activeFiscalYear ??= (int) FiscalYear::query()->findOrFail(getActiveFiscalYear())->year;
         $lastDay = match (true) {
             $month <= 6 => 31,
             $month <= 11 => 30,
