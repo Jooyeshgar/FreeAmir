@@ -412,7 +412,7 @@ class WarehouseTest extends TestCase
             'transferred_at' => now()->toDateString(),
         ]);
 
-        $export = FiscalYearService::exportData($this->companyId, ['warehouses']);
+        $export = FiscalYearService::exportData(Company::findOrFail($this->companyId)->fiscalYear->id, ['warehouses']);
 
         $this->assertArrayHasKey('warehouses', $export);
         $this->assertArrayNotHasKey('warehouse_product_stocks', $export);

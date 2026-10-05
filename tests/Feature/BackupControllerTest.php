@@ -320,7 +320,7 @@ class BackupControllerTest extends TestCase
             FiscalYearSection::INVOICES->value,
             FiscalYearSection::CHEQUES->value,
         ];
-        $payload = FiscalYearService::exportData($this->company->id, $sections);
+        $payload = FiscalYearService::exportData($this->company->fiscalYear->id, $sections);
 
         $this->assertCount(1, $payload['chequebooks']);
         $this->assertCount(1, $payload['cheques']);
@@ -597,7 +597,7 @@ class BackupControllerTest extends TestCase
             'status' => InvoiceStatus::APPROVED,
         ]);
 
-        $payload = FiscalYearService::exportData($this->company->id, [
+        $payload = FiscalYearService::exportData($this->company->fiscalYear->id, [
             FiscalYearSection::SUBJECTS->value,
             FiscalYearSection::CUSTOMERS->value,
             FiscalYearSection::INVOICES->value,
@@ -1291,7 +1291,7 @@ class BackupControllerTest extends TestCase
             'code' => 'ENG-01',
         ]);
 
-        $exportData = FiscalYearService::exportData($this->company->id, [FiscalYearSection::EMPLOYEES->value]);
+        $exportData = FiscalYearService::exportData($this->company->fiscalYear->id, [FiscalYearSection::EMPLOYEES->value]);
 
         $this->assertArrayHasKey('organization_units', $exportData);
         $this->assertCount(1, $exportData['organization_units']);
@@ -1413,7 +1413,7 @@ class BackupControllerTest extends TestCase
             'organization_unit_id' => $orgUnit->id,
         ]);
 
-        $exportData = FiscalYearService::exportData($this->company->id, [FiscalYearSection::EMPLOYEES->value]);
+        $exportData = FiscalYearService::exportData($this->company->fiscalYear->id, [FiscalYearSection::EMPLOYEES->value]);
 
         $this->assertArrayHasKey('organization_units', $exportData);
         $this->assertNotEmpty($exportData['organization_units']);
@@ -1458,7 +1458,7 @@ class BackupControllerTest extends TestCase
             'note' => 'Submitted for review',
         ]);
 
-        $exportData = FiscalYearService::exportData($this->company->id, [FiscalYearSection::PAYROLLS->value]);
+        $exportData = FiscalYearService::exportData($this->company->fiscalYear->id, [FiscalYearSection::PAYROLLS->value]);
 
         $this->assertArrayHasKey('payroll_status_histories', $exportData);
         $this->assertCount(1, $exportData['payroll_status_histories']);
@@ -1485,7 +1485,7 @@ class BackupControllerTest extends TestCase
             'status' => PayrollStatus::Draft,
         ]);
 
-        $exportData = FiscalYearService::exportData($this->company->id, [FiscalYearSection::PAYROLLS->value]);
+        $exportData = FiscalYearService::exportData($this->company->fiscalYear->id, [FiscalYearSection::PAYROLLS->value]);
 
         $this->assertArrayHasKey('payroll_status_histories', $exportData);
         $this->assertEmpty($exportData['payroll_status_histories']);
