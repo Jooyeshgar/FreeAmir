@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Company;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Services\CompanyOverviewService;
@@ -147,8 +148,7 @@ class ReportsController extends Controller
             }
         }
 
-        $company = Company::withoutGlobalScopes()->findOrFail(getActiveLegacyCompany());
-        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+        [$fiscalStart, $fiscalEnd] = FiscalYear::findOrFail(getScopedFiscalYear())->range();
         $startDate = $validated['start_date'] ?? null;
         $endDate = $validated['end_date'] ?? null;
 

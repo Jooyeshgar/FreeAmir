@@ -104,4 +104,15 @@ class CompanyIdentityConsistencyTest extends TestCase
             ]);
         }
     }
+
+    public function test_fiscal_year_boundaries_come_from_the_year_record(): void
+    {
+        $company = Company::create(['name' => 'Shared', 'fiscal_year' => 1403]);
+        DB::table('companies')->where('id', $company->id)->update(['fiscal_year' => 1402]);
+
+        [$start, $end] = $company->fiscalYear->range();
+
+        $this->assertSame('2024-03-20', $start->toDateString());
+        $this->assertSame('2025-03-20', $end->toDateString());
+    }
 }
