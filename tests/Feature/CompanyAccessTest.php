@@ -30,6 +30,7 @@ class CompanyAccessTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->withoutVite();
 
         $this->user = User::factory()->create();
         $this->accessibleCompany = Company::factory()->create(['name' => 'Accessible Source']);

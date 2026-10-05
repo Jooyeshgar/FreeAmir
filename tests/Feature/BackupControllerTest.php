@@ -59,6 +59,7 @@ class BackupControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->withoutVite();
 
         $this->company = Company::factory()->create();
 
@@ -110,8 +111,8 @@ class BackupControllerTest extends TestCase
         $response = $this->get(route('backups.create'));
 
         $response->assertOk();
-        $response->assertSee("value=\"{$currentYearCompany->id}\" selected", false);
-        $response->assertDontSee("value=\"{$otherCompany->id}\" selected", false);
+        $response->assertSee("value=\"{$currentYearCompany->fiscalYear->id}\" selected", false);
+        $response->assertDontSee("value=\"{$otherCompany->fiscalYear->id}\" selected", false);
     }
 
     public function test_create_lists_only_companies_accessible_to_user(): void
@@ -186,7 +187,8 @@ class BackupControllerTest extends TestCase
         $decoded = json_decode($jsonContent, true);
 
         $this->assertIsArray($decoded);
-        $this->assertSame($this->company->id, $decoded['meta']['source_company_id']);
+        $this->assertSame($this->company->fiscalYear->company_identity_id, $decoded['meta']['source_company_id']);
+        $this->assertSame($this->company->fiscalYear->id, $decoded['meta']['source_fiscal_year_id']);
         $this->assertSame($this->company->name, $decoded['meta']['source_company_name']);
         $this->assertSame([FiscalYearSection::SUBJECTS->value], $decoded['meta']['sections_exported']);
         $this->assertArrayHasKey(FiscalYearSection::SUBJECTS->value, $decoded);

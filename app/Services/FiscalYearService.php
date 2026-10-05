@@ -34,6 +34,7 @@ use App\Models\Chequebook;
 use App\Models\ChequeHistory;
 use App\Models\Comment;
 use App\Models\Company;
+use App\Models\CompanyIdentity;
 use App\Models\Config;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
@@ -112,17 +113,22 @@ class FiscalYearService
     /**
      * Create a new fiscal year with data copied directly from an existing one in the database.
      *
-     * @param  array  $newFiscalYearData  Data for the new Company record.
-     * @param  int  $sourceYearId  The source fiscal year (Company) ID.
+     * @param  array  $newFiscalYearData  Data for the new fiscal year.
+     * @param  int  $sourceYearId  The source fiscal year ID.
      * @param  array  $sectionsToCopy  Sections to copy from source.
      *
      * @throws Exception
      */
     public static function createWithCopiedData(array $newFiscalYearData, int $sourceYearId, array $sectionsToCopy): Company
     {
+        FiscalYear::query()->findOrFail($sourceYearId);
+
         $sectionsToCopy = self::filterValidSections($sectionsToCopy);
 
         $sourceData = self::fetchSourceData($sourceYearId, $sectionsToCopy);
+        if (in_array('document_files', $sectionsToCopy, true)) {
+            self::documentFilesInBase64($sourceData);
+        }
 
         return self::importData($sourceData, $newFiscalYearData);
     }
@@ -130,7 +136,7 @@ class FiscalYearService
     /**
      * Export data from a specific fiscal year.
      *
-     * @param  int  $sourceYearId  The fiscal year (Company) ID to export.
+     * @param  int  $sourceYearId  The fiscal year ID to export.
      * @param  array|null  $sectionsToExport  Specific sections to export (null for all available).
      * @return array Data structure ready for JSON encoding.
      */
@@ -140,29 +146,40 @@ class FiscalYearService
 
         $exportData = self::fetchSourceData($sourceYearId, $sectionsToExport);
 
-        $sourceCompany = Company::find($sourceYearId);
+        $sourceYear = FiscalYear::with('companyIdentity')->findOrFail($sourceYearId);
         $exportData['meta'] = [
-            'source_company_id' => $sourceYearId,
-            'source_company_name' => $sourceCompany?->name,
+            'source_fiscal_year_id' => $sourceYear->id,
+            'source_fiscal_year' => $sourceYear->year,
+            'source_company_id' => $sourceYear->company_identity_id,
+            'source_company_name' => $sourceYear->companyIdentity->name,
             'exported_at' => now()->toIso8601String(),
             'sections_exported' => $sectionsToExport,
         ];
+        if (in_array('documents', $sectionsToExport, true)) {
+            $exportData['meta']['closing'] = $sourceYear->only([
+                'closed_at',
+                'closed_by',
+                'pl_document_id',
+                'closing_document_id',
+                'closing_recalculation_step',
+            ]);
+        }
 
         return $exportData;
     }
 
     /**
-     * Calculate the total disk size (in bytes) of all document files for a specific company.
+     * Calculate the total disk size (in bytes) of a fiscal year's document files.
      *
-     * @param  int  $companyId  The unique identifier of the company.
+     * @param  int  $fiscalYearId  The fiscal year ID.
      * @return int The total size of all existing document files in bytes.
      */
-    public static function documentFilesSizeBytes(int $companyId): int
+    public static function documentFilesSizeBytes(int $fiscalYearId): int
     {
         $disk = Storage::disk('public');
         $totalBytes = 0;
 
-        foreach (self::getCompanyDocumentFiles($companyId) as $docFile) {
+        foreach (self::getFiscalYearDocumentFiles($fiscalYearId) as $docFile) {
             $path = self::normalizeFilePath($docFile->path);
 
             if ($disk->exists($path)) {
@@ -231,15 +248,14 @@ class FiscalYearService
     }
 
     /**
-     * Fetch all document files for a specific company in a memory-efficient manner.
+     * Fetch all document files for a fiscal year in a memory-efficient manner.
      *
-     * @param  int  $companyId  The ID of the company to retrieve files for.
+     * @param  int  $fiscalYearId  The ID of the fiscal year to retrieve files for.
      * @return LazyCollection<DocumentFile>
      */
-    private static function getCompanyDocumentFiles(int $companyId): LazyCollection
+    private static function getFiscalYearDocumentFiles(int $fiscalYearId): LazyCollection
     {
-        $yearId = FiscalYear::query()->where('legacy_company_id', $companyId)->value('id');
-        $documentIdsSubquery = Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $yearId)->select('id');
+        $documentIdsSubquery = Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $fiscalYearId)->select('id');
 
         return DocumentFile::whereIn('document_id', $documentIdsSubquery)->cursor();
     }
@@ -259,13 +275,27 @@ class FiscalYearService
      * Import data from an array (e.g., decoded JSON) into a new fiscal year.
      *
      * @param  array  $importData  Data structure (from exportData or similar).
-     * @param  array  $newFiscalYearData  Data for the new Company record.
-     * @return Company The newly created Company (Fiscal Year).
+     * @param  array  $newFiscalYearData  Data for the new fiscal year.
+     * @return Company The transitional company row belonging to the new fiscal year.
      *
      * @throws Exception
      */
     public static function importData(array $importData, array $newFiscalYearData): Company
     {
+        $identity = CompanyIdentity::query()->where('name', $newFiscalYearData['name'])->get()
+            ->first(fn($candidate) => strcmp($candidate->name, $newFiscalYearData['name']) === 0);
+        if ($identity && FiscalYear::query()->where('company_identity_id', $identity->id)
+            ->where('year', $newFiscalYearData['fiscal_year'])->exists()
+        ) {
+            throw ValidationException::withMessages(['fiscal_year' => __('This fiscal year already exists for the company.')]);
+        }
+        if (
+            $identity && Auth::check() && ! Auth::user()->can('access-super-admin-panel')
+            && ! Auth::user()->fiscalYears()->where('company_identity_id', $identity->id)->exists()
+        ) {
+            throw ValidationException::withMessages(['name' => __('You do not have access to this company.')]);
+        }
+
         $sectionsToImport = array_intersect(
             array_keys(self::getAvailableSections()),
             array_keys($importData)
@@ -284,10 +314,10 @@ class FiscalYearService
             }
             $targetYearId = $newFiscalYear->id;
 
-            $originalCompanyId = getActiveLegacyCompany();
+            $originalCompanyId = getActiveCompany();
             $originalFiscalYearId = getActiveFiscalYear();
             Cookie::expire('active-company-id');
-            Cookie::queue('active-company-id', $targetYearId);
+            Cookie::queue('active-company-id', $newFiscalYear->fiscalYear->company_identity_id);
             Cookie::queue('active-fiscal-year-id', $newFiscalYear->fiscalYear->id);
 
             $idMappings = [];
@@ -738,6 +768,18 @@ class FiscalYearService
                     }
                 }
 
+                if (isset($idMappings['documents'], $importData['meta']['closing'])) {
+                    $closing = $importData['meta']['closing'];
+                    $documentMapping = $idMappings['documents'];
+                    $newFiscalYear->forceFill([
+                        'closed_at' => $closing['closed_at'] ?? null,
+                        'closed_by' => User::query()->whereKey($closing['closed_by'] ?? null)->value('id'),
+                        'pl_document_id' => $documentMapping[$closing['pl_document_id'] ?? null] ?? null,
+                        'closing_document_id' => $documentMapping[$closing['closing_document_id'] ?? null] ?? null,
+                        'closing_recalculation_step' => $closing['closing_recalculation_step'] ?? null,
+                    ])->save();
+                }
+
                 return $newFiscalYear;
             } catch (Throwable $e) {
                 Log::error('Fiscal Year Import Failed: ' . $e->getMessage(), [
@@ -772,7 +814,8 @@ class FiscalYearService
      */
     protected static function fetchSourceData(int $sourceYearId, array $sections): array
     {
-        $sourceFiscalYearId = FiscalYear::query()->where('legacy_company_id', $sourceYearId)->value('id');
+        FiscalYear::query()->findOrFail($sourceYearId);
+        $sourceFiscalYearId = $sourceYearId;
         $sourceData = [];
 
         if (in_array('subjects', $sections)) {
@@ -2966,9 +3009,7 @@ class FiscalYearService
             ->merge(['fiscal_year' => $company->fiscal_year + 1])->toArray();
 
         $sectionsToCopy = ['subjects', 'configs', 'banks', 'customers', 'products', 'warehouses', 'services', 'employees']; // Sections to copy to the new fiscal year
-        $newFiscalYear = self::createWithCopiedData($newFiscalYearData, $company->id, $sectionsToCopy);
-
-        self::copyMoadianKeys($company, $newFiscalYear);
+        $newFiscalYear = self::createWithCopiedData($newFiscalYearData, $company->fiscalYear->id, $sectionsToCopy);
 
         $userIds = $company->fiscalYear->users()->pluck('users.id')->toArray();
         $newFiscalYear->users()->attach($userIds);
