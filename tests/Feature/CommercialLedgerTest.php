@@ -6,6 +6,7 @@ use App\Enums\CommercialLedgerType;
 use App\Models\CommercialLedgerExport;
 use App\Models\Company;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
@@ -24,6 +25,8 @@ class CommercialLedgerTest extends TestCase
 
     private User $user;
 
+    private FiscalYear $fiscalYear;
+
     private Subject $general;
 
     private Subject $subsidiary;
@@ -39,33 +42,50 @@ class CommercialLedgerTest extends TestCase
         $this->company = Company::factory()->create(['fiscal_year' => 1403]);
         $this->user = User::factory()->create();
         $this->company->users()->syncWithoutDetaching([$this->user->id]);
+        $this->fiscalYear = $this->activateFiscalYear($this->company, $this->user);
 
         foreach (['index', 'store', 'show', 'download', 'destroy'] as $action) {
             $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'commercial-ledgers.'.$action]));
         }
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => (string) $this->company->id]);
-        config(['active-company-id' => $this->company->id]);
-
         $this->general = Subject::create([
             'company_id' => $this->company->id,
+            'fiscal_year_id' => getActiveFiscalYear(),
             'parent_id' => null,
             'code' => '101',
             'name' => 'دارایی جاری',
         ]);
         $this->subsidiary = Subject::create([
             'company_id' => $this->company->id,
+            'fiscal_year_id' => getActiveFiscalYear(),
             'parent_id' => $this->general->id,
             'code' => '101001',
             'name' => 'بانک',
         ]);
         $this->detailed = Subject::create([
             'company_id' => $this->company->id,
+            'fiscal_year_id' => getActiveFiscalYear(),
             'parent_id' => $this->subsidiary->id,
             'code' => '101001001',
             'name' => 'بانک ملت',
         ]);
+    }
+
+    private function activateFiscalYear(Company $company, User $user): FiscalYear
+    {
+        $year = $company->fiscalYears()->orderBy('id')->firstOrFail();
+        $year->users()->syncWithoutDetaching([$user->id]);
+
+        config([
+            'active-company-id' => $company->id,
+            'active-fiscal-year-id' => $year->id,
+            'active-company-fiscal-year' => $year->year,
+        ]);
+
+        $this->withCookies(['active-fiscal-year-id' => (string) $year->id]);
+
+        return $year;
     }
 
     public function test_index_contains_history_grid_and_all_generation_options(): void
@@ -159,12 +179,14 @@ class CommercialLedgerTest extends TestCase
     {
         $otherSubsidiary = Subject::create([
             'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'parent_id' => $this->general->id,
             'code' => '101002',
             'name' => 'صندوق',
         ]);
         $otherDetailed = Subject::create([
             'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'parent_id' => $otherSubsidiary->id,
             'code' => '101002001',
             'name' => 'صندوق مرکزی',
@@ -229,10 +251,11 @@ class CommercialLedgerTest extends TestCase
         $this->get(route('commercial-ledgers.download', $export))->assertDownload();
 
         $otherCompany = Company::factory()->create(['fiscal_year' => 1403]);
-        config(['active-fiscal-year-id' => $otherCompany->fiscalYear->id]);
+        $otherFiscalYear = $otherCompany->fiscalYears()->firstOrFail();
+        config(['active-fiscal-year-id' => $otherFiscalYear->id]);
         $this->assertNull(CommercialLedgerExport::query()->find($export->id));
 
-        config(['active-fiscal-year-id' => $this->company->fiscalYear->id]);
+        config(['active-fiscal-year-id' => $this->fiscalYear->id]);
         $path = $export->file_path;
         $this->delete(route('commercial-ledgers.destroy', $export))->assertRedirect();
         $this->assertDatabaseMissing('commercial_ledger_exports', ['id' => $export->id]);

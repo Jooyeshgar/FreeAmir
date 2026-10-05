@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\HasFiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,10 +12,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Warehouse extends Model
 {
     use HasFactory;
-    use HasFiscalYear;
 
     protected $fillable = [
         'company_id',
+        'fiscal_year_id',
         'name',
         'code',
         'description',
@@ -27,7 +26,7 @@ class Warehouse extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function (Warehouse $warehouse) {
-            $warehouse->company_id ??= getActiveLegacyCompany();
+            $warehouse->company_id ??= getActiveCompany();
         });
     }
 

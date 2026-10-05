@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\SubjectType;
 use App\Models\Company;
 use App\Models\Config;
+use App\Models\FiscalYear;
 use App\Models\ProductGroup;
 use App\Models\ServiceGroup;
 use App\Models\Subject;
@@ -21,7 +22,8 @@ class CompanyScopedSeedersTest extends TestCase
 
     private function seedCompany(int $companyId): void
     {
-        config(['active-company-id' => $companyId]);
+        $yearId = FiscalYear::query()->where('company_id', $companyId)->orderBy('id')->value('id');
+        config(['active-company-id' => $companyId, 'active-fiscal-year-id' => $yearId]);
 
         $this->seed(SubjectSeeder::class);
         $this->seed(ConfigSeeder::class);

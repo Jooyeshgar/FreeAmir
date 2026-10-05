@@ -34,18 +34,22 @@ class HomeServiceChartTest extends TestCase
 
     private int $companyId;
 
+    private int $fiscalYearId;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         $company = Company::factory()->create(['fiscal_year' => 1405]);
         $this->companyId = $company->id;
+        $this->fiscalYearId = $company->fiscalYears()->firstOrFail()->id;
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
+        $this->user->fiscalYears()->attach($this->fiscalYearId);
 
-        $this->withCookies(['active-company-id' => (string) $this->companyId]);
-        $_COOKIE['active-company-id'] = (string) $this->companyId;
-        config(['active-company-id' => $this->companyId, 'active-company-fiscal-year' => 1405]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->fiscalYearId]);
+        $_COOKIE['active-fiscal-year-id'] = (string) $this->fiscalYearId;
+        config(['active-company-id' => $this->companyId, 'active-fiscal-year-id' => $this->fiscalYearId]);
 
         $this->importSubjects($this->companyId);
         $this->importConfigs($this->companyId);
@@ -70,10 +74,10 @@ class HomeServiceChartTest extends TestCase
         $this->makeInvoice(jalali_to_gregorian(1405, 2, 1, '-'), InvoiceType::SELL, InvoiceStatus::APPROVED, amount: 400);
 
         $otherCompany = Company::factory()->create(['fiscal_year' => 1405]);
-        config(['active-company-id' => $otherCompany->id]);
+        config(['active-company-id' => $otherCompany->id, 'active-fiscal-year-id' => $otherCompany->fiscalYears()->firstOrFail()->id]);
         $this->makeInvoice(jalali_to_gregorian(1405, 2, 2, '-'), InvoiceType::SELL, InvoiceStatus::APPROVED, amount: 9000);
 
-        config(['active-company-id' => $this->companyId]);
+        config(['active-company-id' => $this->companyId, 'active-fiscal-year-id' => $this->fiscalYearId]);
 
         $this->assertSame(400.0, $this->service()->totalSellAmount());
     }
@@ -606,6 +610,7 @@ class HomeServiceChartTest extends TestCase
     {
         $user = User::factory()->create();
         Company::find($this->companyId)->users()->attach($user);
+        $user->fiscalYears()->attach($this->fiscalYearId);
 
         $permissionModels = collect(['home', ...$permissions])->unique()->map(fn (string $name) => Permission::firstOrCreate(['name' => $name]));
 

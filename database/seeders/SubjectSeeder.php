@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Enums\SubjectType;
-use App\Models\FiscalYear;
 use App\Models\Subject;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -21,7 +20,7 @@ class SubjectSeeder extends Seeder
      */
     public function run(?int $companyId = null): void
     {
-        $companyId ??= (int) getActiveLegacyCompany();
+        $companyId ??= (int) getActiveCompany();
         // Root subjects classified as non-permanent (income statement / temporary).
         // Their children inherit the same flag.
         $nonPermanentRoots = [
@@ -156,6 +155,8 @@ class SubjectSeeder extends Seeder
         }
         unset($row);
 
+        $fiscalYearId = getActiveFiscalYear();
+
         if ($companyId !== 1) {
             $subjectIds = [];
 
@@ -165,6 +166,7 @@ class SubjectSeeder extends Seeder
 
                 unset($row['id']);
                 $row['company_id'] = $companyId;
+                $row['fiscal_year_id'] = $fiscalYearId;
 
                 if ($templateParentId !== null && ! isset($subjectIds[$templateParentId])) {
                     throw new RuntimeException("Missing parent subject template [{$templateParentId}].");
@@ -175,7 +177,7 @@ class SubjectSeeder extends Seeder
                     : $subjectIds[$templateParentId];
 
                 $subject = Subject::withoutGlobalScopes()->updateOrCreate(
-                    ['company_id' => $companyId, 'code' => $row['code']],
+                    ['fiscal_year_id' => $fiscalYearId, 'code' => $row['code']],
                     $row,
                 );
 
@@ -185,7 +187,6 @@ class SubjectSeeder extends Seeder
             return;
         }
 
-        $fiscalYearId = FiscalYear::query()->where('legacy_company_id', $companyId)->value('id');
         foreach ($subjectData as &$row) {
             $row['fiscal_year_id'] = $fiscalYearId;
         }

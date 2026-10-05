@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\SubjectType;
 use App\Models\Company;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
@@ -32,16 +33,31 @@ class TrialBalanceExportTest extends TestCase
         $this->company = Company::factory()->create();
         $this->user = User::factory()->create();
         $this->company->users()->attach($this->user);
+        $this->activateFiscalYear($this->company, $this->user);
 
         foreach (['reports.trial-balance', 'reports.trial-balance.export-csv'] as $perm) {
             $this->user->givePermissionTo(Permission::firstOrCreate(['name' => $perm]));
         }
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => (string) $this->company->id]);
-        config(['active-company-id' => $this->company->id]);
 
         $this->service = app(TrialBalanceService::class);
+    }
+
+    private function activateFiscalYear(Company $company, User $user): FiscalYear
+    {
+        $year = $company->fiscalYears()->orderBy('id')->firstOrFail();
+        $year->users()->syncWithoutDetaching([$user->id]);
+
+        config([
+            'active-company-id' => $company->id,
+            'active-fiscal-year-id' => $year->id,
+            'active-company-fiscal-year' => $year->year,
+        ]);
+
+        $this->withCookies(['active-fiscal-year-id' => (string) $year->id]);
+
+        return $year;
     }
 
     public function test_trial_balance_export_returns_streamed_response(): void
@@ -99,7 +115,7 @@ class TrialBalanceExportTest extends TestCase
         $createSubject = function (string $code, string $name, ?int $parentId = null) use ($subjectType): Subject {
             $id = DB::table('subjects')->insertGetId([
                 'company_id' => $this->company->id,
-                'fiscal_year_id' => $this->company->fiscalYear->id,
+                'fiscal_year_id' => getActiveFiscalYear(),
                 'code' => $code,
                 'name' => $name,
                 'parent_id' => $parentId,

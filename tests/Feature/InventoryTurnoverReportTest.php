@@ -50,8 +50,10 @@ class InventoryTurnoverReportTest extends TestCase
         $this->company = Company::factory()->create(['name' => 'Test Company', 'fiscal_year' => 1405]);
         $this->user = User::factory()->create();
         $this->company->users()->attach($this->user);
-        $this->withCookies(['active-company-id' => (string) $this->company->id]);
-        config(['active-company-id' => $this->company->id]);
+        $fiscalYear = $this->company->fiscalYears()->firstOrFail();
+        $fiscalYear->users()->attach($this->user);
+        $this->withCookies(['active-fiscal-year-id' => (string) $fiscalYear->id]);
+        config(['active-company-id' => $this->company->id, 'active-fiscal-year-id' => $fiscalYear->id]);
         $this->importSubjects($this->company->id);
         $this->importConfigs($this->company->id);
 

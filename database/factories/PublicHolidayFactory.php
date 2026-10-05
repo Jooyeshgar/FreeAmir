@@ -13,7 +13,7 @@ class PublicHolidayFactory extends Factory
     public function definition(): array
     {
         return [
-            'company_id' => Company::factory(),
+            'company_id' => getActiveCompany() ?: Company::factory(),
             'date' => $this->faker->unique()->dateTimeBetween('-1 year', '+1 year')->format('Y-m-d'),
             'name' => $this->faker->words(3, true),
         ];

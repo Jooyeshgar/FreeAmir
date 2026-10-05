@@ -30,17 +30,17 @@
                     <tbody>
                         @foreach ($companies as $company)
                             <tr>
-                                <td class="px-4 py-2">{{ $company->name }}</td>
-                                <td class="px-4 py-2">{{ $company->fiscal_year }}</td>
-                                <td class="px-4 py-2">{{ $company->economical_code }}</td>
-                                <td class="px-4 py-2">{{ $company->address }}</td>
-                                <td class="px-4 py-2">{{ $company->currency }}</td>
+                                <td class="px-4 py-2">{{ $company->company->name }}</td>
+                                <td class="px-4 py-2">{{ $company->year }}</td>
+                                <td class="px-4 py-2">{{ $company->company->economical_code }}</td>
+                                <td class="px-4 py-2">{{ $company->company->address }}</td>
+                                <td class="px-4 py-2">{{ $company->company->currency }}</td>
                                 <td class="px-4 py-2">{{ formatDate($company->closed_at) }}</td>
                                 <td class="px-4 py-2">{{ $company->closedBy ? $company->closedBy->name : '' }}</td>
                                 <td class="px-4 py-2">
                                     <div class="inline-flex gap-2">
                                         @can('companies.edit')
-                                            <a href="{{ route('companies.edit', $company) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                            <a href="{{ route('companies.edit', $company->company) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                         @endcan
                                         @can('companies.close-fiscal-year')
                                             <a href="{{ route('companies.closing-wizard', $company) }}"
@@ -53,7 +53,7 @@
                                             </a>
                                         @endcan
                                         @can('companies.destroy')
-                                            <form action="{{ route('companies.destroy', $company) }}" method="POST" class="inline-block"
+                                            <form action="{{ route('companies.destroy', $company->company) }}" method="POST" class="inline-block"
                                                 onsubmit="return confirm('{{ __('Are you sure you want to delete this company?') }}');">
                                                 @csrf
                                                 @method('DELETE')

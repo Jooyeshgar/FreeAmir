@@ -29,6 +29,8 @@ class BankAccountController extends Controller
     public function store(StoreBankAccountRequest $request)
     {
         $validatedData = $request->validated();
+        $validatedData['company_id'] = getActiveCompany();
+        $validatedData['fiscal_year_id'] = getActiveFiscalYear();
 
         $bankAccount = Models\BankAccount::create($validatedData);
 

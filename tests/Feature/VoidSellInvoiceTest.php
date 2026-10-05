@@ -7,6 +7,7 @@ use App\Enums\InvoiceType;
 use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\MoadianHistory;
 use App\Models\ProductGroup;
@@ -39,15 +40,18 @@ class VoidSellInvoiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->companyId = Company::firstOrCreate(['id' => 1], ['name' => 'Test Company', 'fiscal_year' => 1405])->id;
+        $this->companyId = Company::firstOrCreate(['id' => 1], ['name' => 'Test Company'])->id;
+        $year = FiscalYear::firstOrCreate(['company_id' => $this->companyId, 'year' => 1405]);
+        config(['active-company-id' => $this->companyId, 'active-fiscal-year-id' => $year->id]);
 
         Cache::forever('active_company_id', $this->companyId);
         Cookie::queue('active-company-id', (string) $this->companyId);
         $_COOKIE['active-company-id'] = (string) $this->companyId;
 
         $this->user = User::factory()->create();
-        Company::findOrFail($this->companyId)->users()->attach($this->user);
-        $this->withCookies(['active-fiscal-year-id' => (string) Company::findOrFail($this->companyId)->fiscalYear->id]);
+        $this->user->companies()->syncWithoutDetaching([$this->companyId]);
+        $year->users()->syncWithoutDetaching([$this->user->id]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $year->id]);
 
         $this->user->givePermissionTo([
             Permission::firstOrCreate(['name' => 'invoices.index']),
@@ -188,10 +192,11 @@ class VoidSellInvoiceTest extends TestCase
     public function test_product_stock_can_be_recalculated_from_invoices_in_all_companies(): void
     {
         $product = $this->createProduct();
-        $otherCompany = Company::create(['name' => 'Other Company', 'fiscal_year' => 1404]);
+        $otherCompany = Company::create(['name' => 'Other Company']);
+        $otherYear = FiscalYear::create(['company_id' => $otherCompany->id, 'year' => 1404]);
 
         $invoice = $this->buy([$this->productItem($product, 10, 100)], true, 7024, '2026-07-01')['invoice'];
-        $invoice->updateQuietly(['company_id' => $otherCompany->id]);
+        $invoice->updateQuietly(['company_id' => $otherCompany->id, 'fiscal_year_id' => $otherYear->id]);
 
         $product->update(['quantity' => 999]);
 

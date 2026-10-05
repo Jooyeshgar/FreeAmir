@@ -10,6 +10,7 @@ use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
@@ -35,6 +36,7 @@ class SubjectTransferTest extends TestCase
         $this->user = User::factory()->create();
         $this->company = Company::factory()->create(['fiscal_year' => 1403]);
         $this->user->companies()->attach([$this->company->id]);
+        $this->activateFiscalYear($this->company, $this->user);
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'subjects.index']),
             Permission::firstOrCreate(['name' => 'subjects.destroy']),
@@ -42,14 +44,30 @@ class SubjectTransferTest extends TestCase
         );
 
         $this->actingAs($this->user);
-        config(['active-company-id' => $this->company->id, 'active-company-fiscal-year' => $this->company->fiscal_year]);
         $this->subjectService = app(SubjectService::class);
+    }
+
+    private function activateFiscalYear(Company $company, User $user): FiscalYear
+    {
+        $year = $company->fiscalYears()->orderBy('id')->firstOrFail();
+        $year->users()->syncWithoutDetaching([$user->id]);
+
+        config([
+            'active-company-id' => $company->id,
+            'active-fiscal-year-id' => $year->id,
+            'active-company-fiscal-year' => $year->year,
+        ]);
+
+        $this->withCookies(['active-fiscal-year-id' => (string) $year->id]);
+
+        return $year;
     }
 
     private function makeSubject(array $attributes = []): Subject
     {
         return Subject::withoutGlobalScopes()->create(array_merge([
             'company_id' => $this->company->id,
+            'fiscal_year_id' => getActiveFiscalYear(),
             'parent_id' => null,
             'is_permanent' => true,
             'name' => 'Test Subject',
@@ -62,6 +80,7 @@ class SubjectTransferTest extends TestCase
     {
         return Document::withoutGlobalScopes()->create(array_merge([
             'company_id' => $this->company->id,
+            'fiscal_year_id' => getActiveFiscalYear(),
             'number' => Document::withoutGlobalScopes()->max('number') + 1,
             'date' => '2024-03-21',
             'creator_id' => $this->user->id,
@@ -242,7 +261,7 @@ class SubjectTransferTest extends TestCase
 
     public function test_only_transfers_current_fiscal_year_transactions()
     {
-        $year = $this->company->fiscal_year;
+        $year = $this->company->fiscalYears()->firstOrFail()->year;
 
         $source = $this->makeSubject(['code' => '001']);
         $destination = $this->makeSubject(['code' => '002']);

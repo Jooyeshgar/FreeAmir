@@ -10,25 +10,25 @@ class SetApiCompany
 {
     public function handle(Request $request, Closure $next): Response
     {
-        config(['active-company-id' => 0, 'active-fiscal-year-id' => null, 'active-legacy-company-id' => 0]);
-        $companyId = $request->route('company');
+        config(['active-company-id' => 0, 'active-fiscal-year-id' => null]);
+        $fiscalYearId = $request->route('fiscalYear');
 
-        if ($companyId === null || $companyId === '') {
+        if ($fiscalYearId === null || $fiscalYearId === '') {
             return response()->json([
-                'message' => __('The company path parameter is required.'),
+                'message' => __('The fiscal year path parameter is required.'),
             ], 422);
         }
 
-        if (filter_var($companyId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false) {
+        if (filter_var($fiscalYearId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false) {
             return response()->json([
-                'message' => __('The company path parameter must be a valid company ID.'),
+                'message' => __('The fiscal year path parameter must be a valid fiscal year ID.'),
             ], 422);
         }
 
-        $year = $request->user()->fiscalYears()->where('legacy_company_id', $companyId)->first();
+        $year = $request->user()->fiscalYears()->whereKey((int) $fiscalYearId)->first();
         if (! $year) {
             return response()->json([
-                'message' => __('You do not have access to this company.'),
+                'message' => __('You do not have access to this fiscal year.'),
             ], 403);
         }
 

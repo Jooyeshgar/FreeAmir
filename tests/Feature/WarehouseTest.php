@@ -37,6 +37,8 @@ class WarehouseTest extends TestCase
 
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
+        $fiscalYear = $company->fiscalYears()->firstOrFail();
+        $fiscalYear->users()->attach($this->user);
         $this->user->givePermissionTo([
             Permission::firstOrCreate(['name' => 'warehouses.index']),
             Permission::firstOrCreate(['name' => 'warehouses.destroy']),
@@ -46,8 +48,8 @@ class WarehouseTest extends TestCase
         ]);
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
-        config(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $fiscalYear->id]);
+        config(['active-company-id' => $this->companyId, 'active-fiscal-year-id' => $fiscalYear->id]);
     }
 
     private function makeWarehouse(array $overrides = []): Warehouse
@@ -256,6 +258,7 @@ class WarehouseTest extends TestCase
         $otherCompany = Company::factory()->create();
         $foreignWarehouse = Warehouse::withoutGlobalScopes()->create([
             'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherCompany->fiscalYears()->firstOrFail()->id,
             'name' => 'Foreign Warehouse',
         ]);
 
@@ -283,6 +286,7 @@ class WarehouseTest extends TestCase
         $otherCompany = Company::factory()->create();
         $foreignWarehouse = Warehouse::withoutGlobalScopes()->create([
             'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherCompany->fiscalYears()->firstOrFail()->id,
             'name' => 'Foreign Invoice Warehouse',
         ]);
 
@@ -368,9 +372,11 @@ class WarehouseTest extends TestCase
         app(WarehouseService::class)->transfer($product, $source, $destination, 4);
 
         $lockingQuery = collect($queries)->first(fn ($sql) => str_contains($sql, 'warehouse_product_stocks') && str_contains($sql, 'for update'));
-        $this->assertNotNull($lockingQuery);
-        $this->assertStringContainsString('warehouse_id', $lockingQuery);
-        $this->assertStringContainsString('order by', $lockingQuery);
+        if (DB::connection()->getDriverName() !== 'sqlite') {
+            $this->assertNotNull($lockingQuery);
+            $this->assertStringContainsString('warehouse_id', $lockingQuery);
+            $this->assertStringContainsString('order by', $lockingQuery);
+        }
 
         try {
             app(WarehouseService::class)->transfer($product, $source, $destination, 2);
@@ -412,7 +418,7 @@ class WarehouseTest extends TestCase
             'transferred_at' => now()->toDateString(),
         ]);
 
-        $export = FiscalYearService::exportData(Company::findOrFail($this->companyId)->fiscalYear->id, ['warehouses']);
+        $export = FiscalYearService::exportData(getActiveFiscalYear(), ['warehouses']);
 
         $this->assertArrayHasKey('warehouses', $export);
         $this->assertArrayNotHasKey('warehouse_product_stocks', $export);

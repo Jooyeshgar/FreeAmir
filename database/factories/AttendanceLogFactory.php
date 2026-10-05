@@ -16,7 +16,7 @@ class AttendanceLogFactory extends Factory
         $entry = $this->faker->time('H:i');
 
         return [
-            'company_id' => Company::factory(),
+            'company_id' => getActiveCompany() ?: Company::factory(),
             'employee_id' => Employee::factory(),
             'monthly_attendance_id' => null,
             'log_date' => $this->faker->dateTimeBetween('-3 months', 'now')->format('Y-m-d'),

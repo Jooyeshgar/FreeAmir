@@ -7,6 +7,7 @@ use App\Enums\InvoiceType;
 use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -39,13 +40,7 @@ class InvoiceDashboardTest extends TestCase
         $this->companyId = $company->id;
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
-
-        $this->withCookies(['active-company-id' => (string) $this->companyId]);
-        $_COOKIE['active-company-id'] = (string) $this->companyId;
-        config([
-            'active-company-id' => $this->companyId,
-            'active-company-fiscal-year' => 1405,
-        ]);
+        $this->activateFiscalYear($company, $this->user);
 
         $group = CustomerGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
         $this->customer = Customer::factory()->withGroup($group)->withSubject()->create([
@@ -54,11 +49,25 @@ class InvoiceDashboardTest extends TestCase
         ]);
     }
 
+    private function activateFiscalYear(Company $company, User $user): FiscalYear
+    {
+        $year = $company->fiscalYears()->orderBy('id')->firstOrFail();
+        $year->users()->syncWithoutDetaching([$user->id]);
+
+        config([
+            'active-company-id' => $company->id,
+            'active-fiscal-year-id' => $year->id,
+            'active-company-fiscal-year' => $year->year,
+        ]);
+
+        $this->withCookies(['active-fiscal-year-id' => (string) $year->id]);
+
+        return $year;
+    }
+
     protected function tearDown(): void
     {
         Carbon::setTestNow();
-        unset($_COOKIE['active-company-id']);
-
         parent::tearDown();
     }
 

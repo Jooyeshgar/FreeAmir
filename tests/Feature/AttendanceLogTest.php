@@ -40,6 +40,7 @@ class AttendanceLogTest extends TestCase
 
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
+        $company->fiscalYears()->firstOrFail()->users()->attach($this->user);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'attendance.*'])
@@ -655,9 +656,15 @@ class AttendanceLogTest extends TestCase
 
     public function test_bulk_store_creates_one_log_per_workday_for_the_whole_window(): void
     {
+        $shift = WorkShift::factory()->create([
+            'company_id' => $this->companyId,
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+        ]);
+        $this->employee->update(['work_shift_id' => $shift->id]);
         $this->post(route('attendance.attendance-logs.bulk-store'), $this->validBulkPayload());
 
-        // Feb 1 2026 – Mar 1 2026 has 4 Fridays (6, 13, 20, 27); no holidays; no shift => Thursdays worked.
+        // Feb 1 2026 – Mar 1 2026 has 4 Fridays (6, 13, 20, 27); no holidays; Thursdays worked.
         // 29 days − 4 Fridays = 25 worked days.
         $this->assertSame(
             25,
@@ -675,6 +682,12 @@ class AttendanceLogTest extends TestCase
 
     public function test_bulk_store_without_override_keeps_existing_and_fills_missing_days(): void
     {
+        $shift = WorkShift::factory()->create([
+            'company_id' => $this->companyId,
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+        ]);
+        $this->employee->update(['work_shift_id' => $shift->id]);
         // Pre-existing manual log on Monday 2026-02-02
         AttendanceLog::factory()->create([
             'company_id' => $this->companyId,
@@ -746,10 +759,17 @@ class AttendanceLogTest extends TestCase
 
     public function test_bulk_store_applies_independently_per_employee_with_override(): void
     {
+        $shift = WorkShift::factory()->create([
+            'company_id' => $this->companyId,
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+        ]);
+        $this->employee->update(['work_shift_id' => $shift->id]);
         $workSite2 = WorkSite::factory()->create(['company_id' => $this->companyId]);
         $employee2 = Employee::factory()->create([
             'company_id' => $this->companyId,
             'work_site_id' => $workSite2->id,
+            'work_shift_id' => $shift->id,
         ]);
 
         // Only employee1 has a pre-existing log on 2026-02-02.

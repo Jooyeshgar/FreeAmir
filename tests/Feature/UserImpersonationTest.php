@@ -42,6 +42,7 @@ class UserImpersonationTest extends TestCase
 
         if ($company) {
             $user->companies()->attach($company);
+            $user->fiscalYears()->attach($company->fiscalYears()->firstOrFail());
         }
 
         return $user;
@@ -62,11 +63,10 @@ class UserImpersonationTest extends TestCase
     private function setActiveCompany(Company $company): void
     {
         config([
-            'active-company-id' => $company->fiscalYear->company_identity_id,
-            'active-legacy-company-id' => $company->id,
-            'active-fiscal-year-id' => $company->fiscalYear->id
+            'active-company-id' => $company->id,
+            'active-fiscal-year-id' => $company->fiscalYears()->firstOrFail()->id,
         ]);
-        $this->withCookies(['active-fiscal-year-id' => (string) $company->fiscalYear->id]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $company->fiscalYears()->firstOrFail()->id]);
     }
 
     private function assertImpersonationSessionIsClear(): void
@@ -78,11 +78,10 @@ class UserImpersonationTest extends TestCase
 
     private function company(string $name): Company
     {
-        return Company::create([
-            'name' => $name,
-            'fiscal_year' => (int) toEnglish(jdate('Y')),
-            'currency' => 'Rial',
-        ]);
+        $company = Company::create(['name' => $name, 'currency' => 'Rial']);
+        $company->fiscalYears()->create(['year' => (int) toEnglish(jdate('Y'))]);
+
+        return $company;
     }
 
     public function test_authorized_admin_can_impersonate_a_user_and_return(): void
@@ -185,6 +184,7 @@ class UserImpersonationTest extends TestCase
         $company = $this->company('Shared Company');
         $actor = User::factory()->create();
         $actor->companies()->attach($company);
+        $actor->fiscalYears()->attach($company->fiscalYears()->firstOrFail());
         $actor->givePermissionTo($this->impersonationPermission());
         $target = $this->userWithRole('Employee', $company);
         $this->setActiveCompany($company);
@@ -231,11 +231,11 @@ class UserImpersonationTest extends TestCase
 
         $this->actingAs($admin)->post(route('users.impersonate', $target));
 
-        Event::assertDispatched(TakeImpersonation::class, fn(TakeImpersonation $event) => $event->impersonator->is($admin) && $event->impersonated->is($target));
+        Event::assertDispatched(TakeImpersonation::class, fn (TakeImpersonation $event) => $event->impersonator->is($admin) && $event->impersonated->is($target));
 
         $this->post(route('impersonation.leave'));
 
-        Event::assertDispatched(LeaveImpersonation::class, fn(LeaveImpersonation $event) => $event->impersonator->is($admin) && $event->impersonated->is($target));
+        Event::assertDispatched(LeaveImpersonation::class, fn (LeaveImpersonation $event) => $event->impersonator->is($admin) && $event->impersonated->is($target));
     }
 
     public function test_failed_impersonation_does_not_dispatch_take_event(): void
@@ -285,6 +285,7 @@ class UserImpersonationTest extends TestCase
         foreach (['Admin', 'Accountant', 'Warehousekeeper', 'Seller', 'Employee', null] as $targetRole) {
             $target = $targetRole === null ? User::factory()->create(['email_verified_at' => null]) : $this->userWithRole($targetRole, attributes: ['email_verified_at' => null]);
             $target->companies()->attach($company);
+            $target->fiscalYears()->attach($company->fiscalYears()->firstOrFail());
             $targets[] = $target;
 
             $this->actingAs($superAdmin)->post(route('users.impersonate', $target))->assertRedirect(route('about'));
@@ -423,7 +424,7 @@ class UserImpersonationTest extends TestCase
         foreach (['Admin', 'Accountant', 'Warehousekeeper', 'Seller', 'Employee', null] as $targetRole) {
             $target = $targetRole === null ? User::factory()->create() : $this->userWithRole($targetRole);
             $target->companies()->attach($company);
-
+            $target->fiscalYears()->attach($company->fiscalYears()->firstOrFail());
 
             $this->post(route('users.impersonate', $target))->assertRedirect(route('about'));
             $this->assertAuthenticatedAs($target);
@@ -455,7 +456,7 @@ class UserImpersonationTest extends TestCase
         foreach (['Admin', 'Accountant', 'Warehousekeeper', 'Seller', 'Employee', null] as $targetRole) {
             $target = $targetRole === null ? User::factory()->create() : $this->userWithRole($targetRole);
             $target->companies()->attach($company);
-
+            $target->fiscalYears()->attach($company->fiscalYears()->firstOrFail());
 
             $this->post(route('users.impersonate', $target))->assertRedirect(route('about'));
             $this->assertAuthenticatedAs($target);
@@ -484,6 +485,7 @@ class UserImpersonationTest extends TestCase
         $accountant = $this->userWithRole('Accountant', $company, canImpersonate: true);
         $target = User::factory()->create();
         $target->companies()->attach($company);
+        $target->fiscalYears()->attach($company->fiscalYears()->firstOrFail());
         $target->assignRole([
             $this->role('Accountant'),
             $this->role('Seller'),
@@ -502,6 +504,7 @@ class UserImpersonationTest extends TestCase
         $accountant = $this->userWithRole('Accountant', $company, canImpersonate: true);
         $target = User::factory()->create();
         $target->companies()->attach($company);
+        $target->fiscalYears()->attach($company->fiscalYears()->firstOrFail());
         $target->assignRole([
             $this->role('Seller'),
             $this->role('Warehousekeeper'),
@@ -552,6 +555,7 @@ class UserImpersonationTest extends TestCase
         $secondCompany = $this->company('Second Company');
         $admin = $this->userWithRole('Admin', $activeCompany, canImpersonate: true);
         $admin->companies()->attach($secondCompany);
+        $admin->fiscalYears()->attach($secondCompany->fiscalYears()->firstOrFail());
         $target = $this->userWithRole('Employee', $secondCompany);
         $this->setActiveCompany($activeCompany);
 
@@ -568,6 +572,7 @@ class UserImpersonationTest extends TestCase
         $admin = $this->userWithRole('Admin', $ownCompany, canImpersonate: true);
         $target = $this->userWithRole('Employee', $ownCompany);
         $target->companies()->attach($inaccessibleCompany);
+        $target->fiscalYears()->attach($inaccessibleCompany->fiscalYears()->firstOrFail());
         $this->setActiveCompany($ownCompany);
 
         $this->actingAs($admin)->post(route('users.impersonate', $target))->assertForbidden();
@@ -581,8 +586,10 @@ class UserImpersonationTest extends TestCase
         $secondCompany = $this->company('Second Company');
         $admin = $this->userWithRole('Admin', $activeCompany, canImpersonate: true);
         $admin->companies()->attach($secondCompany);
+        $admin->fiscalYears()->attach($secondCompany->fiscalYears()->firstOrFail());
         $target = $this->userWithRole('Employee', $activeCompany);
         $target->companies()->attach($secondCompany);
+        $target->fiscalYears()->attach($secondCompany->fiscalYears()->firstOrFail());
         $this->setActiveCompany($activeCompany);
 
         $this->actingAs($admin)->withCookie('active-company-id', (string) $activeCompany->id)
@@ -671,9 +678,11 @@ class UserImpersonationTest extends TestCase
         $admin = User::factory()->create();
         $admin->assignRole($adminRole);
         $admin->companies()->attach($company);
+        $admin->fiscalYears()->attach($company->fiscalYears()->firstOrFail());
         $target = User::factory()->create();
         $target->assignRole($employeeRole);
         $target->companies()->attach($company);
+        $target->fiscalYears()->attach($company->fiscalYears()->firstOrFail());
         app()->setLocale('en');
         $this->setActiveCompany($company);
 

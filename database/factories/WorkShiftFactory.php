@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\ThursdayStatus;
 use App\Models\Company;
 use App\Models\WorkShift;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -16,12 +17,13 @@ class WorkShiftFactory extends Factory
         $end = $this->faker->time('H:i');
 
         return [
-            'company_id' => Company::factory(),
+            'company_id' => getActiveCompany() ?: Company::factory(),
             'name' => $this->faker->words(2, true),
             'start_time' => $start,
             'end_time' => $end,
             'float' => $this->faker->numberBetween(0, 30),
             'break' => $this->faker->numberBetween(0, 60),
+            'thursday_status' => ThursdayStatus::HALF_DAY,
             'is_active' => true,
             'paid_leave' => 1200,
         ];

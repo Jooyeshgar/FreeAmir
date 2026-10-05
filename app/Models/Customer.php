@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\CustomerType;
-use App\Models\Concerns\HasFiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,7 +11,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Customer extends Model
 {
     use HasFactory;
-    use HasFiscalYear;
 
     protected $fillable = [
         'name',
@@ -45,6 +43,7 @@ class Customer extends Model
         'reason',
         'disc_rate',
         'company_id',
+        'fiscal_year_id',
         'type',
     ];
 

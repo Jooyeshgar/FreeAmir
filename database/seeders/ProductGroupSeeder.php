@@ -9,9 +9,9 @@ class ProductGroupSeeder extends Seeder
 {
     public function run(?int $companyId = null): void
     {
-        $companyId ??= (int) getActiveLegacyCompany();
+        $companyId ??= (int) getActiveCompany();
 
-        if (ProductGroup::withoutGlobalScopes()->where('company_id', $companyId)->where('name', 'عمومی')->exists()) {
+        if (ProductGroup::withoutGlobalScopes()->where('fiscal_year_id', getActiveFiscalYear())->where('name', 'عمومی')->exists()) {
             return;
         }
 

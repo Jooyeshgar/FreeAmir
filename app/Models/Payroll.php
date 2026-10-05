@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\PayrollStatus;
-use App\Models\Concerns\HasFiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,10 +12,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Payroll extends Model
 {
     use HasFactory;
-    use HasFiscalYear;
 
     protected $fillable = [
         'company_id',
+        'fiscal_year_id',
         'employee_id',
         'decree_id',
         'monthly_attendance_id',

@@ -7,6 +7,7 @@ use App\Enums\InvoiceType;
 use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\ProductGroup;
@@ -40,13 +41,18 @@ class InvoiceGroupActionTest extends TestCase
     {
         parent::setUp();
 
-        $this->companyId = Company::firstOrCreate(['id' => 1], ['name' => 'Test Company', 'fiscal_year' => 1405])->id;
+        $this->companyId = Company::firstOrCreate(['id' => 1], ['name' => 'Test Company'])->id;
+        $year = FiscalYear::firstOrCreate(['company_id' => $this->companyId, 'year' => 1405]);
+        config(['active-company-id' => $this->companyId, 'active-fiscal-year-id' => $year->id]);
 
         Cache::forever('active_company_id', $this->companyId);
         Cookie::queue('active-company-id', (string) $this->companyId);
         $_COOKIE['active-company-id'] = (string) $this->companyId;
 
         $this->user = User::factory()->create();
+        $this->user->companies()->syncWithoutDetaching([$this->companyId]);
+        $year->users()->syncWithoutDetaching([$this->user->id]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $year->id]);
         $this->actingAs($this->user);
 
         $this->importSubjects($this->companyId);

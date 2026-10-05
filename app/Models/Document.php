@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\HasFiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +9,6 @@ use Illuminate\Database\Eloquent\Model;
 class Document extends Model
 {
     use HasFactory;
-    use HasFiscalYear;
 
     public $timestamps = true;
 
@@ -25,6 +23,7 @@ class Document extends Model
         'title',
         'creator_id',
         'company_id',
+        'fiscal_year_id',
         'documentable_id',
         'documentable_type',
         'approved_at',

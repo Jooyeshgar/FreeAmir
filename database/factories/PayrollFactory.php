@@ -21,7 +21,7 @@ class PayrollFactory extends Factory
         $totalDeductions = round($incomeTaxAmount + $otherDeductions, 2);
 
         return [
-            'company_id' => Company::factory(),
+            'company_id' => getActiveCompany() ?: Company::factory(),
             'employee_id' => fn (array $attributes) => Employee::factory()->create(['company_id' => $attributes['company_id']])->id,
             'decree_id' => null,
             'monthly_attendance_id' => null,

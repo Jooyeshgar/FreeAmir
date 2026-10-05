@@ -49,7 +49,7 @@ class BeginningInventoryTest extends TestCase
 
         $this->user = User::factory()->create();
         $this->company = Company::factory()->create();
-        config(['active-company-id' => $this->company->id]);
+        config(['active-company-id' => $this->company->id, 'active-fiscal-year-id' => $this->company->fiscalYears()->firstOrFail()->id]);
         $this->actingAs($this->user);
 
         foreach (['create', 'edit', 'index', 'show', 'store', 'update', 'destroy', 'approve'] as $ability) {
@@ -388,7 +388,7 @@ class BeginningInventoryTest extends TestCase
         $opening = $this->createBeginningInventory($product, 5, $this->mainWarehouse, 100, true, $openingNumber, '2026-01-01');
         $subjectId = DB::table('subjects')->insertGetId([
             'company_id' => $this->company->id,
-            'fiscal_year_id' => $this->company->fiscalYear->id,
+            'fiscal_year_id' => getActiveFiscalYear(),
             'parent_id' => null,
             'code' => '100',
             'name' => 'Inventory test subject',
@@ -496,7 +496,7 @@ class BeginningInventoryTest extends TestCase
     private function subject(string $code, string $name): int
     {
         $existingId = DB::table('subjects')
-            ->where('company_id', $this->company->id)
+            ->where('fiscal_year_id', getActiveFiscalYear())
             ->where('code', $code)
             ->value('id');
 
@@ -506,7 +506,7 @@ class BeginningInventoryTest extends TestCase
 
         return DB::table('subjects')->insertGetId([
             'company_id' => $this->company->id,
-            'fiscal_year_id' => $this->company->fiscalYear->id,
+            'fiscal_year_id' => getActiveFiscalYear(),
             'parent_id' => null,
             'code' => $code,
             'name' => $name,

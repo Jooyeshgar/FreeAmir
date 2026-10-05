@@ -76,7 +76,7 @@ class ServiceGroupService
     {
         $serviceGroup->loadMissing('subject', 'cogsSubject', 'salesReturnsSubject');
 
-        $companyId = $serviceGroup->company_id ?? getActiveLegacyCompany();
+        $companyId = $serviceGroup->company_id ?? getActiveCompany();
 
         $subjectsConfig = [
             'subject_id' => [

@@ -17,37 +17,25 @@ class DefaultCompany
      */
     public function handle(Request $request, Closure $next): Response
     {
-        config(['active-company-id' => 0, 'active-legacy-company-id' => 0,
+        config([
+            'active-company-id' => 0,
             'active-fiscal-year-id' => null, 'active-company-name' => null,
-            'active-company-fiscal-year' => null]);
+            'active-company-fiscal-year' => null,
+        ]);
 
         if (! $request->user()) {
             return $next($request);
         }
 
         $selectedId = $request->cookie('active-fiscal-year-id');
-        $year = $selectedId && ctype_digit((string) $selectedId)
-            ? $request->user()->fiscalYears()->whereKey((int) $selectedId)->first() : null;
-
-        if ($selectedId === null && $request->cookie('active-company-id')) {
-            $year = $request->user()->fiscalYears()
-                ->where('legacy_company_id', $request->cookie('active-company-id'))->first();
-            if ($year) {
-                Cookie::queue('active-fiscal-year-id', $year->id, 362 * 24 * 60);
-            } else {
-                return response('', 403)->withCookie(Cookie::forget('active-company-id'));
-            }
-        }
+        $year = $selectedId && ctype_digit((string) $selectedId) ? $request->user()->fiscalYears()->whereKey((int) $selectedId)->first() : null;
 
         if (! $year && $selectedId !== null) {
-            return response('', 403)
-                ->withCookie(Cookie::forget('active-fiscal-year-id'))
-                ->withCookie(Cookie::forget('active-company-id'));
+            return response('', 403)->withCookie(Cookie::forget('active-fiscal-year-id'));
         }
 
         if (! $year) {
-            $year = $request->user()->fiscalYears()->where('year', toEnglish(jdate('Y')))
-                ->orderBy('fiscal_years.id')->first()
+            $year = $request->user()->fiscalYears()->where('year', toEnglish(jdate('Y')))->orderBy('fiscal_years.id')->first()
                 ?? $request->user()->fiscalYears()->orderByDesc('year')->orderBy('fiscal_years.id')->first();
             if ($year) {
                 Cookie::queue('active-fiscal-year-id', $year->id, 362 * 24 * 60);
@@ -63,10 +51,11 @@ class DefaultCompany
 
     public static function activate(FiscalYear $year): void
     {
-        config(['active-company-id' => $year->company_identity_id,
-            'active-legacy-company-id' => $year->legacy_company_id,
+        config([
+            'active-company-id' => $year->company_id,
             'active-fiscal-year-id' => $year->id,
-            'active-company-name' => $year->companyIdentity->name,
-            'active-company-fiscal-year' => $year->year]);
+            'active-company-name' => $year->company->name,
+            'active-company-fiscal-year' => $year->year,
+        ]);
     }
 }

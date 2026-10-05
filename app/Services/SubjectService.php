@@ -120,7 +120,7 @@ class SubjectService
 
             $transactions = (clone $transactionQuery)
                 ->join('documents', 'documents.id', '=', 'transactions.document_id')
-                ->where('documents.fiscal_year_id', getScopedFiscalYear())
+                ->where('documents.fiscal_year_id', getActiveFiscalYear())
                 ->when($approvedOnly, fn ($query) => $query->whereNotNull('documents.approved_at'))
                 ->whereBetween('documents.date', [$startDate, $endDate])
                 ->selectRaw('DATE(documents.date) as date, SUM(transactions.value) as total')
@@ -159,7 +159,7 @@ class SubjectService
         if ($approvedOnly) {
             return (float) Transaction::query()
                 ->join('documents', 'documents.id', '=', 'transactions.document_id')
-                ->where('documents.fiscal_year_id', getScopedFiscalYear())
+                ->where('documents.fiscal_year_id', getActiveFiscalYear())
                 ->whereNotNull('documents.approved_at')
                 ->whereIn('transactions.subject_id', self::subjectAndDescendantIds($subject))
                 ->when(! $both, fn ($query) => $query->where('transactions.value', $debit ? '<' : '>', 0))
@@ -236,14 +236,14 @@ class SubjectService
             $parentId = null; // normalize to null for roots
         }
 
-        $companyId = $data['company_id'] ?? getActiveLegacyCompany();
+        $companyId = $data['company_id'] ?? getActiveCompany();
         if (! $companyId) {
             throw new \InvalidArgumentException('The company_id is required or must be available in session.');
         }
 
         $parentSubject = null;
         if ($parentId !== null) {
-            $parentSubject = Subject::withoutGlobalScopes()->where('company_id', $companyId)->find($parentId);
+            $parentSubject = Subject::withoutGlobalScopes()->where('company_id', $companyId)->where('fiscal_year_id', getActiveFiscalYear())->find($parentId);
 
             if (! $parentSubject) {
                 throw new \InvalidArgumentException(__('Parent subject not found in the given company.'));
@@ -308,7 +308,7 @@ class SubjectService
                 }
 
                 $newParent = Subject::withoutGlobalScopes()
-                    ->where('company_id', $companyId)
+                    ->where('company_id', $companyId)->where('fiscal_year_id', getActiveFiscalYear())
                     ->find($newParentId);
                 if (! $newParent) {
                     throw new \InvalidArgumentException(__('New parent subject not found in the given company.'));
@@ -409,7 +409,7 @@ class SubjectService
         $codePortion = preg_replace('/[^0-9]/', '', $codePortion);
 
         if ($parentId) {
-            $parent = Subject::withoutGlobalScopes()->where('company_id', $companyId)->find($parentId);
+            $parent = Subject::withoutGlobalScopes()->where('company_id', $companyId)->where('fiscal_year_id', getActiveFiscalYear())->find($parentId);
             if (! $parent) {
                 throw new \InvalidArgumentException(__('Parent subject not found in the given company.'));
             }
@@ -437,7 +437,7 @@ class SubjectService
     private function validateCodeUniqueness(string $code, int $companyId, ?int $excludeId = null): void
     {
         $query = Subject::withoutGlobalScopes()
-            ->where('company_id', $companyId)
+            ->where('company_id', $companyId)->where('fiscal_year_id', getActiveFiscalYear())
             ->where('code', $code);
 
         if ($excludeId !== null) {
@@ -455,14 +455,14 @@ class SubjectService
     private function generateCode(?int $parentId, int $companyId): string
     {
         if ($parentId) {
-            $parent = Subject::withoutGlobalScopes()->where('company_id', $companyId)->find($parentId);
+            $parent = Subject::withoutGlobalScopes()->where('company_id', $companyId)->where('fiscal_year_id', getActiveFiscalYear())->find($parentId);
             if (! $parent) {
                 throw new \InvalidArgumentException('Parent subject not found in the given company.');
             }
 
             $parentCode = $parent->code;
             $lastChild = Subject::withoutGlobalScopes()
-                ->where('company_id', $companyId)
+                ->where('company_id', $companyId)->where('fiscal_year_id', getActiveFiscalYear())
                 ->where('parent_id', $parentId)
                 ->orderBy('code', 'desc')
                 ->first();
@@ -479,7 +479,7 @@ class SubjectService
                 try {
                     $this->validateCodeUniqueness($code, $companyId);
                 } catch (\Exception $e) {
-                    while (Subject::withoutGlobalScopes()->where('company_id', $companyId)->where('code', $code)->exists()) {
+                    while (Subject::withoutGlobalScopes()->where('company_id', $companyId)->where('fiscal_year_id', getActiveFiscalYear())->where('code', $code)->exists()) {
                         $next++;
                         if ($next > 999) {
                             throw new \Exception("Maximum of 999 children reached for parent {$parentCode}");
@@ -496,7 +496,7 @@ class SubjectService
 
         // Root subject generation
         $lastRoot = Subject::withoutGlobalScopes()
-            ->where('company_id', $companyId)
+            ->where('company_id', $companyId)->where('fiscal_year_id', getActiveFiscalYear())
             ->whereNull('parent_id')
             ->orderBy('code', 'desc')
             ->first();

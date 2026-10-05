@@ -30,13 +30,16 @@ class UserEmployeeLinkTest extends TestCase
         $this->company = Company::factory()->create();
         $this->user = User::factory()->create();
         $this->company->users()->attach($this->user);
+        $fiscalYear = $this->company->fiscalYears()->firstOrFail();
+        $fiscalYear->users()->attach($this->user);
+        config(['active-company-id' => $this->company->id, 'active-fiscal-year-id' => $fiscalYear->id]);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'users.*'])
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->company->id]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $fiscalYear->id]);
 
         $this->workSite = WorkSite::factory()->create(['company_id' => $this->company->id]);
         $this->workShift = WorkShift::factory()->create(['company_id' => $this->company->id]);

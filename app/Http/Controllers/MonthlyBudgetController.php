@@ -113,7 +113,7 @@ class MonthlyBudgetController extends Controller
             'subject_id' => [
                 'required',
                 'integer',
-                Rule::exists('subjects', 'id')->where('fiscal_year_id', getScopedFiscalYear())->where('is_permanent', 0),
+                Rule::exists('subjects', 'id')->where('fiscal_year_id', getActiveFiscalYear())->where('is_permanent', 0),
             ],
             'forecast_amount' => ['required', 'numeric', 'regex:/^-?\d+(\.\d{1,2})?$/', 'not_in:0', 'between:-9999999999999999.99,9999999999999999.99'],
             'source' => ['nullable', Rule::in(['cost-income'])],

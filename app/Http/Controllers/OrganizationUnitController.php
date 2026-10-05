@@ -44,7 +44,7 @@ class OrganizationUnitController extends Controller
     {
         OrganizationUnit::create(array_merge(
             $this->validatePayload($request),
-            ['company_id' => getActiveLegacyCompany()]
+            ['company_id' => getActiveCompany(), 'fiscal_year_id' => getActiveFiscalYear()]
         ));
 
         return redirect()->route('hr.organization-units.index')
@@ -89,9 +89,9 @@ class OrganizationUnitController extends Controller
 
     private function validatePayload(Request $request, ?OrganizationUnit $organizationUnit = null): array
     {
-        $companyId = getActiveLegacyCompany();
+        $companyId = getActiveCompany();
         $codeRule = Rule::unique('organization_units', 'code')
-            ->where('company_id', $companyId);
+            ->where('fiscal_year_id', getActiveFiscalYear());
 
         if ($organizationUnit !== null) {
             $codeRule->ignore($organizationUnit->id);
@@ -108,7 +108,7 @@ class OrganizationUnitController extends Controller
             'parent_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('organization_units', 'id')->where('company_id', $companyId),
+                Rule::exists('organization_units', 'id')->where('fiscal_year_id', getActiveFiscalYear()),
             ],
             'description' => ['nullable', 'string'],
             'is_active' => ['boolean'],

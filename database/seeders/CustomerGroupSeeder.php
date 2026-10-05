@@ -9,9 +9,9 @@ class CustomerGroupSeeder extends Seeder
 {
     public function run(?int $companyId = null): void
     {
-        $companyId ??= (int) getActiveLegacyCompany();
+        $companyId ??= (int) getActiveCompany();
 
-        if (CustomerGroup::withoutGlobalScopes()->where('company_id', $companyId)->where('name', 'عمومی')->exists()) {
+        if (CustomerGroup::withoutGlobalScopes()->where('fiscal_year_id', getActiveFiscalYear())->where('name', 'عمومی')->exists()) {
             return;
         }
 

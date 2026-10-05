@@ -34,12 +34,28 @@ class PayrollWorkflowTest extends TestCase
 
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
+        $this->activateFiscalYear($company, $this->user);
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
 
         $this->employee = Employee::factory()->create([
             'company_id' => $this->companyId,
         ]);
+    }
+
+    private function activateFiscalYear(Company $company, User $user): FiscalYear
+    {
+        $year = $company->fiscalYears()->orderBy('id')->firstOrFail();
+        $year->users()->syncWithoutDetaching([$user->id]);
+
+        config([
+            'active-company-id' => $company->id,
+            'active-fiscal-year-id' => $year->id,
+            'active-company-fiscal-year' => $year->year,
+        ]);
+
+        $this->withCookies(['active-fiscal-year-id' => (string) $year->id]);
+
+        return $year;
     }
 
     public function test_draft_payroll_can_be_submitted_for_manager_approval_with_transition_permission(): void
@@ -241,7 +257,7 @@ class PayrollWorkflowTest extends TestCase
         ]);
         $payrollId = DB::table('payrolls')->insertGetId([
             'company_id' => $this->companyId,
-            'fiscal_year_id' => FiscalYear::query()->where('legacy_company_id', $this->companyId)->value('id'),
+            'fiscal_year_id' => FiscalYear::query()->where('company_id', $this->companyId)->value('id'),
             'employee_id' => $this->employee->id,
             'monthly_attendance_id' => $attendance->id,
             'year' => 1405,

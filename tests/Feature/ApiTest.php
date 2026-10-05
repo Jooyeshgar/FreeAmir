@@ -6,6 +6,7 @@ use App\Models\AttendanceLog;
 use App\Models\Company;
 use App\Models\Document;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\User;
 use App\Models\WorkShift;
@@ -35,6 +36,7 @@ class ApiTest extends TestCase
         $this->company = Company::factory()->create();
         $this->user = User::factory()->create();
         $this->company->users()->attach($this->user);
+        $this->company->fiscalYears()->firstOrFail()->users()->attach($this->user);
 
         $permissions = [
             'api.access',
@@ -64,17 +66,18 @@ class ApiTest extends TestCase
 
     protected function companyApiUrl(string $path): string
     {
-        return '/api/companies/'.$this->company->id.$path;
+        return '/api/fiscal-years/'.$this->company->fiscalYears()->firstOrFail()->id.$path;
     }
 
     public function test_api_requires_api_access_permission_for_token_requests(): void
     {
         $user = User::factory()->create();
         $this->company->users()->attach($user);
+        $this->company->fiscalYears()->firstOrFail()->users()->attach($user);
         $user->givePermissionTo(Permission::firstOrCreate(['name' => 'hr.employees.index']));
         $token = $user->createToken('limited', ['hr.employees.index'])->plainTextToken;
 
-        $response = $this->getJson('/api/companies/'.$this->company->id.'/employees', [
+        $response = $this->getJson($this->companyApiUrl('/employees'), [
             'Authorization' => 'Bearer '.$token,
         ]);
 
@@ -168,26 +171,33 @@ class ApiTest extends TestCase
             ->assertJsonCount(2, 'data');
     }
 
-    public function test_company_scoped_api_requires_company_path_parameter(): void
+    public function test_fiscal_year_api_requires_year_path_parameter(): void
     {
         $this->getJson('/api/employees', $this->apiHeaders())
             ->assertNotFound();
     }
 
-    public function test_company_scoped_api_rejects_invalid_company_path_parameter(): void
+    public function test_fiscal_year_api_rejects_invalid_year_path_parameter(): void
     {
-        $this->getJson('/api/companies/0/employees', $this->apiHeaders())
-            ->assertStatus(422)
-            ->assertJsonPath('message', __('The company path parameter must be a valid company ID.'));
+        $this->getJson('/api/fiscal-years/0/employees', $this->apiHeaders())
+            ->assertStatus(422)->assertJsonPath('message', __('The fiscal year path parameter must be a valid fiscal year ID.'));
     }
 
-    public function test_company_scoped_api_rejects_unattached_company_id(): void
+    public function test_fiscal_year_api_rejects_ungranted_year_id(): void
     {
         $otherCompany = Company::factory()->create();
 
-        $this->getJson('/api/companies/'.$otherCompany->id.'/employees', $this->apiHeaders())
-            ->assertForbidden()
-            ->assertJsonPath('message', __('You do not have access to this company.'));
+        $this->getJson('/api/fiscal-years/'.$otherCompany->fiscalYears()->firstOrFail()->id.'/employees', $this->apiHeaders())
+            ->assertForbidden()->assertJsonPath('message', __('You do not have access to this fiscal year.'));
+    }
+
+    public function test_api_denies_an_ungranted_year_of_an_accessible_company(): void
+    {
+        $otherYear = FiscalYear::create(['company_id' => $this->company->id, 'year' => 1404]);
+        $this->getJson('/api/fiscal-years/'.$otherYear->id.'/employees', $this->apiHeaders())->assertForbidden();
+
+        $otherYear->users()->attach($this->user);
+        $this->getJson('/api/fiscal-years/'.$otherYear->id.'/employees', $this->apiHeaders())->assertOk();
     }
 
     public function test_api_lists_available_companies(): void
@@ -196,13 +206,14 @@ class ApiTest extends TestCase
         $unattachedCompany = Company::factory()->create(['name' => 'Hidden API Company']);
         $this->company->update(['name' => 'First API Company']);
         $this->user->companies()->attach($secondCompany);
+        $secondCompany->fiscalYears()->firstOrFail()->users()->attach($this->user);
 
         $this->getJson('/api/companies', $this->apiHeaders())
             ->assertOk()
             ->assertJsonCount(2, 'data')
             ->assertJsonPath('data.0.name', 'First API Company')
             ->assertJsonPath('data.1.name', 'Second API Company')
-            ->assertJsonMissing(['id' => $unattachedCompany->id]);
+            ->assertJsonMissing(['fiscal_year_id' => $unattachedCompany->fiscalYears()->firstOrFail()->id]);
     }
 
     public function test_api_companies_requires_user_permission_and_token_ability(): void

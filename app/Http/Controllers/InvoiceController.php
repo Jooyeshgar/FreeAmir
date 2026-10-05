@@ -342,7 +342,7 @@ class InvoiceController extends Controller
         $ancillaryCostProductIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->unique()->values()->all();
         $canCreateAncillaryCost = $invoice->invoice_type === InvoiceType::BUY && ! $isServiceBuy && empty(InvoiceService::notAllowedInvoiceForAncillaryCosts($invoice, $ancillaryCostProductIds));
 
-        $fiscalYears = auth()->user()->accessibleCompanies()->where('id', '!=', getActiveLegacyCompany())->get();
+        $fiscalYears = auth()->user()->fiscalYears()->with('company')->where('fiscal_years.id', '!=', getActiveFiscalYear())->get();
 
         return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects', 'paidAmount', 'remainingAmount', 'chequeDirection', 'chequeBanks', 'chequeBankAccounts', 'chequebooks', 'fiscalYears', 'canCreateAncillaryCost'));
     }
@@ -823,17 +823,17 @@ class InvoiceController extends Controller
 
     public function transfer(Request $request, Invoice $invoice): RedirectResponse
     {
-        $request->validate(['target_company_id' => 'required|integer|exists:companies,id']);
+        $request->validate(['target_fiscal_year_id' => 'required|integer|exists:fiscal_years,id']);
 
-        if (! Auth::user()->accessibleCompanies()->whereKey((int) $request->target_company_id)->exists()) {
+        if (! Auth::user()->fiscalYears()->whereKey((int) $request->target_fiscal_year_id)->exists()) {
             abort(403);
         }
 
-        if ((int) $request->target_company_id === getActiveLegacyCompany()) {
+        if ((int) $request->target_fiscal_year_id === getActiveFiscalYear()) {
             return redirect()->route('invoices.show', $invoice)->with('error', __('Cannot transfer to the same fiscal year.'));
         }
 
-        $result = FiscalYearTransferService::transferInvoice($invoice, $request->target_company_id, $request->user());
+        $result = FiscalYearTransferService::transferInvoice($invoice, $request->target_fiscal_year_id, $request->user());
 
         if (! $result['success']) {
             return redirect()->route('invoices.show', $invoice)->withErrors($result['errors']);

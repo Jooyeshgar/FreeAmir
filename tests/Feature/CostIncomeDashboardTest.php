@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\MonthlyBudget;
 use App\Models\Subject;
 use App\Models\Transaction;
@@ -44,15 +45,28 @@ class CostIncomeDashboardTest extends TestCase
 
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
-
-        $this->withCookies(['active-company-id' => (string) $this->companyId]);
-        $_COOKIE['active-company-id'] = (string) $this->companyId;
-        config(['active-company-id' => $this->companyId, 'active-company-fiscal-year' => 1405]);
+        $this->activateFiscalYear($company, $this->user);
 
         $this->importSubjects($this->companyId);
         $this->importConfigs($this->companyId);
 
         $this->customerGroup = CustomerGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
+    }
+
+    private function activateFiscalYear(Company $company, User $user): FiscalYear
+    {
+        $year = $company->fiscalYears()->orderBy('id')->firstOrFail();
+        $year->users()->syncWithoutDetaching([$user->id]);
+
+        config([
+            'active-company-id' => $company->id,
+            'active-fiscal-year-id' => $year->id,
+            'active-company-fiscal-year' => $year->year,
+        ]);
+
+        $this->withCookies(['active-fiscal-year-id' => (string) $year->id]);
+
+        return $year;
     }
 
     public function test_user_with_permission_can_view_dashboard(): void
@@ -416,7 +430,9 @@ class CostIncomeDashboardTest extends TestCase
 
     private function setFiscalYear(int $year): void
     {
-        Company::withoutGlobalScopes()->findOrFail($this->companyId)->update(['fiscal_year' => $year]);
+        $company = Company::withoutGlobalScopes()->findOrFail($this->companyId);
+        $company->fiscalYears()->whereKey(getActiveFiscalYear())->update(['year' => $year]);
+        config(['active-fiscal-year-id' => getActiveFiscalYear()]);
         config(['active-company-fiscal-year' => $year]);
     }
 

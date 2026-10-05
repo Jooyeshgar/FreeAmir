@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Service;
@@ -16,8 +17,7 @@ use Tests\TestCase;
 
 class ProductGroupOrServiceGroupDeletionTest extends TestCase
 {
-    use RefreshDatabase;
-    use SeederHelper;
+    use RefreshDatabase, SeederHelper;
 
     private User $user;
 
@@ -30,18 +30,12 @@ class ProductGroupOrServiceGroupDeletionTest extends TestCase
         $company = Company::factory()->create(['fiscal_year' => 1405]);
         $this->companyId = $company->id;
 
-        config([
-            'active-company-id' => $this->companyId,
-            'active-company-fiscal-year' => $company->fiscal_year,
-        ]);
-
-        $this->withCookies(['active-company-id' => (string) $this->companyId]);
-
         $this->importSubjects($this->companyId);
         $this->importConfigs($this->companyId);
 
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
+        $this->activateFiscalYear($company, $this->user);
 
         $this->user->givePermissionTo([
             Permission::firstOrCreate(['name' => 'product-groups.index']),
@@ -51,6 +45,22 @@ class ProductGroupOrServiceGroupDeletionTest extends TestCase
             Permission::firstOrCreate(['name' => 'service-groups.show']),
             Permission::firstOrCreate(['name' => 'service-groups.destroy']),
         ]);
+    }
+
+    private function activateFiscalYear(Company $company, User $user): FiscalYear
+    {
+        $year = $company->fiscalYears()->orderBy('id')->firstOrFail();
+        $year->users()->syncWithoutDetaching([$user->id]);
+
+        config([
+            'active-company-id' => $company->id,
+            'active-fiscal-year-id' => $year->id,
+            'active-company-fiscal-year' => $year->year,
+        ]);
+
+        $this->withCookies(['active-fiscal-year-id' => (string) $year->id]);
+
+        return $year;
     }
 
     public function test_product_group_with_products_cannot_be_deleted_and_shows_disabled_button(): void

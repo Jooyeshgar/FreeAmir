@@ -87,7 +87,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function companies()
     {
-        return $this->belongsToMany(Company::class)->using(CompanyUserPivot::class);
+        return $this->belongsToMany(Company::class);
     }
 
     public function fiscalYears(): BelongsToMany
@@ -95,14 +95,14 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->belongsToMany(FiscalYear::class);
     }
 
-    public function canAccessFiscalYear(Company $company): bool
+    public function canAccessFiscalYear(FiscalYear $fiscalYear): bool
     {
-        return $this->fiscalYears()->where('legacy_company_id', $company->id)->exists();
+        return $this->fiscalYears()->whereKey($fiscalYear->id)->exists();
     }
 
     public function accessibleCompanies(): Builder
     {
-        return Company::query()->whereIn('companies.id', $this->fiscalYears()->select('legacy_company_id'));
+        return Company::query()->whereIn('companies.id', $this->fiscalYears()->select('company_id'));
     }
 
     public function employee(): HasOne

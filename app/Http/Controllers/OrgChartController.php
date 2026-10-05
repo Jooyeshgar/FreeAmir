@@ -39,7 +39,7 @@ class OrgChartController extends Controller
 
         OrgChart::create(array_merge(
             $validated,
-            ['company_id' => getActiveLegacyCompany()]
+            ['company_id' => getActiveCompany(), 'fiscal_year_id' => getActiveFiscalYear()]
         ));
 
         return redirect()->route('hr.org-charts.index')

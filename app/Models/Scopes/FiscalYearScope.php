@@ -13,6 +13,6 @@ class FiscalYearScope implements Scope
      */
     public function apply(Builder $builder, Model $model): void
     {
-        $builder->where($model->qualifyColumn('fiscal_year_id'), getScopedFiscalYear());
+        $builder->where($model->qualifyColumn('fiscal_year_id'), getActiveFiscalYear() ?? 0);
     }
 }

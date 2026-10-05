@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\User;
 use App\Models\WorkSite;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -17,6 +18,8 @@ class WorkSiteTest extends TestCase
 
     protected int $companyId;
 
+    protected int $fiscalYearId;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -26,19 +29,37 @@ class WorkSiteTest extends TestCase
 
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
+        $fiscalYear = $this->activateFiscalYear($company, $this->user);
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'salary.work-sites.*'])
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+    }
+
+    private function activateFiscalYear(Company $company, User $user): FiscalYear
+    {
+        $year = $company->fiscalYears()->orderBy('id')->firstOrFail();
+        $year->users()->syncWithoutDetaching([$user->id]);
+
+        config([
+            'active-company-id' => $company->id,
+            'active-fiscal-year-id' => $year->id,
+            'active-company-fiscal-year' => $year->year,
+        ]);
+
+        $this->withCookies(['active-fiscal-year-id' => (string) $year->id]);
+
+        return $year;
     }
 
     private function makeWorkSite(array $overrides = []): WorkSite
     {
         return WorkSite::factory()->create(array_merge([
             'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
         ], $overrides));
     }
 
@@ -72,7 +93,11 @@ class WorkSiteTest extends TestCase
     public function test_index_does_not_show_other_company_work_sites(): void
     {
         $otherCompany = Company::factory()->create();
-        WorkSite::factory()->create(['company_id' => $otherCompany->id, 'name' => 'Other Site']);
+        WorkSite::factory()->create([
+            'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherCompany->fiscalYears()->orderBy('id')->firstOrFail()->id,
+            'name' => 'Other Site',
+        ]);
 
         $response = $this->get(route('salary.work-sites.index'));
 

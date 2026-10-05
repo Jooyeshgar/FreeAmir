@@ -2,14 +2,11 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\HasFiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Model;
 
 class Config extends Model
 {
-    use HasFiscalYear;
-
     public $timestamps = false;
 
     protected $fillable = [
@@ -19,6 +16,7 @@ class Config extends Model
         'type',
         'category',
         'company_id',
+        'fiscal_year_id',
     ];
 
     public static function booted(): void

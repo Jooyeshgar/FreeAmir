@@ -147,7 +147,7 @@ class ReportsController extends Controller
             }
         }
 
-        $company = Company::withoutGlobalScopes()->findOrFail(getActiveLegacyCompany());
+        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
         [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
         $startDate = $validated['start_date'] ?? null;
         $endDate = $validated['end_date'] ?? null;
@@ -182,19 +182,19 @@ class ReportsController extends Controller
     {
         abort_if(! config('app.debug') || config('app.env') === 'production', 404);
 
-        $companyId = (int) getActiveLegacyCompany();
+        $companyId = (int) getActiveCompany();
         $user = auth()->user();
 
-        abort_unless($user->fiscalYears()->where('legacy_company_id', $companyId)->exists(), 403);
+        abort_unless($user->fiscalYears()->whereKey(getActiveFiscalYear())->where('company_id', $companyId)->exists(), 403);
 
         if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
             return redirect()->route('home')->with('error', __('Please select a valid company first.'));
         }
 
         // Seeders use this value when no HTTP cookie is available (for example when they are invoked through Artisan from this request).
-        config(['active-legacy-company-id' => $companyId]);
+        config(['active-company-id' => $companyId, 'active-fiscal-year-id' => getActiveFiscalYear()]);
 
-        if (Document::withoutGlobalScopes()->where('company_id', $companyId)->exists()) {
+        if (Document::withoutGlobalScopes()->where('fiscal_year_id', getActiveFiscalYear())->exists()) {
             return redirect()->route('home')->with('error', __('Cannot add demo data to a non-empty database.'));
         }
 

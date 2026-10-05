@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\PayrollStatus;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\Payroll;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -30,6 +31,7 @@ class PayrollDashboardTest extends TestCase
 
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
+        $this->activateFiscalYear($company, $this->user);
 
         $this->employee = Employee::factory()->create([
             'company_id' => $this->companyId,
@@ -39,7 +41,22 @@ class PayrollDashboardTest extends TestCase
         ]);
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+    }
+
+    private function activateFiscalYear(Company $company, User $user): FiscalYear
+    {
+        $year = $company->fiscalYears()->orderBy('id')->firstOrFail();
+        $year->users()->syncWithoutDetaching([$user->id]);
+
+        config([
+            'active-company-id' => $company->id,
+            'active-fiscal-year-id' => $year->id,
+            'active-company-fiscal-year' => $year->year,
+        ]);
+
+        $this->withCookies(['active-fiscal-year-id' => (string) $year->id]);
+
+        return $year;
     }
 
     public function test_payroll_dashboard_permission_can_view_dashboard(): void

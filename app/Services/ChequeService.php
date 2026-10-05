@@ -56,7 +56,7 @@ class ChequeService
             $status = $this->initialStatus($direction, $purpose);
 
             $cheque = Cheque::create([
-                'company_id' => getActiveLegacyCompany(),
+                'company_id' => getActiveCompany(),
                 'title' => filled($data['title'] ?? null) ? trim($data['title']) : __('Cheque #').($data['cheque_number'] ?? ''),
                 'amount' => $data['amount'],
                 'write_date' => $data['issue_date'],
@@ -377,9 +377,9 @@ class ChequeService
         if (! preg_match('/^\d{16}$/', (string) ($data['sayad_number'] ?? ''))) {
             throw ValidationException::withMessages(['sayad_number' => __('validation.regex', ['attribute' => __('16-digit Sayad number')])]);
         }
-        $companyId = $except?->company_id ?? getActiveLegacyCompany();
+        $companyId = $except?->company_id ?? getActiveCompany();
         $duplicateSayad = Cheque::withoutGlobalScopes()
-            ->where('company_id', $companyId)
+            ->where('fiscal_year_id', $except?->fiscal_year_id ?? getActiveFiscalYear())
             ->where('sayad_number', $data['sayad_number'])
             ->when($except, fn ($query) => $query->where('id', '!=', $except->id))
             ->exists();
@@ -515,7 +515,7 @@ class ChequeService
     private function subject(string $configKey): int
     {
         $subjectId = (int) config('amir.'.$configKey);
-        $subject = $subjectId ? Subject::where('fiscal_year_id', getScopedFiscalYear())->find($subjectId) : null;
+        $subject = $subjectId ? Subject::where('fiscal_year_id', getActiveFiscalYear())->find($subjectId) : null;
         if (! $subject) {
             throw ValidationException::withMessages(['accounting' => __('Accounting subject configuration :key is missing or invalid.', ['key' => $configKey])]);
         }

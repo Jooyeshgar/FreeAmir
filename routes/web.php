@@ -72,7 +72,7 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::post('api-tokens', [Controllers\ApiTokenController::class, 'store'])->name('api-tokens.store');
     Route::delete('api-tokens/{tokenId}', [Controllers\ApiTokenController::class, 'destroy'])->name('api-tokens.destroy');
 
-    Route::get('change-company/{company}', [Controllers\CompanyController::class, 'setActiveCompany'])->name('change-company');
+    Route::get('change-company/{fiscalYear}', [Controllers\CompanyController::class, 'setActiveCompany'])->name('change-company');
 
     Route::group(['prefix' => 'backups', 'as' => 'backups.'], function () {
         Route::get('/create', [Controllers\BackupController::class, 'create'])->name('create');
@@ -180,11 +180,11 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::post('invoices/{invoice}/transfer', [Controllers\InvoiceController::class, 'transfer'])->name('invoices.transfer');
     Route::group(['prefix' => 'management'], function () {
         Route::resource('companies', Controllers\CompanyController::class);
-        Route::post('companies/close-fiscal-year/{company}', [Controllers\CompanyController::class, 'closeFiscalYear'])->name('companies.close-fiscal-year');
-        Route::get('companies/{company}/closing-wizard', [Controllers\CompanyController::class, 'closingWizard'])->name('companies.closing-wizard');
-        Route::post('companies/{company}/closing-wizard/step1', [Controllers\CompanyController::class, 'closingWizardStep1'])->name('companies.closing-wizard.step1');
-        Route::post('companies/{company}/closing-wizard/step3', [Controllers\CompanyController::class, 'closingWizardStep3'])->name('companies.closing-wizard.step3');
-        Route::post('companies/{company}/closing-wizard/recalculate', [Controllers\CompanyController::class, 'recalculateClosingDocument'])->name('companies.closing-wizard.recalculate');
+        Route::post('companies/close-fiscal-year/{fiscalYear}', [Controllers\CompanyController::class, 'closeFiscalYear'])->name('companies.close-fiscal-year');
+        Route::get('companies/{fiscalYear}/closing-wizard', [Controllers\CompanyController::class, 'closingWizard'])->name('companies.closing-wizard');
+        Route::post('companies/{fiscalYear}/closing-wizard/step1', [Controllers\CompanyController::class, 'closingWizardStep1'])->name('companies.closing-wizard.step1');
+        Route::post('companies/{fiscalYear}/closing-wizard/step3', [Controllers\CompanyController::class, 'closingWizardStep3'])->name('companies.closing-wizard.step3');
+        Route::post('companies/{fiscalYear}/closing-wizard/recalculate', [Controllers\CompanyController::class, 'recalculateClosingDocument'])->name('companies.closing-wizard.recalculate');
         Route::post('users/{user}/create-employee', [Controllers\Management\UserController::class, 'createEmployee'])
             ->name('users.create-employee');
         Route::post('users/{user}/impersonate', [Controllers\Management\UserController::class, 'impersonate'])

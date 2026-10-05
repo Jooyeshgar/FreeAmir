@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Service;
 use App\Models\ServiceGroup;
 use App\Models\Subject;
@@ -34,6 +35,7 @@ class ServiceImportExportTest extends TestCase
 
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
+        $this->activateFiscalYear($company, $this->user);
 
         $this->user->givePermissionTo([
             Permission::firstOrCreate(['name' => 'services.index']),
@@ -46,6 +48,22 @@ class ServiceImportExportTest extends TestCase
         config(['active-company-id' => $this->companyId]);
 
         $this->serviceGroup = ServiceGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
+    }
+
+    private function activateFiscalYear(Company $company, User $user): FiscalYear
+    {
+        $year = $company->fiscalYears()->orderBy('id')->firstOrFail();
+        $year->users()->syncWithoutDetaching([$user->id]);
+
+        config([
+            'active-company-id' => $company->id,
+            'active-fiscal-year-id' => $year->id,
+            'active-company-fiscal-year' => $year->year,
+        ]);
+
+        $this->withCookies(['active-fiscal-year-id' => (string) $year->id]);
+
+        return $year;
     }
 
     private function upload(string $csv): UploadedFile

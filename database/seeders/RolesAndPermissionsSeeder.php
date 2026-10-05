@@ -300,7 +300,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
     private function seedDemoUsersAndEmployees(): void
     {
-        $companyId = (int) getActiveLegacyCompany();
+        $companyId = (int) getActiveCompany();
         $users = [
             'super-admin' => [
                 'roles' => ['Super-Admin', __('Admin'), __('Employee')],
@@ -362,8 +362,8 @@ class RolesAndPermissionsSeeder extends Seeder
             ]
         );
 
-        $orgCharts = OrgChart::withoutGlobalScopes()->where('company_id', $companyId)->get()->keyBy('title');
-        $orgUnits = OrganizationUnit::withoutGlobalScopes()->where('company_id', $companyId)->get()->keyBy('name');
+        $orgCharts = OrgChart::withoutGlobalScopes()->where('fiscal_year_id', getActiveFiscalYear())->get()->keyBy('title');
+        $orgUnits = OrganizationUnit::withoutGlobalScopes()->where('fiscal_year_id', getActiveFiscalYear())->get()->keyBy('name');
 
         foreach ($users as $name => $config) {
             $email = $name === 'super-admin' ? 'admin@example.com' : $name.'@example.com';

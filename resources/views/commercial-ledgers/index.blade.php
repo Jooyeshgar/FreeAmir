@@ -33,7 +33,7 @@
                             <td>{{ formatDate($export->from_date) }}</td>
                             <td>{{ formatDate($export->to_date) }}</td>
                             <td>{{ $export->seal_tracking_code }}</td>
-                            <td>{{ localizeNumber($export->company->fiscal_year) }}</td>
+                            <td>{{ localizeNumber($export->fiscalYear->year) }}</td>
                             <td>
                                 <span @class([
                                     'badge badge-sm',

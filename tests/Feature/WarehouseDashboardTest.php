@@ -38,10 +38,12 @@ class WarehouseDashboardTest extends TestCase
 
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
+        $fiscalYear = $company->fiscalYears()->firstOrFail();
+        $fiscalYear->users()->attach($this->user);
 
-        $this->withCookies(['active-company-id' => (string) $this->companyId]);
-        $_COOKIE['active-company-id'] = (string) $this->companyId;
-        config(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $fiscalYear->id]);
+        $_COOKIE['active-fiscal-year-id'] = (string) $fiscalYear->id;
+        config(['active-company-id' => $this->companyId, 'active-fiscal-year-id' => $fiscalYear->id]);
         $this->importSubjects($this->companyId);
         $this->importConfigs($this->companyId);
 

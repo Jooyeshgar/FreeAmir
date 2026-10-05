@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\SubjectType;
-use App\Models\Concerns\HasFiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
@@ -14,13 +13,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Subject extends Model
 {
     use HasFactory;
-    use HasFiscalYear;
 
     protected $fillable = [
         'code',
         'name',
         'parent_id',
         'company_id',
+        'fiscal_year_id',
         'type',
         'is_permanent',
     ];
@@ -38,7 +37,7 @@ class Subject extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function ($subject) {
-            $subject->company_id ??= getActiveLegacyCompany();
+            $subject->company_id ??= getActiveCompany();
         });
 
         static::deleting(function ($subject) {

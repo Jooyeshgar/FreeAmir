@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\PayrollElementCalcType;
-use App\Models\Concerns\HasFiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,10 +10,10 @@ use Illuminate\Database\Eloquent\Model;
 class TaxSlab extends Model
 {
     use HasFactory;
-    use HasFiscalYear;
 
     protected $fillable = [
         'company_id',
+        'fiscal_year_id',
         'income_to',
         'tax_rate',
         'calc_type',

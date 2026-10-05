@@ -9,7 +9,7 @@ class OrganizationUnitSeeder extends Seeder
 {
     public function run(): void
     {
-        $companyId = (int) getActiveLegacyCompany();
+        $companyId = (int) getActiveCompany();
 
         $tree = [
             [

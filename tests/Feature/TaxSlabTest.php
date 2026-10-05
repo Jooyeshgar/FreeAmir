@@ -26,13 +26,15 @@ class TaxSlabTest extends TestCase
 
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
+        $fiscalYear = $company->fiscalYears()->orderBy('id')->firstOrFail();
+        $fiscalYear->users()->syncWithoutDetaching([$this->user->id]);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'salary.tax-slabs.*'])
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $fiscalYear->id]);
     }
 
     private function makeTaxSlab(array $overrides = []): TaxSlab

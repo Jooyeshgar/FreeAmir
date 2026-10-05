@@ -71,19 +71,19 @@
                                 <div class="flex min-w-48 items-center gap-3">
                                     <span
                                         class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-emerald-100 to-teal-100 font-bold text-emerald-700 dark:from-emerald-950 dark:to-teal-950 dark:text-emerald-300">
-                                        {{ mb_strtoupper(mb_substr($company->name, 0, 1)) }}
+                                        {{ mb_strtoupper(mb_substr($company->company->name, 0, 1)) }}
                                     </span>
                                     <div>
-                                        <a href="{{ route('companies.show', $company) }}"
-                                            class="font-semibold text-slate-900 transition hover:text-emerald-700 hover:underline dark:text-white dark:hover:text-emerald-300">{{ $company->name }}</a>
+                                        <a href="{{ route('companies.show', $company->company) }}"
+                                            class="font-semibold text-slate-900 transition hover:text-emerald-700 hover:underline dark:text-white dark:hover:text-emerald-300">{{ $company->company->name }}</a>
                                         <p class="mt-0.5 max-w-56 truncate text-xs text-slate-500">
-                                            {{ $company->address ? localizeNumber($company->address) : __('No address') }}
+                                            {{ $company->company->address ? localizeNumber($company->company->address) : __('No address') }}
                                         </p>
                                     </div>
                                 </div>
                             </td>
                             <td><span
-                                    class="rounded-lg bg-slate-100 px-2.5 py-1 font-mono text-sm dark:bg-slate-800">{{ localizeNumber($company->fiscal_year) }}</span>
+                                    class="rounded-lg bg-slate-100 px-2.5 py-1 font-mono text-sm dark:bg-slate-800">{{ localizeNumber($company->year) }}</span>
                             </td>
                             <td><span
                                     class="badge badge-ghost">{{ localizeNumber(number_format($company->users_count)) }}</span>
@@ -91,10 +91,10 @@
                             <td>
                                 <div class="space-y-1 text-xs">
                                     <p><span class="text-slate-400">{{ __('National Code') }}:</span>
-                                        {{ $company->national_code ? localizeNumber($company->national_code) : '—' }}
+                                        {{ $company->company->national_code ? localizeNumber($company->company->national_code) : '—' }}
                                     </p>
                                     <p><span class="text-slate-400">{{ __('Economical Code') }}:</span>
-                                        {{ $company->economical_code ? localizeNumber($company->economical_code) : '—' }}
+                                        {{ $company->company->economical_code ? localizeNumber($company->company->economical_code) : '—' }}
                                     </p>
                                 </div>
                             </td>
@@ -115,7 +115,7 @@
                             <td>
                                 <div class="flex justify-end gap-1">
                                     @can('companies.edit')
-                                        <a href="{{ route('companies.edit', $company) }}"
+                                        <a href="{{ route('companies.edit', $company->company) }}"
                                             class="btn btn-ghost btn-sm rounded-lg">{{ __('Edit') }}</a>
                                     @endcan
                                     @cannot('access-super-admin-panel')
@@ -129,7 +129,7 @@
                                         @endcan
                                     @endcannot
                                     @can('companies.destroy')
-                                        <form action="{{ route('companies.destroy', $company) }}" method="POST"
+                                        <form action="{{ route('companies.destroy', $company->company) }}" method="POST"
                                             onsubmit="return confirm('{{ __('Are you sure you want to delete this company?') }}');">
                                             @csrf
                                             @method('DELETE')

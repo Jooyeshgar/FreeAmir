@@ -9,7 +9,7 @@ class WarehouseSeeder extends Seeder
 {
     public function run(?int $companyId = null): void
     {
-        $companyId ??= (int) getActiveLegacyCompany();
+        $companyId ??= (int) getActiveCompany();
 
         foreach ([
             ['name' => 'انبار اصلی', 'code' => 'MAIN'],
@@ -18,7 +18,7 @@ class WarehouseSeeder extends Seeder
             ['name' => 'انبار معیوب', 'code' => 'DAMAGED'],
         ] as $warehouse) {
             Warehouse::withoutGlobalScopes()->updateOrCreate(
-                ['company_id' => $companyId, 'name' => $warehouse['name']],
+                ['fiscal_year_id' => getActiveFiscalYear(), 'name' => $warehouse['name']],
                 ['code' => $warehouse['code']],
             );
         }

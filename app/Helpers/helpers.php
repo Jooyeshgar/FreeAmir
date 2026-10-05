@@ -1,6 +1,5 @@
 <?php
 
-use App\Models\Company;
 use App\Models\FiscalYear;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\App;
@@ -14,54 +13,16 @@ function getActiveCompany(): int
         return (int) $configuredCompanyId;
     }
 
-    // Compatibility for CLI and tests that establish a legacy year context directly.
-    $legacyId = getActiveLegacyCompany();
-    try {
-        return (int) (FiscalYear::where('legacy_company_id', $legacyId)->value('company_identity_id') ?? $legacyId);
-    } catch (Throwable) {
-        return $legacyId;
+    if (getActiveFiscalYear() !== null) {
+        return (int) (FiscalYear::whereKey(getActiveFiscalYear())->value('company_id') ?? 1);
     }
+
+    return 1;
 }
 
 function getActiveFiscalYear(): ?int
 {
     return config('active-fiscal-year-id') === null ? null : (int) config('active-fiscal-year-id');
-}
-
-function getScopedFiscalYear(): int
-{
-    return getActiveFiscalYear() ?? (int) (FiscalYear::query()->where('legacy_company_id', getActiveLegacyCompany())->value('id') ?? 0);
-}
-
-function getActiveLegacyCompany(): int
-{
-    $configuredLegacyId = config('active-legacy-company-id');
-    if ($configuredLegacyId !== null) {
-        return (int) $configuredLegacyId;
-    }
-
-    if (getActiveFiscalYear() !== null) {
-        return (int) (FiscalYear::whereKey(getActiveFiscalYear())->value('legacy_company_id') ?? 0);
-    }
-
-    $configuredCompanyId = config('active-company-id');
-    if ($configuredCompanyId !== null) {
-        return (int) $configuredCompanyId;
-    }
-
-    $cookieCompanyId = Cookie::get('active-company-id');
-    if ($cookieCompanyId !== null) {
-        return (int) $cookieCompanyId;
-    }
-
-    // During tests/CLI execution there may be no request cookie. Use the
-    // first persisted company deterministically; fresh databases still use 1
-    // until the companies table is available.
-    try {
-        return (int) (Company::withoutGlobalScopes()->orderBy('id')->value('id') ?? 1);
-    } catch (Throwable) {
-        return 1;
-    }
 }
 
 /**

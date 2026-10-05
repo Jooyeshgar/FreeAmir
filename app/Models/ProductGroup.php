@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\HasFiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +10,6 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ProductGroup extends Model
 {
     use HasFactory;
-    use HasFiscalYear;
 
     protected $fillable = [
         'name',
@@ -20,6 +18,7 @@ class ProductGroup extends Model
         'sellId',
         'vat',
         'company_id',
+        'fiscal_year_id',
         'sales_returns_subject_id',
         'income_subject_id',
         'cogs_subject_id',
@@ -35,7 +34,7 @@ class ProductGroup extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function ($model) {
-            $model->company_id ??= getActiveLegacyCompany();
+            $model->company_id ??= getActiveCompany();
         });
     }
 

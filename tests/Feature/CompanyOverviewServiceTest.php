@@ -32,18 +32,22 @@ class CompanyOverviewServiceTest extends TestCase
 
     private int $companyId;
 
+    private int $fiscalYearId;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         $company = Company::factory()->create(['fiscal_year' => 1405]);
         $this->companyId = $company->id;
+        $this->fiscalYearId = $company->fiscalYears()->firstOrFail()->id;
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
+        $this->user->fiscalYears()->attach($this->fiscalYearId);
 
-        $this->withCookies(['active-company-id' => (string) $this->companyId]);
-        $_COOKIE['active-company-id'] = (string) $this->companyId;
-        config(['active-company-id' => $this->companyId, 'active-company-fiscal-year' => 1405]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->fiscalYearId]);
+        $_COOKIE['active-fiscal-year-id'] = (string) $this->fiscalYearId;
+        config(['active-company-id' => $this->companyId, 'active-fiscal-year-id' => $this->fiscalYearId]);
 
         $this->importSubjects($this->companyId);
         $this->importConfigs($this->companyId);

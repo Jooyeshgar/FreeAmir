@@ -9,7 +9,7 @@ class BankSeeder extends Seeder
 {
     public function run(?int $companyId = null): void
     {
-        $companyId ??= (int) getActiveLegacyCompany();
+        $companyId ??= (int) getActiveCompany();
         $bankNames = [
             'بانک پارسیان',
             'بانک دی',
@@ -38,6 +38,7 @@ class BankSeeder extends Seeder
             Bank::withoutGlobalScopes()->firstOrCreate([
                 'name' => $bankName,
                 'company_id' => $companyId,
+                'fiscal_year_id' => getActiveFiscalYear(),
             ]);
         }
     }

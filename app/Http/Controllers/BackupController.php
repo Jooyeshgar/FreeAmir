@@ -14,7 +14,7 @@ class BackupController extends Controller
 {
     public function create()
     {
-        $previousYears = auth()->user()->fiscalYears()->with('companyIdentity')->orderByDesc('year')->get();
+        $previousYears = auth()->user()->fiscalYears()->with('company')->orderByDesc('year')->get();
         $currentYear = toEnglish(jdate('Y'));
 
         return view('backups.create', compact('previousYears', 'currentYear'));
@@ -55,14 +55,14 @@ class BackupController extends Controller
 
         $includeDocumentFiles = in_array($documentFilesVal, $tables);
 
-        $year = FiscalYear::with('companyIdentity')->findOrFail($validated['source_id']);
+        $year = FiscalYear::with('company')->findOrFail($validated['source_id']);
         $exportData = FiscalYearService::exportData($validated['source_id'], $tables);
 
         if ($includeDocumentFiles) {
             FiscalYearService::documentFilesInBase64($exportData);
         }
 
-        $safeName = preg_replace('/\s+/', '-', trim($year->companyIdentity->name));
+        $safeName = preg_replace('/\s+/', '-', trim($year->company->name));
         $fileBaseName = "Amir-{$safeName}-".now()->format('Y-m-d-H-i');
 
         $jsonContent = json_encode($exportData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);

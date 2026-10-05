@@ -30,7 +30,7 @@ class WarehouseController extends Controller
             ->when(is_numeric($inventory), function ($query) use ($inventory) {
                 $query->whereRaw(
                     '(SELECT COALESCE(SUM(quantity), 0) FROM warehouse_product_stocks WHERE warehouse_product_stocks.warehouse_id = warehouses.id) = ?',
-                    [(float) $inventory]
+                    [(string) $inventory]
                 );
             });
 
@@ -174,9 +174,9 @@ class WarehouseController extends Controller
     public function transfer(Request $request): RedirectResponse
     {
         $data = $request->validate([
-            'product_id' => ['required', 'integer', Rule::exists('products', 'id')->where('fiscal_year_id', getScopedFiscalYear())],
-            'from_warehouse_id' => ['required', 'integer', Rule::exists('warehouses', 'id')->where('fiscal_year_id', getScopedFiscalYear())],
-            'to_warehouse_id' => ['required', 'integer', Rule::exists('warehouses', 'id')->where('fiscal_year_id', getScopedFiscalYear())],
+            'product_id' => ['required', 'integer', Rule::exists('products', 'id')->where('fiscal_year_id', getActiveFiscalYear())],
+            'from_warehouse_id' => ['required', 'integer', Rule::exists('warehouses', 'id')->where('fiscal_year_id', getActiveFiscalYear())],
+            'to_warehouse_id' => ['required', 'integer', Rule::exists('warehouses', 'id')->where('fiscal_year_id', getActiveFiscalYear())],
             'quantity' => ['required', 'numeric', 'gt:0'],
             'description' => ['nullable', 'string', 'max:500'],
             'submit_action' => ['nullable', Rule::in(['create_new'])],
@@ -193,8 +193,8 @@ class WarehouseController extends Controller
     private function validateWarehouse(Request $request, ?Warehouse $warehouse = null): array
     {
         return $request->validate([
-            'name' => ['required', 'string', 'max:100', Rule::unique('warehouses', 'name')->where('fiscal_year_id', getScopedFiscalYear())->ignore($warehouse)],
-            'code' => ['nullable', 'string', 'max:30', Rule::unique('warehouses', 'code')->where('fiscal_year_id', getScopedFiscalYear())->ignore($warehouse)],
+            'name' => ['required', 'string', 'max:100', Rule::unique('warehouses', 'name')->where('fiscal_year_id', getActiveFiscalYear())->ignore($warehouse)],
+            'code' => ['nullable', 'string', 'max:30', Rule::unique('warehouses', 'code')->where('fiscal_year_id', getActiveFiscalYear())->ignore($warehouse)],
             'description' => ['nullable', 'string', 'max:1000'],
         ]);
     }

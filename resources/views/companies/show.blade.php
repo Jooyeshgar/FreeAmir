@@ -30,7 +30,7 @@
                         'border-emerald-300/40 bg-emerald-400/15' => !$fiscalYear->closed_at,
                         'border-white/10 bg-white/5' => $fiscalYear->closed_at,
                     ])>
-                        <span class="block font-mono text-lg font-black">{{ localizeNumber($fiscalYear->fiscal_year) }}</span>
+                        <span class="block font-mono text-lg font-black">{{ localizeNumber($fiscalYear->year) }}</span>
                         <span class="mt-0.5 block text-[10px] text-slate-300">{{ $fiscalYear->closed_at ? __('Closed') : __('Open') }}</span>
                     </div>
                 @endforeach
@@ -77,7 +77,7 @@
                 <tbody>
                     @foreach ($fiscalYears as $fiscalYear)
                         <tr class="border-slate-100 transition hover:bg-slate-50/70 dark:border-slate-800 dark:hover:bg-slate-800/30">
-                            <td><span class="rounded-lg bg-slate-100 px-2.5 py-1 font-mono font-bold dark:bg-slate-800">{{ localizeNumber($fiscalYear->fiscal_year) }}</span></td>
+                            <td><span class="rounded-lg bg-slate-100 px-2.5 py-1 font-mono font-bold dark:bg-slate-800">{{ localizeNumber($fiscalYear->year) }}</span></td>
                             <td>{{ localizeNumber(number_format($fiscalYear->users_count)) }}</td>
                             <td>{{ localizeNumber(number_format($fiscalYear->documents_count)) }}</td>
                             <td>{{ localizeNumber(number_format($fiscalYear->invoices_count)) }}</td>
@@ -89,7 +89,7 @@
                             </td>
                             <td class="text-end">
                                 @can('companies.edit')
-                                    <a href="{{ route('companies.edit', $fiscalYear) }}" class="btn btn-ghost btn-xs rounded-lg">{{ __('Edit') }}</a>
+                                    <a href="{{ route('companies.edit', $business) }}" class="btn btn-ghost btn-xs rounded-lg">{{ __('Edit') }}</a>
                                 @endcan
                             </td>
                         </tr>

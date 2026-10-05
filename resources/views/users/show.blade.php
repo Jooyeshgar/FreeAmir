@@ -132,38 +132,38 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($user->companies as $company)
+                        @forelse ($user->fiscalYears as $year)
                             <tr class="border-slate-200 align-top transition-colors odd:bg-white even:bg-slate-50/70 hover:bg-indigo-50/70 dark:border-slate-800 dark:odd:bg-slate-900 dark:even:bg-slate-950/40 dark:hover:bg-indigo-950/25">
                                 <td class="min-w-52">
-                                    <a href="{{ route('companies.show', $company) }}" class="font-medium text-slate-900 transition hover:text-indigo-700 hover:underline dark:text-slate-100 dark:hover:text-indigo-300">{{ $company->name }}</a>
-                                    <p class="mt-1 max-w-56 truncate text-xs text-slate-500">{{ $company->address ? localizeNumber($company->address) : __('No address') }}</p>
+                                    <a href="{{ route('companies.show', $year->company) }}" class="font-medium text-slate-900 transition hover:text-indigo-700 hover:underline dark:text-slate-100 dark:hover:text-indigo-300">{{ $year->company->name }}</a>
+                                    <p class="mt-1 max-w-56 truncate text-xs text-slate-500">{{ $year->company->address ? localizeNumber($year->company->address) : __('No address') }}</p>
                                 </td>
-                                <td class="whitespace-nowrap font-medium">{{ localizeNumber($company->fiscal_year) }}</td>
-                                <td class="whitespace-nowrap">{{ __($company->currency) }}</td>
+                                <td class="whitespace-nowrap font-medium">{{ localizeNumber($year->year) }}</td>
+                                <td class="whitespace-nowrap">{{ __($year->company->currency) }}</td>
                                 <td class="min-w-40">
-                                    <p class="font-medium text-slate-800 dark:text-slate-100">{{ $company->national_code ?: '—' }}</p>
+                                    <p class="font-medium text-slate-800 dark:text-slate-100">{{ $year->company->national_code ?: '—' }}</p>
                                     <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                                         {{ __('Economic code') }}:
-                                        <span>{{ $company->economical_code ?: '—' }}</span>
+                                        <span>{{ $year->company->economical_code ?: '—' }}</span>
                                     </p>
                                 </td>
                                 <td class="min-w-40">
-                                    <p class="font-medium text-slate-800 dark:text-slate-100">{{ $company->phone_number ?: '—' }}</p>
+                                    <p class="font-medium text-slate-800 dark:text-slate-100">{{ $year->company->phone_number ?: '—' }}</p>
                                     <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                                         {{ __('Postal code') }}:
-                                        <span>{{ $company->postal_code ?: '—' }}</span>
+                                        <span>{{ $year->company->postal_code ?: '—' }}</span>
                                     </p>
                                 </td>
                                 <td>
                                     <span @class([
                                         'badge badge-sm whitespace-nowrap',
-                                        'border-emerald-200 bg-emerald-100 font-semibold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200' => ! $company->closed_at,
-                                        'border-slate-300 bg-slate-100 font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200' => $company->closed_at,
-                                    ])>{{ $company->closed_at ? __('Closed') : __('Open') }}</span>
+                                        'border-emerald-200 bg-emerald-100 font-semibold text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200' => ! $year->closed_at,
+                                        'border-slate-300 bg-slate-100 font-semibold text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200' => $year->closed_at,
+                                    ])>{{ $year->closed_at ? __('Closed') : __('Open') }}</span>
                                 </td>
                                 <td class="text-end">
                                     @can('companies.edit')
-                                        <a href="{{ route('companies.edit', $company) }}" class="btn btn-xs whitespace-nowrap border-indigo-200 bg-indigo-50 text-indigo-700 hover:border-indigo-300 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/70 dark:text-indigo-200 dark:hover:bg-indigo-900/70">{{ __('Edit company') }}</a>
+                                        <a href="{{ route('companies.edit', $year->company) }}" class="btn btn-xs whitespace-nowrap border-indigo-200 bg-indigo-50 text-indigo-700 hover:border-indigo-300 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/70 dark:text-indigo-200 dark:hover:bg-indigo-900/70">{{ __('Edit company') }}</a>
                                     @endcan
                                 </td>
                             </tr>

@@ -13,7 +13,7 @@ class WorkSiteFactory extends Factory
     public function definition(): array
     {
         return [
-            'company_id' => Company::factory(),
+            'company_id' => getActiveCompany() ?: Company::factory(),
             'name' => $this->faker->company(),
             'code' => strtoupper($this->faker->unique()->lexify('WS-???')),
             'address' => $this->faker->optional()->address(),

@@ -11,6 +11,7 @@ use App\Models\Cheque;
 use App\Models\Company;
 use App\Models\Document;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Payroll;
@@ -59,7 +60,7 @@ class HomeService
                 ->join('fiscal_year_user', 'users.id', '=', 'fiscal_year_user.user_id')
                 ->join('fiscal_years', 'fiscal_years.id', '=', 'fiscal_year_user.fiscal_year_id')
                 ->where('users.created_at', '>=', $userGrowthStart)
-                ->selectRaw("{$monthExpression} as period, COUNT(DISTINCT fiscal_years.company_identity_id) as aggregate_count")
+                ->selectRaw("{$monthExpression} as period, COUNT(DISTINCT fiscal_years.company_id) as aggregate_count")
                 ->groupBy('period')
                 ->pluck('aggregate_count', 'period');
             $documentsByMonth = Document::withoutGlobalScopes()
@@ -117,7 +118,7 @@ class HomeService
                 ->count();
             $monthlyDocuments = Document::withoutGlobalScopes()->where('created_at', '>=', $currentPeriodStart)->count();
             $monthlyInvoices = Invoice::withoutGlobalScopes()->where('created_at', '>=', $currentPeriodStart)->count();
-            $activeBusinesses = Company::query()->whereNull('closed_at')->distinct()->count('name');
+            $activeBusinesses = FiscalYear::query()->whereNull('closed_at')->distinct()->count('company_id');
             $usageByCompany = Document::withoutGlobalScopes()
                 ->join('companies', 'documents.company_id', '=', 'companies.id')
                 ->where('documents.created_at', '>=', $previousPeriodStart)
@@ -128,7 +129,6 @@ class HomeService
                 ->get();
             $overviewCompanyIds = Company::query()
                 ->whereIn('name', $usageByCompany->pluck('name'))
-                ->orderByDesc('fiscal_year')
                 ->orderByDesc('id')
                 ->get(['id', 'name'])
                 ->unique('name')
@@ -162,9 +162,9 @@ class HomeService
             return [
                 'metrics' => [
                     'businesses' => Company::query()->distinct()->count('name'),
-                    'activeBusinesses' => Company::query()->whereNull('closed_at')->distinct()->count('name'),
-                    'openFiscalYears' => Company::query()->whereNull('closed_at')->count(),
-                    'closedFiscalYears' => Company::query()->whereNotNull('closed_at')->count(),
+                    'activeBusinesses' => FiscalYear::query()->whereNull('closed_at')->distinct()->count('company_id'),
+                    'openFiscalYears' => FiscalYear::query()->whereNull('closed_at')->count(),
+                    'closedFiscalYears' => FiscalYear::query()->whereNotNull('closed_at')->count(),
                     'users' => User::query()->count(),
                     'verifiedUsers' => User::query()->whereNotNull('email_verified_at')->count(),
                     'unassignedUsers' => User::query()->doesntHave('companies')->count(),
@@ -197,7 +197,8 @@ class HomeService
             : Cache::remember('dashboard.super-admin-overview.v3.'.app()->getLocale(), now()->addMinutes(5), $statistics);
 
         $dashboard = $statistics + [
-            'recentCompanies' => Company::query()
+            'recentCompanies' => FiscalYear::query()
+                ->with('company')
                 ->withCount('users')
                 ->orderByDesc('id')
                 ->limit(5)

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Subject;
@@ -35,6 +36,7 @@ class ProductImportExportTest extends TestCase
 
         $this->user = User::factory()->create();
         $company->users()->attach($this->user);
+        $this->activateFiscalYear($company, $this->user);
 
         $this->user->givePermissionTo([
             Permission::firstOrCreate(['name' => 'products.index']),
@@ -48,6 +50,22 @@ class ProductImportExportTest extends TestCase
         config(['active-company-id' => $this->companyId]);
 
         $this->productGroup = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId]);
+    }
+
+    private function activateFiscalYear(Company $company, User $user): FiscalYear
+    {
+        $year = $company->fiscalYears()->orderBy('id')->firstOrFail();
+        $year->users()->syncWithoutDetaching([$user->id]);
+
+        config([
+            'active-company-id' => $company->id,
+            'active-fiscal-year-id' => $year->id,
+            'active-company-fiscal-year' => $year->year,
+        ]);
+
+        $this->withCookies(['active-fiscal-year-id' => (string) $year->id]);
+
+        return $year;
     }
 
     private function upload(string $csv): UploadedFile

@@ -12,8 +12,9 @@ class DatabaseSeeder extends Seeder
      */
     public function run(?int $companyId = null): void
     {
-        $companyId ??= (int) getActiveLegacyCompany();
+        $companyId ??= (int) getActiveCompany();
         $previousActiveCompanyId = config('active-company-id');
+        $previousActiveFiscalYearId = config('active-fiscal-year-id');
         config(['active-company-id' => $companyId]);
 
         try {
@@ -32,6 +33,7 @@ class DatabaseSeeder extends Seeder
             ]);
         } finally {
             config(['active-company-id' => $previousActiveCompanyId]);
+            config(['active-fiscal-year-id' => $previousActiveFiscalYearId]);
         }
     }
 }
