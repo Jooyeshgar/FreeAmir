@@ -61,7 +61,7 @@ class CompanyAccessTest extends TestCase
         $superAdmin = User::factory()->create();
         $superAdmin->assignRole(Role::firstOrCreate(['name' => 'Super-Admin']));
 
-        $form = $this->actingAs($superAdmin)->get(route('companies.create'));
+        $form = $this->actingAs($superAdmin)->withCookies(['active-company-id' => null])->get(route('companies.create'));
 
         $form->assertOk()->assertDontSee('id="previousYears"', false)->assertDontSee('name="source_year_id"', false);
 
@@ -82,7 +82,7 @@ class CompanyAccessTest extends TestCase
         $superAdmin = User::factory()->create();
         $superAdmin->assignRole(Role::firstOrCreate(['name' => 'Super-Admin']));
 
-        $response = $this->actingAs($superAdmin)->withSession(['interface_mode' => 'management'])->get(route('companies.index'));
+        $response = $this->actingAs($superAdmin)->withCookies(['active-company-id' => null])->withSession(['interface_mode' => 'management'])->get(route('companies.index'));
         $response->assertOk()->assertSee('data-testid="create-first-company"', false);
     }
 
@@ -92,7 +92,7 @@ class CompanyAccessTest extends TestCase
         $superAdmin->assignRole(Role::firstOrCreate(['name' => 'Super-Admin']));
         $this->accessibleCompany->users()->attach($superAdmin);
 
-        $response = $this->actingAs($superAdmin)->withSession(['interface_mode' => 'management'])->get(route('companies.index'));
+        $response = $this->actingAs($superAdmin)->withCookies(['active-company-id' => null])->withSession(['interface_mode' => 'management'])->get(route('companies.index'));
         $response->assertOk()->assertDontSee('data-testid="create-first-company"', false);
     }
 
@@ -241,6 +241,7 @@ class CompanyAccessTest extends TestCase
             'company_id' => $this->accessibleCompany->id,
             'subject_id' => $accountSubject->id,
             'iban' => 'IR163212724891703088374062',
+            'fiscal_year_id' => $this->accessibleCompany->fiscalYear->id,
         ])->saveQuietly();
 
         $accountSubject->subjectable()->associate($sourceAccount);
@@ -267,6 +268,7 @@ class CompanyAccessTest extends TestCase
 
         $this->assertDatabaseHas('bank_accounts', [
             'company_id' => $newCompany->id,
+            'fiscal_year_id' => $newCompany->fiscalYear->id,
             'iban' => 'IR163212724891703088374062',
         ]);
     }

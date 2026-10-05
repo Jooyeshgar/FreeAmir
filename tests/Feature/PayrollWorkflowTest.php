@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\PayrollStatus;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\MonthlyAttendance;
 use App\Models\Payroll;
 use App\Models\User;
@@ -240,6 +241,7 @@ class PayrollWorkflowTest extends TestCase
         ]);
         $payrollId = DB::table('payrolls')->insertGetId([
             'company_id' => $this->companyId,
+            'fiscal_year_id' => FiscalYear::query()->where('legacy_company_id', $this->companyId)->value('id'),
             'employee_id' => $this->employee->id,
             'monthly_attendance_id' => $attendance->id,
             'year' => 1405,

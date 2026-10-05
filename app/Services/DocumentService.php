@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Document;
 use App\Models\DocumentFile;
+use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -36,7 +37,7 @@ class DocumentService
             $data['number'] = Document::max('number') + 1;
         }
 
-        $data['company_id'] = isset($data['company_id']) ? $data['company_id'] : getActiveCompany();
+        $data['company_id'] = isset($data['company_id']) ? $data['company_id'] : getActiveLegacyCompany();
 
         $document = null;
         DB::transaction(function () use ($data, $transactions, $user, &$document) {
@@ -132,6 +133,12 @@ class DocumentService
         }
 
         $transaction = new Transaction;
+        if (! Subject::withoutGlobalScopes()->whereKey($data['subject_id'])
+            ->where('fiscal_year_id', $document->fiscal_year_id)->exists()) {
+            throw ValidationException::withMessages([
+                'subject_id' => [__('The selected subject is invalid for this fiscal year.')],
+            ]);
+        }
         $data['user_id'] ??= Auth::id();
         $transaction->fill($data);
         $transaction->document_id = $document->id;
@@ -159,6 +166,12 @@ class DocumentService
         }
 
         $transaction->fill($data);
+        if (isset($data['subject_id']) && ! Subject::withoutGlobalScopes()->whereKey($data['subject_id'])
+            ->where('fiscal_year_id', $transaction->document?->fiscal_year_id)->exists()) {
+            throw ValidationException::withMessages([
+                'subject_id' => [__('The selected subject is invalid for this fiscal year.')],
+            ]);
+        }
         $transaction->save();
 
         return $transaction;

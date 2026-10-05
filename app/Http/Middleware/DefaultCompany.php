@@ -2,11 +2,10 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use Closure;
 use Cookie;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 class DefaultCompany
@@ -18,46 +17,56 @@ class DefaultCompany
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->hasCookie('active-company-id')) {
-            $company = Company::find($request->cookie('active-company-id'));
+        config(['active-company-id' => 0, 'active-legacy-company-id' => 0,
+            'active-fiscal-year-id' => null, 'active-company-name' => null,
+            'active-company-fiscal-year' => null]);
 
-            if (! $company or ! $company->users->contains(auth()->id())) {
-                Cookie::forget('active-company-id');
+        if (! $request->user()) {
+            return $next($request);
+        }
 
-                config([
-                    'active-company-id' => null,
-                    'active-company-name' => null,
-                    'active-company-fiscal-year' => null,
-                ]);
+        $selectedId = $request->cookie('active-fiscal-year-id');
+        $year = $selectedId && ctype_digit((string) $selectedId)
+            ? $request->user()->fiscalYears()->whereKey((int) $selectedId)->first() : null;
 
-                $this->setDefaultCompany();
+        if ($selectedId === null && $request->cookie('active-company-id')) {
+            $year = $request->user()->fiscalYears()
+                ->where('legacy_company_id', $request->cookie('active-company-id'))->first();
+            if ($year) {
+                Cookie::queue('active-fiscal-year-id', $year->id, 362 * 24 * 60);
             } else {
-                config([
-                    'active-company-id' => $company->id,
-                    'active-company-name' => $company->name,
-                    'active-company-fiscal-year' => $company->fiscal_year,
-                ]);
+                return response('', 403)->withCookie(Cookie::forget('active-company-id'));
             }
-        } else {
-            $this->setDefaultCompany();
+        }
+
+        if (! $year && $selectedId !== null) {
+            return response('', 403)
+                ->withCookie(Cookie::forget('active-fiscal-year-id'))
+                ->withCookie(Cookie::forget('active-company-id'));
+        }
+
+        if (! $year) {
+            $year = $request->user()->fiscalYears()->where('year', toEnglish(jdate('Y')))
+                ->orderBy('fiscal_years.id')->first()
+                ?? $request->user()->fiscalYears()->orderByDesc('year')->orderBy('fiscal_years.id')->first();
+            if ($year) {
+                Cookie::queue('active-fiscal-year-id', $year->id, 362 * 24 * 60);
+            }
+        }
+
+        if ($year) {
+            self::activate($year);
         }
 
         return $next($request);
     }
 
-    private function setDefaultCompany(): void
+    public static function activate(FiscalYear $year): void
     {
-        if (Auth::check()) {
-            $company = Auth::user()->companies()->where('fiscal_year', toEnglish(jdate('Y')))->first();
-            if ($company) {
-                Cookie::queue('active-company-id', $company->id, 362 * 24 * 60);
-
-                config([
-                    'active-company-id' => $company->id,
-                    'active-company-name' => $company->name,
-                    'active-company-fiscal-year' => $company->fiscal_year,
-                ]);
-            }
-        }
+        config(['active-company-id' => $year->company_identity_id,
+            'active-legacy-company-id' => $year->legacy_company_id,
+            'active-fiscal-year-id' => $year->id,
+            'active-company-name' => $year->companyIdentity->name,
+            'active-company-fiscal-year' => $year->year]);
     }
 }

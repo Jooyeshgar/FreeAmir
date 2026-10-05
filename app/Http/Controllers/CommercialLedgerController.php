@@ -22,7 +22,7 @@ class CommercialLedgerController extends Controller
 
     public function index(): View
     {
-        $company = Company::query()->findOrFail(getActiveCompany());
+        $company = Company::query()->findOrFail(getActiveLegacyCompany());
         [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
 
         $unapprovedDocumentsCount = Document::query()
@@ -93,6 +93,7 @@ class CommercialLedgerController extends Controller
 
     public function show(Request $request, CommercialLedgerExport $commercialLedger): View
     {
+        abort_unless((int) $commercialLedger->fiscal_year_id === getScopedFiscalYear(), 404);
         $allRows = $this->service->rows(
             $commercialLedger->from_date->toDateString(),
             $commercialLedger->to_date->toDateString(),
@@ -114,6 +115,7 @@ class CommercialLedgerController extends Controller
 
     public function download(CommercialLedgerExport $commercialLedger): StreamedResponse
     {
+        abort_unless((int) $commercialLedger->fiscal_year_id === getScopedFiscalYear(), 404);
         abort_unless(Storage::disk('local')->exists($commercialLedger->file_path), 404);
 
         return Storage::disk('local')->download(
@@ -127,6 +129,7 @@ class CommercialLedgerController extends Controller
 
     public function destroy(CommercialLedgerExport $commercialLedger): RedirectResponse
     {
+        abort_unless((int) $commercialLedger->fiscal_year_id === getScopedFiscalYear(), 404);
         $this->service->delete($commercialLedger);
 
         return redirect()->route('commercial-ledgers.index')->with('success', __('Commercial ledger deleted successfully.'));

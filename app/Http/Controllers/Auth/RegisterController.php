@@ -136,7 +136,7 @@ class RegisterController extends Controller
 
     private function verifiedRedirect(User $user): RedirectResponse
     {
-        return $user->companies()->exists() ? redirect()->route('home') : redirect()->route('registered-user.company.create');
+        return $user->fiscalYears()->exists() ? redirect()->route('home') : redirect()->route('registered-user.company.create');
     }
 
     private function normalizeEmail(Request $request): void

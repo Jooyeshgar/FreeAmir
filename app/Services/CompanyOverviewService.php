@@ -19,6 +19,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class CompanyOverviewService
 {
@@ -32,7 +33,7 @@ class CompanyOverviewService
     public function build(Company $company): array
     {
         $fiscalYears = Company::query()
-            ->where('name', $company->name)
+            ->whereIn('companies.id', $company->fiscalYear->companyIdentity->fiscalYears()->select('legacy_company_id'))
             ->select('companies.*')
             ->selectSub(
                 Document::withoutGlobalScopes()
@@ -46,14 +47,18 @@ class CompanyOverviewService
                     ->whereColumn('invoices.company_id', 'companies.id'),
                 'invoices_count'
             )
-            ->withCount('users')
+            ->selectSub(
+                DB::table('fiscal_year_user')->join('fiscal_years', 'fiscal_year_user.fiscal_year_id', '=', 'fiscal_years.id')
+                    ->selectRaw('COUNT(*)')->whereColumn('fiscal_years.legacy_company_id', 'companies.id'),
+                'users_count'
+            )
             ->orderByDesc('fiscal_year')
             ->orderByDesc('id')
             ->get();
 
-        $companyIds = $fiscalYears->pluck('id');
+        $yearIds = $company->fiscalYear->companyIdentity->fiscalYears()->pluck('id');
         $users = User::query()
-            ->whereHas('companies', fn ($query) => $query->whereIn('companies.id', $companyIds))
+            ->whereHas('fiscalYears', fn ($query) => $query->whereIn('fiscal_years.id', $yearIds))
             ->with('roles:id,name')
             ->orderBy('name')
             ->orderBy('id')
@@ -236,6 +241,7 @@ class CompanyOverviewService
 
             $balance = (float) Transaction::query()
                 ->join('documents', 'documents.id', '=', 'transactions.document_id')
+                ->where('documents.fiscal_year_id', getScopedFiscalYear())
                 ->whereIn('transactions.subject_id', $subjectIds)
                 ->when($startDate, fn ($query, string $date) => $query->where('documents.date', '>=', $date))
                 ->when($endDate, fn ($query, string $date) => $query->where('documents.date', '<=', $date))
@@ -326,6 +332,7 @@ class CompanyOverviewService
 
         $invoiceItems = \DB::table('invoice_items')
             ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
+            ->where('invoices.fiscal_year_id', getScopedFiscalYear())
             ->select('invoices.date', 'invoice_items.itemable_id', 'invoice_items.quantity_at')
             ->where('invoice_items.itemable_type', Product::class)
             ->whereBetween('invoices.date', [$startDate, $endDate])
@@ -406,6 +413,7 @@ class CompanyOverviewService
 
         $dailyTransactions = (clone $transactionQuery)
             ->join('documents', 'documents.id', '=', 'transactions.document_id')
+            ->where('documents.fiscal_year_id', getScopedFiscalYear())
             ->whereBetween('documents.date', [$startDate, $endDate])
             ->selectRaw('DATE(documents.date) as date, SUM(transactions.value) as total')
             ->groupBy('date')

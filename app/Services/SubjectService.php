@@ -120,6 +120,7 @@ class SubjectService
 
             $transactions = (clone $transactionQuery)
                 ->join('documents', 'documents.id', '=', 'transactions.document_id')
+                ->where('documents.fiscal_year_id', getScopedFiscalYear())
                 ->when($approvedOnly, fn ($query) => $query->whereNotNull('documents.approved_at'))
                 ->whereBetween('documents.date', [$startDate, $endDate])
                 ->selectRaw('DATE(documents.date) as date, SUM(transactions.value) as total')
@@ -158,6 +159,7 @@ class SubjectService
         if ($approvedOnly) {
             return (float) Transaction::query()
                 ->join('documents', 'documents.id', '=', 'transactions.document_id')
+                ->where('documents.fiscal_year_id', getScopedFiscalYear())
                 ->whereNotNull('documents.approved_at')
                 ->whereIn('transactions.subject_id', self::subjectAndDescendantIds($subject))
                 ->when(! $both, fn ($query) => $query->where('transactions.value', $debit ? '<' : '>', 0))
@@ -234,7 +236,7 @@ class SubjectService
             $parentId = null; // normalize to null for roots
         }
 
-        $companyId = $data['company_id'] ?? getActiveCompany();
+        $companyId = $data['company_id'] ?? getActiveLegacyCompany();
         if (! $companyId) {
             throw new \InvalidArgumentException('The company_id is required or must be available in session.');
         }

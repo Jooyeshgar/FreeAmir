@@ -11,7 +11,7 @@ class InvoiceSeeder extends Seeder
 {
     public function run(): void
     {
-        $company = Company::withoutGlobalScopes()->find(getActiveCompany());
+        $company = Company::withoutGlobalScopes()->find(getActiveLegacyCompany());
 
         if (! $company) {
             return;

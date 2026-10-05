@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\FiscalYearSection;
+use App\Http\Middleware\DefaultCompany;
 use App\Models\Company;
 use App\Models\Document;
 use App\Models\DocumentFile;
@@ -56,8 +57,12 @@ class CompanyController extends Controller
     public function index(Request $request): View
     {
         $user = auth()->user();
-        $companies = ($user->can('access-super-admin-panel') ? Company::query() : $user->companies())
-            ->with('closedBy:id,name')->withCount('users')->when($request->filled('search'), function ($query) use ($request) {
+        $companies = ($user->can('access-super-admin-panel') && $request->session()->get('interface_mode') === 'management' ? Company::query() : $user->accessibleCompanies())
+            ->with('closedBy:id,name')->select('companies.*')->selectSub(
+                DB::table('fiscal_year_user')->join('fiscal_years', 'fiscal_year_user.fiscal_year_id', '=', 'fiscal_years.id')
+                    ->selectRaw('COUNT(*)')->whereColumn('fiscal_years.legacy_company_id', 'companies.id'),
+                'users_count'
+            )->when($request->filled('search'), function ($query) use ($request) {
                 $search = trim((string) $request->input('search'));
 
                 $query->where(function ($query) use ($search) {
@@ -80,7 +85,7 @@ class CompanyController extends Controller
 
         return view($view, [
             'companies' => $companies,
-            'canCreateFirstCompany' => $user->can('access-super-admin-panel') && $user->companies()->doesntExist(),
+            'canCreateFirstCompany' => $user->can('access-super-admin-panel') && $user->fiscalYears()->doesntExist(),
         ]);
     }
 
@@ -90,7 +95,7 @@ class CompanyController extends Controller
     public function create(Request $request): View
     {
         // Get previous fiscal years for the current company
-        $previousYears = $request->user()->companies()->orderByDesc('fiscal_year')->get();
+        $previousYears = $request->user()->accessibleCompanies()->orderByDesc('fiscal_year')->get();
 
         return view('companies.create', [
             'company' => null,
@@ -102,7 +107,7 @@ class CompanyController extends Controller
     {
         abort_if($request->user()->can('access-super-admin-panel'), 404);
 
-        if (auth()->user()->companies()->exists()) {
+        if (auth()->user()->fiscalYears()->exists()) {
             return redirect()->route('home');
         }
 
@@ -125,7 +130,7 @@ class CompanyController extends Controller
     {
         abort_if($request->user()->can('access-super-admin-panel'), 404);
 
-        if ($request->user()->companies()->exists()) {
+        if ($request->user()->fiscalYears()->exists()) {
             return redirect()->route('home');
         }
 
@@ -141,6 +146,7 @@ class CompanyController extends Controller
         try {
             $company = $this->createCompany($request->user(), $data);
             Cookie::queue('active-company-id', $company->id, 362 * 24 * 60);
+            Cookie::queue('active-fiscal-year-id', $company->fiscalYear->id, 362 * 24 * 60);
 
             return redirect()->route('home')->with('success', __('Company created successfully.'));
         } catch (\Throwable $e) {
@@ -163,7 +169,7 @@ class CompanyController extends Controller
         $fiscalYearRules = [
             'source_year_id' => [
                 'nullable',
-                Rule::exists('company_user', 'company_id')->where('user_id', auth()->user()->id),
+                Rule::exists('fiscal_years', 'legacy_company_id')->whereIn('id', auth()->user()->fiscalYears()->pluck('fiscal_years.id')),
             ],
             'tables_to_copy' => 'array',
             'tables_to_copy.*' => 'string|in:'.implode(',', array_map(fn ($case) => $case->value, FiscalYearSection::cases())),
@@ -197,6 +203,7 @@ class CompanyController extends Controller
         try {
             $company = $this->createCompany($request->user(), $data, isset($validated['source_year_id']) ? (int) $validated['source_year_id'] : null, $validated['tables_to_copy'] ?? []);
             Cookie::queue('active-company-id', $company->id, 362 * 24 * 60);
+            Cookie::queue('active-fiscal-year-id', $company->fiscalYear->id, 362 * 24 * 60);
         } catch (\Throwable $e) {
             Log::error('Company initialization failed.', [
                 'creator_id' => $request->user()->id,
@@ -374,7 +381,7 @@ class CompanyController extends Controller
     {
         $user = auth()->user();
 
-        abort_unless($user->can('access-super-admin-panel') || $user->companies()->whereKey($company->id)->exists(), 403);
+        abort_unless($user->canAccessFiscalYear($company), 403);
     }
 
     private function privateKeyRules(): array
@@ -430,6 +437,7 @@ class CompanyController extends Controller
         return DB::transaction(function () use ($creator, $companyData, $sourceCompanyId, $sectionsToCopy) {
             $company = $sourceCompanyId === null ? Company::create($companyData) : FiscalYearService::createWithCopiedData($companyData, $sourceCompanyId, $sectionsToCopy);
             $company->users()->syncWithoutDetaching([$creator->id]);
+            $company->fiscalYear->users()->syncWithoutDetaching([$creator->id]);
 
             if ($sourceCompanyId === null) {
                 foreach ([
@@ -466,23 +474,20 @@ class CompanyController extends Controller
 
     public function setActiveCompany(Company $company): RedirectResponse
     {
-        if (! $company->users->contains(auth()->id())) {
+        if (! auth()->user()->canAccessFiscalYear($company)) {
             abort(403);
         }
 
         Cookie::queue('active-company-id', $company->id, 365 * 24 * 60);
-
-        config([
-            'active-company-name' => $company->name,
-            'active-company-fiscal-year' => $company->fiscal_year,
-        ]);
+        Cookie::queue('active-fiscal-year-id', $company->fiscalYear->id, 365 * 24 * 60);
+        DefaultCompany::activate($company->fiscalYear);
 
         return redirect()->route('home');
     }
 
     public function closeFiscalYear(Company $company, Request $request): RedirectResponse
     {
-        if (! $company->users->contains($request->user()->id)) {
+        if (! $request->user()->canAccessFiscalYear($company)) {
             abort(403);
         }
 
@@ -502,7 +507,7 @@ class CompanyController extends Controller
      */
     public function closingWizard(Company $company, Request $request): View
     {
-        if (! $company->users->contains($request->user()->id)) {
+        if (! $request->user()->canAccessFiscalYear($company)) {
             abort(403);
         }
 
@@ -528,7 +533,7 @@ class CompanyController extends Controller
      */
     public function closingWizardStep1(Company $company, Request $request): RedirectResponse
     {
-        if (! $company->users->contains($request->user()->id)) {
+        if (! $request->user()->canAccessFiscalYear($company)) {
             abort(403);
         }
 
@@ -558,7 +563,7 @@ class CompanyController extends Controller
      */
     public function closingWizardStep3(Company $company, Request $request): RedirectResponse
     {
-        if (! $company->users->contains($request->user()->id)) {
+        if (! $request->user()->canAccessFiscalYear($company)) {
             abort(403);
         }
 
@@ -596,7 +601,7 @@ class CompanyController extends Controller
 
     public function recalculateClosingDocument(Company $company, Request $request): RedirectResponse
     {
-        if (! $company->users->contains($request->user()->id)) {
+        if (! $request->user()->canAccessFiscalYear($company)) {
             abort(403);
         }
 

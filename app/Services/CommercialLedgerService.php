@@ -30,7 +30,7 @@ class CommercialLedgerService
 
     public function generate(array $data, int $userId): CommercialLedgerExport
     {
-        $company = Company::query()->findOrFail(getActiveCompany());
+        $company = Company::query()->findOrFail(getActiveLegacyCompany());
         $fromDate = jalali_to_gregorian_date($data['from_date'], '-', '/');
         $toDate = jalali_to_gregorian_date($data['to_date'], '-', '/');
         $type = CommercialLedgerType::from((int) $data['ledger_type']);
@@ -69,10 +69,10 @@ class CommercialLedgerService
         $transactions = DB::table('transactions')
             ->join('documents', 'documents.id', '=', 'transactions.document_id')
             ->leftJoin('subjects', 'subjects.id', '=', 'transactions.subject_id')
-            ->where('documents.company_id', getActiveCompany())
+            ->where('documents.fiscal_year_id', getScopedFiscalYear())
             ->whereBetween('documents.date', [$fromDate, $toDate])
             ->whereNotNull('transactions.subject_id')
-            ->where('subjects.company_id', getActiveCompany())
+            ->where('subjects.fiscal_year_id', getScopedFiscalYear())
             ->orderBy('documents.date')
             ->orderBy('documents.number')
             ->orderBy('transactions.id')
@@ -236,7 +236,7 @@ class CommercialLedgerService
     {
         $unbalancedDocuments = DB::table('documents')
             ->leftJoin('transactions', 'transactions.document_id', '=', 'documents.id')
-            ->where('documents.company_id', getActiveCompany())
+            ->where('documents.fiscal_year_id', getScopedFiscalYear())
             ->whereBetween('documents.date', [$fromDate, $toDate])
             ->groupBy('documents.id', 'documents.number')
             ->select('documents.number')

@@ -13,6 +13,7 @@ use App\Models\WorkSite;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use RuntimeException;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -222,7 +223,7 @@ class ApiTest extends TestCase
         ])->assertForbidden();
     }
 
-    #[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+    #[RunInSeparateProcess]
     public function test_attendance_batch_rolls_back_when_one_insert_fails(): void
     {
         $workSite = WorkSite::factory()->create(['company_id' => $this->company->id]);

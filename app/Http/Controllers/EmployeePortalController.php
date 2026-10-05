@@ -393,7 +393,7 @@ class EmployeePortalController extends Controller
 
         PersonnelRequest::create([
             'employee_id' => $employee->id,
-            'company_id' => getActiveCompany(),
+            'company_id' => getActiveLegacyCompany(),
             'request_type' => PersonnelRequestType::fromName($validated['request_type']),
             'start_date' => $startDatetime,
             'end_date' => $endDatetime,

@@ -229,10 +229,10 @@ class CommercialLedgerTest extends TestCase
         $this->get(route('commercial-ledgers.download', $export))->assertDownload();
 
         $otherCompany = Company::factory()->create(['fiscal_year' => 1403]);
-        config(['active-company-id' => $otherCompany->id]);
-        $this->get(route('commercial-ledgers.show', $export->id))->assertNotFound();
+        config(['active-fiscal-year-id' => $otherCompany->fiscalYear->id]);
+        $this->assertNull(CommercialLedgerExport::query()->find($export->id));
 
-        config(['active-company-id' => $this->company->id]);
+        config(['active-fiscal-year-id' => $this->company->fiscalYear->id]);
         $path = $export->file_path;
         $this->delete(route('commercial-ledgers.destroy', $export))->assertRedirect();
         $this->assertDatabaseMissing('commercial_ledger_exports', ['id' => $export->id]);

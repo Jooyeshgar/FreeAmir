@@ -90,7 +90,7 @@ class InventoryTurnoverService
             ],
             'warehouses' => Warehouse::query()->orderBy('name')->get(['id', 'name']),
             'productGroups' => ProductGroup::query()->orderBy('name')->get(['id', 'name']),
-            'company' => Company::find(getActiveCompany()),
+            'company' => Company::find(getActiveLegacyCompany()),
             'generatedAt' => formatDateTime(now()),
         ];
     }
@@ -108,8 +108,8 @@ class InventoryTurnoverService
         Validator::make($rawFilters, [
             'start_date' => ['bail', 'nullable', 'string', $dateRule],
             'end_date' => ['bail', 'nullable', 'string', $dateRule],
-            'warehouse_id' => ['nullable', 'integer', Rule::exists('warehouses', 'id')->where('company_id', getActiveCompany())],
-            'product_group' => ['nullable', 'integer', Rule::exists('product_groups', 'id')->where('company_id', getActiveCompany())],
+            'warehouse_id' => ['nullable', 'integer', Rule::exists('warehouses', 'id')->where('fiscal_year_id', getScopedFiscalYear())],
+            'product_group' => ['nullable', 'integer', Rule::exists('product_groups', 'id')->where('fiscal_year_id', getScopedFiscalYear())],
         ])->after(function ($validator) use ($rawFilters): void {
             if (empty($rawFilters['start_date']) || empty($rawFilters['end_date']) || $validator->errors()->hasAny(['start_date', 'end_date'])) {
                 return;
@@ -120,7 +120,7 @@ class InventoryTurnoverService
             }
         })->validate();
 
-        $company = Company::query()->findOrFail(getActiveCompany());
+        $company = Company::query()->findOrFail(getActiveLegacyCompany());
         $defaultStartDate = Carbon::parse(jalali_to_gregorian($company->fiscal_year, 1, 1, '/'))->addDays(4)->format('Y-m-d');
         $defaultEndDate = Carbon::parse(jalali_to_gregorian($company->fiscal_year, jdate('m'), jdate('d'), '/'))->format('Y-m-d');
         $selectedStartDate = ! empty($rawFilters['start_date']) ? jalaliInputToGregorian($rawFilters['start_date'], 'start_date') : $defaultStartDate;
@@ -150,7 +150,7 @@ class InventoryTurnoverService
             ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
             ->where('invoice_items.itemable_type', Product::class)
             ->whereIn('invoice_items.itemable_id', $productIds)
-            ->where('invoices.company_id', getActiveCompany())
+            ->where('invoices.fiscal_year_id', getScopedFiscalYear())
             ->whereIn('invoices.status', $this->enumValues(InvoiceStatus::approvedOrSettled()))
             ->whereBetween('invoices.date', [$filters['start_date'], $filters['end_date']])
             ->when($filters['warehouse_id'], fn (Builder $query, int $warehouseId) => $query->where('invoices.warehouse_id', $warehouseId))
@@ -172,7 +172,7 @@ class InventoryTurnoverService
             ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
             ->where('invoice_items.itemable_type', Product::class)
             ->whereIn('invoice_items.itemable_id', $productIds)
-            ->where('invoices.company_id', getActiveCompany())
+            ->where('invoices.fiscal_year_id', getScopedFiscalYear())
             ->whereIn('invoices.status', $this->enumValues(InvoiceStatus::approvedOrSettled()))
             ->when($filters['warehouse_id'], fn (Builder $query, int $warehouseId) => $query->where('invoices.warehouse_id', $warehouseId))
             ->when($filters['end_date'], fn (Builder $query, string $date) => $query->where('invoices.date', '<=', $date))
@@ -191,7 +191,7 @@ class InventoryTurnoverService
                 $quantity = (float) $item->quantity;
 
                 if ($type === InvoiceType::BEGINNING_INVENTORY->value) {
-                    if ($item->date <= $filters['start_date']) {
+                    if (substr((string) $item->date, 0, 10) <= $filters['start_date']) {
                         $opening += $quantity;
                     }
 
@@ -222,13 +222,13 @@ class InventoryTurnoverService
         return DB::table('transactions')
             ->join('documents', 'documents.id', '=', 'transactions.document_id')
             ->join('invoices', 'invoices.document_id', '=', 'documents.id')
-            ->where('invoices.company_id', getActiveCompany())
+            ->where('invoices.fiscal_year_id', getScopedFiscalYear())
             ->whereIn('invoices.status', $this->enumValues(InvoiceStatus::approvedOrSettled()))
             ->whereIn('invoices.invoice_type', $this->enumValues($types))
             ->whereIn('transactions.subject_id', $subjectIds)
             ->when($warehouseId, fn (Builder $query, int $id) => $query->where('invoices.warehouse_id', $id))
             ->when($from, fn (Builder $query, string $date) => $query->where('invoices.date', '>=', $date))
-            ->when($through, fn (Builder $query, string $date) => $query->where('invoices.date', '<=', $date))
+            ->when($through, fn (Builder $query, string $date) => $query->whereDate('invoices.date', '<=', $date))
             ->groupBy('transactions.subject_id')
             ->selectRaw('transactions.subject_id, SUM(transactions.value) as balance')
             ->pluck('balance', 'transactions.subject_id');

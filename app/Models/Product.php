@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasFiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 class Product extends Model
 {
     use HasFactory;
+    use HasFiscalYear;
 
     public $timestamps = false;
 
@@ -48,7 +50,7 @@ class Product extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function ($product) {
-            $product->company_id ??= getActiveCompany();
+            $product->company_id ??= getActiveLegacyCompany();
         });
 
     }

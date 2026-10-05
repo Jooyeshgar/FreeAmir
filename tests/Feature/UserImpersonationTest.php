@@ -61,7 +61,10 @@ class UserImpersonationTest extends TestCase
 
     private function setActiveCompany(Company $company): void
     {
-        config(['active-company-id' => $company->id]);
+        config(['active-company-id' => $company->fiscalYear->company_identity_id,
+            'active-legacy-company-id' => $company->id,
+            'active-fiscal-year-id' => $company->fiscalYear->id]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $company->fiscalYear->id]);
     }
 
     private function assertImpersonationSessionIsClear(): void
@@ -419,6 +422,7 @@ class UserImpersonationTest extends TestCase
             $target = $targetRole === null ? User::factory()->create() : $this->userWithRole($targetRole);
             $target->companies()->attach($company);
 
+
             $this->post(route('users.impersonate', $target))->assertRedirect(route('about'));
             $this->assertAuthenticatedAs($target);
 
@@ -449,6 +453,7 @@ class UserImpersonationTest extends TestCase
         foreach (['Admin', 'Accountant', 'Warehousekeeper', 'Seller', 'Employee', null] as $targetRole) {
             $target = $targetRole === null ? User::factory()->create() : $this->userWithRole($targetRole);
             $target->companies()->attach($company);
+
 
             $this->post(route('users.impersonate', $target))->assertRedirect(route('about'));
             $this->assertAuthenticatedAs($target);

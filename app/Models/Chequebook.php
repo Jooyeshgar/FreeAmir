@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasFiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,6 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Chequebook extends Model
 {
+    use HasFiscalYear;
+
     protected $fillable = [
         'company_id',
         'bank_account_id',
@@ -30,7 +33,7 @@ class Chequebook extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function (Chequebook $chequebook) {
-            $chequebook->company_id ??= getActiveCompany();
+            $chequebook->company_id ??= getActiveLegacyCompany();
         });
     }
 

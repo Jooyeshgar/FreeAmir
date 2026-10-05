@@ -72,6 +72,9 @@ class ChequeManagementTest extends TestCase
             ['id' => 202, 'code' => '012001002', 'name' => 'Vendor subject', 'parent_id' => null, 'type' => 3, 'company_id' => $companyId],
             ['id' => 203, 'code' => '010001', 'name' => 'Bank account subject', 'parent_id' => 1, 'type' => 3, 'company_id' => $companyId],
         ]);
+        DB::table('subjects')->where('company_id', $companyId)->update([
+            'fiscal_year_id' => Company::findOrFail($companyId)->fiscalYear->id,
+        ]);
 
         foreach ([
             'cheque_documents_receivable' => 44,
@@ -90,6 +93,8 @@ class ChequeManagementTest extends TestCase
         }
 
         $this->user = User::factory()->create();
+        Company::findOrFail($companyId)->users()->attach($this->user);
+        $this->withCookies(['active-fiscal-year-id' => (string) Company::findOrFail($companyId)->fiscalYear->id]);
         $this->actingAs($this->user);
 
         $this->customer = Customer::create(['company_id' => $companyId, 'name' => 'Customer', 'subject_id' => 201]);
@@ -135,6 +140,9 @@ class ChequeManagementTest extends TestCase
             ['id' => 301, 'code' => '091001', 'name' => 'Configured receivable', 'parent_id' => null, 'type' => 3, 'company_id' => 1],
             ['id' => 302, 'code' => '091002', 'name' => 'Configured in collection', 'parent_id' => null, 'type' => 3, 'company_id' => 1],
             ['id' => 303, 'code' => '091003', 'name' => 'Configured payable', 'parent_id' => null, 'type' => 3, 'company_id' => 1],
+        ]);
+        DB::table('subjects')->whereIn('id', [301, 302, 303])->update([
+            'fiscal_year_id' => Company::findOrFail(1)->fiscalYear->id,
         ]);
 
         foreach ([

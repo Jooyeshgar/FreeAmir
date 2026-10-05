@@ -28,7 +28,7 @@ class MoadianService
 
     public function sendInvoice(Invoice $invoice): bool
     {
-        $company = Company::find(getActiveCompany());
+        $company = Company::find(getActiveLegacyCompany());
 
         $this->moadian_username = $company->moadian_username;
         $this->taxID = $company->tax_id;
@@ -68,7 +68,7 @@ class MoadianService
             $decision->addMessage('error', __('Cannot send a buy or return buy invoice to moadian.'));
         }
 
-        $company = Company::find(getActiveCompany());
+        $company = Company::find(getActiveLegacyCompany());
 
         if (! $company || ! $company->moadian_username || ! $company->tax_id || ! $company->decryptedPrivateKey() || ! $company->decryptedCertificate()) {
             $decision->addMessage('error', __('Moadian credentials are not fully configured. Please set the username, tax ID, certificate and private key in company settings.'));
@@ -108,7 +108,7 @@ class MoadianService
 
     public function moadianStatus(string $referenceNumber, Invoice $invoice): array
     {
-        $company = Company::find(getActiveCompany());
+        $company = Company::find(getActiveLegacyCompany());
 
         $privateKey = $company->decryptedPrivateKey();
         $certificate = $company->decryptedCertificate();

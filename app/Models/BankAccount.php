@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\BankAccountType;
+use App\Models\Concerns\HasFiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class BankAccount extends Model
 {
     use HasFactory;
+    use HasFiscalYear;
 
     protected $fillable = [
         'name',
@@ -38,7 +40,7 @@ class BankAccount extends Model
 
         static::creating(function ($bankAccount) {
             if (! isset($bankAccount->company_id)) {
-                $bankAccount->company_id = getActiveCompany();
+                $bankAccount->company_id = getActiveLegacyCompany();
             }
         });
     }

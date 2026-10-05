@@ -169,7 +169,8 @@ class ActivityLogTest extends TestCase
 
         $this->assertSame(1, Activity::query()->count());
         $activity = Activity::query()->sole();
-        $models = collect($activity->details->get('models'));
+        $models = collect($activity->details->get('models'))
+            ->where('model_type', Company::class)->values();
 
         $this->assertSame('request', $activity->source);
         $this->assertSame('POST', $activity->details->get('method'));
@@ -956,7 +957,7 @@ class ActivityLogTest extends TestCase
 
         $activity = Activity::query()->where('source', 'request')->latest('id')->firstOrFail();
 
-        $this->assertCount(3, $activity->details->get('models'));
+        $this->assertCount(3, collect($activity->details->get('models'))->where('model_type', Company::class));
         $this->assertSame($impersonator->id, (int) $activity->user_id);
         $this->assertSame($impersonated->id, (int) $activity->details->get('impersonated_user_id'));
         $this->assertLessThanOrEqual(1, $impersonatorLookupCount);

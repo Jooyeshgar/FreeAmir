@@ -41,6 +41,7 @@ use App\Models\DecreeBenefit;
 use App\Models\Document;
 use App\Models\DocumentFile;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\MonthlyAttendance;
@@ -237,7 +238,8 @@ class FiscalYearService
      */
     private static function getCompanyDocumentFiles(int $companyId): LazyCollection
     {
-        $documentIdsSubquery = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $companyId)->select('id');
+        $yearId = FiscalYear::query()->where('legacy_company_id', $companyId)->value('id');
+        $documentIdsSubquery = Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $yearId)->select('id');
 
         return DocumentFile::whereIn('document_id', $documentIdsSubquery)->cursor();
     }
@@ -277,11 +279,16 @@ class FiscalYearService
 
             $newFiscalYear = Company::create($newFiscalYearData);
             $newFiscalYear->users()->attach(Auth::id());
+            if (Auth::id() !== null) {
+                $newFiscalYear->fiscalYear->users()->syncWithoutDetaching([Auth::id()]);
+            }
             $targetYearId = $newFiscalYear->id;
 
-            $originalCompanyId = getActiveCompany();
+            $originalCompanyId = getActiveLegacyCompany();
+            $originalFiscalYearId = getActiveFiscalYear();
             Cookie::expire('active-company-id');
             Cookie::queue('active-company-id', $targetYearId);
+            Cookie::queue('active-fiscal-year-id', $newFiscalYear->fiscalYear->id);
 
             $idMappings = [];
 
@@ -734,6 +741,7 @@ class FiscalYearService
             } finally {
                 Cookie::expire('active-company-id');
                 Cookie::queue('active-company-id', $originalCompanyId);
+                Cookie::queue('active-fiscal-year-id', $originalFiscalYearId);
                 if (DB::getDriverName() === 'mysql') {
                     DB::statement('SET FOREIGN_KEY_CHECKS=1;');
                 }
@@ -749,39 +757,40 @@ class FiscalYearService
      */
     protected static function fetchSourceData(int $sourceYearId, array $sections): array
     {
+        $sourceFiscalYearId = FiscalYear::query()->where('legacy_company_id', $sourceYearId)->value('id');
         $sourceData = [];
 
         if (in_array('subjects', $sections)) {
             $sourceData['subjects'] = Subject::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->orderBy('parent_id') // Ensure parents likely come before children
                 ->get()->toArray();
 
             $sourceData['monthly_budgets'] = MonthlyBudget::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
         }
         if (in_array('configs', $sections)) {
             $sourceData['configs'] = Config::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
         }
         if (in_array('banks', $sections)) {
             $sourceData['banks'] = Bank::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
 
             $sourceData['bank_accounts'] = BankAccount::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
         }
         if (in_array('customers', $sections)) {
             $sourceData['customer_groups'] = CustomerGroup::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
 
             $sourceData['customers'] = Customer::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->orderBy('introducer_id') // Ensure introducer likely come before its introduced customers
                 ->get()->toArray();
 
@@ -790,15 +799,15 @@ class FiscalYearService
         }
         if (in_array('products', $sections)) {
             $sourceData['warehouses'] = Warehouse::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
 
             $sourceData['product_groups'] = ProductGroup::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
 
             $sourceData['products'] = Product::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
 
             $productIds = collect($sourceData['products'])->pluck('id')->toArray();
@@ -809,26 +818,26 @@ class FiscalYearService
                 ? WarehouseProductStock::whereIn('warehouse_id', $warehouseIds)->whereIn('product_id', $productIds)->get()->toArray()
                 : [];
             $sourceData['warehouse_transfers'] = ! empty($warehouseIds)
-                ? WarehouseTransfer::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $sourceYearId)->whereIn('product_id', $productIds)->get()->toArray()
+                ? WarehouseTransfer::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $sourceFiscalYearId)->whereIn('product_id', $productIds)->get()->toArray()
                 : [];
         }
         if (in_array('warehouses', $sections) && ! in_array('products', $sections)) {
             $sourceData['warehouses'] = Warehouse::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
         }
         if (in_array('services', $sections)) {
             $sourceData['service_groups'] = ServiceGroup::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
 
             $sourceData['services'] = Service::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
         }
         if (in_array('documents', $sections)) {
             $sourceData['documents'] = Document::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
 
             $documentIds = collect($sourceData['documents'])->pluck('id')->toArray();
@@ -838,21 +847,21 @@ class FiscalYearService
         }
         if (in_array('document_files', $sections) && ! isset($sourceData['document_files'])) {
             $documentIdsSubquery = Document::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->select('id');
 
             $sourceData['document_files'] = DocumentFile::whereIn('document_id', $documentIdsSubquery)->get()->toArray();
         }
         if (in_array('invoices', $sections)) {
             $sourceData['invoices'] = Invoice::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
 
             $invoiceIds = collect($sourceData['invoices'])->pluck('id')->toArray();
             $sourceData['invoice_items'] = ! empty($invoiceIds) ? InvoiceItem::whereIn('invoice_id', $invoiceIds)->get()->toArray() : [];
 
             $sourceData['ancillary_costs'] = AncillaryCost::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
 
             $ancillaryCostIds = collect($sourceData['ancillary_costs'])->pluck('id')->toArray();
@@ -862,11 +871,11 @@ class FiscalYearService
         }
         if (in_array('cheques', $sections)) {
             $sourceData['chequebooks'] = Chequebook::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
 
             $sourceData['cheques'] = Cheque::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
 
             $chequeIds = collect($sourceData['cheques'])->pluck('id')->toArray();
@@ -878,44 +887,44 @@ class FiscalYearService
         }
         if (in_array('employees', $sections)) {
             $sourceData['employees'] = Employee::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
 
             $sourceData['org_charts'] = OrgChart::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
 
             $sourceData['organization_units'] = OrganizationUnit::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->orderBy('parent_id')
                 ->get()->toArray();
 
             $sourceData['work_sites'] = WorkSite::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
 
             $workSiteIds = collect($sourceData['work_sites'])->pluck('id')->toArray();
             $sourceData['work_site_contracts'] = ! empty($workSiteIds) ? WorkSiteContract::whereIn('work_site_id', $workSiteIds)->get()->toArray() : [];
 
             $sourceData['work_shifts'] = WorkShift::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
         }
         if (in_array('payrolls', $sections)) {
             $sourceData['salary_decrees'] = SalaryDecree::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
 
             $sourceData['monthly_attendances'] = MonthlyAttendance::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
 
             $sourceData['payrolls'] = Payroll::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
 
             $sourceData['payroll_elements'] = PayrollElement::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
 
             $payrollIds = collect($sourceData['payrolls'])->pluck('id')->toArray();
@@ -932,21 +941,21 @@ class FiscalYearService
                 DecreeBenefit::whereIn('decree_id', $salaryDecreeIds)->whereIn('element_id', $elementIds)->get()->toArray() : [];
 
             $sourceData['attendance_logs'] = AttendanceLog::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
 
             $sourceData['personnel_requests'] = PersonnelRequest::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
         }
         if (in_array('tax_slabs', $sections)) {
             $sourceData['tax_slabs'] = TaxSlab::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
         }
         if (in_array('public_holidays', $sections)) {
             $sourceData['public_holidays'] = PublicHoliday::withoutGlobalScope(FiscalYearScope::class)
-                ->where('company_id', $sourceYearId)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
                 ->get()->toArray();
         }
 
@@ -1723,6 +1732,7 @@ class FiscalYearService
             $newAccount->fill(collect($accountData)->except(['id'])->toArray());
             $newAccount->bank_id = $bankMapping[$oldBankId];
             $newAccount->company_id = $targetYearId;
+            $newAccount->fiscal_year_id = FiscalYear::query()->where('legacy_company_id', $targetYearId)->value('id');
             $newAccount->subject_id = $subjectMapping[$oldSubjectId];
             $newAccount->saveQuietly();
 
@@ -1800,6 +1810,7 @@ class FiscalYearService
             $newCustomer = new Customer;
             $newCustomer->fill(collect($customerData)->except(['id', 'group_id', 'subject_id', 'company_id', 'introducer_id'])->toArray());
             $newCustomer->company_id = $targetYearId;
+            $newCustomer->fiscal_year_id = FiscalYear::query()->where('legacy_company_id', $targetYearId)->value('id');
             $newCustomer->introducer_id = $oldIntroducerId ? $mapping[$oldIntroducerId] : null;
             $newCustomer->group_id = $groupMapping[$oldGroupId];
             $newCustomer->subject_id = $subjectMapping[$oldSubjectId];
@@ -2327,6 +2338,7 @@ class FiscalYearService
             $newChequebook = new Chequebook;
             $newChequebook->fill(collect($chequebookData)->except(['id', 'company_id', 'bank_account_id'])->toArray());
             $newChequebook->company_id = $targetYearId;
+            $newChequebook->fiscal_year_id = FiscalYear::query()->where('legacy_company_id', $targetYearId)->value('id');
             $newChequebook->bank_account_id = $bankAccountMapping[$oldBankAccountId];
             $newChequebook->saveQuietly();
 
@@ -2382,6 +2394,7 @@ class FiscalYearService
             $newCheque = new Cheque;
             $newCheque->fill(collect($chequeData)->except(['id', 'company_id', 'customer_id', 'endorsed_to_id', 'bank_account_id', 'chequebook_id'])->toArray());
             $newCheque->company_id = $targetYearId;
+            $newCheque->fiscal_year_id = FiscalYear::query()->where('legacy_company_id', $targetYearId)->value('id');
             $newCheque->customer_id = $customerMapping[$oldCustomerId];
             $newCheque->endorsed_to_id = $oldEndorsedToId !== null ? $customerMapping[$oldEndorsedToId] : null;
             $newCheque->bank_account_id = $oldBankAccountId !== null ? $bankAccountMapping[$oldBankAccountId] : null;
@@ -2490,6 +2503,7 @@ class FiscalYearService
                 $newInvoice->customer_id = $isBeginningInventory ? null : $customerMapping[$oldCustomerId];
                 $newInvoice->document_id = $oldDocumentId ? ($documentMapping[$oldDocumentId] ?? null) : null;
                 $newInvoice->company_id = $targetYearId;
+                $newInvoice->fiscal_year_id = FiscalYear::query()->where('legacy_company_id', $targetYearId)->value('id');
                 $newInvoice->warehouse_id = $warehouseMapping[$invoiceData['warehouse_id'] ?? null] ?? null;
                 $newInvoice->saveQuietly();
 
@@ -2530,6 +2544,7 @@ class FiscalYearService
                 $newInvoice->returned_invoice_id = $mapping[$oldReturnedInvoiceId];
                 $newInvoice->document_id = $oldDocumentId ? ($documentMapping[$oldDocumentId] ?? null) : null;
                 $newInvoice->company_id = $targetYearId;
+                $newInvoice->fiscal_year_id = FiscalYear::query()->where('legacy_company_id', $targetYearId)->value('id');
                 $newInvoice->warehouse_id = $warehouseMapping[$invoiceData['warehouse_id'] ?? null] ?? null;
                 $newInvoice->saveQuietly();
 
@@ -2936,8 +2951,9 @@ class FiscalYearService
 
         self::copyMoadianKeys($company, $newFiscalYear);
 
-        $userIds = $company->users()->pluck('users.id')->toArray();
+        $userIds = $company->fiscalYear->users()->pluck('users.id')->toArray();
         $newFiscalYear->users()->attach($userIds);
+        $newFiscalYear->fiscalYear->users()->syncWithoutDetaching($userIds);
 
         return $newFiscalYear;
     }
