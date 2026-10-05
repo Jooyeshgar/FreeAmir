@@ -83,7 +83,7 @@ class FiscalYearCopySubjectableIntegrityTest extends TestCase
 
         $target = FiscalYearService::createWithCopiedData(
             $this->newYearData($source, 1403),
-            $source->id,
+            $source->fiscalYear->id,
             ['subjects', 'configs', 'customers'],
         );
 
@@ -119,7 +119,7 @@ class FiscalYearCopySubjectableIntegrityTest extends TestCase
         $source = $this->seedSource();
         $target = FiscalYearService::createWithCopiedData(
             $this->newYearData($source, 1403),
-            $source->id,
+            $source->fiscalYear->id,
             ['subjects', 'configs'],
         );
 

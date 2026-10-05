@@ -1131,7 +1131,7 @@ class MonthlyBudgetTest extends TestCase
             'forecast_amount' => 125000,
         ]);
 
-        $exportData = FiscalYearService::exportData($this->company->id, [FiscalYearSection::SUBJECTS->value]);
+        $exportData = FiscalYearService::exportData($this->company->fiscalYear->id, [FiscalYearSection::SUBJECTS->value]);
 
         $this->assertArrayHasKey('monthly_budgets', $exportData);
         $this->assertCount(1, $exportData['monthly_budgets']);
@@ -1149,7 +1149,7 @@ class MonthlyBudgetTest extends TestCase
             'forecast_amount' => 98765.43,
         ]);
 
-        $exportData = FiscalYearService::exportData($this->company->id, [FiscalYearSection::SUBJECTS->value]);
+        $exportData = FiscalYearService::exportData($this->company->fiscalYear->id, [FiscalYearSection::SUBJECTS->value]);
         $target = FiscalYearService::importData($exportData, ['name' => 'Next Year', 'fiscal_year' => 1404]);
 
         $importedSubject = Subject::withoutGlobalScopes()->where('company_id', $target->id)->sole();
