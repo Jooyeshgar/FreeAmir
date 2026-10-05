@@ -311,7 +311,7 @@ class WarehouseInvoiceStockTest extends TestCase
             'amount' => 100,
         ]);
 
-        $exportData = FiscalYearService::exportData($this->company->id, [
+        $exportData = FiscalYearService::exportData($this->company->fiscalYear->id, [
             FiscalYearSection::SUBJECTS->value,
             FiscalYearSection::CUSTOMERS->value,
             FiscalYearSection::PRODUCTS->value,
