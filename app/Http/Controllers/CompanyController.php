@@ -272,7 +272,7 @@ class CompanyController extends Controller
 
         $validated['currency'] ??= 'Rial'; // default
 
-        if ($company->update($validated)) {
+        if (DB::transaction(fn () => $company->update($validated))) {
             return redirect(route('companies.index'))
                 ->with('success', __('Company updated successfully.'));
         }
