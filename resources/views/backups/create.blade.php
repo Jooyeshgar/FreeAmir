@@ -47,8 +47,8 @@
                         </label>
                         <select class="select select-bordered w-full" id="source_id" name="source_id" x-on:change="fetchSize()">
                             @foreach ($previousYears as $year)
-                                <option value="{{ $year->id }}" @selected($year->fiscal_year == $currentYear)>
-                                    {{ $year->name }} - {{ $year->fiscal_year }}
+                                <option value="{{ $year->id }}" @selected($year->year == $currentYear)>
+                                    {{ $year->companyIdentity->name }} - {{ $year->year }}
                                 </option>
                             @endforeach
                         </select>

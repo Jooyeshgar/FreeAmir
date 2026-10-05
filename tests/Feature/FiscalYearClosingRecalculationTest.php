@@ -51,10 +51,14 @@ class FiscalYearClosingRecalculationTest extends TestCase
         $nextFiscalYear = FiscalYearService::stepThreeCloseAndOpenNewYear($company, $user);
         $company = $company->fresh();
         $closingDocumentId = $company->closing_document_id;
+        $this->assertSame($closingDocumentId, $company->fiscalYear->closing_document_id);
+        $this->assertSame($company->fiscalYear->company_identity_id, $nextFiscalYear->fiscalYear->company_identity_id);
+        $this->assertNotSame($company->fiscalYear->id, $nextFiscalYear->fiscalYear->id);
         $openingDocument = Document::withoutGlobalScopes()
             ->where('company_id', $nextFiscalYear->id)
             ->where('number', 1)
             ->firstOrFail();
+        $this->assertSame($nextFiscalYear->fiscalYear->id, $openingDocument->fiscal_year_id);
         $openingValues = $openingDocument->transactions()->pluck('value', 'subject_id')->all();
 
         $changedDocument = $this->createDocument($company, $user, 5, [
@@ -100,6 +104,8 @@ class FiscalYearClosingRecalculationTest extends TestCase
         $this->assertSame($closingDocumentId, $company->closing_document_id);
         $this->assertNull($company->closing_recalculation_step);
         $this->assertNotNull($company->closed_at);
+        $this->assertNotNull($company->fiscalYear->closed_at);
+        $this->assertSame($closingDocumentId, $company->fiscalYear->closing_document_id);
         $this->assertSame(2, Company::count());
 
         $closingValues = Document::findOrFail($closingDocumentId)->transactions()->pluck('value', 'subject_id');
