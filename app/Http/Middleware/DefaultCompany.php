@@ -36,6 +36,10 @@ class DefaultCompany
                     ->where('company_identity_id', (int) $companyId)
                     ->orderByDesc('year')->orderBy('fiscal_years.id')->first()
                 : null;
+            if (! $year && ctype_digit($companyId)) {
+                $year = $request->user()->fiscalYears()
+                    ->where('legacy_company_id', (int) $companyId)->first();
+            }
             if ($year) {
                 Cookie::queue('active-fiscal-year-id', $year->id, 362 * 24 * 60);
             } else {
