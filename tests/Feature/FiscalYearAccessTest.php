@@ -105,4 +105,20 @@ class FiscalYearAccessTest extends TestCase
         $user->companies()->detach($company);
         $this->assertFalse($user->canAccessFiscalYear($company));
     }
+
+    public function test_company_cookie_selects_only_an_accessible_fiscal_year(): void
+    {
+        $allowed = Company::factory()->create(['name' => 'Shared Business', 'fiscal_year' => 1403]);
+        $denied = Company::factory()->create(['name' => 'Shared Business', 'fiscal_year' => 1404]);
+        $user = User::factory()->create();
+        $allowed->fiscalYear->users()->syncWithoutDetaching($user);
+        $user->givePermissionTo(Permission::firstOrCreate(['name' => 'companies.index']));
+
+        $this->actingAs($user)->withCookies([
+            'active-company-id' => (string) $allowed->fiscalYear->company_identity_id,
+        ])->get(route('companies.index'))->assertOk();
+
+        $this->assertSame($allowed->fiscalYear->id, getActiveFiscalYear());
+        $this->assertNotSame($denied->fiscalYear->id, getActiveFiscalYear());
+    }
 }
