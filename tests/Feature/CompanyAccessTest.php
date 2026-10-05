@@ -30,6 +30,7 @@ class CompanyAccessTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->withoutVite();
 
         $this->user = User::factory()->create();
         $this->accessibleCompany = Company::factory()->create(['name' => 'Accessible Source']);
@@ -185,7 +186,7 @@ class CompanyAccessTest extends TestCase
         $response = $this->post(route('companies.store'), [
             'name' => 'Unauthorized Copy',
             'fiscal_year' => 1405,
-            'source_year_id' => $this->inaccessibleCompany->id,
+            'source_year_id' => $this->inaccessibleCompany->fiscalYear->id,
             'tables_to_copy' => [FiscalYearSection::SUBJECTS->value],
         ]);
 
@@ -198,7 +199,7 @@ class CompanyAccessTest extends TestCase
     {
         $response = $this->post(route('companies.store'), [
             'fiscal_year' => 1405,
-            'source_year_id' => $this->accessibleCompany->id,
+            'source_year_id' => $this->accessibleCompany->fiscalYear->id,
             'tables_to_copy' => [FiscalYearSection::SUBJECTS->value],
         ]);
 
@@ -250,7 +251,7 @@ class CompanyAccessTest extends TestCase
         $response = $this->post(route('companies.store'), [
             'name' => 'Copied Company',
             'fiscal_year' => 1405,
-            'source_year_id' => $this->accessibleCompany->id,
+            'source_year_id' => $this->accessibleCompany->fiscalYear->id,
             'tables_to_copy' => [
                 FiscalYearSection::SUBJECTS->value,
                 FiscalYearSection::BANKS->value,

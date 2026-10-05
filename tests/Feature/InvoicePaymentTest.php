@@ -347,7 +347,7 @@ class InvoicePaymentTest extends TestCase
             FiscalYearSection::INVOICES->value,
         ];
 
-        $exportData = FiscalYearService::exportData($this->companyId, $sections);
+        $exportData = FiscalYearService::exportData(Company::findOrFail($this->companyId)->fiscalYear->id, $sections);
         $this->assertArrayHasKey('payments', $exportData);
         $this->assertCount(1, $exportData['payments']);
 

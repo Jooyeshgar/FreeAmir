@@ -15,6 +15,12 @@ class FiscalYearAccessTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->withoutVite();
+    }
+
     public function test_one_year_grant_does_not_allow_another_year_of_the_same_company(): void
     {
         $first = Company::factory()->create(['name' => 'Shared Business', 'fiscal_year' => 1403]);
