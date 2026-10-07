@@ -22,7 +22,7 @@ class Document extends Model
         'date',
         'title',
         'creator_id',
-        'company_id',
+        'fiscal_year_id',
         'documentable_id',
         'documentable_type',
         'approved_at',

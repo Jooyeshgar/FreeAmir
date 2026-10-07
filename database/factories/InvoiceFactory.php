@@ -35,7 +35,7 @@ class InvoiceFactory extends Factory
             'date' => $this->faker->dateTimeBetween(now()->startOfYear(), now()->endOfYear()),
             'invoice_type' => $invoiceType,
             'customer_id' => $customer->id,
-            'warehouse_id' => Warehouse::withoutGlobalScopes()->where('company_id', getActiveCompany())->inRandomOrder()->value('id'),
+            'warehouse_id' => Warehouse::withoutGlobalScopes()->where('fiscal_year_id', getActiveFiscalYear())->inRandomOrder()->value('id'),
             'creator_id' => $creator->id,
             'subtraction' => 0,
             'status' => $this->faker->randomElement([InvoiceStatus::APPROVED, InvoiceStatus::UNAPPROVED]),
@@ -82,7 +82,7 @@ class InvoiceFactory extends Factory
             $customer = Customer::withoutGlobalScopes()->find($invoice->customer_id);
             if (! $customer || ! $customer->subject) {
                 $customer = Customer::factory()->withGroup()->withSubject()->create([
-                    'company_id' => $invoice->company_id,
+                    'fiscal_year_id' => $invoice->fiscal_year_id,
                 ]);
                 $invoice->updateQuietly(['customer_id' => $customer->id]);
             }
@@ -90,13 +90,13 @@ class InvoiceFactory extends Factory
             $items = [];
 
             if (! $isServicesOnly) {
-                $products = Product::withoutGlobalScopes()->where('company_id', $invoice->company_id)
+                $products = Product::withoutGlobalScopes()->where('fiscal_year_id', $invoice->fiscal_year_id)
                     ->inRandomOrder()->take(random_int(1, 4))->get();
 
                 if ($products->isEmpty()) {
                     $products = collect([
                         Product::factory()->withGroup()->withSubjects()->create([
-                            'company_id' => $invoice->company_id,
+                            'fiscal_year_id' => $invoice->fiscal_year_id,
                         ]),
                     ]);
                 }
@@ -118,21 +118,21 @@ class InvoiceFactory extends Factory
             }
 
             if ($invoice->invoice_type === InvoiceType::SELL || $isServicesOnly) {
-                $services = Service::withoutGlobalScopes()->where('company_id', $invoice->company_id)
+                $services = Service::withoutGlobalScopes()->where('fiscal_year_id', $invoice->fiscal_year_id)
                     ->whereNotNull('subject_id')
                     ->whereNotNull('cogs_subject_id')
                     ->whereNotNull('sales_returns_subject_id')
                     ->inRandomOrder()->take($isServicesOnly ? random_int(2, 6) : random_int(0, 2))->get();
 
                 if ($services->isEmpty()) {
-                    $serviceGroup = ServiceGroup::withoutGlobalScopes()->where('company_id', $invoice->company_id)
+                    $serviceGroup = ServiceGroup::withoutGlobalScopes()->where('fiscal_year_id', $invoice->fiscal_year_id)
                         ->whereNotNull('subject_id')
                         ->whereNotNull('cogs_subject_id')
                         ->whereNotNull('sales_returns_subject_id')
                         ->inRandomOrder()
                         ->first();
 
-                    $services = collect([Service::factory()->withGroup($serviceGroup)->withSubject()->create(['company_id' => $invoice->company_id])]);
+                    $services = collect([Service::factory()->withGroup($serviceGroup)->withSubject()->create(['fiscal_year_id' => $invoice->fiscal_year_id])]);
                 }
 
                 $serviceItems = $services->map(function (Service $service) {

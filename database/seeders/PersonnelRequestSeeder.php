@@ -16,8 +16,8 @@ class PersonnelRequestSeeder extends Seeder
     public function run(): void
     {
         $service = app(AttendanceService::class);
-        $companyId = (int) getActiveCompany();
-        $employees = Employee::withoutGlobalScopes()->where('company_id', $companyId)->get();
+        $fiscalYearId = (int) getActiveFiscalYear();
+        $employees = Employee::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->get();
         if ($employees->isEmpty()) {
             return;
         }
@@ -88,7 +88,7 @@ class PersonnelRequestSeeder extends Seeder
                         'request_type' => $row['type']->value,
                     ],
                     [
-                        'company_id' => $employee->company_id,
+                        'fiscal_year_id' => $employee->fiscal_year_id,
                         'end_date' => $end,
                         'reason' => __('Demo request').' #'.($i + 1),
                         'status' => $row['status'],

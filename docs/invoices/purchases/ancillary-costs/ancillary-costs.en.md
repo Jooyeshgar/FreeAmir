@@ -30,7 +30,7 @@ The cost is recorded at invoice level and an accounting document is created, but
 
 - Title: required, at most 255 characters.
 - Date: required, within the fiscal year, and equal to the purchase invoice date.
-- Document number: required, positive, and unique within the company.
+- Document number: required, positive, and unique within the fiscal year.
 - Ancillary-cost type: required.
 - Cost subject and counterparty: required.
 - At least one purchase invoice: required.

@@ -5,8 +5,8 @@ namespace Tests\Feature;
 use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Models\AttendanceLog;
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\PersonnelRequest;
 use App\Models\PublicHoliday;
 use App\Models\WorkShift;
@@ -34,7 +34,7 @@ class AttendanceServiceCalculationTest extends TestCase
 
     private AttendanceService $service;
 
-    private Company $company;
+    private FiscalYear $fiscalYear;
 
     private WorkSite $workSite;
 
@@ -47,11 +47,11 @@ class AttendanceServiceCalculationTest extends TestCase
         parent::setUp();
 
         $this->service = new AttendanceService;
-        $this->company = Company::factory()->create();
-        $this->workSite = WorkSite::factory()->create(['company_id' => $this->company->id]);
+        $this->fiscalYear = FiscalYear::factory()->create();
+        $this->workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
 
-        request()->cookies->set('active-company-id', $this->company->id);
-        $this->withCookies(['active-company-id' => $this->company->id]);
+        request()->cookies->set('active-fiscal-year-id', $this->fiscalYear->id);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYear->id]);
 
         $this->startDate = Carbon::create(2025, 3, 1);
         $this->durationDays = 31;
@@ -64,7 +64,7 @@ class AttendanceServiceCalculationTest extends TestCase
     private function makeShift(array $overrides = []): WorkShift
     {
         return WorkShift::factory()->create(array_merge([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'start_time' => '08:00:00',
             'end_time' => '17:00:00',
             'break' => 60,
@@ -76,7 +76,7 @@ class AttendanceServiceCalculationTest extends TestCase
     private function makeEmployee(?WorkShift $shift = null): Employee
     {
         return Employee::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'work_site_id' => $this->workSite->id,
             'work_shift_id' => $shift?->id,
         ]);
@@ -85,7 +85,7 @@ class AttendanceServiceCalculationTest extends TestCase
     private function insertLog(Employee $employee, string $date, array $data = [], $recalculate = true): AttendanceLog
     {
         $log = AttendanceLog::factory()->create(array_merge([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'employee_id' => $employee->id,
             'log_date' => $date,
             'entry_time' => $data['entry_time'] ?? null,
@@ -381,7 +381,7 @@ class AttendanceServiceCalculationTest extends TestCase
         $shift = $this->makeShift();
         $employee = $this->makeEmployee($shift);
 
-        PublicHoliday::factory()->create(['company_id' => $this->company->id, 'date' => '2025-03-05']);
+        PublicHoliday::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'date' => '2025-03-05']);
 
         $this->insertLog($employee, '2025-03-05', ['remote_work' => 480]);
 
@@ -401,7 +401,7 @@ class AttendanceServiceCalculationTest extends TestCase
         $employee = $this->makeEmployee($shift);
 
         // Thursday 2025-03-13 as holiday
-        PublicHoliday::factory()->create(['company_id' => $this->company->id, 'date' => '2025-03-13']);
+        PublicHoliday::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'date' => '2025-03-13']);
 
         $this->insertLog($employee, '2025-03-13', ['mission' => 480]);
 
@@ -551,7 +551,7 @@ class AttendanceServiceCalculationTest extends TestCase
         $shift = $this->makeShift();
         $employee = $this->makeEmployee($shift);
 
-        PublicHoliday::factory()->create(['company_id' => $this->company->id, 'date' => '2025-03-11']);
+        PublicHoliday::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'date' => '2025-03-11']);
 
         $friday = $this->startDate->next(Carbon::FRIDAY);
         // Holiday: remote work + mission + overtime
@@ -593,7 +593,7 @@ class AttendanceServiceCalculationTest extends TestCase
         $shift = $this->makeShift();
         $employee = $this->makeEmployee($shift);
 
-        PublicHoliday::factory()->create(['company_id' => $this->company->id, 'date' => '2025-03-27']);
+        PublicHoliday::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'date' => '2025-03-27']);
 
         // Mission spanning Thursday (holiday) and Friday
         $this->insertLog($employee, '2025-03-27', ['mission' => 480]); // Thursday holiday
@@ -764,7 +764,7 @@ class AttendanceServiceCalculationTest extends TestCase
         $log = $this->insertLog($employee, '2025-03-10', [], false);
 
         $request = PersonnelRequest::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'employee_id' => $employee->id,
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'start_date' => '2025-03-10 10:00:00',
@@ -797,7 +797,7 @@ class AttendanceServiceCalculationTest extends TestCase
         $log = $this->insertLog($employee, '2025-03-10', [], false);
 
         $request = PersonnelRequest::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'employee_id' => $employee->id,
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'start_date' => '2025-03-10 09:00:00',
@@ -829,7 +829,7 @@ class AttendanceServiceCalculationTest extends TestCase
         $log = $this->insertLog($employee, '2025-03-10', [], false);
 
         $request = PersonnelRequest::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'employee_id' => $employee->id,
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'start_date' => '2025-03-10 09:00:00',
@@ -873,7 +873,7 @@ class AttendanceServiceCalculationTest extends TestCase
         ], false);
 
         PersonnelRequest::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'employee_id' => $employee->id,
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'start_date' => '2025-03-10 10:00:00',
@@ -910,7 +910,7 @@ class AttendanceServiceCalculationTest extends TestCase
         ], false);
 
         PersonnelRequest::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'employee_id' => $employee->id,
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'start_date' => '2025-03-10 09:00:00',
@@ -946,7 +946,7 @@ class AttendanceServiceCalculationTest extends TestCase
         ], false);
 
         PersonnelRequest::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'employee_id' => $employee->id,
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'start_date' => '2025-03-10 09:00:00',
@@ -983,7 +983,7 @@ class AttendanceServiceCalculationTest extends TestCase
         ], false);
 
         $request = PersonnelRequest::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'employee_id' => $employee->id,
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'start_date' => '2025-03-10 13:00:00',
@@ -1014,7 +1014,7 @@ class AttendanceServiceCalculationTest extends TestCase
     private function applyHourlyRequest(Employee $employee, PersonnelRequestType $type, string $start, string $end): void
     {
         $request = PersonnelRequest::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'employee_id' => $employee->id,
             'request_type' => $type->value,
             'start_date' => $start,

@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Enums\SubjectType;
-use App\Models\Company;
 use App\Models\Config;
+use App\Models\FiscalYear;
 use App\Models\ProductGroup;
 use App\Models\ServiceGroup;
 use App\Models\Subject;
@@ -19,17 +19,17 @@ class CompanyScopedSeedersTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function seedCompany(int $companyId): void
+    private function seedFiscalYear(int $fiscalYearId): void
     {
-        config(['active-company-id' => $companyId]);
+        config(['active-fiscal-year-id' => $fiscalYearId]);
 
         $this->seed(SubjectSeeder::class);
         $this->seed(ConfigSeeder::class);
     }
 
-    private function subjectSnapshot(int $companyId): array
+    private function subjectSnapshot(int $fiscalYearId): array
     {
-        $subjects = Subject::withoutGlobalScopes()->where('company_id', $companyId)->get()->keyBy('id');
+        $subjects = Subject::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->get()->keyBy('id');
 
         return $subjects->mapWithKeys(fn (Subject $subject) => [
             $subject->code => [
@@ -43,11 +43,11 @@ class CompanyScopedSeedersTest extends TestCase
         ])->sortKeys()->all();
     }
 
-    private function configSnapshot(int $companyId): array
+    private function configSnapshot(int $fiscalYearId): array
     {
-        $subjects = Subject::withoutGlobalScopes()->where('company_id', $companyId)->get()->keyBy('id');
+        $subjects = Subject::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->get()->keyBy('id');
 
-        return Config::withoutGlobalScopes()->where('company_id', $companyId)->get()->mapWithKeys(fn (Config $config) => [
+        return Config::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->get()->mapWithKeys(fn (Config $config) => [
             $config->key => [
                 'type' => (string) $config->type,
                 'category' => (string) $config->category,
@@ -59,10 +59,10 @@ class CompanyScopedSeedersTest extends TestCase
 
     public function test_subjects_and_configs_are_seeded_equally_for_a_specific_company(): void
     {
-        Company::factory()->create(['id' => 1]);
-        Company::factory()->create(['id' => 42]);
+        FiscalYear::factory()->create(['id' => 1]);
+        FiscalYear::factory()->create(['id' => 42]);
 
-        $this->seedCompany(1);
+        $this->seedFiscalYear(1);
 
         $defaultSubjects = $this->subjectSnapshot(1);
         $defaultConfigs = $this->configSnapshot(1);
@@ -70,7 +70,7 @@ class CompanyScopedSeedersTest extends TestCase
         $this->assertNotEmpty($defaultSubjects);
         $this->assertNotEmpty($defaultConfigs);
 
-        $this->seedCompany(42);
+        $this->seedFiscalYear(42);
 
         $this->assertSame($defaultSubjects, $this->subjectSnapshot(42));
         $this->assertSame($defaultConfigs, $this->configSnapshot(42));
@@ -78,24 +78,24 @@ class CompanyScopedSeedersTest extends TestCase
         $this->assertSame($defaultSubjects, $this->subjectSnapshot(1));
         $this->assertSame($defaultConfigs, $this->configSnapshot(1));
 
-        $defaultSubject = Subject::withoutGlobalScopes()->where('company_id', 1)->where('code', '050003')->firstOrFail();
-        $companySubject = Subject::withoutGlobalScopes()->where('company_id', 42)->where('code', '050003')->firstOrFail();
+        $defaultSubject = Subject::withoutGlobalScopes()->where('fiscal_year_id', 1)->where('code', '050003')->firstOrFail();
+        $companySubject = Subject::withoutGlobalScopes()->where('fiscal_year_id', 42)->where('code', '050003')->firstOrFail();
 
         $this->assertNotSame($defaultSubject->id, $companySubject->id);
     }
 
     public function test_specific_company_parent_and_config_references_are_company_scoped(): void
     {
-        Company::factory()->create(['id' => 42]);
-        $this->seedCompany(42);
+        FiscalYear::factory()->create(['id' => 42]);
+        $this->seedFiscalYear(42);
 
-        $subjectIds = Subject::withoutGlobalScopes()->where('company_id', 42)->pluck('id');
+        $subjectIds = Subject::withoutGlobalScopes()->where('fiscal_year_id', 42)->pluck('id');
 
         $this->assertNotEmpty($subjectIds);
-        $this->assertGreaterThan(0, Config::withoutGlobalScopes()->where('company_id', 42)->count());
+        $this->assertGreaterThan(0, Config::withoutGlobalScopes()->where('fiscal_year_id', 42)->count());
 
-        $foreignParentCount = Subject::withoutGlobalScopes()->where('company_id', 42)->whereNotNull('parent_id')->whereNotIn('parent_id', $subjectIds)->count();
-        $foreignConfigCount = Config::withoutGlobalScopes()->where('company_id', 42)->whereNotIn('value', $subjectIds->map(fn ($id) => (string) $id))->count();
+        $foreignParentCount = Subject::withoutGlobalScopes()->where('fiscal_year_id', 42)->whereNotNull('parent_id')->whereNotIn('parent_id', $subjectIds)->count();
+        $foreignConfigCount = Config::withoutGlobalScopes()->where('fiscal_year_id', 42)->whereNotIn('value', $subjectIds->map(fn ($id) => (string) $id))->count();
 
         $this->assertSame(0, $foreignParentCount);
         $this->assertSame(0, $foreignConfigCount);
@@ -103,22 +103,22 @@ class CompanyScopedSeedersTest extends TestCase
 
     public function test_payroll_config_uses_payroll_key_and_translation(): void
     {
-        Company::factory()->create(['id' => 1]);
-        $this->seedCompany(1);
+        FiscalYear::factory()->create(['id' => 1]);
+        $this->seedFiscalYear(1);
 
         $payrollSubject = Subject::withoutGlobalScopes()
-            ->where('company_id', 1)
+            ->where('fiscal_year_id', 1)
             ->where('code', '040001')
             ->firstOrFail();
 
         $this->assertDatabaseHas('configs', [
-            'company_id' => 1,
+            'fiscal_year_id' => 1,
             'key' => 'payroll',
             'value' => (string) $payrollSubject->id,
             'desc' => 'حقوق و دستمزد',
         ]);
         $this->assertDatabaseMissing('configs', [
-            'company_id' => 1,
+            'fiscal_year_id' => 1,
             'key' => 'wage',
         ]);
         $this->assertSame((string) $payrollSubject->id, config('amir.payroll'));
@@ -126,8 +126,8 @@ class CompanyScopedSeedersTest extends TestCase
 
     public function test_profit_and_loss_subjects_and_seeded_group_children_use_their_normal_balance_types(): void
     {
-        Company::factory()->create(['id' => 1]);
-        $this->seedCompany(1);
+        FiscalYear::factory()->create(['id' => 1]);
+        $this->seedFiscalYear(1);
 
         $expectedTypes = [
             '040' => SubjectType::DEBTOR,
@@ -151,7 +151,7 @@ class CompanyScopedSeedersTest extends TestCase
             '070002' => SubjectType::DEBTOR,
         ];
 
-        $subjects = Subject::withoutGlobalScopes()->where('company_id', 1)->whereIn('code', array_keys($expectedTypes))->get()->keyBy('code');
+        $subjects = Subject::withoutGlobalScopes()->where('fiscal_year_id', 1)->whereIn('code', array_keys($expectedTypes))->get()->keyBy('code');
 
         foreach ($expectedTypes as $code => $expectedType) {
             $this->assertSame($expectedType, $subjects->get($code)?->type, "Unexpected type for seeded subject {$code}.");
@@ -160,8 +160,8 @@ class CompanyScopedSeedersTest extends TestCase
         $this->seed(ProductGroupSeeder::class);
         $this->seed(ServiceGroupSeeder::class);
 
-        $productGroup = ProductGroup::withoutGlobalScopes()->where('company_id', 1)->firstOrFail();
-        $serviceGroup = ServiceGroup::withoutGlobalScopes()->where('company_id', 1)->firstOrFail();
+        $productGroup = ProductGroup::withoutGlobalScopes()->where('fiscal_year_id', 1)->firstOrFail();
+        $serviceGroup = ServiceGroup::withoutGlobalScopes()->where('fiscal_year_id', 1)->firstOrFail();
 
         $this->assertSame(SubjectType::CREDITOR, $productGroup->incomeSubject->type);
         $this->assertSame(SubjectType::DEBTOR, $productGroup->salesReturnsSubject->type);

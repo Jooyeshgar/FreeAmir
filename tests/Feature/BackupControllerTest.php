@@ -17,12 +17,12 @@ use App\Models\BankAccount;
 use App\Models\Cheque;
 use App\Models\Chequebook;
 use App\Models\ChequeHistory;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
 use App\Models\DocumentFile;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\OrganizationUnit;
 use App\Models\Payment;
@@ -54,16 +54,16 @@ class BackupControllerTest extends TestCase
 
     protected User $user;
 
-    protected Company $company;
+    protected FiscalYear $fiscalYear;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->company = Company::factory()->create();
+        $this->fiscalYear = FiscalYear::factory()->create();
 
         $this->user = User::factory()->create();
-        $this->company->users()->attach($this->user);
+        $this->fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'backups.create']),
@@ -73,7 +73,7 @@ class BackupControllerTest extends TestCase
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => (string) $this->company->id]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->fiscalYear->id]);
     }
 
     private function makeZipUpload(array|string $payload, string $archiveName = 'backup.zip', string $entryName = 'backup.json'): UploadedFile
@@ -102,52 +102,52 @@ class BackupControllerTest extends TestCase
     {
         $currentYear = (int) toEnglish(jdate('Y'));
 
-        $currentYearCompany = Company::factory()->create(['fiscal_year' => $currentYear]);
-        $otherCompany = Company::factory()->create(['fiscal_year' => $currentYear - 1]);
-        $currentYearCompany->users()->syncWithoutDetaching([$this->user->id]);
-        $otherCompany->users()->syncWithoutDetaching([$this->user->id]);
+        $currentFiscalYear = FiscalYear::factory()->create(['year' => $currentYear]);
+        $otherFiscalYear = FiscalYear::factory()->create(['year' => $currentYear - 1]);
+        $currentFiscalYear->users()->syncWithoutDetaching([$this->user->id]);
+        $otherFiscalYear->users()->syncWithoutDetaching([$this->user->id]);
 
         $response = $this->get(route('backups.create'));
 
         $response->assertOk();
-        $response->assertSee("value=\"{$currentYearCompany->id}\" selected", false);
-        $response->assertDontSee("value=\"{$otherCompany->id}\" selected", false);
+        $response->assertSee("value=\"{$currentFiscalYear->id}\" selected", false);
+        $response->assertDontSee("value=\"{$otherFiscalYear->id}\" selected", false);
     }
 
-    public function test_create_lists_only_companies_accessible_to_user(): void
+    public function test_create_lists_only_fiscal_years_accessible_to_user(): void
     {
-        $accessibleCompany = Company::factory()->create(['name' => 'Accessible Company']);
-        $inaccessibleCompany = Company::factory()->create(['name' => 'Inaccessible Company']);
-        $accessibleCompany->users()->syncWithoutDetaching([$this->user->id]);
-        $inaccessibleCompany->users()->detach($this->user->id);
+        $accessibleFiscalYear = FiscalYear::factory()->create(['id' => 1]);
+        $inaccessibleFiscalYear = FiscalYear::factory()->create(['id' => 2]);
+        $accessibleFiscalYear->users()->syncWithoutDetaching([$this->user->id]);
+        $inaccessibleFiscalYear->users()->detach($this->user->id);
 
         $response = $this->get(route('backups.create'));
 
         $response->assertOk();
-        $response->assertSee('Accessible Company');
-        $response->assertDontSee('Inaccessible Company');
+        $response->assertSee("value=\"{$accessibleFiscalYear->id}\"", false);
+        $response->assertDontSee("value=\"{$inaccessibleFiscalYear->id}\"", false);
     }
 
-    public function test_export_rejects_company_not_accessible_to_user(): void
+    public function test_export_rejects_fiscal_year_not_accessible_to_user(): void
     {
-        $inaccessibleCompany = Company::factory()->create();
-        $inaccessibleCompany->users()->detach($this->user->id);
+        $inaccessibleFiscalYear = FiscalYear::factory()->create(['id' => 2]);
+        $inaccessibleFiscalYear->users()->detach($this->user->id);
 
         $response = $this->post(route('backups.export'), [
-            'source_id' => $inaccessibleCompany->id,
+            'source_id' => $inaccessibleFiscalYear->id,
             'tables_to_backup' => [FiscalYearSection::SUBJECTS->value],
         ]);
 
         $response->assertSessionHasErrors('source_id');
     }
 
-    public function test_document_files_size_rejects_company_not_accessible_to_user(): void
+    public function test_document_files_size_rejects_fiscal_year_not_accessible_to_user(): void
     {
-        $inaccessibleCompany = Company::factory()->create();
-        $inaccessibleCompany->users()->detach($this->user->id);
+        $inaccessibleFiscalYear = FiscalYear::factory()->create(['id' => 2]);
+        $inaccessibleFiscalYear->users()->detach($this->user->id);
 
         $response = $this->getJson(route('backups.document-files-size', [
-            'source_id' => $inaccessibleCompany->id,
+            'source_id' => $inaccessibleFiscalYear->id,
         ]));
 
         $response->assertUnprocessable();
@@ -157,7 +157,7 @@ class BackupControllerTest extends TestCase
     public function test_export_downloads_zip_with_json_backup_contents(): void
     {
         $response = $this->post(route('backups.export'), [
-            'source_id' => $this->company->id,
+            'source_id' => $this->fiscalYear->id,
             'tables_to_backup' => [FiscalYearSection::SUBJECTS->value],
         ]);
 
@@ -186,8 +186,8 @@ class BackupControllerTest extends TestCase
         $decoded = json_decode($jsonContent, true);
 
         $this->assertIsArray($decoded);
-        $this->assertSame($this->company->id, $decoded['meta']['source_company_id']);
-        $this->assertSame($this->company->name, $decoded['meta']['source_company_name']);
+        $this->assertSame($this->fiscalYear->id, $decoded['meta']['source_fiscal_year_id']);
+        $this->assertSame($this->fiscalYear->company->name, $decoded['meta']['source_fiscal_year_name']);
         $this->assertSame([FiscalYearSection::SUBJECTS->value], $decoded['meta']['sections_exported']);
         $this->assertArrayHasKey(FiscalYearSection::SUBJECTS->value, $decoded);
     }
@@ -195,28 +195,28 @@ class BackupControllerTest extends TestCase
     public function test_cheques_and_histories_are_exported_and_restored_with_remapped_relations(): void
     {
         $groupSubject = Subject::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'code' => '100',
             'name' => 'Customer groups',
             'parent_id' => null,
             'type' => SubjectType::BOTH,
         ]);
         $customerSubject = Subject::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'code' => '100001',
             'name' => 'Cheque customer',
             'parent_id' => $groupSubject->id,
             'type' => SubjectType::BOTH,
         ]);
         $bankSubject = Subject::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'code' => '200',
             'name' => 'Banks',
             'parent_id' => null,
             'type' => SubjectType::BOTH,
         ]);
         $accountSubject = Subject::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'code' => '200001',
             'name' => 'Cheque bank account',
             'parent_id' => $bankSubject->id,
@@ -224,23 +224,23 @@ class BackupControllerTest extends TestCase
         ]);
 
         $group = CustomerGroup::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'subject_id' => $groupSubject->id,
             'name' => 'Cheque customers',
         ]);
         $customer = Customer::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'group_id' => $group->id,
             'subject_id' => $customerSubject->id,
             'name' => 'Backup customer',
             'type' => CustomerType::INDIVIDUAL,
         ]);
         $bank = Bank::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'name' => 'Backup bank',
         ]);
         $account = BankAccount::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'bank_id' => $bank->id,
             'subject_id' => $accountSubject->id,
             'name' => 'Backup account',
@@ -248,7 +248,7 @@ class BackupControllerTest extends TestCase
             'type' => BankAccountType::CURRENT,
         ]);
         $chequebook = Chequebook::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'bank_account_id' => $account->id,
             'serial_prefix' => 'BACKUP',
             'first_leaf' => 40,
@@ -257,7 +257,7 @@ class BackupControllerTest extends TestCase
             'desc' => 'Chequebook backup test',
         ]);
         $cheque = Cheque::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'amount' => 1250000,
             'write_date' => '2026-07-01',
             'due_date' => '2026-08-01',
@@ -273,12 +273,12 @@ class BackupControllerTest extends TestCase
             'desc' => 'Cheque backup test',
         ]);
         $document = Document::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'documentable_type' => Cheque::class,
             'documentable_id' => $cheque->id,
         ]);
         $invoice = Invoice::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'number' => 42,
             'date' => '2026-07-01',
             'invoice_type' => InvoiceType::BUY,
@@ -318,7 +318,7 @@ class BackupControllerTest extends TestCase
             FiscalYearSection::INVOICES->value,
             FiscalYearSection::CHEQUES->value,
         ];
-        $payload = FiscalYearService::exportData($this->company->id, $sections);
+        $payload = FiscalYearService::exportData($this->fiscalYear->id, $sections);
 
         $this->assertCount(1, $payload['chequebooks']);
         $this->assertCount(1, $payload['cheques']);
@@ -326,13 +326,13 @@ class BackupControllerTest extends TestCase
         $this->assertCount(1, $payload['payments']);
         $this->assertSame($sections, $payload['meta']['sections_exported']);
 
-        $newCompany = FiscalYearService::importData($payload, [
+        $newFiscalYear = FiscalYearService::importData($payload, [
             'name' => 'Restored Cheques',
             'fiscal_year' => 1406,
         ]);
 
         $restoredCheque = Cheque::withoutGlobalScope(FiscalYearScope::class)
-            ->where('company_id', $newCompany->id)
+            ->where('fiscal_year_id', $newFiscalYear->id)
             ->firstOrFail();
         $restoredHistory = $restoredCheque->histories()->firstOrFail();
         $restoredDocument = Document::withoutGlobalScope(FiscalYearScope::class)
@@ -356,19 +356,19 @@ class BackupControllerTest extends TestCase
         $this->assertSame(Cheque::class, $restoredDocument->documentable_type);
         $this->assertSame(ChequeType::ISSUED, $restoredHistory->to_status);
         $this->assertSame($restoredCheque->id, $restoredPayment->cheque_id);
-        $this->assertSame($newCompany->id, $restoredInvoice->company_id);
+        $this->assertSame($newFiscalYear->id, $restoredInvoice->fiscal_year_id);
         $this->assertNotNull(Cheque::withoutGlobalScope(FiscalYearScope::class)->find($cheque->id));
     }
 
     public function test_sayad_number_can_be_reused_in_another_company_only(): void
     {
-        $otherCompany = Company::factory()->create();
+        $otherFiscalYear = FiscalYear::factory()->create();
         $customerId = DB::table('customers')->insertGetId([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'name' => 'Source cheque customer',
         ]);
         $otherCustomerId = DB::table('customers')->insertGetId([
-            'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherFiscalYear->id,
             'name' => 'Imported cheque customer',
         ]);
         $cheque = [
@@ -383,12 +383,12 @@ class BackupControllerTest extends TestCase
 
         DB::table('cheques')->insert([
             ...$cheque,
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'customer_id' => $customerId,
         ]);
         DB::table('cheques')->insert([
             ...$cheque,
-            'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherFiscalYear->id,
             'customer_id' => $otherCustomerId,
         ]);
 
@@ -397,7 +397,7 @@ class BackupControllerTest extends TestCase
         $this->expectException(UniqueConstraintViolationException::class);
         DB::table('cheques')->insert([
             ...$cheque,
-            'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherFiscalYear->id,
             'customer_id' => $otherCustomerId,
         ]);
     }
@@ -407,8 +407,8 @@ class BackupControllerTest extends TestCase
         $response = $this->post(route('backups.import'), [
             'file' => $this->makeZipUpload([
                 'meta' => [
-                    'source_company_id' => $this->company->id,
-                    'source_company_name' => $this->company->name,
+                    'source_fiscal_year_id' => $this->fiscalYear->id,
+                    'source_company_name' => $this->fiscalYear->company?->name,
                 ],
             ]),
             'fiscal_year' => 1410,
@@ -418,9 +418,8 @@ class BackupControllerTest extends TestCase
         $response->assertRedirect(route('home'));
         $response->assertSessionHas('success');
 
-        $this->assertDatabaseHas('companies', [
-            'name' => 'Imported Company',
-            'fiscal_year' => 1410,
+        $this->assertDatabaseHas('fiscal_years', [
+            'year' => 1410,
         ]);
     }
 
@@ -472,7 +471,7 @@ class BackupControllerTest extends TestCase
 
     public function test_import_rejects_invalid_json_inside_zip_upload(): void
     {
-        $existingCompanies = Company::count();
+        $existingFiscalYears = FiscalYear::count();
 
         $response = $this->post(route('backups.import'), [
             'file' => $this->makeZipUpload('{"meta": invalid json}'),
@@ -482,12 +481,12 @@ class BackupControllerTest extends TestCase
 
         $response->assertRedirect();
         $response->assertSessionHas('error');
-        $this->assertSame($existingCompanies, Company::count());
+        $this->assertSame($existingFiscalYears, FiscalYear::count());
     }
 
     public function test_import_rejects_zip_upload_without_json_file(): void
     {
-        $existingCompanies = Company::count();
+        $existingFiscalYears = FiscalYear::count();
 
         $response = $this->post(route('backups.import'), [
             'file' => $this->makeZipUpload('plain text file', 'backup.zip', 'backup.txt'),
@@ -497,7 +496,7 @@ class BackupControllerTest extends TestCase
 
         $response->assertRedirect();
         $response->assertSessionHas('error');
-        $this->assertSame($existingCompanies, Company::count());
+        $this->assertSame($existingFiscalYears, FiscalYear::count());
     }
 
     public function test_import_rejects_empty_json(): void
@@ -518,19 +517,19 @@ class BackupControllerTest extends TestCase
         // Before the fix, empty documentMapping caused all invoices to be skipped.
         $payload = [
             'subjects' => [
-                ['id' => 1, 'code' => '1',   'name' => 'Group Subject',    'parent_id' => null, 'company_id' => 0, 'type' => SubjectType::BOTH, 'subjectable_type' => CustomerGroup::class, 'subjectable_id' => 1, 'is_permanent' => false],
-                ['id' => 2, 'code' => '11', 'name' => 'Customer Subject', 'parent_id' => 1,    'company_id' => 0, 'type' => SubjectType::BOTH, 'subjectable_type' => Customer::class, 'subjectable_id' => 1, 'is_permanent' => false],
+                ['id' => 1, 'code' => '1',   'name' => 'Group Subject',    'parent_id' => null, 'fiscal_year_id' => 0, 'type' => SubjectType::BOTH, 'subjectable_type' => CustomerGroup::class, 'subjectable_id' => 1, 'is_permanent' => false],
+                ['id' => 2, 'code' => '11', 'name' => 'Customer Subject', 'parent_id' => 1,    'fiscal_year_id' => 0, 'type' => SubjectType::BOTH, 'subjectable_type' => Customer::class, 'subjectable_id' => 1, 'is_permanent' => false],
             ],
             'customer_groups' => [
-                ['id' => 1, 'name' => 'Test Group', 'description' => null, 'subject_id' => 1, 'company_id' => 0],
+                ['id' => 1, 'name' => 'Test Group', 'description' => null, 'subject_id' => 1, 'fiscal_year_id' => 0],
             ],
             'customers' => [
-                ['id' => 1, 'name' => 'Test Customer', 'company_id' => 0, 'group_id' => 1, 'subject_id' => 2, 'introducer_id' => null],
+                ['id' => 1, 'name' => 'Test Customer', 'fiscal_year_id' => 0, 'group_id' => 1, 'subject_id' => 2, 'introducer_id' => null],
             ],
             'comments' => [],
             'invoices' => [
                 ['id' => 1, 'number' => '1', 'date' => '2026-01-01', 'customer_id' => 1, 'document_id' => null,
-                    'company_id' => 0, 'subtraction' => 0, 'vat' => 0, 'amount' => 100, 'returned_invoice_id' => null,
+                    'fiscal_year_id' => 0, 'subtraction' => 0, 'vat' => 0, 'amount' => 100, 'returned_invoice_id' => null,
                     'creator_id' => null, 'approver_id' => null, 'status' => InvoiceStatus::UNAPPROVED, 'invoice_type' => InvoiceType::SELL],
             ],
             'invoice_items' => [],
@@ -540,39 +539,39 @@ class BackupControllerTest extends TestCase
 
         $newCompany = FiscalYearService::importData($payload, ['name' => 'Restored Co', 'fiscal_year' => 1403]);
 
-        $this->assertSame(1, Invoice::withoutGlobalScopes()->where('company_id', $newCompany->id)->count());
+        $this->assertSame(1, Invoice::withoutGlobalScopes()->where('fiscal_year_id', $newCompany->id)->count());
     }
 
     public function test_import_assigns_ancillary_costs_to_the_new_company(): void
     {
         $groupSubject = Subject::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'code' => '100',
             'name' => 'Customer groups',
             'parent_id' => null,
             'type' => SubjectType::BOTH,
         ]);
         $customerSubject = Subject::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'code' => '100001',
             'name' => 'Ancillary cost customer',
             'parent_id' => $groupSubject->id,
             'type' => SubjectType::BOTH,
         ]);
         $group = CustomerGroup::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'subject_id' => $groupSubject->id,
             'name' => 'Ancillary cost customers',
         ]);
         $customer = Customer::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'group_id' => $group->id,
             'subject_id' => $customerSubject->id,
             'name' => 'Ancillary cost customer',
             'type' => CustomerType::INDIVIDUAL,
         ]);
         $invoice = Invoice::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'number' => 24,
             'date' => '2026-06-01',
             'invoice_type' => InvoiceType::BUY,
@@ -584,7 +583,7 @@ class BackupControllerTest extends TestCase
             'amount' => 1247598000,
         ]);
         $sourceAncillaryCost = AncillaryCost::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'number' => 24,
             'invoice_id' => $invoice->id,
             'customer_id' => $customer->id,
@@ -595,43 +594,43 @@ class BackupControllerTest extends TestCase
             'status' => InvoiceStatus::APPROVED,
         ]);
 
-        $payload = FiscalYearService::exportData($this->company->id, [
+        $payload = FiscalYearService::exportData($this->fiscalYear->id, [
             FiscalYearSection::SUBJECTS->value,
             FiscalYearSection::CUSTOMERS->value,
             FiscalYearSection::INVOICES->value,
         ]);
 
-        $newCompany = FiscalYearService::importData($payload, [
+        $newFiscalYear = FiscalYearService::importData($payload, [
             'name' => 'Imported ancillary costs',
             'fiscal_year' => 1406,
         ]);
 
         $importedAncillaryCost = AncillaryCost::withoutGlobalScopes()
-            ->where('company_id', $newCompany->id)
+            ->where('fiscal_year_id', $newFiscalYear->id)
             ->where('number', 24)
             ->firstOrFail();
 
-        $this->assertSame($this->company->id, $sourceAncillaryCost->company_id);
-        $this->assertSame($newCompany->id, $importedAncillaryCost->company_id);
+        $this->assertSame($this->fiscalYear->id, $sourceAncillaryCost->fiscal_year_id);
+        $this->assertSame($newFiscalYear->id, $importedAncillaryCost->fiscal_year_id);
         $this->assertSame(
-            $newCompany->id,
-            Invoice::withoutGlobalScopes()->findOrFail($importedAncillaryCost->invoice_id)->company_id
+            $newFiscalYear->id,
+            Invoice::withoutGlobalScopes()->findOrFail($importedAncillaryCost->invoice_id)->fiscal_year_id
         );
     }
 
     public function test_document_relation_sync_ignores_active_company_scope(): void
     {
-        $targetCompany = Company::factory()->create();
+        $targetFiscalYear = FiscalYear::factory()->create();
         $usesLegacyEnumSchema = DB::connection()->getDriverName() === 'sqlite';
         $customerId = DB::table('customers')->insertGetId([
             'name' => 'Imported invoice customer',
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'type' => $usesLegacyEnumSchema ? CustomerType::INDIVIDUAL->valueName() : CustomerType::INDIVIDUAL->value,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
         $document = Document::factory()->create([
-            'company_id' => $targetCompany->id,
+            'fiscal_year_id' => $targetFiscalYear->id,
             'documentable_type' => Invoice::class,
             'documentable_id' => 999,
         ]);
@@ -640,7 +639,7 @@ class BackupControllerTest extends TestCase
             'date' => '2026-06-02',
             'customer_id' => $customerId,
             'document_id' => $document->id,
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'subtraction' => 0,
             'vat' => 0,
             'amount' => 100,
@@ -660,11 +659,12 @@ class BackupControllerTest extends TestCase
 
     public function test_export_filename_replaces_spaces_with_hyphens(): void
     {
-        $company = Company::factory()->create(['name' => 'My Test Company']);
-        $company->users()->syncWithoutDetaching([$this->user->id]);
+        $fiscalYear = FiscalYear::factory()->create(['year' => 1405]);
+        $fiscalYear->company->update(['name' => 'My Test Company']);
+        $fiscalYear->users()->syncWithoutDetaching([$this->user->id]);
 
         $response = $this->post(route('backups.export'), [
-            'source_id' => $company->id,
+            'source_id' => $fiscalYear->id,
             'tables_to_backup' => [FiscalYearSection::SUBJECTS->value],
         ]);
 
@@ -683,12 +683,12 @@ class BackupControllerTest extends TestCase
     {
         Storage::fake('public');
 
-        $document = Document::factory()->create(['company_id' => $this->company->id]);
+        $document = Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
         $path = "documents/{$document->id}/test.pdf";
         Storage::disk('public')->put($path, str_repeat('x', 1024 * 1024));
         DocumentFile::factory()->withDocument($document)->create(['path' => $path]);
 
-        $response = $this->get(route('backups.document-files-size', ['source_id' => $this->company->id]));
+        $response = $this->get(route('backups.document-files-size', ['source_id' => $this->fiscalYear->id]));
 
         $response->assertOk();
         $response->assertJsonStructure(['size_mb']);
@@ -699,14 +699,14 @@ class BackupControllerTest extends TestCase
     {
         Storage::fake('public');
 
-        $document = Document::factory()->create(['company_id' => $this->company->id]);
+        $document = Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
         $fileContent = 'dummy pdf content';
         $path = "documents/{$document->id}/report.pdf";
         Storage::disk('public')->put($path, $fileContent);
         DocumentFile::factory()->withDocument($document)->create(['path' => $path]);
 
         $response = $this->post(route('backups.export'), [
-            'source_id' => $this->company->id,
+            'source_id' => $this->fiscalYear->id,
             'tables_to_backup' => [
                 FiscalYearSection::DOCUMENTS->value,
                 FiscalYearSection::DOCUMENT_FILES->value,
@@ -738,14 +738,14 @@ class BackupControllerTest extends TestCase
     {
         Storage::fake('public');
 
-        $document = Document::factory()->create(['company_id' => $this->company->id]);
+        $document = Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
         $fileContent = str_repeat('A', 1024);
         $path = "documents/{$document->id}/invoice.pdf";
         Storage::disk('public')->put($path, $fileContent);
         DocumentFile::factory()->withDocument($document)->create(['path' => $path]);
 
         $response = $this->post(route('backups.export'), [
-            'source_id' => $this->company->id,
+            'source_id' => $this->fiscalYear->id,
             'tables_to_backup' => [
                 FiscalYearSection::DOCUMENTS->value,
                 FiscalYearSection::DOCUMENT_FILES->value,
@@ -779,7 +779,7 @@ class BackupControllerTest extends TestCase
 
         $payload = [
             'documents' => [
-                ['id' => 99, 'number' => 1, 'date' => '2026-01-01', 'creator_id' => null, 'title' => 'Doc', 'company_id' => 0],
+                ['id' => 99, 'number' => 1, 'date' => '2026-01-01', 'creator_id' => null, 'title' => 'Doc', 'fiscal_year_id' => 0],
             ],
             'document_files' => [
                 [
@@ -812,10 +812,10 @@ class BackupControllerTest extends TestCase
             'company_name' => 'Base64 Import Co',
         ])->assertRedirect(route('home'));
 
-        $newCompany = Company::where('name', 'Base64 Import Co')->firstOrFail();
+        $newFiscalYear = FiscalYear::whereHas('company', fn ($query) => $query->where('name', 'Base64 Import Co'))->firstOrFail();
 
         $documentIds = Document::withoutGlobalScope(FiscalYearScope::class)
-            ->where('company_id', $newCompany->id)
+            ->where('fiscal_year_id', $newFiscalYear->id)
             ->pluck('id');
 
         $docFile = DocumentFile::whereIn('document_id', $documentIds)->firstOrFail();
@@ -832,7 +832,7 @@ class BackupControllerTest extends TestCase
 
         $payload = [
             'documents' => [
-                ['id' => 1, 'number' => 1, 'date' => '2026-01-01', 'creator_id' => null, 'title' => 'Doc', 'company_id' => 0],
+                ['id' => 1, 'number' => 1, 'date' => '2026-01-01', 'creator_id' => null, 'title' => 'Doc', 'fiscal_year_id' => 0],
             ],
             'document_files' => [
                 [
@@ -866,7 +866,7 @@ class BackupControllerTest extends TestCase
 
         $payload = [
             'documents' => [
-                ['id' => 1, 'number' => 1, 'date' => '2026-01-01', 'creator_id' => null, 'title' => 'Doc', 'company_id' => 0],
+                ['id' => 1, 'number' => 1, 'date' => '2026-01-01', 'creator_id' => null, 'title' => 'Doc', 'fiscal_year_id' => 0],
             ],
             'document_files' => [
                 [
@@ -884,9 +884,9 @@ class BackupControllerTest extends TestCase
             ],
         ];
 
-        $company = FiscalYearService::importData($payload, ['name' => 'Checksum OK Co', 'fiscal_year' => 1408]);
+        $fiscalYear = FiscalYearService::importData($payload, ['name' => 'Checksum OK Co', 'fiscal_year' => 1408]);
 
-        $documentIds = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $company->id)->pluck('id');
+        $documentIds = Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $fiscalYear->id)->pluck('id');
         $docFile = DocumentFile::whereIn('document_id', $documentIds)->firstOrFail();
 
         Storage::disk('public')->assertExists($docFile->path);
@@ -898,13 +898,13 @@ class BackupControllerTest extends TestCase
         Storage::fake('public');
 
         $largeContent = str_repeat('X', 200 * 1024); // 200 KiB — spans multiple 57 KiB encode chunks
-        $document = Document::factory()->create(['company_id' => $this->company->id]);
+        $document = Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
         $path = "documents/{$document->id}/large.bin";
         Storage::disk('public')->put($path, $largeContent);
         DocumentFile::factory()->withDocument($document)->create(['path' => $path]);
 
         $response = $this->post(route('backups.export'), [
-            'source_id' => $this->company->id,
+            'source_id' => $this->fiscalYear->id,
             'tables_to_backup' => [
                 FiscalYearSection::DOCUMENTS->value,
                 FiscalYearSection::DOCUMENT_FILES->value,
@@ -928,12 +928,12 @@ class BackupControllerTest extends TestCase
     {
         Storage::fake('public');
 
-        $document = Document::factory()->create(['company_id' => $this->company->id]);
+        $document = Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
         Storage::disk('public')->put("documents/{$document->id}/note.pdf", 'content');
         DocumentFile::factory()->withDocument($document)->create(['path' => "documents/{$document->id}/note.pdf"]);
 
         $response = $this->post(route('backups.export'), [
-            'source_id' => $this->company->id,
+            'source_id' => $this->fiscalYear->id,
             'tables_to_backup' => [FiscalYearSection::DOCUMENTS->value],
         ]);
 
@@ -950,11 +950,11 @@ class BackupControllerTest extends TestCase
     {
         Storage::fake('public');
 
-        $document = Document::factory()->create(['company_id' => $this->company->id]);
+        $document = Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
         DocumentFile::factory()->withDocument($document)->create(['path' => "documents/{$document->id}/ghost.pdf"]);
 
         $response = $this->post(route('backups.export'), [
-            'source_id' => $this->company->id,
+            'source_id' => $this->fiscalYear->id,
             'tables_to_backup' => [
                 FiscalYearSection::DOCUMENTS->value,
                 FiscalYearSection::DOCUMENT_FILES->value,
@@ -976,8 +976,8 @@ class BackupControllerTest extends TestCase
     {
         Storage::fake('public');
 
-        $doc1 = Document::factory()->create(['company_id' => $this->company->id]);
-        $doc2 = Document::factory()->create(['company_id' => $this->company->id]);
+        $doc1 = Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
+        $doc2 = Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
         $content1 = 'first file content';
         $content2 = 'second file content';
 
@@ -987,7 +987,7 @@ class BackupControllerTest extends TestCase
         DocumentFile::factory()->withDocument($doc2)->create(['path' => "documents/{$doc2->id}/b.pdf"]);
 
         $response = $this->post(route('backups.export'), [
-            'source_id' => $this->company->id,
+            'source_id' => $this->fiscalYear->id,
             'tables_to_backup' => [
                 FiscalYearSection::DOCUMENTS->value,
                 FiscalYearSection::DOCUMENT_FILES->value,
@@ -1019,16 +1019,16 @@ class BackupControllerTest extends TestCase
 
         $payload = [
             'documents' => [
-                ['id' => 1, 'number' => 1, 'date' => '2026-01-01', 'creator_id' => null, 'title' => 'Doc', 'company_id' => 0],
+                ['id' => 1, 'number' => 1, 'date' => '2026-01-01', 'creator_id' => null, 'title' => 'Doc', 'fiscal_year_id' => 0],
             ],
             'document_files' => [
                 ['id' => 1, 'document_id' => 1, 'user_id' => null, 'title' => 'Plain', 'name' => 'plain.pdf', 'path' => 'documents/1/plain.pdf'],
             ],
         ];
 
-        $company = FiscalYearService::importData($payload, ['name' => 'No Content Co', 'fiscal_year' => 1409]);
+        $fiscalYear = FiscalYearService::importData($payload, ['name' => 'No Content Co', 'fiscal_year' => 1409]);
 
-        $documentIds = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $company->id)->pluck('id');
+        $documentIds = Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $fiscalYear->id)->pluck('id');
 
         $this->assertSame(0, DocumentFile::whereIn('document_id', $documentIds)->count());
         Storage::disk('public')->assertMissing('documents/1/plain.pdf');
@@ -1043,8 +1043,8 @@ class BackupControllerTest extends TestCase
 
         $payload = [
             'documents' => [
-                ['id' => 10, 'number' => 1, 'date' => '2026-01-01', 'creator_id' => null, 'title' => 'A', 'company_id' => 0],
-                ['id' => 20, 'number' => 2, 'date' => '2026-01-01', 'creator_id' => null, 'title' => 'B', 'company_id' => 0],
+                ['id' => 10, 'number' => 1, 'date' => '2026-01-01', 'creator_id' => null, 'title' => 'A', 'fiscal_year_id' => 0],
+                ['id' => 20, 'number' => 2, 'date' => '2026-01-01', 'creator_id' => null, 'title' => 'B', 'fiscal_year_id' => 0],
             ],
             'document_files' => [
                 [
@@ -1058,9 +1058,9 @@ class BackupControllerTest extends TestCase
             ],
         ];
 
-        $company = FiscalYearService::importData($payload, ['name' => 'Multi File Co', 'fiscal_year' => 1410]);
+        $fiscalYear = FiscalYearService::importData($payload, ['name' => 'Multi File Co', 'fiscal_year' => 1410]);
 
-        $documentIds = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $company->id)->pluck('id');
+        $documentIds = Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $fiscalYear->id)->pluck('id');
         $docFiles = DocumentFile::whereIn('document_id', $documentIds)->get();
 
         $this->assertCount(2, $docFiles);
@@ -1079,7 +1079,7 @@ class BackupControllerTest extends TestCase
 
         $payload = [
             'documents' => [
-                ['id' => 1, 'number' => 1, 'date' => '2026-01-01', 'creator_id' => null, 'title' => 'Doc', 'company_id' => 0],
+                ['id' => 1, 'number' => 1, 'date' => '2026-01-01', 'creator_id' => null, 'title' => 'Doc', 'fiscal_year_id' => 0],
             ],
             'document_files' => [
                 [
@@ -1106,13 +1106,13 @@ class BackupControllerTest extends TestCase
     {
         Storage::fake('public');
 
-        $document = Document::factory()->create(['company_id' => $this->company->id]);
+        $document = Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
         $path = "documents/{$document->id}/test.pdf";
         Storage::disk('public')->put($path, 'content');
         DocumentFile::factory()->withDocument($document)->create(['path' => $path]);
 
         $response = $this->post(route('backups.export'), [
-            'source_id' => $this->company->id,
+            'source_id' => $this->fiscalYear->id,
             'tables_to_backup' => [FiscalYearSection::DOCUMENT_FILES->value],
         ]);
 
@@ -1131,12 +1131,12 @@ class BackupControllerTest extends TestCase
     {
         Storage::fake('public');
 
-        $document = Document::factory()->create(['company_id' => $this->company->id]);
+        $document = Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
         Storage::disk('public')->put("documents/{$document->id}/f.pdf", 'x');
         DocumentFile::factory()->withDocument($document)->create(['path' => "documents/{$document->id}/f.pdf"]);
 
         $response = $this->post(route('backups.export'), [
-            'source_id' => $this->company->id,
+            'source_id' => $this->fiscalYear->id,
             'tables_to_backup' => [
                 FiscalYearSection::SUBJECTS->value,
                 FiscalYearSection::DOCUMENT_FILES->value,
@@ -1179,10 +1179,10 @@ class BackupControllerTest extends TestCase
             ],
         ];
 
-        $company = FiscalYearService::importData($payload, ['name' => 'No Docs Co', 'fiscal_year' => 1412]);
+        $fiscalYear = FiscalYearService::importData($payload, ['name' => 'No Docs Co', 'fiscal_year' => 1412]);
 
         $documentIds = Document::withoutGlobalScope(FiscalYearScope::class)
-            ->where('company_id', $company->id)
+            ->where('fiscal_year_id', $fiscalYear->id)
             ->pluck('id');
 
         $this->assertSame(0, DocumentFile::whereIn('document_id', $documentIds)->count());
@@ -1197,8 +1197,8 @@ class BackupControllerTest extends TestCase
 
         $payload = [
             'meta' => [
-                'source_company_id' => $this->company->id,
-                'source_company_name' => $this->company->name,
+                'source_fiscal_year_id' => $this->fiscalYear->id,
+                'source_company_name' => $this->fiscalYear->company->name,
             ],
             'document_files' => [
                 [
@@ -1224,10 +1224,10 @@ class BackupControllerTest extends TestCase
 
         $response->assertRedirect(route('home'));
 
-        $newCompany = Company::where('name', 'No Docs Import Co')->firstOrFail();
+        $newFiscalYear = FiscalYear::whereHas('company', fn ($query) => $query->where('name', 'No Docs Import Co'))->firstOrFail();
 
         $documentIds = Document::withoutGlobalScope(FiscalYearScope::class)
-            ->where('company_id', $newCompany->id)
+            ->where('fiscal_year_id', $newFiscalYear->id)
             ->pluck('id');
 
         $this->assertSame(0, DocumentFile::whereIn('document_id', $documentIds)->count());
@@ -1238,7 +1238,7 @@ class BackupControllerTest extends TestCase
     {
         Storage::fake('public');
 
-        $document = Document::factory()->create(['company_id' => $this->company->id]);
+        $document = Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
         $path = "documents/{$document->id}/attachment.pdf";
         Storage::disk('public')->put($path, 'file body');
         $docFile = DocumentFile::factory()->withDocument($document)->create(['path' => $path]);
@@ -1255,7 +1255,7 @@ class BackupControllerTest extends TestCase
     {
         $disk = Storage::fake('public');
 
-        $document = Document::factory()->create(['company_id' => $this->company->id]);
+        $document = Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
         $paths = [
             "documents/{$document->id}/file1.pdf",
             "documents/{$document->id}/file2.pdf",
@@ -1267,7 +1267,7 @@ class BackupControllerTest extends TestCase
             $fileIds[] = DocumentFile::factory()->withDocument($document)->create(['path' => $path])->id;
         }
 
-        config(['active-company-id' => $this->company->id]);
+        config(['active-fiscal-year-id' => $this->fiscalYear->id]);
         DocumentService::deleteDocument($document->id);
 
         foreach ($paths as $path) {
@@ -1284,12 +1284,12 @@ class BackupControllerTest extends TestCase
     public function test_employees_section_export_includes_organization_units(): void
     {
         OrganizationUnit::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'name' => 'Engineering',
             'code' => 'ENG-01',
         ]);
 
-        $exportData = FiscalYearService::exportData($this->company->id, [FiscalYearSection::EMPLOYEES->value]);
+        $exportData = FiscalYearService::exportData($this->fiscalYear->id, [FiscalYearSection::EMPLOYEES->value]);
 
         $this->assertArrayHasKey('organization_units', $exportData);
         $this->assertCount(1, $exportData['organization_units']);
@@ -1301,32 +1301,32 @@ class BackupControllerTest extends TestCase
         $payload = [
             'org_charts' => [],
             'work_sites' => [
-                ['id' => 10, 'name' => 'HQ', 'code' => 'HQ-01', 'company_id' => 0, 'address' => null, 'phone' => null, 'is_active' => true],
+                ['id' => 10, 'name' => 'HQ', 'code' => 'HQ-01', 'fiscal_year_id' => 0, 'address' => null, 'phone' => null, 'is_active' => true],
             ],
             'work_site_contracts' => [],
             'work_shifts' => [
-                ['id' => 20, 'name' => 'Day Shift', 'company_id' => 0, 'start_time' => '08:00', 'end_time' => '17:00', 'float' => 0, 'break' => 0, 'paid_leave' => 1200, 'is_active' => true],
+                ['id' => 20, 'name' => 'Day Shift', 'fiscal_year_id' => 0, 'start_time' => '08:00', 'end_time' => '17:00', 'float' => 0, 'break' => 0, 'paid_leave' => 1200, 'is_active' => true],
             ],
             'organization_units' => [
-                ['id' => 30, 'name' => 'HR Department', 'code' => 'HR-01', 'company_id' => 0, 'parent_id' => null, 'description' => null, 'is_active' => true],
+                ['id' => 30, 'name' => 'HR Department', 'code' => 'HR-01', 'fiscal_year_id' => 0, 'parent_id' => null, 'description' => null, 'is_active' => true],
             ],
             'employees' => [
                 $this->makeMinimalEmployeeData(40, 10, 20, 30),
             ],
         ];
 
-        $newCompany = FiscalYearService::importData($payload, ['name' => 'Org Unit Remap Co', 'fiscal_year' => 1404]);
+        $newFiscalYear = FiscalYearService::importData($payload, ['name' => 'Org Unit Remap Co', 'fiscal_year' => 1404]);
 
         $newOrgUnit = OrganizationUnit::withoutGlobalScope(FiscalYearScope::class)
-            ->where('company_id', $newCompany->id)
+            ->where('fiscal_year_id', $newFiscalYear->id)
             ->where('name', 'HR Department')
             ->first();
 
-        $this->assertNotNull($newOrgUnit, 'Org unit should be created in the new company');
+        $this->assertNotNull($newOrgUnit, 'Org unit should be created in the new fiscal year');
         $this->assertNotSame(30, $newOrgUnit->id, 'Org unit ID must be remapped, not kept from source');
 
         $employee = Employee::withoutGlobalScope(FiscalYearScope::class)
-            ->where('company_id', $newCompany->id)
+            ->where('fiscal_year_id', $newFiscalYear->id)
             ->first();
 
         $this->assertNotNull($employee);
@@ -1338,27 +1338,27 @@ class BackupControllerTest extends TestCase
         $payload = [
             'org_charts' => [],
             'work_sites' => [
-                ['id' => 1, 'name' => 'HQ', 'code' => 'HQ-01', 'company_id' => 0, 'address' => null, 'phone' => null, 'is_active' => true],
+                ['id' => 1, 'name' => 'HQ', 'code' => 'HQ-01', 'fiscal_year_id' => 0, 'address' => null, 'phone' => null, 'is_active' => true],
             ],
             'work_site_contracts' => [],
             'work_shifts' => [
-                ['id' => 1, 'name' => 'Day', 'company_id' => 0, 'start_time' => '08:00', 'end_time' => '17:00', 'float' => 0, 'break' => 0, 'paid_leave' => 1200, 'is_active' => true],
+                ['id' => 1, 'name' => 'Day', 'fiscal_year_id' => 0, 'start_time' => '08:00', 'end_time' => '17:00', 'float' => 0, 'break' => 0, 'paid_leave' => 1200, 'is_active' => true],
             ],
             'organization_units' => [
-                ['id' => 1, 'name' => 'Company Root', 'code' => 'ROOT', 'company_id' => 0, 'parent_id' => null, 'description' => null, 'is_active' => true],
-                ['id' => 2, 'name' => 'Engineering', 'code' => 'ENG', 'company_id' => 0, 'parent_id' => 1, 'description' => null, 'is_active' => true],
+                ['id' => 1, 'name' => 'Company Root', 'code' => 'ROOT', 'fiscal_year_id' => 0, 'parent_id' => null, 'description' => null, 'is_active' => true],
+                ['id' => 2, 'name' => 'Engineering', 'code' => 'ENG', 'fiscal_year_id' => 0, 'parent_id' => 1, 'description' => null, 'is_active' => true],
             ],
             'employees' => [
                 $this->makeMinimalEmployeeData(1, 1, 1, 2), // assigned to child unit (id=2)
             ],
         ];
 
-        $newCompany = FiscalYearService::importData($payload, ['name' => 'Hierarchy Co', 'fiscal_year' => 1404]);
+        $newFiscalYear = FiscalYearService::importData($payload, ['name' => 'Hierarchy Co', 'fiscal_year' => 1404]);
 
         $parentUnit = OrganizationUnit::withoutGlobalScope(FiscalYearScope::class)
-            ->where('company_id', $newCompany->id)->where('name', 'Company Root')->first();
+            ->where('fiscal_year_id', $newFiscalYear->id)->where('name', 'Company Root')->first();
         $childUnit = OrganizationUnit::withoutGlobalScope(FiscalYearScope::class)
-            ->where('company_id', $newCompany->id)->where('name', 'Engineering')->first();
+            ->where('fiscal_year_id', $newFiscalYear->id)->where('name', 'Engineering')->first();
 
         $this->assertNotNull($parentUnit);
         $this->assertNotNull($childUnit);
@@ -1366,7 +1366,7 @@ class BackupControllerTest extends TestCase
         $this->assertSame($parentUnit->id, $childUnit->parent_id, 'Child must point to new parent ID, not source parent ID');
 
         $employee = Employee::withoutGlobalScope(FiscalYearScope::class)
-            ->where('company_id', $newCompany->id)->first();
+            ->where('fiscal_year_id', $newFiscalYear->id)->first();
         $this->assertSame($childUnit->id, $employee->organization_unit_id);
     }
 
@@ -1375,11 +1375,11 @@ class BackupControllerTest extends TestCase
         $payload = [
             'org_charts' => [],
             'work_sites' => [
-                ['id' => 1, 'name' => 'HQ', 'code' => 'HQ-01', 'company_id' => 0, 'address' => null, 'phone' => null, 'is_active' => true],
+                ['id' => 1, 'name' => 'HQ', 'code' => 'HQ-01', 'fiscal_year_id' => 0, 'address' => null, 'phone' => null, 'is_active' => true],
             ],
             'work_site_contracts' => [],
             'work_shifts' => [
-                ['id' => 1, 'name' => 'Day', 'company_id' => 0, 'start_time' => '08:00', 'end_time' => '17:00', 'float' => 0, 'break' => 0, 'paid_leave' => 1200, 'is_active' => true],
+                ['id' => 1, 'name' => 'Day', 'fiscal_year_id' => 0, 'start_time' => '08:00', 'end_time' => '17:00', 'float' => 0, 'break' => 0, 'paid_leave' => 1200, 'is_active' => true],
             ],
             'organization_units' => [],
             'employees' => [
@@ -1387,10 +1387,10 @@ class BackupControllerTest extends TestCase
             ],
         ];
 
-        $newCompany = FiscalYearService::importData($payload, ['name' => 'Null OrgUnit Co', 'fiscal_year' => 1404]);
+        $newFiscalYear = FiscalYearService::importData($payload, ['name' => 'Null OrgUnit Co', 'fiscal_year' => 1404]);
 
         $employee = Employee::withoutGlobalScope(FiscalYearScope::class)
-            ->where('company_id', $newCompany->id)->first();
+            ->where('fiscal_year_id', $newFiscalYear->id)->first();
 
         $this->assertNotNull($employee);
         $this->assertNull($employee->organization_unit_id);
@@ -1399,33 +1399,33 @@ class BackupControllerTest extends TestCase
     public function test_full_export_import_roundtrip_preserves_organization_unit_assignment(): void
     {
         $orgUnit = OrganizationUnit::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'name' => 'Finance Department',
         ]);
-        $workSite = WorkSite::factory()->create(['company_id' => $this->company->id]);
-        $workShift = WorkShift::factory()->create(['company_id' => $this->company->id]);
+        $workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
+        $workShift = WorkShift::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
         Employee::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'work_site_id' => $workSite->id,
             'work_shift_id' => $workShift->id,
             'organization_unit_id' => $orgUnit->id,
         ]);
 
-        $exportData = FiscalYearService::exportData($this->company->id, [FiscalYearSection::EMPLOYEES->value]);
+        $exportData = FiscalYearService::exportData($this->fiscalYear->id, [FiscalYearSection::EMPLOYEES->value]);
 
         $this->assertArrayHasKey('organization_units', $exportData);
         $this->assertNotEmpty($exportData['organization_units']);
 
-        $newCompany = FiscalYearService::importData($exportData, ['name' => 'Roundtrip OrgUnit Co', 'fiscal_year' => 1405]);
+        $newFiscalYear = FiscalYearService::importData($exportData, ['name' => 'Roundtrip OrgUnit Co', 'fiscal_year' => 1405]);
 
         $newOrgUnit = OrganizationUnit::withoutGlobalScope(FiscalYearScope::class)
-            ->where('company_id', $newCompany->id)->where('name', 'Finance Department')->first();
+            ->where('fiscal_year_id', $newFiscalYear->id)->where('name', 'Finance Department')->first();
 
         $this->assertNotNull($newOrgUnit, 'Org unit must be recreated in new company');
         $this->assertNotSame($orgUnit->id, $newOrgUnit->id, 'New org unit must have a new ID');
 
         $newEmployee = Employee::withoutGlobalScope(FiscalYearScope::class)
-            ->where('company_id', $newCompany->id)->first();
+            ->where('fiscal_year_id', $newFiscalYear->id)->first();
 
         $this->assertNotNull($newEmployee);
         $this->assertSame($newOrgUnit->id, $newEmployee->organization_unit_id, 'Employee must be linked to the new org unit, not the source one');
@@ -1433,15 +1433,15 @@ class BackupControllerTest extends TestCase
 
     public function test_payrolls_section_export_includes_status_histories(): void
     {
-        $workSite = WorkSite::factory()->create(['company_id' => $this->company->id]);
-        $workShift = WorkShift::factory()->create(['company_id' => $this->company->id]);
+        $workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
+        $workShift = WorkShift::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
         $employee = Employee::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'work_site_id' => $workSite->id,
             'work_shift_id' => $workShift->id,
         ]);
         $payroll = Payroll::withoutGlobalScopes()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'employee_id' => $employee->id,
             'year' => 1404, 'month' => 1,
             'total_earnings' => 10_000_000, 'total_deductions' => 1_000_000, 'net_payment' => 9_000_000,
@@ -1456,7 +1456,7 @@ class BackupControllerTest extends TestCase
             'note' => 'Submitted for review',
         ]);
 
-        $exportData = FiscalYearService::exportData($this->company->id, [FiscalYearSection::PAYROLLS->value]);
+        $exportData = FiscalYearService::exportData($this->fiscalYear->id, [FiscalYearSection::PAYROLLS->value]);
 
         $this->assertArrayHasKey('payroll_status_histories', $exportData);
         $this->assertCount(1, $exportData['payroll_status_histories']);
@@ -1467,15 +1467,15 @@ class BackupControllerTest extends TestCase
 
     public function test_payrolls_section_export_includes_no_status_histories_when_there_are_none(): void
     {
-        $workSite = WorkSite::factory()->create(['company_id' => $this->company->id]);
-        $workShift = WorkShift::factory()->create(['company_id' => $this->company->id]);
+        $workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
+        $workShift = WorkShift::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
         $employee = Employee::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'work_site_id' => $workSite->id,
             'work_shift_id' => $workShift->id,
         ]);
         Payroll::withoutGlobalScopes()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'employee_id' => $employee->id,
             'year' => 1404, 'month' => 2,
             'total_earnings' => 5_000_000, 'total_deductions' => 500_000, 'net_payment' => 4_500_000,
@@ -1483,7 +1483,7 @@ class BackupControllerTest extends TestCase
             'status' => PayrollStatus::Draft,
         ]);
 
-        $exportData = FiscalYearService::exportData($this->company->id, [FiscalYearSection::PAYROLLS->value]);
+        $exportData = FiscalYearService::exportData($this->fiscalYear->id, [FiscalYearSection::PAYROLLS->value]);
 
         $this->assertArrayHasKey('payroll_status_histories', $exportData);
         $this->assertEmpty($exportData['payroll_status_histories']);
@@ -1502,9 +1502,9 @@ class BackupControllerTest extends TestCase
             ],
         ]);
 
-        $newCompany = FiscalYearService::importData($payload, ['name' => 'PSH Remap Co', 'fiscal_year' => 1404]);
+        $newFiscalYear = FiscalYearService::importData($payload, ['name' => 'PSH Remap Co', 'fiscal_year' => 1404]);
 
-        $newPayroll = Payroll::withoutGlobalScopes()->where('company_id', $newCompany->id)->first();
+        $newPayroll = Payroll::withoutGlobalScopes()->where('fiscal_year_id', $newFiscalYear->id)->first();
         $this->assertNotNull($newPayroll);
         $this->assertNotSame(1, $newPayroll->id, 'Payroll ID must be remapped');
 
@@ -1528,9 +1528,9 @@ class BackupControllerTest extends TestCase
             ],
         ]);
 
-        $newCompany = FiscalYearService::importData($payload, ['name' => 'PSH Skip Co', 'fiscal_year' => 1404]);
+        $newFiscalYear = FiscalYearService::importData($payload, ['name' => 'PSH Skip Co', 'fiscal_year' => 1404]);
 
-        $newPayroll = Payroll::withoutGlobalScopes()->where('company_id', $newCompany->id)->first();
+        $newPayroll = Payroll::withoutGlobalScopes()->where('fiscal_year_id', $newFiscalYear->id)->first();
         $this->assertNotNull($newPayroll);
 
         $this->assertSame(
@@ -1559,9 +1559,9 @@ class BackupControllerTest extends TestCase
             ],
         ]);
 
-        $newCompany = FiscalYearService::importData($payload, ['name' => 'Multi PSH Co', 'fiscal_year' => 1404]);
+        $newFiscalYear = FiscalYearService::importData($payload, ['name' => 'Multi PSH Co', 'fiscal_year' => 1404]);
 
-        $newPayroll = Payroll::withoutGlobalScopes()->where('company_id', $newCompany->id)->first();
+        $newPayroll = Payroll::withoutGlobalScopes()->where('fiscal_year_id', $newFiscalYear->id)->first();
         $this->assertNotNull($newPayroll);
 
         $histories = PayrollStatusHistory::where('payroll_id', $newPayroll->id)
@@ -1591,7 +1591,7 @@ class BackupControllerTest extends TestCase
             'contract_start_date' => null, 'contract_end_date' => null,
             'org_chart_id' => null, 'organization_unit_id' => $orgUnitId,
             'work_site_id' => $workSiteId, 'work_shift_id' => $workShiftId, 'contract_framework_id' => null,
-            'user_id' => null, 'is_active' => true, 'company_id' => 0,
+            'user_id' => null, 'is_active' => true, 'fiscal_year_id' => 0,
             'device_id' => null, 'leave_remain' => 1200,
         ];
     }
@@ -1601,28 +1601,28 @@ class BackupControllerTest extends TestCase
         return array_merge([
             'org_charts' => [],
             'work_sites' => [
-                ['id' => 1, 'name' => 'HQ', 'code' => 'HQ-01', 'company_id' => 0, 'address' => null, 'phone' => null, 'is_active' => true],
+                ['id' => 1, 'name' => 'HQ', 'code' => 'HQ-01', 'fiscal_year_id' => $this->fiscalYear->id, 'address' => null, 'phone' => null, 'is_active' => true],
             ],
             'work_site_contracts' => [],
             'work_shifts' => [
-                ['id' => 1, 'name' => 'Day', 'company_id' => 0, 'start_time' => '08:00', 'end_time' => '17:00', 'float' => 0, 'break' => 0, 'paid_leave' => 1200, 'is_active' => true],
+                ['id' => 1, 'name' => 'Day', 'fiscal_year_id' => 0, 'start_time' => '08:00', 'end_time' => '17:00', 'float' => 0, 'break' => 0, 'paid_leave' => 1200, 'is_active' => true],
             ],
             'organization_units' => [],
             'employees' => [
                 $this->makeMinimalEmployeeData(1, 1, 1, null),
             ],
             'salary_decrees' => [
-                ['id' => 1, 'employee_id' => 1, 'company_id' => 0, 'name' => 'Decree 2025',
+                ['id' => 1, 'employee_id' => 1, 'fiscal_year_id' => 0, 'name' => 'Decree 2025',
                     'start_date' => '2025-01-01', 'end_date' => null, 'daily_wage' => '1000000.00', 'description' => null, 'is_active' => true],
             ],
             'monthly_attendances' => [
-                ['id' => 1, 'employee_id' => 1, 'company_id' => 0, 'year' => 1404, 'month' => 1,
+                ['id' => 1, 'employee_id' => 1, 'fiscal_year_id' => 0, 'year' => 1404, 'month' => 1,
                     'start_date' => '2025-03-21', 'duration' => 26, 'work_days' => 26, 'present_days' => 26,
                     'absent_days' => 0, 'overtime' => 0, 'auto_overtime' => 0, 'undertime' => 0,
                     'mission' => 0, 'paid_leave' => 0, 'unpaid_leave' => 0, 'remote_work' => 0, 'friday' => 0, 'holiday' => 0],
             ],
             'payrolls' => [
-                ['id' => 1, 'employee_id' => 1, 'company_id' => 0, 'decree_id' => 1, 'monthly_attendance_id' => 1,
+                ['id' => 1, 'employee_id' => 1, 'fiscal_year_id' => 0, 'decree_id' => 1, 'monthly_attendance_id' => 1,
                     'year' => 1404, 'month' => 1, 'total_earnings' => '10000000.00', 'total_deductions' => '1000000.00',
                     'net_payment' => '9000000.00', 'employer_insurance' => '2000000.00',
                     'tax_base_amount' => '9000000.00', 'income_tax_amount' => '500000.00',

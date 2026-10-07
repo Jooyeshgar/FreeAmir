@@ -10,11 +10,11 @@ class DatabaseSeeder extends Seeder
     /**
      * Seed the application's database.
      */
-    public function run(?int $companyId = null): void
+    public function run(?int $fiscalYearId = null): void
     {
-        $companyId ??= (int) getActiveCompany();
-        $previousActiveCompanyId = config('active-company-id');
-        config(['active-company-id' => $companyId]);
+        $fiscalYearId ??= (int) getActiveFiscalYear();
+        $previousActiveFiscalYearId = config('active-fiscal-year-id');
+        config(['active-fiscal-year-id' => $fiscalYearId]);
 
         try {
             $this->call([
@@ -31,7 +31,7 @@ class DatabaseSeeder extends Seeder
                 RolesAndPermissionsSeeder::class,
             ]);
         } finally {
-            config(['active-company-id' => $previousActiveCompanyId]);
+            config(['active-fiscal-year-id' => $previousActiveFiscalYearId]);
         }
     }
 }

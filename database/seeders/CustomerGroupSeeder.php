@@ -7,11 +7,11 @@ use Illuminate\Database\Seeder;
 
 class CustomerGroupSeeder extends Seeder
 {
-    public function run(?int $companyId = null): void
+    public function run(?int $fiscalYearId = null): void
     {
-        $companyId ??= (int) getActiveCompany();
+        $fiscalYearId ??= (int) getActiveFiscalYear();
 
-        if (CustomerGroup::withoutGlobalScopes()->where('company_id', $companyId)->where('name', 'عمومی')->exists()) {
+        if (CustomerGroup::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->where('name', 'عمومی')->exists()) {
             return;
         }
 
@@ -20,7 +20,7 @@ class CustomerGroupSeeder extends Seeder
             ->create([
                 'name' => 'عمومی',
                 'description' => 'گروه مشتریان عمومی',
-                'company_id' => $companyId,
+                'fiscal_year_id' => $fiscalYearId,
             ]);
     }
 }

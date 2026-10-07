@@ -97,7 +97,7 @@ class AncillaryCostService
                 'number' => $nextNumber,
                 'invoice_id' => $data['invoice_id'],
                 'customer_id' => $data['customer_id'],
-                'company_id' => $data['company_id'],
+                'fiscal_year_id' => $data['fiscal_year_id'],
                 'date' => $data['date'] ?? now()->toDateString(),
                 'type' => AncillaryCostType::fromName($data['type']),
                 'amount' => $data['amount'],

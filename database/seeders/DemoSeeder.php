@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use Illuminate\Database\Seeder;
 use RuntimeException;
 
@@ -11,16 +11,16 @@ class DemoSeeder extends Seeder
     /**
      * Run the database seeds.
      */
-    public function run(?int $companyId = null): void
+    public function run(?int $fiscalYearId = null): void
     {
-        $companyId ??= (int) getActiveCompany();
+        $fiscalYearId ??= (int) getActiveFiscalYear();
 
-        if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
-            throw new RuntimeException("Company with ID {$companyId} does not exist.");
+        if (! FiscalYear::withoutGlobalScopes()->whereKey($fiscalYearId)->exists()) {
+            throw new RuntimeException("Fiscal year with ID {$fiscalYearId} does not exist.");
         }
 
-        $previousActiveCompanyId = config('active-company-id');
-        config(['active-company-id' => $companyId]);
+        $previousActiveFiscalYearId = config('active-fiscal-year-id');
+        config(['active-fiscal-year-id' => $fiscalYearId]);
 
         try {
             $this->call([
@@ -41,7 +41,7 @@ class DemoSeeder extends Seeder
                 HomeSeeder::class,
             ]);
         } finally {
-            config(['active-company-id' => $previousActiveCompanyId]);
+            config(['active-fiscal-year-id' => $previousActiveFiscalYearId]);
         }
     }
 }

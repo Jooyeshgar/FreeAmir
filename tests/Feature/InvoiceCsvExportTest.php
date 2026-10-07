@@ -4,9 +4,9 @@ namespace Tests\Feature;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\User;
@@ -23,31 +23,31 @@ class InvoiceCsvExportTest extends TestCase
 
     private Customer $customer;
 
-    private int $companyId;
+    private int $fiscalYearId;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create();
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'invoices.export'])
         );
 
-        $this->withCookies(['active-company-id' => $this->companyId]);
-        config(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
+        config(['active-fiscal-year-id' => $this->fiscalYearId]);
         App::setLocale('en');
 
-        $this->customer = Customer::create(['name' => 'Alpha Customer', 'company_id' => $this->companyId]);
+        $this->customer = Customer::create(['name' => 'Alpha Customer', 'fiscal_year_id' => $this->fiscalYearId]);
     }
 
     public function test_export_uses_filters_and_writes_the_nine_requested_columns(): void
     {
-        $document = Document::create(['number' => 7001, 'date' => '2026-06-10', 'creator_id' => $this->user->id, 'company_id' => $this->companyId]);
+        $document = Document::create(['number' => 7001, 'date' => '2026-06-10', 'creator_id' => $this->user->id, 'fiscal_year_id' => $this->fiscalYearId]);
 
         $included = $this->invoice([
             'number' => 1001,
@@ -58,7 +58,7 @@ class InvoiceCsvExportTest extends TestCase
         ]);
         $this->item($included, quantity: 2, unitPrice: 500, discount: 50, vat: 90);
 
-        $otherCustomer = Customer::create(['name' => 'Other Customer', 'company_id' => $this->companyId]);
+        $otherCustomer = Customer::create(['name' => 'Other Customer', 'fiscal_year_id' => $this->fiscalYearId]);
         $excludedByText = $this->invoice(['number' => 1002, 'customer_id' => $otherCustomer->id]);
         $this->item($excludedByText, quantity: 1, unitPrice: 300);
 

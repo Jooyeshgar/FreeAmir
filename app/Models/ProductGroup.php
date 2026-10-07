@@ -17,7 +17,7 @@ class ProductGroup extends Model
         'buyId',
         'sellId',
         'vat',
-        'company_id',
+        'fiscal_year_id',
         'sales_returns_subject_id',
         'income_subject_id',
         'cogs_subject_id',
@@ -33,7 +33,7 @@ class ProductGroup extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function ($model) {
-            $model->company_id ??= getActiveCompany();
+            $model->fiscal_year_id ??= getActiveFiscalYear();
         });
     }
 

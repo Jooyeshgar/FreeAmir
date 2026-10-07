@@ -2,13 +2,13 @@
 
 namespace Database\Factories;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\ProductGroup;
 use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\ProductGroup>
+ * @extends Factory<ProductGroup>
  */
 class ProductGroupFactory extends Factory
 {
@@ -19,19 +19,19 @@ class ProductGroupFactory extends Factory
      */
     public function definition(): array
     {
-        $companyId = Company::withoutGlobalScopes()->inRandomOrder()->value('id') ?? getActiveCompany() ?? Company::factory()->create()->id;
+        $fiscalYearId = FiscalYear::withoutGlobalScopes()->inRandomOrder()->value('id') ?? getActiveFiscalYear() ?? FiscalYear::factory()->create()->id;
 
         return [
             'name' => $this->faker?->persianProductCategory(),
             'vat' => 0,
-            'company_id' => $companyId,
+            'fiscal_year_id' => $fiscalYearId,
         ];
     }
 
     public function withSubjects(): static
     {
         return $this->afterCreating(function (ProductGroup $group) {
-            $companyId = $group->company_id;
+            $fiscalYearId = $group->fiscal_year_id;
 
             $map = [
                 'income_subject_id' => config('amir.sales_revenue'),
@@ -48,7 +48,7 @@ class ProductGroupFactory extends Factory
                 $subject = Subject::factory()
                     ->state([
                         'name' => $group->name,
-                        'company_id' => $companyId,
+                        'fiscal_year_id' => $fiscalYearId,
                     ])
                     ->withParent($parent)
                     ->for($group, 'subjectable')

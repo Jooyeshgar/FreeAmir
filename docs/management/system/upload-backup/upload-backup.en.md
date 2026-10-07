@@ -1,10 +1,7 @@
 # Upload a backup
 
-Management → System → Upload Backup imports data from a backup file into a company/fiscal year. Back up important data and test the recovery in a non-production environment first.
+Management → System → Upload Backup currently asks for a company name and fiscal-year number. Company and fiscal year are separate records; restored data must be linked to a company and a fiscal-year record. The form does not identify a destination company and sends the legacy `name`/`fiscal_year` payload to the import service, so this flow is not aligned with the separate `Company` and `FiscalYear` models. Do not use this page for recovery until the form and service are updated.
 
-1. Enter the destination company name: at most 50 characters, using letters, digits, and spaces.
-2. Enter a positive integer for the fiscal year.
-3. Select the backup ZIP and choose “Upload.” The file may be at most 100 MB, and the ZIP must contain a readable JSON file.
-4. After the success message redirects you to the home page, inspect the company/fiscal year and a sample of documents and balances.
+The ZIP may be at most 100 MB and must contain a readable JSON file. The import service needs `company_id` and `year` to create a fiscal-year record.
 
-A corrupt file, ZIP without JSON, or invalid JSON is rejected. This guide does not imply that an arbitrary ZIP has a compatible application data structure; see [Download a backup](../backups/backups.en.md) to create a suitable file.
+A corrupt file, ZIP without JSON, or invalid JSON is rejected. This guide does not imply that an arbitrary ZIP has a compatible application data structure; see [Download a backup](../backups/backups.en.md) to create a suitable file. After the flow is updated, test recovery in a non-production environment and reconcile balances before relying on it.

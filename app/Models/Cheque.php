@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Cheque extends Model
 {
     protected $fillable = [
-        'company_id',
+        'fiscal_year_id',
         'title',
         'amount',
         'write_date',
@@ -43,7 +43,7 @@ class Cheque extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function (Cheque $cheque) {
-            $cheque->company_id ??= getActiveCompany();
+            $cheque->fiscal_year_id ??= getActiveFiscalYear();
         });
     }
 

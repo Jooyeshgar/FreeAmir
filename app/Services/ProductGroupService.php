@@ -76,7 +76,7 @@ class ProductGroupService
 
     protected function syncSubjects(ProductGroup $productGroup): void
     {
-        $companyId = $productGroup->company_id ?? getActiveCompany();
+        $fiscalYearId = $productGroup->fiscal_year_id ?? getActiveFiscalYear();
 
         $subjectsConfig = [
             'income_subject_id' => [
@@ -108,7 +108,7 @@ class ProductGroupService
                 $subject = $this->subjectService->createSubject([
                     'name' => $productGroup->name,
                     'parent_id' => $parentId,
-                    'company_id' => $companyId,
+                    'fiscal_year_id' => $fiscalYearId,
                 ]);
             }
 

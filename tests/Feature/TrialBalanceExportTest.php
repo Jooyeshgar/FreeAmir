@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Enums\SubjectType;
-use App\Models\Company;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
@@ -21,7 +21,7 @@ class TrialBalanceExportTest extends TestCase
 
     private User $user;
 
-    private Company $company;
+    private FiscalYear $fiscalYear;
 
     private TrialBalanceService $service;
 
@@ -29,17 +29,17 @@ class TrialBalanceExportTest extends TestCase
     {
         parent::setUp();
 
-        $this->company = Company::factory()->create();
+        $this->fiscalYear = FiscalYear::factory()->create();
         $this->user = User::factory()->create();
-        $this->company->users()->attach($this->user);
+        $this->fiscalYear->users()->attach($this->user);
 
         foreach (['reports.trial-balance', 'reports.trial-balance.export-csv'] as $perm) {
             $this->user->givePermissionTo(Permission::firstOrCreate(['name' => $perm]));
         }
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => (string) $this->company->id]);
-        config(['active-company-id' => $this->company->id]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->fiscalYear->id]);
+        config(['active-fiscal-year-id' => $this->fiscalYear->id]);
 
         $this->service = app(TrialBalanceService::class);
     }
@@ -55,7 +55,7 @@ class TrialBalanceExportTest extends TestCase
 
     public function test_trial_balance_export_contains_csv_headers(): void
     {
-        Subject::create(['company_id' => $this->company->id, 'code' => '011', 'name' => 'بانک ها', 'parent_id' => null, 'type' => SubjectType::BOTH]);
+        Subject::create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '011', 'name' => 'بانک ها', 'parent_id' => null, 'type' => SubjectType::BOTH]);
 
         $response = $this->service->exportCsv(request());
 
@@ -73,10 +73,10 @@ class TrialBalanceExportTest extends TestCase
 
     public function test_trial_balance_export_includes_root_subjects_with_balances(): void
     {
-        $root = Subject::create(['company_id' => $this->company->id, 'code' => '011', 'name' => 'بانک ها', 'parent_id' => null, 'type' => SubjectType::BOTH]);
-        $child = Subject::create(['company_id' => $this->company->id, 'code' => '011004', 'name' => 'پاسارگاد', 'parent_id' => $root->id, 'type' => SubjectType::BOTH]);
+        $root = Subject::create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '011', 'name' => 'بانک ها', 'parent_id' => null, 'type' => SubjectType::BOTH]);
+        $child = Subject::create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '011004', 'name' => 'پاسارگاد', 'parent_id' => $root->id, 'type' => SubjectType::BOTH]);
 
-        $doc = Document::factory()->create(['company_id' => $this->company->id, 'number' => 5, 'date' => '2026-01-10']);
+        $doc = Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'number' => 5, 'date' => '2026-01-10']);
         Transaction::create(['document_id' => $doc->id, 'subject_id' => $child->id, 'value' => 1000000, 'user_id' => $this->user->id]);
         Transaction::create(['document_id' => $doc->id, 'subject_id' => $child->id, 'value' => -500000, 'user_id' => $this->user->id]);
 
@@ -98,7 +98,7 @@ class TrialBalanceExportTest extends TestCase
 
         $createSubject = function (string $code, string $name, ?int $parentId = null) use ($subjectType): Subject {
             $id = DB::table('subjects')->insertGetId([
-                'company_id' => $this->company->id,
+                'fiscal_year_id' => $this->fiscalYear->id,
                 'code' => $code,
                 'name' => $name,
                 'parent_id' => $parentId,
@@ -114,7 +114,7 @@ class TrialBalanceExportTest extends TestCase
         $ledger = $createSubject('011004', 'بانک ها', $root->id);
         $detail = $createSubject('011004001', 'بانک پاسارگاد', $ledger->id);
 
-        $doc = Document::factory()->create(['company_id' => $this->company->id, 'number' => 5, 'date' => '2026-01-10']);
+        $doc = Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'number' => 5, 'date' => '2026-01-10']);
         Transaction::create(['document_id' => $doc->id, 'subject_id' => $detail->id, 'value' => -750000, 'user_id' => $this->user->id]);
 
         $response = $this->service->exportCsv(request()->merge(['parent_id' => $ledger->id]));
@@ -132,8 +132,8 @@ class TrialBalanceExportTest extends TestCase
 
     public function test_trial_balance_export_remain_bed_and_bes_reflect_net_balance(): void
     {
-        $root = Subject::create(['company_id' => $this->company->id, 'code' => '011', 'name' => 'بانک', 'parent_id' => null, 'type' => SubjectType::BOTH]);
-        $doc = Document::factory()->create(['company_id' => $this->company->id, 'number' => 3, 'date' => '2026-01-01']);
+        $root = Subject::create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '011', 'name' => 'بانک', 'parent_id' => null, 'type' => SubjectType::BOTH]);
+        $doc = Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'number' => 3, 'date' => '2026-01-01']);
         // Net debit: value=-300 (debit) + value=100 (credit) → net = -200 → RemainBed=200
         Transaction::create(['document_id' => $doc->id, 'subject_id' => $root->id, 'value' => -300, 'user_id' => $this->user->id]);
         Transaction::create(['document_id' => $doc->id, 'subject_id' => $root->id, 'value' => 100, 'user_id' => $this->user->id]);

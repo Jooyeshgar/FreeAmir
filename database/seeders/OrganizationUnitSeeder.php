@@ -9,7 +9,7 @@ class OrganizationUnitSeeder extends Seeder
 {
     public function run(): void
     {
-        $companyId = (int) getActiveCompany();
+        $fiscalYearId = (int) getActiveFiscalYear();
 
         $tree = [
             [
@@ -48,14 +48,14 @@ class OrganizationUnitSeeder extends Seeder
             ],
         ];
 
-        $this->seedUnits($tree, null, $companyId);
+        $this->seedUnits($tree, null, $fiscalYearId);
     }
 
-    private function seedUnits(array $units, ?int $parentId, int $companyId): void
+    private function seedUnits(array $units, ?int $parentId, int $fiscalYearId): void
     {
         foreach ($units as $unit) {
             $record = OrganizationUnit::withoutGlobalScopes()->firstOrCreate(
-                ['company_id' => $companyId, 'code' => $unit['code']],
+                ['fiscal_year_id' => $fiscalYearId, 'code' => $unit['code']],
                 [
                     'name' => $unit['name'],
                     'parent_id' => $parentId,
@@ -65,7 +65,7 @@ class OrganizationUnitSeeder extends Seeder
             );
 
             if (! empty($unit['children'])) {
-                $this->seedUnits($unit['children'], $record->id, $companyId);
+                $this->seedUnits($unit['children'], $record->id, $fiscalYearId);
             }
         }
     }

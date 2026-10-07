@@ -87,7 +87,7 @@
         <article class="rounded-2xl border border-sky-200/70 bg-linear-to-br from-white to-sky-50/60 p-5 dark:border-sky-900/60 dark:from-slate-900 dark:to-sky-950/20">
             <p class="text-xs font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">{{ __('Assigned companies') }}</p>
             <div class="mt-3 flex items-center justify-between gap-3">
-                <strong class="text-2xl font-bold text-slate-900 dark:text-white">{{ localizeNumber(number_format($user->companies->count())) }}</strong>
+                <strong class="text-2xl font-bold text-slate-900 dark:text-white">{{ localizeNumber(number_format($user->fiscalYears->count())) }}</strong>
                 <span class="rounded-xl bg-sky-100 p-2.5 text-sky-700 dark:bg-sky-950 dark:text-sky-300">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01" /></svg>
                 </span>
@@ -115,7 +115,7 @@
         <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white/95 dark:border-slate-800 dark:bg-slate-900/95">
             <header class="flex flex-col gap-1 border-b border-slate-200 px-5 py-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between">
                 <h2 class="font-bold text-slate-900 dark:text-white">{{ __('Assigned companies') }}</h2>
-                <p class="text-xs font-medium text-slate-500 dark:text-slate-400">{{ trans_choice(':count company|:count companies', $user->companies->count(), ['count' => localizeNumber(number_format($user->companies->count()))]) }}</p>
+                <p class="text-xs font-medium text-slate-500 dark:text-slate-400">{{ trans_choice(':count company|:count companies', $user->fiscalYears->count(), ['count' => localizeNumber(number_format($user->fiscalYears->count()))]) }}</p>
             </header>
 
             <div class="overflow-x-auto">
@@ -132,26 +132,26 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($user->companies as $company)
+                        @forelse ($user->fiscalYears as $company)
                             <tr class="border-slate-200 align-top transition-colors odd:bg-white even:bg-slate-50/70 hover:bg-indigo-50/70 dark:border-slate-800 dark:odd:bg-slate-900 dark:even:bg-slate-950/40 dark:hover:bg-indigo-950/25">
                                 <td class="min-w-52">
-                                    <a href="{{ route('companies.show', $company) }}" class="font-medium text-slate-900 transition hover:text-indigo-700 hover:underline dark:text-slate-100 dark:hover:text-indigo-300">{{ $company->name }}</a>
-                                    <p class="mt-1 max-w-56 truncate text-xs text-slate-500">{{ $company->address ? localizeNumber($company->address) : __('No address') }}</p>
+                                    <a href="{{ route('companies.show', $company->company) }}" class="font-medium text-slate-900 transition hover:text-indigo-700 hover:underline dark:text-slate-100 dark:hover:text-indigo-300">{{ $company->company->name }}</a>
+                                    <p class="mt-1 max-w-56 truncate text-xs text-slate-500">{{ $company->company->address ? localizeNumber($company->company->address) : __('No address') }}</p>
                                 </td>
-                                <td class="whitespace-nowrap font-medium">{{ localizeNumber($company->fiscal_year) }}</td>
-                                <td class="whitespace-nowrap">{{ __($company->currency) }}</td>
+                                <td class="whitespace-nowrap font-medium">{{ localizeNumber($company->year) }}</td>
+                                <td class="whitespace-nowrap">{{ __($company->company->currency) }}</td>
                                 <td class="min-w-40">
-                                    <p class="font-medium text-slate-800 dark:text-slate-100">{{ $company->national_code ?: '—' }}</p>
+                                    <p class="font-medium text-slate-800 dark:text-slate-100">{{ $company->company->national_code ?: '—' }}</p>
                                     <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                                         {{ __('Economic code') }}:
-                                        <span>{{ $company->economical_code ?: '—' }}</span>
+                                        <span>{{ $company->company->economical_code ?: '—' }}</span>
                                     </p>
                                 </td>
                                 <td class="min-w-40">
-                                    <p class="font-medium text-slate-800 dark:text-slate-100">{{ $company->phone_number ?: '—' }}</p>
+                                    <p class="font-medium text-slate-800 dark:text-slate-100">{{ $company->company->phone_number ?: '—' }}</p>
                                     <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
                                         {{ __('Postal code') }}:
-                                        <span>{{ $company->postal_code ?: '—' }}</span>
+                                        <span>{{ $company->company->postal_code ?: '—' }}</span>
                                     </p>
                                 </td>
                                 <td>

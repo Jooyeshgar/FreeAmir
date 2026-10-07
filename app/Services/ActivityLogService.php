@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use App\Models\Activity;
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -127,13 +127,13 @@ class ActivityLogService
         $modelTypes = collect($models)->pluck('model_type')->filter()->unique()->values()->all();
         $modelIds = collect($models)->pluck('model_id')->filter(fn (mixed $id): bool => $id !== null)->unique()->values()->all();
         $modelNumbers = collect($models)->pluck('model_number')->filter(fn (mixed $number): bool => $number !== null && $number !== '')->unique()->values()->all();
-        $companyIds = collect($models)->pluck('company_id')->filter()->unique()->values()->all();
+        $fiscalYearIds = collect($models)->pluck('fiscal_year_id')->filter()->unique()->values()->all();
 
         activity('request')->causedBy($actor)->event(strtolower($method))->withProperties([
             'route' => $routeName,
             'method' => $method,
             'path' => '/'.ltrim($request->path(), '/'),
-            'company_id' => $this->requestCompanyId($request),
+            'fiscal_year_id' => $this->requestFiscalYearId($request),
             'ip_address' => $request->ip(),
             'user_agent' => Str::limit((string) $request->userAgent(), 500, '…'),
             'request_input' => $this->sanitize($request->all()),
@@ -141,7 +141,7 @@ class ActivityLogService
             'model_types' => $modelTypes,
             'model_ids' => $modelIds,
             'model_numbers' => $modelNumbers,
-            'company_ids' => $companyIds,
+            'fiscal_year_ids' => $fiscalYearIds,
             'request_time' => now()->toAtomString(),
             ...$this->impersonationProperties($actor, $authenticatedUser),
         ])->log(trim($method.' '.($routeName ?: '/'.ltrim($request->path(), '/'))));
@@ -182,7 +182,7 @@ class ActivityLogService
             ...$changes,
             'model_label' => $this->modelLabel($model),
             'model_number' => $this->modelNumber($model),
-            'company_id' => $this->modelCompanyId($model, $request),
+            'fiscal_year_id' => $this->modelFiscalYearId($model, $request),
             'route' => $request->route()?->getName(),
             'method' => $request->method(),
             'ip_address' => $request->ip(),
@@ -231,8 +231,8 @@ class ActivityLogService
                         ->orWhereRaw('CAST(details AS CHAR) LIKE ?', ["%{$reference}%"]);
                 });
             })
-            ->when($filters['company_id'] ?? null, fn ($query, int|string $companyId) => $query->where(function ($query) use ($companyId) {
-                $query->where('details->company_id', (int) $companyId)->orWhereJsonContains('details->company_ids', (int) $companyId);
+            ->when($filters['fiscal_year_id'] ?? null, fn ($query, int|string $fiscalYearId) => $query->where(function ($query) use ($fiscalYearId) {
+                $query->where('details->fiscal_year_id', (int) $fiscalYearId)->orWhereJsonContains('details->fiscal_year_ids', (int) $fiscalYearId);
             }))
             ->when($filters['date_from'] ?? null, fn ($query, string $date) => $query->whereDate('created_at', '>=', $date))
             ->when($filters['date_to'] ?? null, fn ($query, string $date) => $query->whereDate('created_at', '<=', $date));
@@ -246,7 +246,7 @@ class ActivityLogService
             'metrics' => $this->metrics(),
             'users' => User::query()->whereIn('id', Activity::query()->whereNotNull('user_id')->select('user_id'))->orderBy('name')->get(['id', 'name', 'email']),
             'impersonatedUsers' => User::query()->whereIn('id', $impersonatedUserIds)->get(['id', 'name', 'email'])->keyBy('id'),
-            'companies' => Company::query()->orderByDesc('fiscal_year')->orderBy('name')->get(['id', 'name', 'fiscal_year']),
+            'fiscalYears' => FiscalYear::query()->with('company:id,name')->orderByDesc('year')->get(['id', 'company_id', 'year']),
             'modelTypes' => $this->availableModelTypes(),
             'filters' => $filters,
         ];
@@ -430,7 +430,7 @@ class ActivityLogService
             'event' => $event,
             'model_label' => $this->modelLabel($model),
             'model_number' => $this->modelNumber($model),
-            'company_id' => $this->modelCompanyId($model, $request),
+            'fiscal_year_id' => $this->modelFiscalYearId($model, $request),
             'old' => $changes['old'] ?? [],
             'attributes' => $changes['attributes'] ?? [],
         ];
@@ -520,30 +520,30 @@ class ActivityLogService
         return is_scalar($number) && (string) $number !== '' ? $number : null;
     }
 
-    private function modelCompanyId(Model $model, Request $request): ?int
+    private function modelFiscalYearId(Model $model, Request $request): ?int
     {
-        if ($model instanceof Company) {
+        if ($model instanceof FiscalYear) {
             return (int) $model->getKey();
         }
 
-        if (array_key_exists('company_id', $model->getAttributes())) {
-            $companyId = $model->getAttribute('company_id');
+        if (array_key_exists('fiscal_year_id', $model->getAttributes())) {
+            $fiscalYearId = $model->getAttribute('fiscal_year_id');
 
-            return $companyId ? (int) $companyId : null;
+            return $fiscalYearId ? (int) $fiscalYearId : null;
         }
 
-        return $this->requestCompanyId($request);
+        return $this->requestFiscalYearId($request);
     }
 
-    private function requestCompanyId(Request $request): ?int
+    private function requestFiscalYearId(Request $request): ?int
     {
         if ($request->hasSession() && $request->session()->get('interface_mode') === 'management') {
             return null;
         }
 
-        $companyId = config('active-company-id') ?? $request->cookie('active-company-id');
+        $fiscalYearId = config('active-fiscal-year-id') ?? $request->cookie('active-fiscal-year-id');
 
-        return $companyId ? (int) $companyId : null;
+        return $fiscalYearId ? (int) $fiscalYearId : null;
     }
 
     /**

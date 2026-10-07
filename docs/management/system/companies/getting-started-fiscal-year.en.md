@@ -6,13 +6,15 @@
 
 **[General fiscal-year concepts](fiscal-year.en.md)**
 
-This guide follows an accountant's path from first sign-in and choosing a company through checking the home dashboard and closing a fiscal year. In Amir, selecting an active company also determines the fiscal year and the scope of documents, invoices, accounts, inventory, and reports.
+This guide follows an accountant's path from first sign-in and choosing a fiscal year through checking the home dashboard and closing a fiscal year. A company is the business identity and can own multiple fiscal years. The active fiscal year scopes that period's documents, invoices, accounts, inventory, and reports.
+
+> **Current limitation:** The data model separates companies from fiscal years and assigns user access through `fiscal_year_user`, but several screens still use the old “one company per fiscal year” structure. The post-login redirect, fiscal-year creation and copying, header selector, backup download/upload, and closing wizard are not yet aligned with the separate models. The walkthrough below describes intended behavior; do not rely on those flows to create, select, back up, restore, or close a fiscal year until they are updated.
 
 ## Before you begin
 
-- Always check the company name and fiscal year shown at the top of the page before daily work.
-- Before copying data or closing a year, create a backup through **Management → System → Backup** and keep a copy.
-- Your role must have permission for each operation; to change or close a year, you must also have access to that company/year record.
+- Once the selector is updated, check the company name and active fiscal year at the top of the page before daily work.
+- Before copying data or closing a year, keep a recoverable backup. The download page is not yet aligned with the refactor; see the [backup guide](../backups/backups.en.md).
+- Your role must have permission for each operation; to select or close a year, you must also have access to that fiscal year.
 - Current application behavior treats the fiscal year as running from the first of Farvardin through the end of Esfand of the recorded Jalali year.
 
 ### Main permissions
@@ -21,34 +23,31 @@ This guide follows an accountant's path from first sign-in and choosing a compan
 |---|---|
 | Open the home dashboard | `home` |
 | View financial summary values | `home.summary` plus the relevant domain permission |
-| Change active company/year | `change-company` |
-| View companies and years | `companies.index` |
-| Create a company/year | `companies.create` and `companies.store` |
+| Change active fiscal year | `change-company` |
+| View companies and fiscal years | `companies.index` |
+| Create a company or fiscal year | `companies.create` and `companies.store` |
 | View the closing wizard | `companies.closing-wizard` |
 | Run closing stages 1 and 3 | `companies.closing-wizard.step1` and `companies.closing-wizard.step3` |
 | Create a backup | `backups.create` and `backups.export` |
 
-Visible menu items and buttons depend on permissions, so two users in the same company may see different dashboards or menus.
+Visible menu items and buttons depend on permissions, and users may also have access to different fiscal years.
 
 ## What is the difference between a company and a fiscal year in Amir?
 
-The interface discusses “company” and “fiscal year” separately, but the current application structure has no separate fiscal-year model. Each row in the company list holds both:
+A company holds the business identity; a fiscal year is a period that belongs to that company. One company can have multiple fiscal years, such as 1404 and 1405. Each fiscal year has its own record, and documents, invoices, accounts, and related data are stored with that fiscal year's ID.
 
-- Company details, such as name, identifiers, and currency; and
-- One fiscal year, for example 1405.
-
-Thus “Example Company — 1404” and “Example Company — 1405” are two independent records. There is no shared business identifier connecting those rows; their practical relationship comes from a similar name, user access, and copied prior-year data.
+User access is assigned by fiscal year. Access to one year does not grant access to the company's other years. Roles determine which operations a user may perform; fiscal-year assignments determine which period's data the user can select and access.
 
 Keep that distinction in mind for these operations:
 
 - **Copy when creating a year:** Creates new records for selected sections in the destination year; it does not delete the source data.
 - **Transfer a document or invoice:** Started from that document's or invoice's page with transfer permission; it creates a copy with a destination number. This is different from copying all base data when creating a year.
-- **Import a backup:** Creates a new company/year record from a ZIP file rather than directly replacing the current record.
-- **Close a year:** Marks the current year closed, creates a new record for the next year, and generates closing/opening documents.
+- **Import a backup:** Intended to load fiscal-year data from a ZIP file; the current form is not aligned with the separate models and is not reliable for recovery.
+- **Close a year:** Closes the current year, creates the next fiscal year for the same company, and generates closing/opening documents.
 
 ## First sign-in and first company
 
-After sign-in, a user without any company is directed to the **Create your company** form. If email verification is enabled in system settings, the account must first be verified.
+In the intended flow, a user without access to any fiscal year is directed to the **Create your company** form after sign-in. If email verification is enabled in system settings, the account must first be verified. The current redirect still checks the old `companies` relationship, so it is not aligned with the new model. The form asks for a company name and year, but its save path creates a fiscal year without `company_id` and submits company data using the old schema, so first-time setup is not reliable.
 
 The first-company form asks only for:
 
@@ -59,16 +58,9 @@ The first-company form asks only for:
 | Currency | Optional; an empty value is stored as `Rial` |
 | Phone number | Required 11-digit mobile number starting with `09` |
 
-After a successful submission, the application automatically:
+After the creation flow is aligned, it should create the company, its fiscal year, the creator's access to that year, and the period's initial data together. Do not assume the current form has completed these steps successfully.
 
-1. Creates default accounts, configurations, banks, and initial customer, product, and service groups.
-2. Creates a warehouse named “Main Warehouse” with code `MAIN`.
-3. Associates the creator with the company and assigns the “Manager” role.
-4. Saves the new company/year as the active scope and opens the home dashboard.
-
-If initial setup fails, the application displays “Company setup failed. No data was saved” and rolls back the database operation.
-
-### Suggested checks after creating the first company
+### Checks after the creation flow is restored
 
 1. Check the company name and fiscal year at the top of the page.
 2. Review default accounts under **Management → Finance → Accounts**.
@@ -76,27 +68,23 @@ If initial setup fails, the application displays “Company setup failed. No dat
 4. Set up the necessary users and permissions.
 5. Complete the currency and company identity details before recording real documents.
 
-## Identify and change the active company/year
+## Identify and change the active fiscal year
 
-The active-scope selector in the company interface header displays “company name - fiscal year.” To switch:
+The intended header label is “company name - fiscal year.” The current selector still reads the removed `companies` relationship and `fiscal_year` column, so its list and selection action are not reliable. Once corrected, select only a year assigned to you through `fiscal_year_user`.
 
-1. Open the company/year selector.
-2. Select one of the rows assigned to you.
-3. After returning to the dashboard, check the company name and year in the header again.
+The `active-fiscal-year-id` cookie now stores a fiscal-year ID, and middleware checks the user's access to that year. The selector still reads the old `companies` relationship, and its automatic fallback queries the removed `fiscal_year` column, so selecting or automatically setting the active year is not aligned with the new model.
 
-The application retains your selection in the browser. If that selection is deleted or no longer accessible, it is discarded. With no valid selection, the application tries to activate an assigned year matching the current Jalali year; otherwise it displays “Please select a company.”
-
-Many application models—including documents, invoices, accounts, customers, products, warehouses, banks, cheques, employees, and payroll—are restricted to the active company/year ID. After a switch:
+Financial and operational models—including documents, invoices, accounts, customers, products, warehouses, banks, cheques, employees, and payroll—are restricted to the active fiscal-year ID. After switching years:
 
 - Document and invoice lists and numbering belong to the destination year.
 - Accounts, balances, stock, and base data load from that record.
 - Dashboard indicators and most reports are calculated from the new scope.
 
-Changing the active company does not transfer or merge data. It only changes your current working scope.
+Changing the active fiscal year does not transfer or merge data. It only changes your current working scope.
 
 ## Create another company or fiscal year
 
-The interface path is **Management → System → Companies → Create new company**. In addition to name and year, the full form includes:
+The current **Management → System → Companies → Create new company** form still combines company and fiscal-year data using the old structure. It is not aligned with the separate `Company` and `FiscalYear` models, so it is not currently a reliable way to create or copy a year. The form requests these fields:
 
 | Field | Important restriction |
 |---|---|
@@ -113,20 +101,15 @@ The interface path is **Management → System → Companies → Create new compa
 | Postal code | Optional integer only |
 | Phone number | Optional numeric 11-digit mobile number starting with `09` |
 
-### Create from scratch
+### Intended behavior: create from scratch
 
-If **Copy data from** is empty, selections in the copy table have no effect. The application creates an independent record and the same default base data as for the first company, including Main Warehouse. Check or enter opening balances and business-specific base data afterward.
+After the flow is corrected, leaving **Copy data from** empty should create a fiscal year with default base data, including Main Warehouse. Check or enter opening balances and business-specific base data afterward.
 
-### Create by copying an existing year
+### Intended behavior: copy an existing year
 
-If you have access to existing company/year records, the **Previous years** section appears:
+The corrected flow should list only fiscal years assigned to you in **Previous years**, then let you select a source year, sections to copy, and the destination company. Current submission code still passes legacy company/year fields to the copy service, so copying a year is not reliable.
 
-1. Choose a source in **Copy data from**. Only years assigned to you are valid.
-2. Select the required sections in the table.
-3. Enter the destination name, year, and other company details.
-4. Select **Create**, then check the destination year in the header selector.
-
-The current interface can copy configurations, banks and bank accounts, customers, products, warehouses, services, accounts, documents, document files, invoices, cheques, employees, payroll, official holidays, and tax tables. Monthly budgets are also fetched and copied with the accounts section.
+The copy service supports configurations, banks and bank accounts, customers, products, warehouses, services, accounts, documents, document files, invoices, cheques, employees, payroll, official holidays, and tax tables. Monthly budgets are also fetched and copied with the accounts section.
 
 All sections are selected by default, and the interface keeps **Accounts** mandatory. This matters because bank accounts, customers, products, services, and transactions need account mappings in the destination. Other important dependencies include:
 
@@ -139,7 +122,7 @@ If some dependent mappings are absent, current code may reject or skip dependent
 
 ## Use the home dashboard
 
-After sign-in or changing companies, the **Home** dashboard is personalized by user permissions. Accounting, sales, warehouse, services, CRM, and employee roles may see different cards and shortcuts.
+After sign-in or changing the active fiscal year, the **Home** dashboard is personalized by user permissions. Accounting, sales, warehouse, services, CRM, and employee roles may see different cards and shortcuts.
 
 ### Financial amounts
 
@@ -168,6 +151,8 @@ Draft, pending, pro forma, rejected, or unapproved invoices are excluded from sa
 To check a result, reconcile a card with the detailed report for its domain. For example, compare total sales against active-year sales invoices and profit against the ledger of temporary accounts. A dashboard card does not replace an accounting report or period-end reconciliation.
 
 ## Close a fiscal year with the closing wizard
+
+> **Current limitation:** Closing routes and controller methods still treat `Company` as the fiscal year, although closing state now belongs to `FiscalYear`. Do not run the wizard until those routes and methods are aligned.
 
 Open **Management → System → Companies** and select **Close fiscal year** on the open-year row. The button is available only with the required permission and for a year assigned to you.
 
@@ -210,9 +195,9 @@ This stage is enabled only after stage 1 has run and the profit-and-loss summary
 
 1. Reverses all nonzero permanent account balances and creates an approved closing document.
 2. Marks the current year closed with its closing time and user.
-3. Creates a new record with the same company details and fiscal year “current year + 1.”
+3. Creates the next fiscal year (“current year + 1”) for the same company.
 4. Copies accounts, configurations, banks, customers, products, warehouses, services, and employees to the new year.
-5. Carries the same users' access and separate Moadian certificate/key files into the new year.
+5. Assigns the prior users access to the new year too and carries the separate Moadian certificate/key files into it.
 6. Creates opening document number 1 in the new year from the reversal of the closing document.
 7. Selects the new year as the active scope.
 
@@ -234,10 +219,10 @@ Opening transactions are built by matching source and destination account codes.
 
 | Message or condition | Cause and action |
 |---|---|
-| “You do not have access to this company” | The user is not assigned to the destination company/year record; review their assignment. |
+| “You do not have access to this fiscal year” | The user is not assigned to the destination year; review their fiscal-year access. |
 | Companies or Close Year is missing | The role lacks the corresponding `companies.*` permission. |
 | No active company appears | No assigned record matches the current Jalali year; select a valid row from the header selector. |
-| Company creation failed and no data was saved | Initial data creation or copying failed; check inputs and error logs, then retry. |
+| First-time setup or year copying fails | The form is not aligned with separate company and fiscal-year models; do not repeat the operation through the current interface. |
 | Draft-document check fails | Approve documents without an approval date or delete them if permitted. |
 | Negative-inventory check fails | Correct negative product quantities using warehouse records and movements. |
 | Document-number sequence check fails | Investigate gaps and correct numbering with the document-ordering tool and accountant review. |
@@ -250,7 +235,7 @@ Opening transactions are built by matching source and destination account codes.
 - Closing a year does not currently impose a global lock on all create/edit forms. Closed records also remain selectable in the header. After closing, users should avoid new postings in the closed year without access controls and an internal procedure.
 - Stage 1 has no rollback or rerun action in the interface.
 - The wizard's automatic checks are limited to the three listed above; they do not replace trial balance, document checks, stocktaking, or financial-manager approval.
-- The creation form has no visible uniqueness check for company name plus fiscal year; verify that a duplicate record does not exist before submitting.
+- The database enforces one record for each company and year combination. If the year is rejected as a duplicate, check that company's fiscal-year list.
 - The application does not determine legal or tax rules for closing profit and loss; the financial lead must approve them.
 
 ## Related guides

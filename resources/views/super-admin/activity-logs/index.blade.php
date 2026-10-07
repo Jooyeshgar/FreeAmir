@@ -121,11 +121,11 @@
                 <label class="form-control">
                     <span
                         class="mb-2 block text-xs font-semibold text-slate-600 dark:text-slate-300">{{ __('Company') }}</span>
-                    <select name="company_id" class="select select-bordered w-full">
+                    <select name="fiscal_year_id" class="select select-bordered w-full">
                         <option value="">{{ __('All companies') }}</option>
-                        @foreach ($companyOptions as $company)
-                            <option value="{{ $company['value'] }}" @selected((string) ($filters['company_id'] ?? '') === (string) $company['value'])>
-                                {{ $company['label'] }}
+                        @foreach ($fiscalYearOptions as $fiscalYear)
+                            <option value="{{ $fiscalYear['value'] }}" @selected((string) ($filters['fiscal_year_id'] ?? '') === (string) $fiscalYear['value'])>
+                                {{ $fiscalYear['label'] }}
                             </option>
                         @endforeach
                     </select>

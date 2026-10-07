@@ -74,7 +74,7 @@ class AttendanceLogController extends Controller
         AttendanceLog::create(array_merge(
             $validated,
             [
-                'company_id' => getActiveCompany(),
+                'fiscal_year_id' => getActiveFiscalYear(),
                 'log_date' => $gregorianLogDate,
                 'is_manual' => $request->boolean('is_manual'),
             ]
@@ -335,10 +335,10 @@ class AttendanceLogController extends Controller
 
         $startDate = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($validated['start_date']));
         $endDate = $startDate->copy()->addDays((int) $validated['duration'] - 1);
-        $companyId = getActiveCompany();
+        $fiscal_year_id = getActiveFiscalYear();
 
         $holidayDates = PublicHoliday::withoutGlobalScopes()
-            ->where('company_id', $companyId)
+            ->where('fiscal_year_id', $fiscal_year_id)
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->pluck('date')
             ->map(fn ($d) => $d instanceof Carbon ? $d->toDateString() : (string) $d)
@@ -349,7 +349,7 @@ class AttendanceLogController extends Controller
 
         $existingLogs = [];
         if (! $override) {
-            $existingLogs = AttendanceLog::where('company_id', $companyId)
+            $existingLogs = AttendanceLog::where('fiscal_year_id', $fiscal_year_id)
                 ->whereIn('employee_id', $validated['employee_ids'])
                 ->whereBetween('log_date', [$startDate->toDateString(), $endDate->toDateString()])
                 ->get(['employee_id', 'log_date'])
@@ -361,7 +361,7 @@ class AttendanceLogController extends Controller
                 ->toArray();
         }
 
-        DB::transaction(function () use ($validated, $startDate, $companyId, $holidayDates, $employees, $override, $existingLogs) {
+        DB::transaction(function () use ($validated, $startDate, $fiscal_year_id, $holidayDates, $employees, $override, $existingLogs) {
             foreach ($validated['employee_ids'] as $employeeId) {
                 $employee = $employees->get($employeeId);
                 if (! $employee) {
@@ -405,7 +405,7 @@ class AttendanceLogController extends Controller
                     }
 
                     $log = AttendanceLog::updateOrCreate(
-                        ['employee_id' => $employeeId, 'company_id' => $companyId, 'log_date' => $dateStr],
+                        ['employee_id' => $employeeId, 'fiscal_year_id' => $fiscal_year_id, 'log_date' => $dateStr],
                         ['entry_time' => $defaultEntry, 'exit_time' => $exitTime, 'is_manual' => false],
                     );
 
@@ -454,7 +454,7 @@ class AttendanceLogController extends Controller
         $preview = $importService->preview(
             $request->file('file'),
             $type,
-            getActiveCompany(),
+            getActiveFiscalYear(),
             $dateFrom,
             $dateTo
         );
@@ -488,7 +488,7 @@ class AttendanceLogController extends Controller
         $result = $importService->import(
             $tmpPath,
             $type,
-            getActiveCompany(),
+            getActiveFiscalYear(),
             $dateFrom,
             $dateTo,
             $duplicateMode

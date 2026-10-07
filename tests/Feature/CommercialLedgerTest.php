@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use App\Enums\CommercialLedgerType;
 use App\Models\CommercialLedgerExport;
-use App\Models\Company;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
@@ -20,7 +20,7 @@ class CommercialLedgerTest extends TestCase
 {
     use RefreshDatabase;
 
-    private Company $company;
+    private FiscalYear $fiscalYear;
 
     private User $user;
 
@@ -36,32 +36,32 @@ class CommercialLedgerTest extends TestCase
 
         app()->setLocale('fa');
         Storage::fake('local');
-        $this->company = Company::factory()->create(['fiscal_year' => 1403]);
+        $this->fiscalYear = FiscalYear::factory()->create(['year' => 1403]);
         $this->user = User::factory()->create();
-        $this->company->users()->syncWithoutDetaching([$this->user->id]);
+        $this->fiscalYear->users()->syncWithoutDetaching([$this->user->id]);
 
         foreach (['index', 'store', 'show', 'download', 'destroy'] as $action) {
             $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'commercial-ledgers.'.$action]));
         }
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => (string) $this->company->id]);
-        config(['active-company-id' => $this->company->id]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->fiscalYear->id]);
+        config(['active-fiscal-year-id' => $this->fiscalYear->id]);
 
         $this->general = Subject::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'parent_id' => null,
             'code' => '101',
             'name' => 'دارایی جاری',
         ]);
         $this->subsidiary = Subject::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'parent_id' => $this->general->id,
             'code' => '101001',
             'name' => 'بانک',
         ]);
         $this->detailed = Subject::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'parent_id' => $this->subsidiary->id,
             'code' => '101001001',
             'name' => 'بانک ملت',
@@ -158,13 +158,13 @@ class CommercialLedgerTest extends TestCase
     public function test_all_ledger_types_group_transactions_at_general_or_subsidiary_level(): void
     {
         $otherSubsidiary = Subject::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'parent_id' => $this->general->id,
             'code' => '101002',
             'name' => 'صندوق',
         ]);
         $otherDetailed = Subject::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'parent_id' => $otherSubsidiary->id,
             'code' => '101002001',
             'name' => 'صندوق مرکزی',
@@ -228,11 +228,11 @@ class CommercialLedgerTest extends TestCase
         $this->assertMatchesRegularExpression('/title="[^"]+">\s*۱\s*<\/span>/', $index->getContent());
         $this->get(route('commercial-ledgers.download', $export))->assertDownload();
 
-        $otherCompany = Company::factory()->create(['fiscal_year' => 1403]);
-        config(['active-company-id' => $otherCompany->id]);
+        $otherFiscalYear = FiscalYear::factory()->create(['year' => 1403]);
+        config(['active-fiscal-year-id' => $otherFiscalYear->id]);
         $this->get(route('commercial-ledgers.show', $export->id))->assertNotFound();
 
-        config(['active-company-id' => $this->company->id]);
+        config(['active-fiscal-year-id' => $this->fiscalYear->id]);
         $path = $export->file_path;
         $this->delete(route('commercial-ledgers.destroy', $export))->assertRedirect();
         $this->assertDatabaseMissing('commercial_ledger_exports', ['id' => $export->id]);
@@ -280,7 +280,7 @@ class CommercialLedgerTest extends TestCase
     private function createTransaction(int|float $documentNumber, string $jalaliDate, float $value, string $description, ?Subject $subject = null): Transaction
     {
         $document = Document::query()->firstOrCreate([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'number' => $documentNumber,
         ], [
             'date' => jalali_to_gregorian_date($jalaliDate, '-', '/'),

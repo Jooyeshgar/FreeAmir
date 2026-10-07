@@ -8,10 +8,10 @@ use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
 use App\Models\Bank;
 use App\Models\BankAccount;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\ProductGroup;
@@ -36,7 +36,7 @@ class InvoicePaymentTest extends TestCase
 
     protected Customer $customer;
 
-    protected int $companyId;
+    protected int $fiscalYearId;
 
     protected int $nextInvoiceNumber = 8000;
 
@@ -50,22 +50,22 @@ class InvoicePaymentTest extends TestCase
 
         $this->paymentService = app(PaymentService::class);
 
-        $this->companyId = Company::firstOrCreate(['id' => 1], ['name' => 'Test Company', 'fiscal_year' => 1405])->id;
+        $this->fiscalYearId = FiscalYear::factory()->create(['year' => 1405])->id;
 
-        Cache::forever('active_company_id', $this->companyId);
-        Cookie::queue('active-company-id', (string) $this->companyId);
-        $_COOKIE['active-company-id'] = (string) $this->companyId;
+        Cache::forever('active_fiscal_year_id', $this->fiscalYearId);
+        Cookie::queue('active-fiscal-year-id', (string) $this->fiscalYearId);
+        $_COOKIE['active-fiscal-year-id'] = (string) $this->fiscalYearId;
 
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
 
-        $this->importSubjects($this->companyId);
-        $this->importConfigs($this->companyId);
+        $this->importSubjects($this->fiscalYearId);
+        $this->importConfigs($this->fiscalYearId);
 
-        ProductGroup::factory()->withSubjects()->create(['name' => 'عمومی', 'vat' => 10, 'company_id' => $this->companyId]);
-        $customerGroup = CustomerGroup::factory()->withSubject()->create(['name' => 'عمومی', 'description' => 'گروه مشتریان عمومی', 'company_id' => $this->companyId]);
+        ProductGroup::factory()->withSubjects()->create(['name' => 'عمومی', 'vat' => 10, 'fiscal_year_id' => $this->fiscalYearId]);
+        $customerGroup = CustomerGroup::factory()->withSubject()->create(['name' => 'عمومی', 'description' => 'گروه مشتریان عمومی', 'fiscal_year_id' => $this->fiscalYearId]);
 
-        $this->customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create(['company_id' => $this->companyId]);
+        $this->customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
     }
 
     private function cashSubjectId(): int
@@ -77,7 +77,7 @@ class InvoicePaymentTest extends TestCase
         $cashBook = Subject::withoutGlobalScopes()->find((int) config('amir.cash_book'));
         $box = Subject::factory()->withParent($cashBook)->create([
             'name' => 'صندوق',
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
         ]);
 
         return $this->cashBoxSubjectId = (int) $box->id;
@@ -86,11 +86,11 @@ class InvoicePaymentTest extends TestCase
     private function bankAccountSubjectId(): int
     {
         $bank = new Bank(['name' => 'بانک نمونه']);
-        $bank->company_id = $this->companyId;
+        $bank->fiscal_year_id = $this->fiscalYearId;
         $bank->save();
 
         $account = BankAccount::factory()->withSubject()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'bank_id' => $bank->id,
         ]);
 
@@ -184,7 +184,7 @@ class InvoicePaymentTest extends TestCase
             'number' => 1,
             'invoice_id' => $buy->id,
             'customer_id' => $this->customer->id,
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'date' => $buy->date,
             'type' => 1,
             'amount' => 300,
@@ -196,7 +196,7 @@ class InvoicePaymentTest extends TestCase
             'number' => 2,
             'invoice_id' => $buy->id,
             'customer_id' => $this->customer->id,
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'date' => $buy->date,
             'type' => 2,
             'amount' => 500,
@@ -226,7 +226,7 @@ class InvoicePaymentTest extends TestCase
         AncillaryCostService::createAncillaryCost($this->user, [
             'invoice_id' => $buy->id,
             'customer_id' => $this->customer->id,
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'date' => $buy->date->toDateString(),
             'type' => 'Shipping',
             'amount' => 300,
@@ -347,16 +347,16 @@ class InvoicePaymentTest extends TestCase
             FiscalYearSection::INVOICES->value,
         ];
 
-        $exportData = FiscalYearService::exportData($this->companyId, $sections);
+        $exportData = FiscalYearService::exportData($this->fiscalYearId, $sections);
         $this->assertArrayHasKey('payments', $exportData);
         $this->assertCount(1, $exportData['payments']);
 
-        $newCompany = FiscalYearService::importData($exportData, [
-            'name' => 'Next Fiscal Year',
-            'fiscal_year' => 1406,
+        $newFiscalYear = FiscalYearService::importData($exportData, [
+            'company_id' => FiscalYear::findOrFail($this->fiscalYearId)->company_id,
+            'year' => 1406,
         ]);
 
-        $importedSell = Invoice::withoutGlobalScopes()->where('company_id', $newCompany->id)->where('invoice_type', InvoiceType::SELL)->first();
+        $importedSell = Invoice::withoutGlobalScopes()->where('fiscal_year_id', $newFiscalYear->id)->where('invoice_type', InvoiceType::SELL)->first();
         $importedPayments = Payment::where('invoice_id', $importedSell->id)->get();
         $this->assertCount(1, $importedPayments);
 

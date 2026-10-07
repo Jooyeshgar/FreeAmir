@@ -7,7 +7,7 @@ description: "Record opening quantities and values of products for each warehous
 
 Menu path: **Invoices → Beginning Inventory**. [Open the list in the app]({{ site.app_url }}/invoices?invoice_type=beginning_inventory). This invoice type records opening product quantities and values in a warehouse for the active fiscal year; it is not a supplier purchase.
 
-1. Select the correct company/fiscal year and warehouse. Only one beginning-inventory invoice is allowed per warehouse.
+1. Select the correct fiscal year and one of its warehouses. Only one beginning-inventory invoice is allowed per warehouse.
 2. Select **Create Beginning Inventory**. Check the title, number, and date; the form defaults to the start of the fiscal year.
 3. Select products and enter quantity and unit cost for each. This form accepts products only; it has no customer, discount, or tax.
 4. Save, then reconcile total quantity and value with the stock count and opening balance before approval.

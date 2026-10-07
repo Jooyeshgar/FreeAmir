@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -44,7 +44,7 @@ class InvoiceDashboardService
 
     private function activeFiscalYearRange(): array
     {
-        return Company::withoutGlobalScopes()->findOrFail(getActiveCompany())->fiscalYearRange();
+        return FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear())->range();
     }
 
     private function normalizeFilters(array $raw, Carbon $fiscalStart, Carbon $fiscalEnd): array

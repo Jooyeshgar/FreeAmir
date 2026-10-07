@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\PublicHoliday;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,30 +15,30 @@ class PublicHolidayTest extends TestCase
 
     protected User $user;
 
-    protected int $companyId;
+    protected int $fiscalYearId;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create();
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'salary.public-holidays.*'])
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
     }
 
     private function makePublicHoliday(array $overrides = []): PublicHoliday
     {
         return PublicHoliday::factory()->create(array_merge([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
         ], $overrides));
     }
 
@@ -99,7 +99,7 @@ class PublicHolidayTest extends TestCase
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('public_holidays', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'date' => jalali_to_gregorian_date('2026-03-21', '-', '-'),
             'name' => 'Nowruz',
         ]);

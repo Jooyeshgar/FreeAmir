@@ -48,6 +48,7 @@ For HTTP scenarios, use `Tests/TestCase` and Laravel's testing traits. This exam
 namespace Tests\Feature;
 
 use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -58,10 +59,12 @@ class DocumentAccessTest extends TestCase
 
     public function test_authenticated_user_can_view_documents_index(): void
     {
-        $user = User::factory()->create();
         $company = Company::factory()->create();
+        $fiscalYear = FiscalYear::factory()->create(['company_id' => $company->id]);
+        $user = User::factory()->create();
+        $user->fiscalYears()->syncWithoutDetaching([$fiscalYear->id]);
 
-        session(['active-company-id' => $company->id]);
+        config(['active-fiscal-year-id' => $fiscalYear->id]);
 
         $this->actingAs($user);
         $this->withoutMiddleware('check-permission');
@@ -82,7 +85,7 @@ class DocumentAccessTest extends TestCase
 
 Notes:
 
-- Many models use `FiscalYearScope` and expect the active company ID in the session (`session(['active-company-id' => ...])`).
+- Many models use `FiscalYearScope` and get the active fiscal-year ID through `getActiveFiscalYear()`. In tests, set it with `config(['active-fiscal-year-id' => $fiscalYear->id])`. To test access, assign the test user to that period through `fiscalYears()`.
 - When necessary, `$this->withoutMiddleware()` can disable middleware such as `check-permission` so the test focuses on its main behavior.
 
 ## 🧩 Example unit test for services
@@ -95,6 +98,7 @@ To test methods in `App/Services/DocumentService`, use the test database and fac
 namespace Tests\Unit;
 
 use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Document;
 use App\Models\Subject;
 use App\Models\User;
@@ -109,13 +113,14 @@ class DocumentServiceTest extends TestCase
     public function test_create_transaction_persists_value(): void
     {
         $company = Company::factory()->create();
+        $fiscalYear = FiscalYear::factory()->create(['company_id' => $company->id]);
         $user = User::factory()->create();
         $subject = Subject::factory()->create();
 
-        session(['active-company-id' => $company->id]);
+        config(['active-fiscal-year-id' => $fiscalYear->id]);
 
         $document = Document::factory()->create([
-            'company_id' => $company->id,
+            'fiscal_year_id' => $fiscalYear->id,
             'creator_id' => $user->id,
         ]);
 
@@ -141,6 +146,7 @@ You can follow the same pattern for other methods such as `createDocument` or `u
 Factories in `database/factories` can create test data. Examples include:
 
 - `CompanyFactory`
+- `FiscalYearFactory`
 - `UserFactory`
 - `SubjectFactory`
 - `DocumentFactory`
@@ -148,18 +154,20 @@ Factories in `database/factories` can create test data. Examples include:
 - `CustomerFactory`
 - `ProductFactory`
 
-Before using `DocumentFactory`, make sure at least one company and one user exist; this factory uses existing records to populate their IDs.
+Before using `FiscalYearFactory`, create a company and pass its ID as `company_id`. For access-control tests, assign the user to the fiscal year being tested.
 
 Example in a test:
 
 ```php
 $company = Company::factory()->create();
+$fiscalYear = FiscalYear::factory()->create(['company_id' => $company->id]);
 $user = User::factory()->create();
+$user->fiscalYears()->syncWithoutDetaching([$fiscalYear->id]);
 
-session(['active-company-id' => $company->id]);
+config(['active-fiscal-year-id' => $fiscalYear->id]);
 
 $document = Document::factory()->create([
-    'company_id' => $company->id,
+    'fiscal_year_id' => $fiscalYear->id,
     'creator_id' => $user->id,
 ]);
 ```

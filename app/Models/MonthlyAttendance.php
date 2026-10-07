@@ -14,7 +14,7 @@ class MonthlyAttendance extends Model
     use HasFactory;
 
     protected $fillable = [
-        'company_id',
+        'fiscal_year_id',
         'employee_id',
         'year',
         'month',

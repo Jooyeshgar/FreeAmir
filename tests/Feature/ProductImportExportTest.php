@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Subject;
@@ -22,7 +22,7 @@ class ProductImportExportTest extends TestCase
 
     protected ProductGroup $productGroup;
 
-    protected int $companyId;
+    protected int $fiscalYearId;
 
     protected function setUp(): void
     {
@@ -30,11 +30,11 @@ class ProductImportExportTest extends TestCase
 
         app()->setLocale('en');
 
-        $company = Company::factory()->create();
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create();
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo([
             Permission::firstOrCreate(['name' => 'products.index']),
@@ -44,10 +44,10 @@ class ProductImportExportTest extends TestCase
             Permission::firstOrCreate(['name' => 'products.import.store']),
         ]);
 
-        $this->withCookies(['active-company-id' => $this->companyId]);
-        config(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
+        config(['active-fiscal-year-id' => $this->fiscalYearId]);
 
-        $this->productGroup = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId]);
+        $this->productGroup = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId]);
     }
 
     private function upload(string $csv): UploadedFile
@@ -86,7 +86,7 @@ class ProductImportExportTest extends TestCase
 
     public function test_export_returns_csv_with_products(): void
     {
-        $product = Product::factory()->withGroup($this->productGroup)->create(['company_id' => $this->companyId, 'name' => 'Widget', 'code' => '5001']);
+        $product = Product::factory()->withGroup($this->productGroup)->create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Widget', 'code' => '5001']);
         $response = $this->actingAs($this->user)->get(route('products.export'));
         $response->assertStatus(200);
         $response->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
@@ -101,7 +101,7 @@ class ProductImportExportTest extends TestCase
     public function test_export_includes_all_requested_report_columns(): void
     {
         Product::factory()->withGroup($this->productGroup)->withSubjects()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Widget',
             'code' => '5003',
         ]);
@@ -131,7 +131,7 @@ class ProductImportExportTest extends TestCase
     public function test_export_only_includes_selected_optional_columns(): void
     {
         Product::factory()->withGroup($this->productGroup)->withSubjects()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Selected Widget',
             'code' => '5004',
         ]);
@@ -146,7 +146,7 @@ class ProductImportExportTest extends TestCase
 
     public function test_export_includes_all_subject_codes(): void
     {
-        $product = Product::factory()->withGroup($this->productGroup)->withSubjects()->create(['company_id' => $this->companyId, 'name' => 'Widget', 'code' => '5002']);
+        $product = Product::factory()->withGroup($this->productGroup)->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Widget', 'code' => '5002']);
         $product->loadMissing('incomeSubject', 'cogsSubject', 'inventorySubject', 'salesReturnsSubject');
 
         $response = $this->actingAs($this->user)->get(route('products.export'));
@@ -163,12 +163,12 @@ class ProductImportExportTest extends TestCase
     public function test_product_export_includes_warehouse_and_import_restores_it(): void
     {
         $warehouse = Warehouse::create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Central Warehouse',
             'code' => 'CENTRAL',
         ]);
         $product = Product::factory()->withGroup($this->productGroup)->withSubjects()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Warehouse Widget',
             'code' => '5010',
         ]);
@@ -198,17 +198,17 @@ class ProductImportExportTest extends TestCase
     public function test_import_updates_each_exported_warehouse_quantity_without_duplicating_product_stock(): void
     {
         $firstWarehouse = Warehouse::create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'First Warehouse',
             'code' => 'FIRST',
         ]);
         $secondWarehouse = Warehouse::create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Second Warehouse',
             'code' => 'SECOND',
         ]);
         $product = Product::factory()->withGroup($this->productGroup)->withSubjects()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Multi Warehouse Widget',
             'code' => '5012',
             'quantity' => 10,
@@ -262,7 +262,7 @@ class ProductImportExportTest extends TestCase
         $response = $this->actingAs($this->user)->post(route('products.import.store'), ['file' => $this->upload($csv)]);
         $response->assertRedirect(route('products.index'));
         $response->assertSessionHas('success');
-        $this->assertDatabaseHas('product_groups', ['name' => 'Brand New Group', 'company_id' => $this->companyId]);
+        $this->assertDatabaseHas('product_groups', ['name' => 'Brand New Group', 'fiscal_year_id' => $this->fiscalYearId]);
         $product = Product::where('name', 'Newest Widget')->first();
         $this->assertNotNull($product);
         $this->assertNotNull($product->code);
@@ -289,7 +289,7 @@ class ProductImportExportTest extends TestCase
             $this->assertNotNull($subject);
             $this->assertSame($parent->id, $subject->parent_id);
             $this->assertSame($product->name, $subject->name);
-            $this->assertSame($product->company_id, $subject->company_id);
+            $this->assertSame($product->fiscal_year_id, $subject->fiscal_year_id);
             $this->assertSame($product->id, $subject->subjectable_id);
             $this->assertSame($product->getMorphClass(), $subject->subjectable_type);
         }
@@ -301,14 +301,14 @@ class ProductImportExportTest extends TestCase
     {
         $csv = "name,group_name\n"."Reuse Widget,{$this->productGroup->name}\n";
         $this->actingAs($this->user)->post(route('products.import.store'), ['file' => $this->upload($csv)])->assertSessionHas('success');
-        $this->assertSame(1, ProductGroup::withoutGlobalScopes()->where('company_id', $this->companyId)->where('name', $this->productGroup->name)->count());
+        $this->assertSame(1, ProductGroup::withoutGlobalScopes()->where('fiscal_year_id', $this->fiscalYearId)->where('name', $this->productGroup->name)->count());
         $product = Product::where('name', 'Reuse Widget')->first();
         $this->assertSame($this->productGroup->id, $product->group);
     }
 
     public function test_import_updates_existing_product_when_code_matches(): void
     {
-        $existing = Product::factory()->withGroup($this->productGroup)->withSubjects()->create(['company_id' => $this->companyId, 'name' => 'Old Name', 'code' => '7777', 'selling_price' => 100]);
+        $existing = Product::factory()->withGroup($this->productGroup)->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Old Name', 'code' => '7777', 'selling_price' => 100]);
         $csv = "code,name,group_name,selling_price\n"."7777,Updated Name,{$this->productGroup->name},250\n";
         $response = $this->actingAs($this->user)->post(route('products.import.store'), ['file' => $this->upload($csv)]);
         $response->assertRedirect(route('products.index'));

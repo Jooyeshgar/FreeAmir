@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\ServiceGroup;
 use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -11,20 +11,20 @@ class ServiceGroupFactory extends Factory
 {
     public function definition(): array
     {
-        $companyId = Company::withoutGlobalScopes()->inRandomOrder()->value('id') ?? getActiveCompany() ?? Company::factory()->create()->id;
+        $fiscalYearId = FiscalYear::withoutGlobalScopes()->inRandomOrder()->value('id') ?? getActiveFiscalYear() ?? FiscalYear::factory()->create()->id;
 
         return [
             'name' => $this->faker?->persianServiceGroupName(),
             'vat' => 0,
             'sstid' => $this->faker?->optional()->word,
-            'company_id' => $companyId,
+            'fiscal_year_id' => $fiscalYearId,
         ];
     }
 
     public function withSubject(): static
     {
         return $this->afterCreating(function (ServiceGroup $group) {
-            $companyId = $group->company_id;
+            $fiscalYearId = $group->fiscal_year_id;
             $subjectParent = Subject::withoutGlobalScopes()->find(config('amir.sales_revenue'));
             $cogsParent = Subject::withoutGlobalScopes()->find(config('amir.cogs_service'));
             $salesReturnsParent = Subject::withoutGlobalScopes()->find(config('amir.sales_returns'));
@@ -32,7 +32,7 @@ class ServiceGroupFactory extends Factory
             $subject = Subject::factory()
                 ->state([
                     'name' => $group->name,
-                    'company_id' => $companyId,
+                    'fiscal_year_id' => $fiscalYearId,
                 ])
                 ->withParent($subjectParent)
                 ->for($group, 'subjectable')
@@ -41,7 +41,7 @@ class ServiceGroupFactory extends Factory
             $cogsSubject = Subject::factory()
                 ->state([
                     'name' => $group->name,
-                    'company_id' => $companyId,
+                    'fiscal_year_id' => $fiscalYearId,
                 ])
                 ->withParent($cogsParent)
                 ->for($group, 'subjectable')
@@ -50,7 +50,7 @@ class ServiceGroupFactory extends Factory
             $salesReturnsSubject = Subject::factory()
                 ->state([
                     'name' => $group->name,
-                    'company_id' => $companyId,
+                    'fiscal_year_id' => $fiscalYearId,
                 ])
                 ->withParent($salesReturnsParent)
                 ->for($group, 'subjectable')
