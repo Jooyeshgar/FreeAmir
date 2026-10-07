@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Enums\PayrollStatus;
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\MonthlyAttendance;
 use App\Models\Payroll;
 use App\Models\User;
@@ -20,7 +20,7 @@ class PayrollWorkflowTest extends TestCase
 
     private User $user;
 
-    private int $companyId;
+    private int $fiscalYearId;
 
     private Employee $employee;
 
@@ -28,16 +28,16 @@ class PayrollWorkflowTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create();
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
 
         $this->employee = Employee::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
         ]);
     }
 
@@ -233,13 +233,13 @@ class PayrollWorkflowTest extends TestCase
     {
         $this->grant('salary.payrolls.destroy');
         $attendance = MonthlyAttendance::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'year' => 1405,
             'month' => 1,
         ]);
         $payrollId = DB::table('payrolls')->insertGetId([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'monthly_attendance_id' => $attendance->id,
             'year' => 1405,
@@ -267,7 +267,7 @@ class PayrollWorkflowTest extends TestCase
     private function makePayroll(array $overrides = []): Payroll
     {
         return Payroll::withoutGlobalScopes()->create(array_merge([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'year' => 1405,
             'month' => 1,

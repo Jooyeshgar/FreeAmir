@@ -12,7 +12,7 @@ class MonthlyBudget extends Model
     use HasFactory;
 
     protected $fillable = [
-        'company_id',
+        'fiscal_year_id',
         'subject_id',
         'month',
         'budget_type',

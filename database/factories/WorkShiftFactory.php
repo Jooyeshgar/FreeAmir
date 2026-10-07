@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\WorkShift;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -16,7 +16,7 @@ class WorkShiftFactory extends Factory
         $end = $this->faker->time('H:i');
 
         return [
-            'company_id' => Company::factory(),
+            'fiscal_year_id' => FiscalYear::factory(),
             'name' => $this->faker->words(2, true),
             'start_time' => $start,
             'end_time' => $end,

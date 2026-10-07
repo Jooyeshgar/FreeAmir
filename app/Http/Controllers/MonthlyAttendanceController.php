@@ -123,7 +123,7 @@ class MonthlyAttendanceController extends Controller
         $start = $monthlyAttendance->start_date->copy();
         $end = $start->copy()->addDays($monthlyAttendance->duration - 1);
         $holidayDates = PublicHoliday::withoutGlobalScopes()
-            ->where('company_id', $monthlyAttendance->company_id)
+            ->where('fiscal_year_id', $monthlyAttendance->fiscal_year_id)
             ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
             ->pluck('date')
             ->map(fn ($d) => $d instanceof Carbon ? $d->toDateString() : (string) $d)

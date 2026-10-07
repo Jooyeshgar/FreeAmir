@@ -68,16 +68,16 @@
                 <li>
                     <details class="app-main-menu-dropdown" data-main-menu-dropdown>
                         <summary class="text-sm">
-                            <span class="hidden md:inline">{{ cookie('active-company-id') ? config('active-company-name') . ' - ' . config('active-company-fiscal-year') : __('Please Select a Company') }}</span>
+                            <span class="hidden md:inline">{{ cookie('active-fiscal-year-id') ? config('active-company-name') . ' - ' . config('active-company-fiscal-year') : __('Please Select a Company') }}</span>
                             <svg class="h-4 w-4 md:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m3 0h1m-4-8h1m-1-4h1m4 4h1m-1-4h1M9 3v18" />
                             </svg>
                         </summary>
                         <ul class="app-main-menu-panel z-50 w-auto md:w-max min-w-full max-w-[calc(100vw-2rem)] ltr:right-0 rtl:left-0 text-sm">
-                            @foreach (auth()->user()->companies as $company)
+                            @foreach (auth()->user()->fiscalYears()->with('company:id,name')->get() as $fiscalYear)
                                 <li>
-                                    <a href="{{ route('change-company', ['company' => $company]) }}" class="whitespace-nowrap">
-                                        {{ $company->name . ' - ' . $company->fiscal_year }}
+                                    <a href="{{ route('change-company', ['company' => $fiscalYear]) }}" class="whitespace-nowrap">
+                                        {{ $fiscalYear->company->name . ' - ' . $fiscalYear->year }}
                                     </a>
                                 </li>
                             @endforeach

@@ -11,6 +11,7 @@ use App\Models\Cheque;
 use App\Models\Company;
 use App\Models\Document;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Payroll;
@@ -56,9 +57,10 @@ class HomeService
                 ->groupBy('period')
                 ->pluck('aggregate_count', 'period');
             $companiesByMonth = User::query()
-                ->join('company_user', 'users.id', '=', 'company_user.user_id')
+                ->join('fiscal_year_user', 'users.id', '=', 'fiscal_year_user.user_id')
+                ->join('fiscal_years', 'fiscal_year_user.fiscal_year_id', '=', 'fiscal_years.id')
                 ->where('users.created_at', '>=', $userGrowthStart)
-                ->selectRaw("{$monthExpression} as period, COUNT(DISTINCT company_user.company_id) as aggregate_count")
+                ->selectRaw("{$monthExpression} as period, COUNT(DISTINCT fiscal_years.company_id) as aggregate_count")
                 ->groupBy('period')
                 ->pluck('aggregate_count', 'period');
             $documentsByMonth = Document::withoutGlobalScopes()
@@ -106,32 +108,26 @@ class HomeService
             $previousMonthlyActiveUsers = $activeUsers($previousPeriodStart);
             $churnedUsers = max(0, $previousMonthlyActiveUsers - $monthlyActiveUsers);
             $activationRate = $newUsers > 0
-                ? round((User::query()->where('created_at', '>=', $currentPeriodStart)->has('companies')->count() / $newUsers) * 100, 1)
+                ? round((User::query()->where('created_at', '>=', $currentPeriodStart)->has('fiscalYears')->count() / $newUsers) * 100, 1)
                 : 0.0;
             $newUsersQuery = User::query()->where('created_at', '>=', $currentPeriodStart);
             $verifiedNewUsers = (clone $newUsersQuery)->whereNotNull('email_verified_at')->count();
-            $companyCreatedNewUsers = (clone $newUsersQuery)->has('companies')->count();
+            $companyCreatedNewUsers = (clone $newUsersQuery)->has('fiscalYears')->count();
             $firstDocumentNewUsers = (clone $newUsersQuery)
-                ->whereHas('companies', fn ($companyQuery) => $companyQuery->whereHas('documents'))
+                ->whereHas('fiscalYears', fn ($fiscalYearQuery) => $fiscalYearQuery->whereHas('documents', fn ($documentQuery) => $documentQuery->withoutGlobalScopes()))
                 ->count();
             $monthlyDocuments = Document::withoutGlobalScopes()->where('created_at', '>=', $currentPeriodStart)->count();
             $monthlyInvoices = Invoice::withoutGlobalScopes()->where('created_at', '>=', $currentPeriodStart)->count();
-            $activeBusinesses = Company::query()->whereNull('closed_at')->distinct()->count('name');
+            $activeBusinesses = Company::query()->whereHas('fiscalYears', fn ($query) => $query->whereNull('closed_at'))->count();
             $usageByCompany = Document::withoutGlobalScopes()
-                ->join('companies', 'documents.company_id', '=', 'companies.id')
+                ->join('fiscal_years', 'documents.fiscal_year_id', '=', 'fiscal_years.id')
+                ->join('companies', 'fiscal_years.company_id', '=', 'companies.id')
                 ->where('documents.created_at', '>=', $previousPeriodStart)
-                ->select('companies.name')
+                ->select('companies.id', 'companies.name')
                 ->selectRaw('SUM(CASE WHEN documents.created_at >= ? THEN 1 ELSE 0 END) as current_count', [$currentPeriodStart])
                 ->selectRaw('SUM(CASE WHEN documents.created_at < ? THEN 1 ELSE 0 END) as previous_count', [$currentPeriodStart])
-                ->groupBy('companies.name')
+                ->groupBy('companies.id', 'companies.name')
                 ->get();
-            $overviewCompanyIds = Company::query()
-                ->whereIn('name', $usageByCompany->pluck('name'))
-                ->orderByDesc('fiscal_year')
-                ->orderByDesc('id')
-                ->get(['id', 'name'])
-                ->unique('name')
-                ->pluck('id', 'name');
             $topUsageCompanies = $usageByCompany
                 ->filter(fn ($company): bool => (int) $company->current_count > 0)
                 ->sortByDesc(fn ($company): int => (int) $company->current_count)
@@ -140,7 +136,7 @@ class HomeService
             $highestCompanyUsage = max(1, (int) $topUsageCompanies->max('current_count'));
             $topUsageCompanies = $topUsageCompanies->map(fn ($company): array => [
                 'name' => $company->name,
-                'id' => $overviewCompanyIds->get($company->name),
+                'id' => $company->id,
                 'documents' => (int) $company->current_count,
                 'percentage' => round(((int) $company->current_count / $highestCompanyUsage) * 100, 1),
             ]);
@@ -149,7 +145,7 @@ class HomeService
                     && (int) $company->current_count < (int) $company->previous_count)
                 ->map(fn ($company): array => [
                     'name' => $company->name,
-                    'id' => $overviewCompanyIds->get($company->name),
+                    'id' => $company->id,
                     'current' => (int) $company->current_count,
                     'previous' => (int) $company->previous_count,
                     'drop' => round((((int) $company->previous_count - (int) $company->current_count) / (int) $company->previous_count) * 100, 1),
@@ -160,13 +156,13 @@ class HomeService
 
             return [
                 'metrics' => [
-                    'businesses' => Company::query()->distinct()->count('name'),
-                    'activeBusinesses' => Company::query()->whereNull('closed_at')->distinct()->count('name'),
-                    'openFiscalYears' => Company::query()->whereNull('closed_at')->count(),
-                    'closedFiscalYears' => Company::query()->whereNotNull('closed_at')->count(),
+                    'businesses' => Company::query()->count(),
+                    'activeBusinesses' => $activeBusinesses,
+                    'openFiscalYears' => FiscalYear::query()->whereNull('closed_at')->count(),
+                    'closedFiscalYears' => FiscalYear::query()->whereNotNull('closed_at')->count(),
                     'users' => User::query()->count(),
                     'verifiedUsers' => User::query()->whereNotNull('email_verified_at')->count(),
-                    'unassignedUsers' => User::query()->doesntHave('companies')->count(),
+                    'unassignedUsers' => User::query()->doesntHave('fiscalYears')->count(),
                     'newUsers' => $newUsers,
                     'userGrowthRate' => $userGrowthRate,
                     'activationRate' => $activationRate,
@@ -197,13 +193,13 @@ class HomeService
 
         $dashboard = $statistics + [
             'recentCompanies' => Company::query()
-                ->withCount('users')
+                ->with(['fiscalYears' => fn ($query) => $query->with('users')->orderByDesc('year')])
                 ->orderByDesc('id')
                 ->limit(5)
                 ->get(),
             'recentUsers' => User::query()
                 ->with('roles:id,name')
-                ->withCount('companies')
+                ->withCount('fiscalYears')
                 ->latest()
                 ->limit(4)
                 ->get(),

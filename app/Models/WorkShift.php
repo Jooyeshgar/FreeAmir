@@ -14,7 +14,7 @@ class WorkShift extends Model
     use HasFactory;
 
     protected $fillable = [
-        'company_id',
+        'fiscal_year_id',
         'name',
         'start_time',
         'end_time',

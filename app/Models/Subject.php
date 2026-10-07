@@ -18,7 +18,7 @@ class Subject extends Model
         'code',
         'name',
         'parent_id',
-        'company_id',
+        'fiscal_year_id',
         'type',
         'is_permanent',
     ];
@@ -36,7 +36,7 @@ class Subject extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function ($subject) {
-            $subject->company_id ??= getActiveCompany();
+            $subject->fiscal_year_id ??= getActiveFiscalYear();
         });
 
         static::deleting(function ($subject) {

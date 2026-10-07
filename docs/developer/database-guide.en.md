@@ -8,8 +8,8 @@ This guide describes FreeAmir's database structure, table relationships, and imp
 
 | Area | Tables and purpose |
 | --- | --- |
-| User management | `users` (users), `roles`, `permissions`, `model_has_permissions`, `model_has_roles`, `role_has_permissions`, and `company_user` (companies available to users) |
-| Companies | `companies` and company-specific `configs` |
+| User management | `users`, `roles`, `permissions`, `model_has_permissions`, `model_has_roles`, `role_has_permissions`, and `fiscal_year_user` (user access by fiscal year) |
+| Companies and fiscal years | `companies` (business identity), `fiscal_years` (accounting periods), and fiscal-year-specific `configs` |
 | Accounting core | `subjects` (chart of accounts), `documents` (accounting documents), and `transactions` (financial entries) |
 | Customers | `customers` and `customer_groups` |
 | Products | `products` and `product_groups` |
@@ -22,7 +22,8 @@ This guide describes FreeAmir's database structure, table relationships, and imp
 ### Simplified ERD
 
 ```text
-companies ──< subjects, customers, products, documents
+companies ──< fiscal_years ──< subjects, customers, products, documents
+users >──< fiscal_years (fiscal_year_user)
 documents ──< transactions >── subjects
 users >──< roles >──< permissions
 invoices ──< invoice_items
@@ -35,28 +36,31 @@ products ── subjects (inventory account)
 
 ### 🏢 `companies`
 
-The original schema example has an `id`, required `name`, optional `logo`, `address`, `economical_code`, `national_code`, `postal_code`, and `phone_number`, plus a required numeric `fiscal_year`.
+This table stores business identity and company-level details. It does not store a fiscal-year number or closing state. A company can have multiple fiscal years.
 
-- Each company has an independent data set.
-- The guide describes isolation through `company_id` and the global `FiscalYearScope`, which applies `session('active-company-id')` to queries.
-- `fiscal_year` displays the company's fiscal year.
-- `company_user` controls which companies a user may access; one user may access several.
+### 📅 `fiscal_years`
 
-### 📅 Fiscal years
+Each row belongs to one company and represents one accounting period. `year` stores the Jalali year; `(company_id, year)` is unique. Closing state and related document IDs are stored here, including `closed_at`, `closed_by`, `pl_document_id`, `closing_document_id`, and `closing_recalculation_step`.
 
-The original guide says there is no separate `fiscal_years` table and each `companies` row represents a fiscal year. It describes active-year selection through `session('active-company-id')` and automatic filtering by `FiscalYearScope`. **This is historical schema guidance; check the current migrations and models**, which may have changed.
+Records scoped to a period reference `fiscal_years.id` through `fiscal_year_id`. `FiscalYearScope` filters scoped model queries using `getActiveFiscalYear()`. In web requests, the active ID comes from request configuration or the `active-fiscal-year-id` cookie.
+
+The `fiscal_year_user` pivot assigns users to fiscal years. This is separate from roles and permissions: roles authorize operations, while fiscal-year assignment limits the periods whose data the user may access. Access to one fiscal year does not grant access to another year owned by the same company.
+
+```text
+fiscal_year_user: fiscal_year_id → fiscal_years.id, user_id → users.id
+```
 
 ### 📊 `subjects`
 
-The illustrated table has `id`, `code`, `name`, optional self-referencing `parent_id`, `type` (`debtor`, `creditor`, or `both`, default `both`), `company_id`, optional polymorphic `subjectable_type` and `subjectable_id`, and timestamps. Deleting a parent cascades to children; deleting a company cascades to its subjects. `(company_id, code)` is unique.
+The illustrated table has `id`, `code`, `name`, optional self-referencing `parent_id`, `type` (`debtor`, `creditor`, or `both`, default `both`), `fiscal_year_id`, optional polymorphic `subjectable_type` and `subjectable_id`, and timestamps. Deleting a parent cascades to children; deleting a fiscal year cascades to its subjects. `(fiscal_year_id, code)` is unique.
 
 - `parent_id` builds a tree, for example Assets → Current assets → Cash and bank → Cash desk or a specific bank.
-- Codes are unique within a company, not necessarily across companies.
+- Codes are unique within a fiscal year, not necessarily across years.
 - Polymorphic links connect subjects to entities such as customers and products.
 
 ### 📄 `documents`
 
-The schema example includes `id`, nullable decimal `number`, nullable `title`, `date`, and `approved_at`, optional `creator_id`, `approver_id`, and `company_id`, plus timestamps. Creator and approver reference `users`; company references `companies`; those references become null when the related row is deleted.
+The schema example includes `id`, nullable decimal `number`, nullable `title`, `date`, and `approved_at`, optional `creator_id`, `approver_id`, and `fiscal_year_id`, plus timestamps. Creator and approver reference `users`; `fiscal_year_id` references `fiscal_years` and becomes null if the fiscal year is deleted.
 
 The guide describes the document number as unique within each fiscal year. A document can have many transactions, can be approved by an authorized user, and records its creator.
 
@@ -68,21 +72,21 @@ The illustrated columns are `id`, optional `subject_id`, `document_id`, and `use
 
 ### 👤 `customers`
 
-The detailed example stores an ID, name, `subject_id`, customer-group ID, introducer ID, and required company ID. Contact fields include phone, mobile, fax, address, postal code, email, website, responsible person, and connector. Financial and classification fields include `ecnmcs_code`, `personal_code`, notes, balance, credit, two bank-account name/number/bank triplets, buyer/seller/mate/agent flags, commission, mark/reason, discount rate, and timestamps. References to subject, group, or introducer become null on deletion; deleting a company cascades to its customers.
+The detailed example stores an ID, name, `subject_id`, customer-group ID, introducer ID, and required `fiscal_year_id`. Contact fields include phone, mobile, fax, address, postal code, email, website, responsible person, and connector. Financial and classification fields include `ecnmcs_code`, `personal_code`, notes, balance, credit, two bank-account name/number/bank triplets, buyer/seller/mate/agent flags, commission, mark/reason, discount rate, and timestamps. References to subject, group, or introducer become null on deletion; deleting a fiscal year cascades to its customers.
 
 Each customer can be associated with a receivables subject and a group. The table also supports extensive contact information, credit limits, opening balances, and role flags.
 
 ### 📦 `products`
 
-The schema example includes a company-unique `code`, name, optional `group` and `subject_id`, location, `quantity`, optional `quantity_warning`, `oversell`, purchase-price field spelled `purchace_price`, selling price, discount formula, optional VAT rate, description, and `company_id`. The group and subject references become null on deletion; deleting a company cascades to its products.
+The schema example includes a fiscal-year-unique `code`, name, optional `group` and `subject_id`, location, `quantity`, optional `quantity_warning`, `oversell`, purchase-price field spelled `purchace_price`, selling price, discount formula, optional VAT rate, description, and `fiscal_year_id`. The group and subject references become null on deletion; deleting a fiscal year cascades to its products.
 
-`(company_id, code)` prevents duplicate product codes per company. Quantity and warning quantity support inventory and reorder warnings; `oversell` controls sales above stock. `SubjectCreatorService` fills `subject_id` after product creation. `vat` is optional.
+`(fiscal_year_id, code)` prevents duplicate product codes within a fiscal year. Quantity and warning quantity support inventory and reorder warnings; `oversell` controls sales above stock. `SubjectCreatorService` fills `subject_id` after product creation. `vat` is optional.
 
 ### 🧾 `invoices`
 
-The example includes a unique `number`, date, creator/approver/document/company/customer references, `addition`, `subtraction`, `vat`, and `cash_payment` totals, shipping date and method, description, `is_sell`, `active`, amount, and timestamps. User, document, and company references become null on deletion; deleting a customer cascades to invoices in the shown schema.
+The example includes a unique `number`, date, creator/approver/document/fiscal-year/customer references, `addition`, `subtraction`, `vat`, and `cash_payment` totals, shipping date and method, description, `is_sell`, `active`, amount, and timestamps. User, document, and fiscal-year references become null on deletion; deleting a customer cascades to invoices in the shown schema.
 
-The amount fields represent additions, deductions, tax, and cash paid. `company_id` links the invoice to the company and is filtered by the fiscal-year scope described in the source.
+The amount fields represent additions, deductions, tax, and cash paid. `fiscal_year_id` links the invoice to its fiscal year and is filtered by `FiscalYearScope`.
 
 ### 📝 `invoice_items`
 
@@ -102,32 +106,33 @@ Spatie Permission uses `roles` and `permissions` (each with ID, name, guard, and
 
 ### Important indexes
 
-- `subjects`: unique `(company_id, code)` and a `parent_id` reference support the account tree.
-- `products`: unique `(company_id, code)` plus group and subject foreign keys.
-- `configs`: unique `(key, company_id)` separates company settings.
-- `bank_accounts`: unique `(number, company_id)` plus a `bank_id` reference.
-- `invoices`: unique `number` and user, document, company, and customer references maintain integrity.
-- `company_user`: company and user foreign keys maintain allowed user/company relationships.
+- `subjects`: unique `(fiscal_year_id, code)` and a `parent_id` reference support the account tree.
+- `products`: unique `(fiscal_year_id, code)` plus group and subject foreign keys.
+- `configs`: unique `(key, fiscal_year_id)` separates fiscal-year settings.
+- `bank_accounts`: unique `(number, fiscal_year_id)` plus a `bank_id` reference.
+- `invoices`: number and user, document, fiscal-year, and customer references maintain integrity.
+- `fiscal_years`: unique `(company_id, year)` prevents duplicate years within a company.
+- `fiscal_year_user`: foreign keys to `fiscal_years` and `users` maintain user access by fiscal year.
 
 ## 🔄 Migrations and seeders
 
 ### Migration order
 
-The original guide lists migration filenames in chronological order. Early tables cover translations, users, password-reset tokens, failed jobs, and personal access tokens. The 2024 sequence then creates companies, banks, documents, configs, subjects, customer groups and customers, invoices, transactions, payments, product groups and products, invoice items, bank accounts, checks and check history, permission tables, and `company_user`. Read the current `database/migrations` directory for the authoritative order and schema before applying migrations.
+Early migrations create translations, users, password-reset tokens, failed jobs, and personal access tokens. The 2024 sequence creates companies, accounting and business tables, permission tables, and the original `company_user` pivot. The fiscal-year refactor migration creates `fiscal_years`, moves period-specific foreign keys to `fiscal_year_id`, and renames the pivot to `fiscal_year_user`. Read the current `database/migrations` directory for the authoritative order and schema before applying migrations.
 
 ### Main seeders
 
-The illustrated `DatabaseSeeder` calls `CompanySeeder`, `SubjectSeeder`, `ConfigSeeder`, `BankSeeder`, `CustomerGroupSeeder`, `ProductGroupSeeder`, and `RolesAndPermissionsSeeder` to set up an initial company, accounts, settings, banks, groups, roles, and permissions.
+`DatabaseSeeder::run(?int $fiscalYearId = null)` temporarily sets the active fiscal-year ID, then calls `CompanySeeder` and the period data seeders. These include warehouse, account, configuration, bank, group, HR-structure, and role/permission seeders. They require an active fiscal year. Because the refactor is still in progress, compare the current `CompanySeeder` implementation and required `FiscalYear` data with the migrations before relying on fresh-database setup or seeding.
 
 ### Example subject seeder
 
-A sample `SubjectSeeder` inserts initial accounts using `DB::table('subjects')->insert(...)`: code `010` for banks, `040` for expenses, and `011` for cash holdings, with IDs, parent IDs, account types (`both` or `debtor`), and `company_id = 1`. Additional rows form the rest of the base chart.
+A sample `SubjectSeeder` inserts initial accounts using `DB::table('subjects')->insert(...)`: code `010` for banks, `040` for expenses, and `011` for cash holdings, with IDs, parent IDs, account types (`both` or `debtor`), and `fiscal_year_id = 1`. Additional rows form the rest of the base chart.
 
 ## 🔒 Database security
 
-### Access control
+### Access control and fiscal-year scope
 
-The guide illustrates a `Document` model installing `FiscalYearScope` in `booted()`. Its `apply(Builder $builder, Model $model)` method adds `where('company_id', session('active-company-id'))`, automatically narrowing queries to the active company. Check the current scope implementation before relying on this exact snippet.
+The guide illustrates a `Document` model installing `FiscalYearScope` in `booted()`. Its `apply(Builder $builder, Model $model)` method adds `where('fiscal_year_id', getActiveFiscalYear())`, automatically narrowing queries to the active fiscal year. Middleware and controllers also check that the user is assigned to the selected year; the global scope does not replace authorization checks.
 
 ### Audit trail
 

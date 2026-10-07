@@ -4,10 +4,10 @@ namespace Tests\Feature;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Transaction;
 use App\Models\User;
@@ -26,7 +26,7 @@ class CrmDashboardTest extends TestCase
 
     private Customer $customer;
 
-    private int $companyId;
+    private int $fiscalYearId;
 
     private int $fiscalYear;
 
@@ -37,25 +37,25 @@ class CrmDashboardTest extends TestCase
         // Use the current Jalali year so "this month" ranges always contain "today".
         $this->fiscalYear = (int) toEnglish(jdate('Y'));
 
-        $company = Company::factory()->create(['fiscal_year' => $this->fiscalYear]);
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create(['year' => $this->fiscalYear]);
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
 
-        $this->withCookies(['active-company-id' => (string) $this->companyId]);
-        $_COOKIE['active-company-id'] = (string) $this->companyId;
-        config(['active-company-id' => $this->companyId, 'active-company-fiscal-year' => $this->fiscalYear]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->fiscalYearId]);
+        $_COOKIE['active-fiscal-year-id'] = (string) $this->fiscalYearId;
+        config(['active-fiscal-year-id' => $this->fiscalYearId, 'active-company-fiscal-year' => $this->fiscalYear]);
 
-        $this->importSubjects($this->companyId);
-        $this->importConfigs($this->companyId);
+        $this->importSubjects($this->fiscalYearId);
+        $this->importConfigs($this->fiscalYearId);
 
         $customerGroup = CustomerGroup::factory()->withSubject()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'VIP',
         ]);
         $this->customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Acme Co',
         ]);
     }
@@ -163,7 +163,7 @@ class CrmDashboardTest extends TestCase
             'date' => $date,
             'creator_id' => $this->user->id,
             'title' => 'test',
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
         ]);
 
         return Transaction::create([

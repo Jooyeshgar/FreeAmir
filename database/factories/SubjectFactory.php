@@ -3,7 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\SubjectType;
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -12,14 +12,14 @@ class SubjectFactory extends Factory
     public function definition(): array
     {
         return [
-            'company_id' => function () {
-                $companyId = (int) getActiveCompany();
+            'fiscal_year_id' => function () {
+                $fiscalYearId = (int) getActiveFiscalYear();
 
-                if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
-                    throw new \LogicException('An active company is required to create a subject.');
+                if (! FiscalYear::withoutGlobalScopes()->whereKey($fiscalYearId)->exists()) {
+                    throw new \LogicException('An active fiscal year is required to create a subject.');
                 }
 
-                return $companyId;
+                return $fiscalYearId;
             },
             'parent_id' => null,
             'code' => uniqid('tmp', false),
@@ -49,7 +49,7 @@ class SubjectFactory extends Factory
     {
         return $this->afterCreating(function (Subject $subject) {
             if (empty($subject->parent_id)) {
-                $maxRootCode = Subject::withoutGlobalScopes()->where('company_id', $subject->company_id)->whereNull('parent_id')
+                $maxRootCode = Subject::withoutGlobalScopes()->where('fiscal_year_id', $subject->fiscal_year_id)->whereNull('parent_id')
                     ->where('id', '!=', $subject->id)->max('code');
 
                 $nextRootCode = ((int) ($maxRootCode ?? 0)) + 1;
@@ -65,7 +65,7 @@ class SubjectFactory extends Factory
             }
 
             $maxChildCode = Subject::withoutGlobalScopes()
-                ->where('company_id', $subject->company_id)
+                ->where('fiscal_year_id', $subject->fiscal_year_id)
                 ->where('parent_id', $parent->id)
                 ->where('id', '!=', $subject->id)
                 ->max('code');

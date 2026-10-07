@@ -6,7 +6,7 @@ This guide explains everyday fiscal-year operations, creating a fiscal year, tra
 
 ## How companies and fiscal years work in Amir
 
-Each fiscal year is stored as a company in Amir. Consequently:
+A company is the business identity and can have multiple fiscal years. Each fiscal year is a separate period for accounting and reporting; documents, invoices, and balances are linked to that year's ID. User access is also assigned by fiscal year, so access to one year does not grant access to the company's other years.
 
 - Selecting a fiscal year changes the user's active scope.
 - Numbers, documents, invoices, and balances are checked within that fiscal year.
@@ -15,12 +15,14 @@ Each fiscal year is stored as a company in Amir. Consequently:
 
 ## Create a fiscal year
 
-1. In the company list, choose **Create new company**.
+> **Current limitation:** The creation form and controller still pass the old company/year payload and relationships. The steps below describe the intended flow after the refactor is completed; do not use this page to create or copy a year yet.
+
+1. In the companies and fiscal-years area, choose the fiscal-year creation option.
 2. Select the source fiscal year (optional).
 3. Select the sections to transfer (required if you select a source year).
-4. Enter the intended company name and fiscal year.
+4. Enter or select the destination company and fiscal-year number.
 5. Select **Create** and wait for the operation to finish.
-6. Once successful, the new year becomes the active scope.
+6. Once successful, the new fiscal year becomes the active scope.
 
 ### Sections available for transfer
 
@@ -62,35 +64,31 @@ If the application returns `HTTP 409`, read the message. A conflict usually poin
 
 ## Backups
 
-You can create or restore backups for companies. Always make a backup before sensitive operations and record its filename and creation date. Restoring a backup may replace current data. Do so only with the right permission and after verifying the file.
+> **Current limitation:** The export service builds data from a fiscal-year ID, but the year-selection page still reads the old `companies` relationship. Backup downloads through the UI are not reliable until that selector is updated.
+
+Each backup contains data for one fiscal year, not all years owned by the company. Keep a backup before sensitive operations and record its filename and creation date. The current download and upload pages are not aligned with the separate company and fiscal-year models; see their guides for the limits of each screen.
 
 ## Export and import a fiscal year
 
-Amir provides these commands to a system administrator for file transfer:
+The export command is available to system administrators. The import command is not aligned with the new models; see the developer guide for details.
 
 ```bash
-php artisan fiscal-year:export {companyId} --output=storage/app/fiscal-year-export.json
-php artisan fiscal-year:import storage/app/fiscal-year-export.json --dry-run
-php artisan fiscal-year:import storage/app/fiscal-year-export.json --target-company={companyId}
+php artisan fiscal-year:export {fiscalYearId} --output=storage/app/fiscal-year-export.json
 ```
 
 ### Export
 
-- The source fiscal-year/company ID must be valid.
+- The source fiscal-year ID must be valid.
 - The exported file contains sensitive accounting data; restrict access to it.
 - Record the file path and row counts.
 
 ### Import
 
-1. Run `--dry-run` first.
-2. Resolve structural, mapping, and dependency errors.
-3. Back up the destination.
-4. Run the import.
-5. Reconcile record counts and financial reports with the source.
-
-Do not import data into a non-local environment without the system administrator's approval.
+The current command accepts a name and year instead of a destination `company_id`; do not use it to create a fiscal year until its payload matches the service. See the [developer export/import guide](../../../developer/FiscalYearExportImport.en.md). After the command is updated, import in a non-production environment first, back up the destination, and reconcile record counts and financial reports with the source.
 
 ## Fiscal-year closing wizard
+
+> **Current limitation:** The wizard routes and controller still use `Company` as the fiscal year, while closing state now belongs to `FiscalYear`. Do not run the wizard until those parts are aligned.
 
 The closing wizard has three stages:
 
@@ -115,7 +113,7 @@ Do not proceed until errors are resolved.
 
 ### Stage 2: Close temporary accounts
 
-In this stage, temporary income and expense accounts are closed and their balances are transferred to the current profit-and-loss summary account. Check the proposed document number; it must be unique within the company.
+In this stage, temporary income and expense accounts are closed and their balances are transferred to the current profit-and-loss summary account. Check the proposed document number; it must be unique within the fiscal year.
 
 After posting:
 

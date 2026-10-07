@@ -6,10 +6,10 @@ use App\Enums\BankAccountType;
 use App\Enums\SubjectType;
 use App\Models\Bank;
 use App\Models\BankAccount;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
@@ -22,7 +22,7 @@ class SubjectTransferTest extends TestCase
 {
     use RefreshDatabase;
 
-    private Company $company;
+    private FiscalYear $fiscalYear;
 
     private User $user;
 
@@ -33,8 +33,8 @@ class SubjectTransferTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create();
-        $this->company = Company::factory()->create(['fiscal_year' => 1403]);
-        $this->user->companies()->attach([$this->company->id]);
+        $this->fiscalYear = FiscalYear::factory()->create(['year' => 1403]);
+        $this->user->fiscalYears()->attach([$this->fiscalYear->id]);
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'subjects.index']),
             Permission::firstOrCreate(['name' => 'subjects.destroy']),
@@ -42,14 +42,14 @@ class SubjectTransferTest extends TestCase
         );
 
         $this->actingAs($this->user);
-        config(['active-company-id' => $this->company->id, 'active-company-fiscal-year' => $this->company->fiscal_year]);
+        config(['active-fiscal-year-id' => $this->fiscalYear->id, 'active-company-fiscal-year' => $this->fiscalYear->year]);
         $this->subjectService = app(SubjectService::class);
     }
 
     private function makeSubject(array $attributes = []): Subject
     {
         return Subject::withoutGlobalScopes()->create(array_merge([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'parent_id' => null,
             'is_permanent' => true,
             'name' => 'Test Subject',
@@ -61,7 +61,7 @@ class SubjectTransferTest extends TestCase
     private function makeDocument(array $attributes = []): Document
     {
         return Document::withoutGlobalScopes()->create(array_merge([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'number' => Document::withoutGlobalScopes()->max('number') + 1,
             'date' => '2024-03-21',
             'creator_id' => $this->user->id,
@@ -84,7 +84,7 @@ class SubjectTransferTest extends TestCase
     {
         $bank = new Bank;
         $bank->name = $attributes['name'] ?? 'Test Bank';
-        $bank->company_id = $attributes['company_id'] ?? $this->company->id;
+        $bank->fiscal_year_id = $attributes['fiscal_year_id'] ?? $this->fiscalYear->id;
         $bank->save();
 
         return $bank;
@@ -120,7 +120,7 @@ class SubjectTransferTest extends TestCase
     {
         return Customer::withoutGlobalScopes()->create(array_merge([
             'name' => 'Test Customer',
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'subject_id' => $subject->id,
         ], $attributes));
     }
@@ -129,7 +129,7 @@ class SubjectTransferTest extends TestCase
     {
         return CustomerGroup::withoutGlobalScopes()->create(array_merge([
             'name' => 'Test Group',
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'subject_id' => $subject->id,
         ], $attributes));
     }
@@ -143,7 +143,7 @@ class SubjectTransferTest extends TestCase
             'number' => '123456789',
             'type' => BankAccountType::INTEREST_FREE_LOAN,
             'bank_id' => $bank->id,
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'subject_id' => $subject->id,
         ], $attributes));
     }
@@ -242,7 +242,7 @@ class SubjectTransferTest extends TestCase
 
     public function test_only_transfers_current_fiscal_year_transactions()
     {
-        $year = $this->company->fiscal_year;
+        $year = $this->fiscalYear->year;
 
         $source = $this->makeSubject(['code' => '001']);
         $destination = $this->makeSubject(['code' => '002']);
@@ -285,7 +285,7 @@ class SubjectTransferTest extends TestCase
         $newSubject = $result['destination'];
         $this->assertEquals($parent->id, $newSubject->parent_id);
         $this->assertEquals('Source Name', $newSubject->name);
-        $this->assertEquals($source->company_id, $newSubject->company_id);
+        $this->assertEquals($source->fiscal_year_id, $newSubject->fiscal_year_id);
 
         $this->assertEquals(0, Transaction::withoutGlobalScopes()->where('subject_id', $source->id)->count());
         $this->assertEquals(1, Transaction::withoutGlobalScopes()->where('subject_id', $newSubject->id)->count());
@@ -694,14 +694,14 @@ class SubjectTransferTest extends TestCase
         $child = $this->subjectService->createSubject([
             'name' => 'Temporary child',
             'parent_id' => $root->id,
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'type' => SubjectType::BOTH,
             'is_permanent' => true,
         ]);
         $grandchild = $this->subjectService->createSubject([
             'name' => 'Temporary grandchild',
             'parent_id' => $child->id,
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'type' => SubjectType::BOTH,
             'is_permanent' => true,
         ]);

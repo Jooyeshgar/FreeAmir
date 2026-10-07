@@ -18,7 +18,7 @@ class GlobalConfigService
 
     public function all(): array
     {
-        $stored = Config::withoutGlobalScope(FiscalYearScope::class)->whereNull('company_id')->pluck('value', 'key');
+        $stored = Config::withoutGlobalScope(FiscalYearScope::class)->whereNull('fiscal_year_id')->pluck('value', 'key');
 
         $values = [];
         foreach (array_keys(self::SETTINGS) as $key) {
@@ -45,7 +45,7 @@ class GlobalConfigService
             $value = ($value === null || $value === '' || $value === 'default') ? null : (string) $value;
 
             Config::withoutGlobalScope(FiscalYearScope::class)->updateOrCreate(
-                ['key' => $key, 'company_id' => null],
+                ['key' => $key, 'fiscal_year_id' => null],
                 ['value' => $value, 'type' => 3, 'category' => 1, 'desc' => __($key)],
             );
         }

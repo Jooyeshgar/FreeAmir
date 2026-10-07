@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
@@ -15,7 +15,7 @@ class UserEmployeeLinkTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected Company $company;
+    protected FiscalYear $fiscalYear;
 
     protected User $user;
 
@@ -27,19 +27,19 @@ class UserEmployeeLinkTest extends TestCase
     {
         parent::setUp();
 
-        $this->company = Company::factory()->create();
+        $this->fiscalYear = FiscalYear::factory()->create();
         $this->user = User::factory()->create();
-        $this->company->users()->attach($this->user);
+        $this->fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'users.*'])
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->company->id]);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYear->id]);
 
-        $this->workSite = WorkSite::factory()->create(['company_id' => $this->company->id]);
-        $this->workShift = WorkShift::factory()->create(['company_id' => $this->company->id]);
+        $this->workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
+        $this->workShift = WorkShift::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
     }
 
     public function test_index_shows_create_employee_button_for_users_without_employee(): void
@@ -54,7 +54,7 @@ class UserEmployeeLinkTest extends TestCase
     public function test_index_shows_employee_link_when_employee_exists(): void
     {
         $employee = Employee::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'work_site_id' => $this->workSite->id,
             'work_shift_id' => $this->workShift->id,
             'user_id' => $this->user->id,
@@ -80,7 +80,7 @@ class UserEmployeeLinkTest extends TestCase
 
         $this->assertDatabaseHas('employees', [
             'user_id' => $this->user->id,
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'first_name' => $employee->first_name,
             'last_name' => $employee->last_name,
         ]);
