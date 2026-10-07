@@ -28,32 +28,32 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($companies as $company)
+                        @foreach ($fiscalYears as $fiscalYear)
                             <tr>
-                                <td class="px-4 py-2">{{ $company->name }}</td>
-                                <td class="px-4 py-2">{{ $company->fiscal_year }}</td>
-                                <td class="px-4 py-2">{{ $company->economical_code }}</td>
-                                <td class="px-4 py-2">{{ $company->address }}</td>
-                                <td class="px-4 py-2">{{ $company->currency }}</td>
-                                <td class="px-4 py-2">{{ formatDate($company->closed_at) }}</td>
-                                <td class="px-4 py-2">{{ $company->closedBy ? $company->closedBy->name : '' }}</td>
+                                <td class="px-4 py-2">{{ $fiscalYear->name }}</td>
+                                <td class="px-4 py-2">{{ $fiscalYear->fiscal_year }}</td>
+                                <td class="px-4 py-2">{{ $fiscalYear->economical_code }}</td>
+                                <td class="px-4 py-2">{{ $fiscalYear->address }}</td>
+                                <td class="px-4 py-2">{{ $fiscalYear->currency }}</td>
+                                <td class="px-4 py-2">{{ formatDate($fiscalYear->closed_at) }}</td>
+                                <td class="px-4 py-2">{{ $fiscalYear->closedBy ? $fiscalYear->closedBy->name : '' }}</td>
                                 <td class="px-4 py-2">
                                     <div class="inline-flex gap-2">
                                         @can('companies.edit')
-                                            <a href="{{ route('companies.edit', $company) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                            <a href="{{ route('companies.edit', $fiscalYear->company_id) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                         @endcan
                                         @can('companies.close-fiscal-year')
-                                            <a href="{{ route('companies.closing-wizard', $company) }}"
+                                            <a href="{{ route('companies.closing-wizard', $fiscalYear) }}"
                                                 @class([
                                                     'btn btn-sm',
-                                                    'btn-warning' => !$company->closed_at,
-                                                    'btn-info btn-outline' => $company->closed_at,
+                                                    'btn-warning' => !$fiscalYear->closed_at,
+                                                    'btn-info btn-outline' => $fiscalYear->closed_at,
                                                 ])>
-                                                {{ $company->closed_at ? __('Review Fiscal Year Closing') : __('Close Fiscal Year') }}
+                                                {{ $fiscalYear->closed_at ? __('Review Fiscal Year Closing') : __('Close Fiscal Year') }}
                                             </a>
                                         @endcan
                                         @can('companies.destroy')
-                                            <form action="{{ route('companies.destroy', $company) }}" method="POST" class="inline-block"
+                                            <form action="{{ route('companies.destroy', $fiscalYear) }}" method="POST" class="inline-block"
                                                 onsubmit="return confirm('{{ __('Are you sure you want to delete this company?') }}');">
                                                 @csrf
                                                 @method('DELETE')
@@ -67,7 +67,7 @@
                     </tbody>
                 </table>
             </div>
-            {!! $companies->links() !!}
+            {!! $fiscalYears->links() !!}
         </div>
     </div>
 </x-app-layout>

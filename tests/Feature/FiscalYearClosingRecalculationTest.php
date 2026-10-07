@@ -24,6 +24,10 @@ class FiscalYearClosingRecalculationTest extends TestCase
         $user->givePermissionTo(Permission::firstOrCreate([
             'name' => 'companies.closing-wizard.recalculate',
         ]));
+        $user->givePermissionTo(Permission::firstOrCreate(['name' => 'companies.closing-wizard.recreate-opening']));
+        $user->givePermissionTo(Permission::firstOrCreate(['name' => 'companies.closing-wizard']));
+        $user->givePermissionTo(Permission::firstOrCreate(['name' => 'change-company']));
+        $user->givePermissionTo(Permission::firstOrCreate(['name' => 'documents.show']));
         $fiscalYear = FiscalYear::factory()->create();
         config(['active-fiscal-year-id' => $fiscalYear->id]);
 
@@ -106,6 +110,47 @@ class FiscalYearClosingRecalculationTest extends TestCase
             Document::withoutGlobalScopes()->findOrFail($openingDocument->id)
                 ->transactions()->pluck('value', 'subject_id')->all()
         );
+
+        $wizard = $this->get(route('companies.closing-wizard', $fiscalYear));
+        $wizard->assertOk()
+            ->assertSee(route('change-company', ['company' => $nextFiscalYear, 'document' => $openingDocument->id]), false)
+            ->assertSee(route('companies.closing-wizard.recreate-opening', $fiscalYear), false);
+
+        $this->get(route('change-company', ['company' => $nextFiscalYear, 'document' => $openingDocument->id]))
+            ->assertRedirect(route('documents.show', $openingDocument));
+        config(['active-fiscal-year-id' => $nextFiscalYear->id]);
+        $this->get(route('documents.show', $openingDocument))->assertOk();
+        config(['active-fiscal-year-id' => $fiscalYear->id]);
+
+        $closingDocument = Document::findOrFail($closingDocumentId);
+        $closingDocument->transactions()->where('subject_id', $cash->id)->update(['value' => -120]);
+        $closingDocument->transactions()->where('subject_id', $retainedProfit->id)->update(['value' => 120]);
+
+        $response = $this->post(route('companies.closing-wizard.recreate-opening', $fiscalYear));
+        $response->assertRedirect(route('companies.closing-wizard', $fiscalYear));
+        $response->assertSessionHas('success', __('Opening Document recreated successfully.'));
+
+        $this->assertDatabaseMissing('documents', ['id' => $openingDocument->id]);
+        $rebuiltOpening = Document::withoutGlobalScopes()->where('fiscal_year_id', $nextFiscalYear->id)->where('number', 1)->firstOrFail();
+        $this->assertNotSame($openingDocument->id, $rebuiltOpening->id);
+        $rebuiltValues = $rebuiltOpening->transactions()->pluck('value', 'subject_id')->all();
+        $this->assertNotEquals($openingValues, $rebuiltValues);
+        $nextCash = Subject::withoutGlobalScopes()->where('fiscal_year_id', $nextFiscalYear->id)->where('code', $cash->code)->firstOrFail();
+        $nextRetainedProfit = Subject::withoutGlobalScopes()->where('fiscal_year_id', $nextFiscalYear->id)->where('code', $retainedProfit->code)->firstOrFail();
+        $this->assertEquals(120, $rebuiltValues[$nextCash->id]);
+        $this->assertEquals(-120, $rebuiltValues[$nextRetainedProfit->id]);
+
+        $nextCash->update(['code' => 'MISSING']);
+        $this->post(route('companies.closing-wizard.recreate-opening', $fiscalYear))
+            ->assertSessionHasErrors('fiscal_year');
+        $this->assertDatabaseHas('documents', ['id' => $rebuiltOpening->id]);
+        $this->assertEquals($rebuiltValues, $rebuiltOpening->fresh()->transactions()->pluck('value', 'subject_id')->all());
+
+        $nextCash->update(['code' => $cash->code]);
+        $rebuiltOpening->update(['title' => 'Manual document']);
+        $this->post(route('companies.closing-wizard.recreate-opening', $fiscalYear))
+            ->assertSessionHasErrors('fiscal_year');
+        $this->assertDatabaseHas('documents', ['id' => $rebuiltOpening->id, 'title' => 'Manual document']);
     }
 
     public function test_it_rejects_recalculation_for_an_open_fiscal_year(): void
@@ -116,6 +161,20 @@ class FiscalYearClosingRecalculationTest extends TestCase
         $this->expectException(ValidationException::class);
 
         FiscalYearService::recalculateClosingDocument($fiscalYear, $user);
+    }
+
+    public function test_opening_recreation_requires_completed_closing(): void
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo(Permission::firstOrCreate(['name' => 'companies.closing-wizard.recreate-opening']));
+        $fiscalYear = FiscalYear::factory()->create();
+        config(['active-fiscal-year-id' => $fiscalYear->id]);
+
+        $this->actingAs($user)->post(route('companies.closing-wizard.recreate-opening', $fiscalYear))
+            ->assertRedirect(route('companies.closing-wizard', $fiscalYear))
+            ->assertSessionHasErrors('fiscal_year');
+
+        $this->assertDatabaseCount('documents', 0);
     }
 
     public function test_the_recalculation_endpoint_reports_a_missing_closing_document(): void

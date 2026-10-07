@@ -1,4 +1,4 @@
-<x-platform-layout title="{{ __('Year-End Closing Wizard') }} – {{ $company->name }} {{ $company->fiscal_year }}">
+<x-platform-layout title="{{ __('Year-End Closing Wizard') }}">
     <div class="card bg-base-100 shadow-xl">
 
         {{-- Header --}}
@@ -7,23 +7,23 @@
                 <div>
                     <div class="flex flex-wrap items-center gap-1">
                         <h2 class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">
-                            {{ __('Year-End Closing Wizard') }}
+                            {{ __('Year-End Closing Wizard') }}  – {{ $fiscalYear->company->name }} {{ $fiscalYear->year }}
                         </h2>
                         <x-user-guide-link source="management/system/companies/getting-started-fiscal-year.md" />
                     </div>
                     <div class="flex flex-wrap gap-2 mt-2">
-                        <span class="badge badge-lg badge-warning gap-2">
+                        <span class="badge badge-md lg:badge-lg badge-warning gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
-                            {{ $company->fiscal_year }}
+                            {{ $fiscalYear->year }}
                         </span>
-                        <span class="badge badge-lg badge-neutral gap-2">
-                            {{ $company->name }}
+                        <span class="badge badge-md lg:badge-lg badge-neutral gap-2">
+                            {{ $fiscalYear->company->name }}
                         </span>
-                        @if ($company->closed_at)
-                            <span class="badge badge-lg badge-error gap-2">
+                        @if ($fiscalYear->closed_at)
+                            <span class="badge badge-md lg:badge-lg badge-error gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
@@ -34,7 +34,7 @@
                     </div>
                 </div>
                 <div class="flex gap-2 shrink-0">
-                    <a href="{{ route('companies.index') }}" class="btn btn-ghost btn-sm gap-2">
+                    <a href="{{ route('companies.index') }}" class="btn btn-ghost btn-md gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                         </svg>
@@ -78,7 +78,7 @@
             {{-- ═══════════════════════════════════════════════════════ --}}
             <div class="min-w-0 [&_button]:max-w-full [&_button]:h-auto [&_button]:whitespace-normal">
                 <div class="divider text-lg font-semibold">{{ __('Pre-flight Checks') }}</div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 text-sm">
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 text-base">
                     @foreach ($validations as $key => $check)
                         <div class="bg-base-200 rounded-lg px-4 py-4 flex flex-wrap items-start gap-3 min-w-0">
                             @if ($check['pass'])
@@ -110,7 +110,7 @@
                                     @endif
                                 </div>
                                 @if ($check['detail'])
-                                    <div class="text-xs text-gray-500 mt-1">{{ $check['detail'] }}</div>
+                                    <div class="text-sm text-gray-500 mt-1">{{ $check['detail'] }}</div>
                                 @endif
                             </div>
                             <div class="w-full sm:w-auto sm:max-w-full">
@@ -143,9 +143,9 @@
                     </div>
                 @endif
 
-                @if ($company->closed_at && $company->closingDocument)
+                @if ($fiscalYear->closed_at && $fiscalYear->closingDocument)
                     @can('companies.closing-wizard.recalculate')
-                        <form action="{{ route('companies.closing-wizard.recalculate', $company) }}" method="POST" class="flex justify-center"
+                        <form action="{{ route('companies.closing-wizard.recalculate', $fiscalYear) }}" method="POST" class="flex justify-center"
                             onsubmit="return confirm('{{ __('Remove all related closing documents? You must repeat all three closing steps, including the manual Income Summary adjustment.') }}')">
                             @csrf
                             <button type="submit" class="btn btn-outline btn-warning mt-4">
@@ -163,7 +163,7 @@
             {{-- STEP 1 – CLOSE TEMPORARY ACCOUNTS                      --}}
             {{-- ═══════════════════════════════════════════════════════ --}}
             <div>
-                <div class="divider text-xs md:text-lg font-semibold">
+                <div class="divider text-base sm:text-lg font-semibold">
                     <span class="hidden md:block badge badge-success badge-sm {{ $plDocument ? 'badge-success' : 'badge-neutral' }} me-2">1</span>
                     {{ __('Step 1: Close Temporary Accounts') }}
                     @if ($plDocument)
@@ -171,7 +171,7 @@
                     @endif
                 </div>
 
-                <div class="bg-base-200 rounded-lg px-4 py-4 text-sm space-y-3">
+                <div class="bg-base-200 rounded-lg px-4 py-4 text-base space-y-3">
                     <p class="text-gray-600 dark:text-gray-300">
                         {{ __('This step generates the Income Summary document, closing all revenue and expense (temporary) accounts to the "Current Profit and Loss Summary" subject.') }}
                     </p>
@@ -183,14 +183,14 @@
                             </svg>
                             <div>
                                 <span class="font-semibold text-success">{{ __('Income Summary document created:') }}</span>
-                                <a href="{{ route('documents.show', $plDocument) }}" class="link link-primary ms-2">
+                                <a href="{{ route('documents.show', $plDocument) }}" class="link link-primary ms-2 text-sm md:px-3">
                                     {{ __('Document') }} #{{ $plDocument->number }} – {{ $plDocument->title }}
                                 </a>
                             </div>
                         </div>
-                        @if ($company->closing_recalculation_step === 2)
+                        @if ($fiscalYear->closing_recalculation_step === 2)
                             @can('companies.closing-wizard.recalculate')
-                                <form action="{{ route('companies.closing-wizard.recalculate', $company) }}" method="POST"
+                                <form action="{{ route('companies.closing-wizard.recalculate', $fiscalYear) }}" method="POST"
                                     onsubmit="return confirm('{{ __('Restart closing recalculation from Step 1?') }}')">
                                     @csrf
                                     <button type="submit" class="btn btn-outline btn-warning gap-2">
@@ -203,10 +203,10 @@
                             @endcan
                         @endif
                     @else
-                        <form action="{{ route('companies.closing-wizard.step1', $company) }}" method="POST">
+                        <form action="{{ route('companies.closing-wizard.step1', $fiscalYear) }}" method="POST">
                             @csrf
-                            <button type="submit" class="btn btn-warning gap-2 {{ !$allPass || $company->closed_at ? 'btn-disabled' : '' }}"
-                                @disabled(!$allPass || $company->closed_at) @if (!$allPass) title="{{ __('Fix all pre-flight checks first.') }}" @endif>
+                            <button type="submit" class="btn btn-warning gap-2 {{ !$allPass || $fiscalYear->closed_at ? 'btn-disabled' : '' }}"
+                                @disabled(!$allPass || $fiscalYear->closed_at) @if (!$allPass) title="{{ __('Fix all pre-flight checks first.') }}" @endif>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -222,12 +222,12 @@
             {{-- STEP 2 – MANUAL ADJUSTMENTS (TAXES / DIVIDENDS)        --}}
             {{-- ═══════════════════════════════════════════════════════ --}}
             <div>
-                <div class="divider text-xs md:text-lg font-semibold">
+                <div class="divider text-base sm:text-lg font-semibold">
                     <span class="hidden md:block badge badge-success badge-sm {{ $plDocument ? 'badge-warning' : 'badge-neutral' }} me-2">2</span>
                     {{ __('Step 2: Manual Adjustments') }}
                 </div>
 
-                <div class="bg-base-200 rounded-lg px-4 py-4 text-sm space-y-3">
+                <div class="bg-base-200 rounded-lg px-4 py-4 text-base space-y-3">
                     <p class="text-gray-600 dark:text-gray-300">
                         {{ __('Manually zero out the Income Summary account (taxes, dividends, retained earnings, etc.). The balance must reach exactly 0 before Step 3 can proceed.') }}
                     </p>
@@ -272,20 +272,20 @@
             {{-- ═══════════════════════════════════════════════════════ --}}
             <div>
                 <div class="divider text-xs md:text-lg font-semibold">
-                    <span class="hidden md:block badge badge-success badge-sm {{ $company->closed_at ? 'badge-success' : ($step3Enabled ? 'badge-error' : 'badge-neutral') }} me-2">3</span>
-                    {{ $company->closing_recalculation_step ? __('Step 3: Recalculate Closing Document') : __('Step 3: Close Permanent Accounts & Open New Year') }}
-                    @if ($company->closed_at)
+                    <span class="hidden md:block badge badge-success badge-sm {{ $fiscalYear->closed_at ? 'badge-success' : ($step3Enabled ? 'badge-error' : 'badge-neutral') }} me-2">3</span>
+                    {{ $fiscalYear->closing_recalculation_step ? __('Step 3: Recalculate Closing Document') : __('Step 3: Close Permanent Accounts & Open New Year') }}
+                    @if ($fiscalYear->closed_at)
                         <span class="hidden md:block badge badge-success badge-sm">{{ __('Completed') }}</span>
                     @endif
                 </div>
 
-                <div class="bg-base-200 rounded-lg px-4 py-4 text-sm space-y-3">
-                    @if ($company->closing_recalculation_step)
+                <div class="bg-base-200 rounded-lg px-4 py-4 text-base space-y-3">
+                    @if ($fiscalYear->closing_recalculation_step)
                         <p class="text-gray-600 dark:text-gray-300">
-                            {{ __('This step recalculates only the Closing Document for fiscal year :year.', ['year' => $company->fiscal_year]) }}
+                            {{ __('This step recalculates only the Closing Document for fiscal year :year.', ['year' => $fiscalYear->year]) }}
                         </p>
                         <p class="text-warning">
-                            {{ __('The next fiscal year and its Opening Document will not be changed. Update the Opening Document manually if you have access.') }}
+                            {{ __('The next fiscal year and its Opening Document will not be changed. Recreate the Opening Document after recalculating the Closing Document.') }}
                         </p>
                     @else
                         <p class="text-gray-600 dark:text-gray-300">
@@ -293,29 +293,51 @@
                         </p>
                         <ol class="list-decimal list-inside space-y-1 text-gray-600 dark:text-gray-300 ms-2">
                             <li>{{ __('Generates the Closing Document (closes all permanent accounts to the Closing Summary).') }}</li>
-                            <li>{{ __('Creates the new Fiscal Year entity for year :year.', ['year' => $company->fiscal_year + 1]) }}</li>
+                            <li>{{ __('Creates the new Fiscal Year entity for year :year.', ['year' => $fiscalYear->year + 1]) }}</li>
                             <li>{{ __('Generates the Opening Document in the new fiscal year.') }}</li>
                         </ol>
                     @endif
 
-                    @if ($company->closed_at)
-                        <div class="flex items-center gap-3 bg-success/10 border border-success/30 rounded-lg px-4 py-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    @if ($fiscalYear->closed_at)
+                        <div class="flex items-start gap-3 bg-success/10 border border-success/30 rounded-lg px-4 py-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            <div>
-                                <span class="font-semibold text-success">{{ __('Fiscal year closed on') }}</span>
-                                <span class="ms-1">{{ formatDate($company->closed_at) }}</span>
-                                @if ($company->closingDocument)
-                                    <a href="{{ route('documents.show', $company->closingDocument) }}" class="link link-primary ms-3">
-                                        {{ __('View Closing Document') }} #{{ $company->closingDocument->number }}
-                                    </a>
-                                @endif
+                            <div class="min-w-0">
+                                <div>
+                                    <span class="font-semibold text-success">{{ __('Fiscal year closed on') }}</span>
+                                    <span class="ms-1">{{ formatDate($fiscalYear->closed_at) }}</span>
+                                </div>
+                                <div class="mt-2 flex flex-col items-start gap-2 md:flex-row md:items-center md:gap-0 md:divide-x md:divide-base-content/20">
+                                    @if ($fiscalYear->closingDocument)
+                                        <a href="{{ route('documents.show', $fiscalYear->closingDocument) }}" class="link link-primary text-sm md:px-3">
+                                            {{ __('Closing Document') }} #{{ $fiscalYear->closingDocument->number }}
+                                        </a>
+                                    @endif
+                                    @if ($nextFiscalYear && $fiscalYear->closingDocument && $nextFiscalYear->users()->whereKey(auth()->id())->exists())
+                                        @if ($openingDocument && auth()->user()->can('change-company') && auth()->user()->can('documents.show'))
+                                            <a href="{{ route('change-company', ['company' => $nextFiscalYear, 'document' => $openingDocument->id]) }}" class="link link-primary text-sm md:px-3">
+                                                {{ __('Opening Document') }} #{{ $openingDocument->number }}
+                                            </a>
+                                        @endif
+                                        @if ($fiscalYear->closing_recalculation_step === null)
+                                            @can('companies.closing-wizard.recreate-opening')
+                                                <form action="{{ route('companies.closing-wizard.recreate-opening', $fiscalYear) }}" method="POST" class="md:px-3"
+                                                    onsubmit="return confirm('{{ __('Remove and recreate the Opening Document for fiscal year :year from the current Closing Document?', ['year' => $nextFiscalYear->year]) }}')">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-sm btn-outline btn-warning h-auto min-h-8 whitespace-normal text-start">
+                                                        {{ __('Remove and Recreate Opening Document') }}
+                                                    </button>
+                                                </form>
+                                            @endcan
+                                        @endif
+                                    @endif
+                                </div>
                             </div>
                         </div>
                     @else
                         @if (!$step3Enabled)
-                            <div class="text-xs text-gray-500 space-y-1">
+                            <div class="text-sm text-gray-500 space-y-1">
                                 @if (!$plDocument)
                                     <div class="flex items-center gap-1 text-error">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -335,15 +357,15 @@
                             </div>
                         @endif
 
-                        <form action="{{ route('companies.closing-wizard.step3', $company) }}" method="POST"
-                            onsubmit="return confirm('{{ $company->closing_recalculation_step ? __('This will recalculate only the Closing Document for fiscal year :year. The next fiscal year will not be changed. Are you sure?', ['year' => $company->fiscal_year]) : __('This will permanently close fiscal year :year and create year :next. Are you absolutely sure?', ['year' => $company->fiscal_year, 'next' => $company->fiscal_year + 1]) }}')">
+                        <form action="{{ route('companies.closing-wizard.step3', $fiscalYear) }}" method="POST"
+                            onsubmit="return confirm('{{ $fiscalYear->closing_recalculation_step ? __('This will recalculate only the Closing Document for fiscal year :year. The next fiscal year will not be changed. Are you sure?', ['year' => $fiscalYear->year]) : __('This will permanently close fiscal year :year and create year :next. Are you absolutely sure?', ['year' => $fiscalYear->year, 'next' => $fiscalYear->year + 1]) }}')">
                             @csrf
                             <button type="submit" class="btn btn-warning gap-2 {{ !$step3Enabled ? 'btn-disabled' : '' }}" @disabled(!$step3Enabled)>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                                 </svg>
-                                {{ $company->closing_recalculation_step ? __('Recalculate Closing Document') : __('Close Permanent Accounts & Open New Year') }}
+                                {{ $fiscalYear->closing_recalculation_step ? __('Recalculate Closing Document') : __('Close Permanent Accounts & Open New Year') }}
                             </button>
                         </form>
                     @endif
