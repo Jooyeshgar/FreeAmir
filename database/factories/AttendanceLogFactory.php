@@ -3,8 +3,8 @@
 namespace Database\Factories;
 
 use App\Models\AttendanceLog;
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class AttendanceLogFactory extends Factory
@@ -16,7 +16,7 @@ class AttendanceLogFactory extends Factory
         $entry = $this->faker->time('H:i');
 
         return [
-            'company_id' => Company::factory(),
+            'fiscal_year_id' => FiscalYear::factory(),
             'employee_id' => Employee::factory(),
             'monthly_attendance_id' => null,
             'log_date' => $this->faker->dateTimeBetween('-3 months', 'now')->format('Y-m-d'),

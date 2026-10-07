@@ -3,8 +3,8 @@
 English | [فارسی](cheque-management.md)
 
 The cheque module manages receivable, payable, and guarantee cheques. Cheques are scoped to the active
-company through `FiscalYearScope`; account sides and bank accounts selected in the web forms must also belong to
-that company. Dates are stored as Gregorian dates and entered and displayed through the application's
+fiscal year through `FiscalYearScope`; account sides and bank accounts selected in the web forms must also belong to
+that fiscal year. Dates are stored as Gregorian dates and entered and displayed through the application's
 Jalali date helpers.
 
 Cheque printing and lifecycle reversal are not part of the current implementation. A completed transition
@@ -35,7 +35,7 @@ The receive-cheque form contains the shared cheque fields. The issue-cheque form
 account and optional chequebook fields. When editing an existing cheque, the form preserves its original direction
 and does not offer a control for changing it. The form heading and submit button identify the active operation.
 
-The account side must have an accounting subject. The following company-scoped configurations select the
+The account side must have an accounting subject. The following fiscal-year-scoped configurations select the
 subjects used by cheque postings. Their seeded subjects use these default codes, but administrators may point
 the configurations to subjects with different codes:
 
@@ -49,7 +49,7 @@ Every bank account used for clearance must have its own accounting subject.
 
 ## Chequebooks
 
-Chequebooks are scoped to the active company and belong to a bank account. Each record stores an optional
+Chequebooks are scoped to the active fiscal year and belong to a bank account from that year. Each record stores an optional
 serial prefix, the first and last leaf numbers, the next leaf number, and an optional description. The next
 leaf defaults to the first leaf.
 

@@ -6,9 +6,9 @@ use App\Enums\AncillaryCostType;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\User;
 use App\Services\InvoiceService;
@@ -21,16 +21,16 @@ class InvoiceAncillaryCostDateSyncTest extends TestCase
 
     public function test_changing_invoice_date_updates_all_of_its_ancillary_cost_dates(): void
     {
-        $company = Company::factory()->create();
-        config(['active-company-id' => $company->id]);
+        $fiscalYear = FiscalYear::factory()->create();
+        config(['active-fiscal-year-id' => $fiscalYear->id]);
 
         $user = User::factory()->create();
         $customerGroup = CustomerGroup::factory()->withSubject()->create([
-            'company_id' => $company->id,
+            'fiscal_year_id' => $fiscalYear->id,
         ]);
         $customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create([
             'name' => 'Test Customer',
-            'company_id' => $company->id,
+            'fiscal_year_id' => $fiscalYear->id,
         ]);
         $invoice = Invoice::query()->create([
             'number' => 1001,
@@ -53,7 +53,7 @@ class InvoiceAncillaryCostDateSyncTest extends TestCase
                 'date' => $date,
                 'invoice_id' => $invoice->id,
                 'status' => InvoiceStatus::UNAPPROVED,
-                'company_id' => $company->id,
+                'fiscal_year_id' => $fiscalYear->id,
                 'customer_id' => $customer->id,
             ]),
         );

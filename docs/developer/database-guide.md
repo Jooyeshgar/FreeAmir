@@ -19,10 +19,11 @@
 │   ├── model_has_permissions # ارتباط مدل‌-مجوز
 │   ├── model_has_roles       # ارتباط مدل‌-نقش
 │   ├── role_has_permissions  # اتصال نقش و مجوز
-│   └── company_user          # شرکت‌های در دسترس هر کاربر
 ├── 🏢 مدیریت شرکت‌ها
 │   ├── companies             # شرکت‌ها
-│   └── configs               # تنظیمات شرکت
+│   ├── fiscal_years          # سال‌های مالی هر شرکت
+│   ├── fiscal_year_user      # دسترسی کاربران به سال‌های مالی
+│   └── configs               # تنظیمات سال مالی و تنظیمات سراسری
 ├── 📊 هسته حسابداری
 │   ├── subjects              # سرفصل‌های حسابداری
 │   ├── documents             # اسناد حسابداری
@@ -50,7 +51,9 @@
 ### نمودار ERD ساده‌شده
 
 ```
-companies
+companies (1) ──→ (N) fiscal_years
+users (N) ←──→ (N) fiscal_years  [fiscal_year_user]
+fiscal_years
     ├─→ (N) subjects
     ├─→ (N) customers
     ├─→ (N) products
@@ -81,20 +84,41 @@ CREATE TABLE companies (
     economical_code VARCHAR(15) NULL,
     national_code VARCHAR(12) NULL,
     postal_code VARCHAR(255) NULL,
-    phone_number VARCHAR(11) NULL,
-    fiscal_year INT UNSIGNED NOT NULL
+    phone_number VARCHAR(11) NULL
 );
 ```
 
 **نکات مهم:**
-- هر شرکت مجموعه‌ای مستقل از داده‌ها دارد.
-- جداسازی داده‌ها از طریق ستون `company_id` و اسکوپ سراسری `FiscalYearScope` انجام می‌شود که مقدار `session('active-company-id')` را روی کوئری‌ها اعمال می‌کند.
-- ستون `fiscal_year` برای نمایش سال مالی شرکت استفاده می‌شود.
-- دسترسی کاربران به شرکت‌ها از طریق جدول میانی `company_user` مدیریت می‌شود و هر کاربر می‌تواند به چند شرکت دسترسی داشته باشد.
+- این جدول هویت کسب‌وکار را نگه می‌دارد؛ هر شرکت می‌تواند چند سال مالی داشته باشد.
+- سال و وضعیت بستن دوره در جدول `fiscal_years` قرار دارد.
 
-### 📅 سال‌های مالی
+### 📅 جدول `fiscal_years` - سال‌های مالی
 
-در پیاده‌سازی فعلی جدول مستقلی با نام `fiscal_years` وجود ندارد. هر رکورد از جدول `companies` نماینده یک سال مالی است و انتخاب سال فعال از طریق شناسه شرکت فعال (ذخیره‌شده در `session('active-company-id')`) انجام می‌شود. اسکوپ `FiscalYearScope` روی مدل‌های وابسته اعمال شده تا به صورت خودکار داده‌ها را بر اساس شرکت فعال فیلتر کند.
+هر ردیف به یک شرکت تعلق دارد. ستون `year` سال شمسی را نگه می‌دارد و ترکیب `(company_id, year)` یکتا است. ستون‌های `closed_at` و `closed_by` وضعیت بستن دوره را نشان می‌دهند؛ `pl_document_id`، `closing_document_id` و `closing_recalculation_step` اطلاعات عملیات بستن سال را نگه می‌دارند.
+
+```sql
+CREATE TABLE fiscal_years (
+    id BIGINT PRIMARY KEY,
+    company_id BIGINT UNSIGNED NOT NULL,
+    year INT UNSIGNED NOT NULL,
+    pl_document_id BIGINT UNSIGNED NULL,
+    closing_document_id BIGINT UNSIGNED NULL,
+    closing_recalculation_step TINYINT UNSIGNED NULL,
+    closed_at TIMESTAMP NULL,
+    closed_by BIGINT UNSIGNED NULL,
+    UNIQUE KEY fiscal_years_company_id_year_unique (company_id, year),
+    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
+    FOREIGN KEY (closed_by) REFERENCES users(id) ON DELETE SET NULL
+);
+```
+
+رکوردهای مالی با `fiscal_year_id` به جدول `fiscal_years` متصل می‌شوند و `FiscalYearScope` آن‌ها را بر اساس شناسه فعال برمی‌گرداند. شناسه فعال از `getActiveFiscalYear()` گرفته می‌شود؛ در درخواست وب از پیکربندی یا کوکی `active-fiscal-year-id` خوانده می‌شود.
+
+دسترسی کاربر به سال مالی از جدول میانی `fiscal_year_user` برقرار می‌شود. این رابطه مجوزهای نقش را جایگزین نمی‌کند: نقش/مجوز تعیین می‌کند کاربر چه عملی انجام دهد و تخصیص سال مالی تعیین می‌کند روی داده‌های کدام دوره کار کند.
+
+```text
+fiscal_year_user: fiscal_year_id → fiscal_years.id, user_id → users.id
+```
 
 ### 📊 جدول `subjects` - سرفصل‌های حسابداری
 
@@ -105,21 +129,21 @@ CREATE TABLE subjects (
     name VARCHAR(60) NOT NULL,
     parent_id BIGINT NULL,
     type ENUM('debtor', 'creditor', 'both') DEFAULT 'both',
-    company_id BIGINT NOT NULL,
+    fiscal_year_id BIGINT NOT NULL,
     subjectable_type VARCHAR(255) NULL, -- Polymorphic
     subjectable_id BIGINT NULL,         -- Polymorphic
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
     
     FOREIGN KEY (parent_id) REFERENCES subjects(id) ON DELETE CASCADE,
-    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_company_code (company_id, code)
+    FOREIGN KEY (fiscal_year_id) REFERENCES fiscal_years(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_fiscal_year_code (fiscal_year_id, code)
 );
 ```
 
 **نکات مهم:**
 - ساختار درختی (Tree Structure) با `parent_id`
-- کدینگ منحصربه‌فرد در هر شرکت
+- کدینگ منحصربه‌فرد در هر سال مالی
 - ارتباط Polymorphic با سایر entities (مشتری، کالا، و...)
 - انواع: `debtor` (بدهکار)، `creditor` (بستانکار)، `both` (هردو)
 
@@ -145,13 +169,13 @@ CREATE TABLE documents (
     approved_at DATE NULL,
     creator_id BIGINT NULL,
     approver_id BIGINT NULL,
-    company_id BIGINT NULL,
+    fiscal_year_id BIGINT NULL,
     created_at TIMESTAMP,
     updated_at TIMESTAMP,
     
     FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (approver_id) REFERENCES users(id) ON DELETE SET NULL,
-    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE SET NULL
+    FOREIGN KEY (fiscal_year_id) REFERENCES fiscal_years(id) ON DELETE SET NULL
 );
 ```
 
@@ -234,12 +258,12 @@ CREATE TABLE customers (
     disc_rate VARCHAR(15) NOT NULL DEFAULT '0',
     created_at TIMESTAMP NULL,
     updated_at TIMESTAMP NULL,
-    company_id BIGINT UNSIGNED NOT NULL,
+    fiscal_year_id BIGINT UNSIGNED NOT NULL,
 
     FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE SET NULL,
     FOREIGN KEY (group_id) REFERENCES customer_groups(id) ON DELETE SET NULL,
     FOREIGN KEY (introducer_id) REFERENCES customers(id) ON DELETE SET NULL,
-    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE
+    FOREIGN KEY (fiscal_year_id) REFERENCES fiscal_years(id) ON DELETE CASCADE
 );
 ```
 
@@ -266,17 +290,17 @@ CREATE TABLE products (
     discount_formula VARCHAR(100) NULL,
     vat DECIMAL(10,2) NULL,
     description VARCHAR(200) NULL,
-    company_id BIGINT UNSIGNED NOT NULL,
+    fiscal_year_id BIGINT UNSIGNED NOT NULL,
 
     FOREIGN KEY (`group`) REFERENCES product_groups(id) ON DELETE SET NULL,
     FOREIGN KEY (subject_id) REFERENCES subjects(id) ON DELETE SET NULL,
-    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_company_product_code (company_id, code)
+    FOREIGN KEY (fiscal_year_id) REFERENCES fiscal_years(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_fiscal_year_product_code (fiscal_year_id, code)
 );
 ```
 
 **نکات مهم:**
-- کد کالا در سطح هر شرکت یکتا است (ایندکس ترکیبی `company_id + code`).
+- کد کالا در هر سال مالی یکتا است (ایندکس ترکیبی `fiscal_year_id + code`).
 - ستون‌های `quantity` و `quantity_warning` برای مدیریت موجودی و نقطه سفارش استفاده می‌شوند و `oversell` امکان فروش بیش از موجودی را کنترل می‌کند.
 - پس از ایجاد کالا، ستون `subject_id` با استفاده از `SubjectCreatorService` پر می‌شود تا هر کالا سرفصل مرتبط خود را داشته باشد.
 - ستون `vat` برای نگهداری نرخ مالیات بر ارزش افزودهٔ کالا استفاده می‌شود و مقدار آن اختیاری است.
@@ -291,7 +315,7 @@ CREATE TABLE invoices (
     creator_id BIGINT UNSIGNED NULL,
     approver_id BIGINT UNSIGNED NULL,
     document_id BIGINT UNSIGNED NULL,
-    company_id BIGINT UNSIGNED NULL,
+    fiscal_year_id BIGINT UNSIGNED NULL,
     customer_id BIGINT UNSIGNED NOT NULL,
     addition DECIMAL(16,2) NOT NULL,
     subtraction DECIMAL(16,2) NOT NULL,
@@ -310,7 +334,7 @@ CREATE TABLE invoices (
     FOREIGN KEY (creator_id) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (approver_id) REFERENCES users(id) ON DELETE SET NULL,
     FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE SET NULL,
-    FOREIGN KEY (company_id) REFERENCES companies(id) ON DELETE SET NULL,
+    FOREIGN KEY (fiscal_year_id) REFERENCES fiscal_years(id) ON DELETE SET NULL,
     FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
 );
 ```
@@ -318,7 +342,7 @@ CREATE TABLE invoices (
 **نکات مهم:**
 - فیلد `number` برای هر فاکتور یکتا است.
 - ستون‌های `addition`، `subtraction`، `vat` و `cash_payment` برای جمع مبالغ جانبی و پرداخت نقدی استفاده می‌شوند.
-- ستون `company_id` به جدول `companies` متصل است و با اسکوپ سال مالی فیلتر می‌شود.
+- ستون `fiscal_year_id` به جدول `fiscal_years` متصل است و با اسکوپ سال مالی فیلتر می‌شود.
 
 ### 📝 جدول `invoice_items` - اقلام فاکتور
 
@@ -411,60 +435,23 @@ CREATE TABLE role_has_permissions (
 
 ### ایندکس‌های مهم
 
-- `subjects`: ایندکس یکتا روی `(company_id, code)` و کلید خارجی `parent_id` برای مدیریت ساختار درختی و جلوگیری از تکرار کد سرفصل‌ها.
-- `products`: ایندکس یکتای `(company_id, code)` به‌همراه کلیدهای خارجی روی `group` و `subject_id` برای اتصال به گروه کالا و سرفصل حسابداری.
-- `configs`: ایندکس یکتای `(key, company_id)` برای جداسازی تنظیمات هر شرکت.
-- `bank_accounts`: ایندکس یکتای `(number, company_id)` به‌همراه کلید خارجی `bank_id` جهت مدیریت حساب‌های بانکی.
-- `invoices`: ایندکس یکتای ستون `number` و کلیدهای خارجی به کاربران، اسناد، شرکت و مشتری برای یکپارچگی داده‌ها.
-- `company_user`: کلیدهای خارجی روی `company_id` و `user_id` مسئول نگه‌داری ارتباط کاربران و شرکت‌های مجاز هستند.
+- `subjects`: ایندکس یکتا روی `(fiscal_year_id, code)` و کلید خارجی `parent_id` برای مدیریت ساختار درختی و جلوگیری از تکرار کد سرفصل‌ها.
+- `products`: ایندکس یکتای `(fiscal_year_id, code)` به‌همراه کلیدهای خارجی روی `group` و `subject_id` برای اتصال به گروه کالا و سرفصل حسابداری.
+- `configs`: ایندکس یکتای `(key, fiscal_year_id)` برای جداسازی تنظیمات هر سال مالی.
+- `bank_accounts`: ایندکس یکتای `(number, fiscal_year_id)` به‌همراه کلید خارجی `bank_id` جهت مدیریت حساب‌های بانکی.
+- `invoices`: ایندکس یکتای ستون `number` و کلیدهای خارجی به کاربران، اسناد، سال مالی و مشتری برای یکپارچگی داده‌ها.
+- `fiscal_years`: یکتایی `(company_id, year)` از ایجاد دوباره یک سال در یک شرکت جلوگیری می‌کند.
+- `fiscal_year_user`: کلیدهای خارجی روی `fiscal_year_id` و `user_id` دسترسی کاربر به سال‌های مالی را نگه می‌دارند.
 
 ## 🔄 مایگریشن‌ها و سیدرها
 
 ### ترتیب اجرای مایگریشن‌ها
 
-```bash
-1. 2014_04_02_193005_create_translations_table.php
-2. 2014_10_12_000000_create_users_table.php
-3. 2014_10_12_100000_create_password_reset_tokens_table.php
-4. 2019_08_19_000000_create_failed_jobs_table.php
-5. 2019_12_14_000001_create_personal_access_tokens_table.php
-6. 2024_02_15_102710_create_companies_table.php
-7. 2024_03_07_110922_create_banks_table.php
-8. 2024_03_07_112403_create_document_table.php
-9. 2024_03_07_112600_create_config_table.php
-10. 2024_03_07_112610_create_subjects_table.php
-11. 2024_03_07_112700_create_cust_groups_table.php
-12. 2024_03_07_112852_create_customers_table.php
-13. 2024_03_07_113542_create_invoices_table.php
-14. 2024_03_07_114328_create_transactions_table.php
-15. 2024_03_07_114627_create_payments_table.php
-16. 2024_03_07_114800_create_product_groups_table.php
-17. 2024_03_07_114819_create_products_table.php
-18. 2024_03_07_115800_create_invoice_items_table.php
-19. 2024_03_08_111100_create_bank_accounts_table.php
-20. 2024_03_08_111150_create_cheques_table.php
-21. 2024_03_08_111160_create_cheque_history_table.php
-22. 2024_04_18_113959_create_permission_tables.php
-23. 2024_08_15_142029_create_company_user_table.php
-```
+مایگریشن‌ها به‌ترتیب زمان اجرا می‌شوند؛ برای فهرست کامل و ساختار مرجع به `database/migrations` رجوع کنید. مایگریشن `2026_10_06_124405_create_fiscal_years_table.php` جدول `fiscal_years` را می‌سازد، ارجاع‌های دوره را از `company_id` به `fiscal_year_id` منتقل می‌کند، pivot را به `fiscal_year_user` تغییر نام می‌دهد و ستون‌های سال و اختتامیه را از `companies` حذف می‌کند. شناسه‌های قبلی حفظ می‌شوند.
 
 ### سیدرهای اصلی
 
-```php
-// DatabaseSeeder.php
-public function run()
-{
-    $this->call([
-        CompanySeeder::class,             // ایجاد شرکت اولیه
-        SubjectSeeder::class,             // سرفصل‌های پایه
-        ConfigSeeder::class,              // تنظیمات پیش‌فرض شرکت
-        BankSeeder::class,                // بانک‌ها
-        CustomerGroupSeeder::class,       // گروه‌های مشتریان
-        ProductGroupSeeder::class,        // گروه‌های کالا
-        RolesAndPermissionsSeeder::class, // نقش‌ها و مجوزهای پایه
-    ]);
-}
-```
+`DatabaseSeeder::run(?int $fiscalYearId = null)` شناسه سال مالی فعال را موقتاً در پیکربندی قرار می‌دهد و سپس `CompanySeeder` و سیدرهای داده‌های دوره را اجرا می‌کند؛ ازجمله انبار، سرفصل، تنظیمات، بانک، گروه‌ها، ساختار منابع انسانی و نقش‌ها/مجوزها. این سیدرها به یک سال مالی فعال نیاز دارند. به‌دلیل refactor، پیش از اتکا به راه‌اندازی اولیه یا اجرای سیدرها، پیاده‌سازی فعلی `CompanySeeder` و داده‌های موردنیاز `FiscalYear` را با migrationها تطبیق دهید.
 
 ### نمونه سیدر برای سرفصل‌ها
 
@@ -475,9 +462,9 @@ use Illuminate\Support\Facades\DB;
 public function run(): void
 {
     DB::table('subjects')->insert([
-        ['id' => 1, 'code' => '010', 'name' => 'بانکها', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
-        ['id' => 2, 'code' => '040', 'name' => 'هزینه ها', 'parent_id' => null, 'type' => 'debtor', 'company_id' => 1],
-        ['id' => 3, 'code' => '011', 'name' => 'موجودیهای نقدی', 'parent_id' => null, 'type' => 'both', 'company_id' => 1],
+        ['id' => 1, 'code' => '010', 'name' => 'بانکها', 'parent_id' => null, 'type' => 'both', 'fiscal_year_id' => 1],
+        ['id' => 2, 'code' => '040', 'name' => 'هزینه ها', 'parent_id' => null, 'type' => 'debtor', 'fiscal_year_id' => 1],
+        ['id' => 3, 'code' => '011', 'name' => 'موجودیهای نقدی', 'parent_id' => null, 'type' => 'both', 'fiscal_year_id' => 1],
         // ... ده‌ها سطر دیگر برای سرفصل‌های پایه ...
     ]);
 }
@@ -485,7 +472,7 @@ public function run(): void
 
 ## 🔒 امنیت دیتابیس
 
-### کنترل دسترسی
+### کنترل دسترسی و دامنه سال مالی
 
 ```php
 // Document.php
@@ -508,10 +495,12 @@ class FiscalYearScope implements Scope
 {
     public function apply(Builder $builder, Model $model): void
     {
-        $builder->where('company_id', session('active-company-id'));
+        $builder->where('fiscal_year_id', getActiveFiscalYear());
     }
 }
 ```
+
+این اسکوپ تنها رکوردهای همان سال مالی را برمی‌گرداند. میان‌افزارها و کنترلرها دسترسی کاربر به سال انتخاب‌شده را نیز جداگانه بررسی می‌کنند؛ اسکوپ جایگزین کنترل مجوز یا تخصیص دسترسی نیست.
 
 
 ### Audit Trail

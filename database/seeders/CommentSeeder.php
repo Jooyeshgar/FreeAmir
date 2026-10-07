@@ -10,7 +10,7 @@ class CommentSeeder extends Seeder
 {
     public function run()
     {
-        $customers = Customer::withoutGlobalScopes()->where('company_id', getActiveCompany())->get();
+        $customers = Customer::withoutGlobalScopes()->where('fiscal_year_id', getActiveFiscalYear())->get();
 
         foreach ($customers as $customer) {
             Comment::factory()->count(5)->withCustomer($customer)->create();

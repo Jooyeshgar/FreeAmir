@@ -4,9 +4,9 @@ namespace Tests\Feature;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -27,7 +27,7 @@ class InvoiceDashboardTest extends TestCase
 
     private Customer $customer;
 
-    private int $companyId;
+    private int $fiscalYearId;
 
     protected function setUp(): void
     {
@@ -35,21 +35,21 @@ class InvoiceDashboardTest extends TestCase
 
         Carbon::setTestNow(Carbon::parse('2026-09-03 12:00:00', config('app.timezone')));
 
-        $company = Company::factory()->create(['fiscal_year' => 1405]);
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create(['year' => 1405]);
+        $this->fiscalYearId = $fiscalYear->id;
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
 
-        $this->withCookies(['active-company-id' => (string) $this->companyId]);
-        $_COOKIE['active-company-id'] = (string) $this->companyId;
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->fiscalYearId]);
+        $_COOKIE['active-fiscal-year-id'] = (string) $this->fiscalYearId;
         config([
-            'active-company-id' => $this->companyId,
+            'active-fiscal-year-id' => $this->fiscalYearId,
             'active-company-fiscal-year' => 1405,
         ]);
 
-        $group = CustomerGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
+        $group = CustomerGroup::factory()->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $this->customer = Customer::factory()->withGroup($group)->withSubject()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Dashboard Customer',
         ]);
     }
@@ -57,7 +57,7 @@ class InvoiceDashboardTest extends TestCase
     protected function tearDown(): void
     {
         Carbon::setTestNow();
-        unset($_COOKIE['active-company-id']);
+        unset($_COOKIE['active-fiscal-year-id']);
 
         parent::tearDown();
     }
@@ -142,11 +142,11 @@ class InvoiceDashboardTest extends TestCase
     public function test_dashboard_calculates_net_product_and_service_activity(): void
     {
         $product = Product::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Dashboard Product',
         ]);
         $service = Service::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Dashboard Service',
         ]);
 
@@ -195,7 +195,7 @@ class InvoiceDashboardTest extends TestCase
 
     public function test_summary_uses_invoice_totals_including_invoice_level_adjustments(): void
     {
-        $product = Product::factory()->create(['company_id' => $this->companyId]);
+        $product = Product::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
 
         $sell = $this->invoice(InvoiceType::SELL, InvoiceStatus::APPROVED, 1, '2026-08-10', 1200);
         $this->item($sell, $product, 1, 1000, 1000);
@@ -217,7 +217,7 @@ class InvoiceDashboardTest extends TestCase
 
     public function test_custom_duration_filters_invoices_and_company_scope_is_preserved(): void
     {
-        $product = Product::factory()->create(['company_id' => $this->companyId]);
+        $product = Product::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
 
         $recent = $this->invoice(InvoiceType::SELL, InvoiceStatus::APPROVED, 1, '2026-08-25', 500);
         $this->item($recent, $product, 1, 500, 500);
@@ -225,7 +225,7 @@ class InvoiceDashboardTest extends TestCase
         $old = $this->invoice(InvoiceType::SELL, InvoiceStatus::APPROVED, 2, '2026-06-01', 700);
         $this->item($old, $product, 1, 700, 700);
 
-        $otherCompany = Company::factory()->create(['fiscal_year' => 1405]);
+        $otherFiscalYear = FiscalYear::factory()->create(['year' => 1405]);
         Invoice::withoutGlobalScopes()->insert([
             'number' => 3,
             'date' => '2026-08-28',
@@ -236,7 +236,7 @@ class InvoiceDashboardTest extends TestCase
             'vat' => 0,
             'subtraction' => 0,
             'amount' => 9000,
-            'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherFiscalYear->id,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -253,7 +253,7 @@ class InvoiceDashboardTest extends TestCase
 
     public function test_product_profit_uses_cogs_snapshot_and_reverses_returns(): void
     {
-        $product = Product::factory()->create(['company_id' => $this->companyId]);
+        $product = Product::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
 
         $sell = $this->invoice(InvoiceType::SELL, InvoiceStatus::APPROVED, 1, '2026-08-10', 1300);
         $this->item($sell, $product, 5, 200, 1100, 100);
@@ -271,7 +271,7 @@ class InvoiceDashboardTest extends TestCase
 
     public function test_service_created_by_invoice_service_does_not_report_snapshot_as_profit_margin(): void
     {
-        $service = Service::factory()->create(['company_id' => $this->companyId]);
+        $service = Service::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
 
         $result = InvoiceService::createInvoice($this->user, [
             'title' => 'Production-path service sale',
@@ -301,7 +301,7 @@ class InvoiceDashboardTest extends TestCase
     public function test_dashboard_tables_link_to_item_and_invoice_details(): void
     {
         $this->grant('invoices.dashboard', 'invoices.show', 'products.show', 'customers.show');
-        $product = Product::factory()->create(['company_id' => $this->companyId, 'name' => 'Linked Product']);
+        $product = Product::factory()->create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Linked Product']);
         $sell = $this->invoice(InvoiceType::SELL, InvoiceStatus::APPROVED, 11, '2026-08-10', 500);
         $this->item($sell, $product, 1, 500, 500, 200);
 
@@ -317,11 +317,11 @@ class InvoiceDashboardTest extends TestCase
     {
         foreach (range(1, 7) as $index) {
             $product = Product::factory()->create([
-                'company_id' => $this->companyId,
+                'fiscal_year_id' => $this->fiscalYearId,
                 'name' => "Product {$index}",
             ]);
             $service = Service::factory()->create([
-                'company_id' => $this->companyId,
+                'fiscal_year_id' => $this->fiscalYearId,
                 'name' => "Service {$index}",
             ]);
             $invoice = $this->invoice(InvoiceType::SELL, InvoiceStatus::APPROVED, $index, '2026-08-10', 0);
@@ -341,7 +341,7 @@ class InvoiceDashboardTest extends TestCase
 
     public function test_top_sales_include_profit_percentage_from_historical_cost(): void
     {
-        $product = Product::factory()->create(['company_id' => $this->companyId]);
+        $product = Product::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $sell = $this->invoice(InvoiceType::SELL, InvoiceStatus::APPROVED, 1, '2026-08-10', 1000);
         $this->item($sell, $product, 2, 500, 1000, 300);
 

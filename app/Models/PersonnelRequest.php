@@ -16,7 +16,7 @@ class PersonnelRequest extends Model
 
     protected $fillable = [
         'employee_id',
-        'company_id',
+        'fiscal_year_id',
         'request_type',
         'start_date',
         'end_date',

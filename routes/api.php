@@ -12,7 +12,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         ->name('api.companies.index');
 });
 
-Route::prefix('companies/{company}')->middleware(['auth:sanctum', 'api-company'])->group(function () {
+Route::prefix('companies/{fiscal_year}')->middleware(['auth:sanctum', 'api-fiscal-year'])->group(function () {
     Route::post('attendance/logs', [AttendanceLogController::class, 'store'])
         ->middleware('check-permission:attendance.attendance-logs.store')
         ->name('api.attendance-logs.store');

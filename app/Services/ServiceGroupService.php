@@ -76,7 +76,7 @@ class ServiceGroupService
     {
         $serviceGroup->loadMissing('subject', 'cogsSubject', 'salesReturnsSubject');
 
-        $companyId = $serviceGroup->company_id ?? getActiveCompany();
+        $fiscalYearId = $serviceGroup->fiscal_year_id ?? getActiveFiscalYear();
 
         $subjectsConfig = [
             'subject_id' => [
@@ -104,7 +104,7 @@ class ServiceGroupService
                 $subject = $this->subjectService->createSubject([
                     'name' => $serviceGroup->name,
                     'parent_id' => $parentId,
-                    'company_id' => $companyId,
+                    'fiscal_year_id' => $fiscalYearId,
                 ]);
             }
 

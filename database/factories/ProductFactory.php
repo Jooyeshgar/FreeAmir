@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Subject;
@@ -14,9 +14,9 @@ class ProductFactory extends Factory
 
     public function definition(): array
     {
-        $companyId = (int) getActiveCompany();
-        if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
-            throw new \LogicException('An active company is required to create a product.');
+        $fiscalYearId = (int) getActiveFiscalYear();
+        if (! FiscalYear::withoutGlobalScopes()->whereKey($fiscalYearId)->exists()) {
+            throw new \LogicException('An active fiscal year is required to create a product.');
         }
 
         return [
@@ -31,7 +31,7 @@ class ProductFactory extends Factory
             'selling_price' => $this->faker->randomFloat(2, 0, 10000),
             'discount_formula' => null,
             'description' => $this->faker->persianSentence(),
-            'company_id' => $companyId,
+            'fiscal_year_id' => $fiscalYearId,
             'vat' => 0,
             'average_cost' => 0,
         ];
@@ -66,7 +66,7 @@ class ProductFactory extends Factory
                     ->for($product, 'subjectable')
                     ->create([
                         'name' => $product->name,
-                        'company_id' => $product->company_id,
+                        'fiscal_year_id' => $product->fiscal_year_id,
                     ]);
 
                 $product->{$column} = $subject->id;

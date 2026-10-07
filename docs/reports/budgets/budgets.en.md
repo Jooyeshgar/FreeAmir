@@ -8,7 +8,7 @@ This guide explains how Amir calculates forecasts, actual values, variances, and
 
 ## Overview
 
-For each Jalali month in the active company's fiscal year, the workbench compares:
+For each Jalali month in the active fiscal year, the workbench compares:
 
 | Value | Meaning |
 |---|---|
@@ -22,7 +22,7 @@ Forecasting operates on temporary accounting subjects; income and expense accoun
 
 A transaction contributes to actual values only when its accounting document:
 
-- belongs to the active company;
+- belongs to the active fiscal year;
 - is approved (`approved_at` is not null);
 - is dated within the selected Jalali month; and
 - posts to a relevant temporary subject or one of its descendants.
@@ -35,7 +35,7 @@ For actual totals, Amir combines each temporary root with all of its descendants
 Root balance = root transactions + all descendant transactions
 ```
 
-The root's direction is determined once from the signed sum of all approved transactions on the root and every descendant in the active fiscal company:
+The root's direction is determined once from the signed sum of all approved transactions on the root and every descendant in the active fiscal year:
 
 ```text
 If complete hierarchy balance > 0:
@@ -96,7 +96,7 @@ Stored budget_type: expense
 Stored forecast_amount: 800
 ```
 
-Only one forecast can exist for a company, month, and subject. A manual forecast always takes priority over the system forecast for that subject, including completed, current, and future months.
+Only one forecast can exist for a fiscal year, month, and subject. A manual forecast always takes priority over the system forecast for that subject, including completed, current, and future months.
 
 The **Copy Previous Month** action replaces the selected month's complete manual forecast set with a copy of the preceding month's set.
 
