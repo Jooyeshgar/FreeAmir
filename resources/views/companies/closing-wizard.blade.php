@@ -2,11 +2,11 @@
     <div class="card bg-base-100 shadow-xl">
 
         {{-- Header --}}
-        <div class="card-header bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-800 dark:to-gray-700 px-6 py-4 rounded-t-2xl border-b-2 border-warning/30">
+        <div class="card-header bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-800 dark:to-gray-700 px-4 sm:px-6 py-4 rounded-t-2xl border-b-2 border-warning/30">
             <div class="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                    <div class="flex items-center gap-1">
-                        <h2 class="text-2xl font-bold text-gray-800 dark:text-white">
+                    <div class="flex flex-wrap items-center gap-1">
+                        <h2 class="text-xl sm:text-2xl font-bold text-gray-800 dark:text-white">
                             {{ __('Year-End Closing Wizard') }}
                         </h2>
                         <x-user-guide-link source="management/system/companies/getting-started-fiscal-year.md" />
@@ -76,11 +76,11 @@
             {{-- ═══════════════════════════════════════════════════════ --}}
             {{-- PRE-FLIGHT VALIDATIONS                                  --}}
             {{-- ═══════════════════════════════════════════════════════ --}}
-            <div>
+            <div class="min-w-0 [&_button]:max-w-full [&_button]:h-auto [&_button]:whitespace-normal">
                 <div class="divider text-lg font-semibold">{{ __('Pre-flight Checks') }}</div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    @foreach ($validations as $check)
-                        <div class="bg-base-200 rounded-lg px-4 py-4 flex items-start gap-3">
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 text-sm">
+                    @foreach ($validations as $key => $check)
+                        <div class="bg-base-200 rounded-lg px-4 py-4 flex flex-wrap items-start gap-3 min-w-0">
                             @if ($check['pass'])
                                 <span class="text-success mt-0.5">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -95,25 +95,67 @@
                                     </svg>
                                 </span>
                             @endif
-                            <div>
+                            <div class="min-w-0 flex-1 break-words">
                                 <div class="font-semibold {{ $check['pass'] ? 'text-success' : 'text-error' }}">
-                                    {{ $check['label'] }}
+                                    @if (!$check['pass'] && $key === 'gaps_in_numbers')
+                                        @can('documents.sort-numbers')
+                                            <a href="{{ route('documents.sort-numbers') }}" class="link">{{ $check['label'] }}</a>
+                                        @endcan
+                                    @elseif (!$check['pass'] && $key === 'draft_docs')
+                                        @can('documents.index')
+                                            <a href="{{ route('documents.index', ['status' => 'unapproved']) }}" class="link">{{ $check['label'] }}</a>
+                                        @endcan
+                                    @else
+                                        {{ $check['label'] }}
+                                    @endif
                                 </div>
                                 @if ($check['detail'])
                                     <div class="text-xs text-gray-500 mt-1">{{ $check['detail'] }}</div>
+                                @endif
+                            </div>
+                            <div class="w-full sm:w-auto sm:max-w-full">
+                                @if (!$check['pass'] && $key === 'gaps_in_numbers')
+                                    @can('documents.sort-numbers.start')
+                                        <form action="{{ route('documents.sort-numbers.start') }}" method="POST" onsubmit="return confirm('{{ __('Are you sure you want to start sorting document numbers?') }}')">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm xl:btn-xs btn-error">{{ __('Sorting Numbers') }}</button>
+                                        </form>
+                                    @endcan
+                                @elseif (!$check['pass'] && $key === 'draft_docs')
+                                    @can('documents.approve-all')
+                                        <form action="{{ route('documents.approve-all') }}" method="POST" onsubmit="return confirm('{{ __('Are you sure you want to approve all unapproved documents?') }}')">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm xl:btn-xs btn-error">{{ __('Approve All') }}</button>
+                                        </form>
+                                    @endcan
                                 @endif
                             </div>
                         </div>
                     @endforeach
                 </div>
                 @if (!$allPass)
-                    <div class="alert alert-warning mt-4">
+                    <div class="alert alert-warning mt-4 min-w-0">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0 stroke-current" fill="none" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                         </svg>
-                        <span>{{ __('Please fix all failing checks before proceeding with year-end closing.') }}</span>
+                        <span class="min-w-0 break-words">{{ __('Please fix all failing checks before proceeding with year-end closing.') }}</span>
                     </div>
+                @endif
+
+                @if ($company->closed_at && $company->closingDocument)
+                    @can('companies.closing-wizard.recalculate')
+                        <form action="{{ route('companies.closing-wizard.recalculate', $company) }}" method="POST" class="flex justify-center"
+                            onsubmit="return confirm('{{ __('Remove all related closing documents? You must repeat all three closing steps, including the manual Income Summary adjustment.') }}')">
+                            @csrf
+                            <button type="submit" class="btn btn-outline btn-warning mt-4">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                {{ __('Remove all related closing documents') }}
+                            </button>
+                        </form>
+                    @endcan
                 @endif
             </div>
 
@@ -121,11 +163,11 @@
             {{-- STEP 1 – CLOSE TEMPORARY ACCOUNTS                      --}}
             {{-- ═══════════════════════════════════════════════════════ --}}
             <div>
-                <div class="divider text-lg font-semibold">
-                    <span class="badge badge-lg {{ $plDocument ? 'badge-success' : 'badge-neutral' }} me-2">1</span>
+                <div class="divider text-xs md:text-lg font-semibold">
+                    <span class="hidden md:block badge badge-success badge-sm {{ $plDocument ? 'badge-success' : 'badge-neutral' }} me-2">1</span>
                     {{ __('Step 1: Close Temporary Accounts') }}
                     @if ($plDocument)
-                        <span class="badge badge-success badge-sm ms-2">{{ __('Completed') }}</span>
+                        <span class="hidden md:block badge badge-sm badge-success">{{ __('Completed') }}</span>
                     @endif
                 </div>
 
@@ -180,8 +222,8 @@
             {{-- STEP 2 – MANUAL ADJUSTMENTS (TAXES / DIVIDENDS)        --}}
             {{-- ═══════════════════════════════════════════════════════ --}}
             <div>
-                <div class="divider text-lg font-semibold">
-                    <span class="badge badge-lg {{ $plDocument ? 'badge-warning' : 'badge-neutral' }} me-2">2</span>
+                <div class="divider text-xs md:text-lg font-semibold">
+                    <span class="hidden md:block badge badge-success badge-sm {{ $plDocument ? 'badge-warning' : 'badge-neutral' }} me-2">2</span>
                     {{ __('Step 2: Manual Adjustments') }}
                 </div>
 
@@ -229,11 +271,11 @@
             {{-- STEP 3 – CLOSE PERMANENT ACCOUNTS & OPEN NEW YEAR      --}}
             {{-- ═══════════════════════════════════════════════════════ --}}
             <div>
-                <div class="divider text-lg font-semibold">
-                    <span class="badge badge-lg {{ $company->closed_at ? 'badge-success' : ($step3Enabled ? 'badge-error' : 'badge-neutral') }} me-2">3</span>
+                <div class="divider text-xs md:text-lg font-semibold">
+                    <span class="hidden md:block badge badge-success badge-sm {{ $company->closed_at ? 'badge-success' : ($step3Enabled ? 'badge-error' : 'badge-neutral') }} me-2">3</span>
                     {{ $company->closing_recalculation_step ? __('Step 3: Recalculate Closing Document') : __('Step 3: Close Permanent Accounts & Open New Year') }}
                     @if ($company->closed_at)
-                        <span class="badge badge-success badge-sm ms-2">{{ __('Completed') }}</span>
+                        <span class="hidden md:block badge badge-success badge-sm">{{ __('Completed') }}</span>
                     @endif
                 </div>
 
@@ -271,20 +313,6 @@
                                 @endif
                             </div>
                         </div>
-                        @can('companies.closing-wizard.recalculate')
-                            @if ($company->closingDocument)
-                                <form action="{{ route('companies.closing-wizard.recalculate', $company) }}" method="POST"
-                                    onsubmit="return confirm('{{ __('Restart closing recalculation? You must repeat all three closing steps, including the manual Income Summary adjustment.') }}')">
-                                    @csrf
-                                    <button type="submit" class="btn btn-outline btn-warning gap-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                        </svg>
-                                        {{ __('Restart Closing Recalculation') }}
-                                    </button>
-                                </form>
-                            @endif
-                        @endcan
                     @else
                         @if (!$step3Enabled)
                             <div class="text-xs text-gray-500 space-y-1">
@@ -310,7 +338,7 @@
                         <form action="{{ route('companies.closing-wizard.step3', $company) }}" method="POST"
                             onsubmit="return confirm('{{ $company->closing_recalculation_step ? __('This will recalculate only the Closing Document for fiscal year :year. The next fiscal year will not be changed. Are you sure?', ['year' => $company->fiscal_year]) : __('This will permanently close fiscal year :year and create year :next. Are you absolutely sure?', ['year' => $company->fiscal_year, 'next' => $company->fiscal_year + 1]) }}')">
                             @csrf
-                            <button type="submit" class="btn btn-error gap-2 {{ !$step3Enabled ? 'btn-disabled' : '' }}" @disabled(!$step3Enabled)>
+                            <button type="submit" class="btn btn-warning gap-2 {{ !$step3Enabled ? 'btn-disabled' : '' }}" @disabled(!$step3Enabled)>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
