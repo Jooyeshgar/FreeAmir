@@ -2,13 +2,13 @@
 
 namespace Database\Factories;
 
-use App\Models\Company;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\CustomerGroup>
+ * @extends Factory<CustomerGroup>
  */
 class CustomerGroupFactory extends Factory
 {
@@ -19,12 +19,12 @@ class CustomerGroupFactory extends Factory
      */
     public function definition(): array
     {
-        $companyId = Company::withoutGlobalScopes()->inRandomOrder()->value('id') ?? getActiveCompany() ?? Company::factory()->create()->id;
+        $fiscalYearId = FiscalYear::withoutGlobalScopes()->inRandomOrder()->value('id') ?? getActiveFiscalYear() ?? FiscalYear::factory()->create()->id;
 
         return [
             'name' => $this->faker?->name,
             'description' => $this->faker?->text,
-            'company_id' => $companyId,
+            'fiscal_year_id' => $fiscalYearId,
         ];
     }
 
@@ -33,7 +33,7 @@ class CustomerGroupFactory extends Factory
         return $this->afterCreating(function (CustomerGroup $group) {
             $parent = Subject::withoutGlobalScopes()
                 ->where('id', config('amir.cust_subject'))
-                ->where('company_id', $group->company_id)
+                ->where('fiscal_year_id', $group->fiscal_year_id)
                 ->first();
 
             $subject = Subject::factory()
@@ -41,7 +41,7 @@ class CustomerGroupFactory extends Factory
                 ->for($group, 'subjectable')
                 ->create([
                     'name' => $group->name,
-                    'company_id' => $group->company_id,
+                    'fiscal_year_id' => $group->fiscal_year_id,
                 ]);
 
             $group->subject_id = $subject->id;

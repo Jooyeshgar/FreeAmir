@@ -7,9 +7,9 @@ use Illuminate\Database\Seeder;
 
 class BankSeeder extends Seeder
 {
-    public function run(?int $companyId = null): void
+    public function run(?int $fiscalYearId = null): void
     {
-        $companyId ??= (int) getActiveCompany();
+        $fiscalYearId ??= (int) getActiveFiscalYear();
         $bankNames = [
             'بانک پارسیان',
             'بانک دی',
@@ -37,7 +37,7 @@ class BankSeeder extends Seeder
         foreach ($bankNames as $bankName) {
             Bank::withoutGlobalScopes()->firstOrCreate([
                 'name' => $bankName,
-                'company_id' => $companyId,
+                'fiscal_year_id' => $fiscalYearId,
             ]);
         }
     }

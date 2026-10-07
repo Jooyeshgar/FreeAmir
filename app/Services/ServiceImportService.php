@@ -91,7 +91,7 @@ class ServiceImportService
      *
      * @throws ValidationException
      */
-    public function import(UploadedFile|string $file, int $companyId): array
+    public function import(UploadedFile|string $file, int $fiscalYearId): array
     {
         $rows = $this->parse($file);
 
@@ -99,7 +99,7 @@ class ServiceImportService
             $this->fail(__('The import file is empty or has no data rows.'));
         }
 
-        return DB::transaction(function () use ($rows, $companyId) {
+        return DB::transaction(function () use ($rows, $fiscalYearId) {
             $imported = 0;
             $updated = 0;
             $groupsCreated = 0;
@@ -130,7 +130,7 @@ class ServiceImportService
                     if (! $group) {
                         $group = $this->serviceGroupService->create([
                             'name' => $groupName,
-                            'company_id' => $companyId,
+                            'fiscal_year_id' => $fiscalYearId,
                         ]);
                         $groupsCreated++;
                     }
@@ -142,7 +142,7 @@ class ServiceImportService
                 $data = [
                     'name' => $name,
                     'group' => $group->id,
-                    'company_id' => $companyId,
+                    'fiscal_year_id' => $fiscalYearId,
                 ];
 
                 foreach (self::PLAIN_FIELDS as $field) {
@@ -164,7 +164,7 @@ class ServiceImportService
                     ? Service::where('code', $code)->first()
                     : null;
 
-                $data = array_merge($data, $this->resolveSubjects($row, $group, $name, $companyId, $existing, $line));
+                $data = array_merge($data, $this->resolveSubjects($row, $group, $name, $fiscalYearId, $existing, $line));
 
                 try {
                     if ($existing) {
@@ -314,7 +314,7 @@ class ServiceImportService
      * Resolve exported subject codes to the correct service account branches.
      * Missing subjects are created with the requested code under the selected group.
      */
-    private function resolveSubjects(array $row, ServiceGroup $group, string $name, int $companyId, ?Service $existing, int $line): array
+    private function resolveSubjects(array $row, ServiceGroup $group, string $name, int $fiscalYearId, ?Service $existing, int $line): array
     {
         $group->loadMissing(array_column(self::SUBJECT_COLUMNS, 'group_relation'));
         $resolved = [];
@@ -342,7 +342,7 @@ class ServiceImportService
                 ]));
             }
 
-            $subject = Subject::withoutGlobalScopes()->where('company_id', $companyId)->where('code', $subjectCode)->first();
+            $subject = Subject::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->where('code', $subjectCode)->first();
 
             if ($existing && $existing->{$config['id_column']} && (int) $existing->{$config['id_column']} !== (int) $subject?->id) {
                 $this->fail(__('Line :line: subject code :code does not match the existing service account relation.', [
@@ -363,7 +363,7 @@ class ServiceImportService
                 $subject = $this->subjectService->createSubject([
                     'name' => $name,
                     'parent_id' => $parent->id,
-                    'company_id' => $companyId,
+                    'fiscal_year_id' => $fiscalYearId,
                     'code' => substr($subjectCode, -3),
                 ]);
             }

@@ -4,9 +4,9 @@ namespace Tests\Feature;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\MoadianHistory;
 use App\Models\ProductGroup;
@@ -31,7 +31,7 @@ class VoidSellInvoiceTest extends TestCase
 
     protected Customer $customer;
 
-    protected int $companyId;
+    protected int $fiscalYearId;
 
     protected int $nextInvoiceNumber = 7000;
 
@@ -39,11 +39,11 @@ class VoidSellInvoiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->companyId = Company::firstOrCreate(['id' => 1], ['name' => 'Test Company', 'fiscal_year' => 1405])->id;
+        $this->fiscalYearId = FiscalYear::factory()->create(['year' => 1405])->id;
 
-        Cache::forever('active_company_id', $this->companyId);
-        Cookie::queue('active-company-id', (string) $this->companyId);
-        $_COOKIE['active-company-id'] = (string) $this->companyId;
+        Cache::forever('active_fiscal_year_id', $this->fiscalYearId);
+        Cookie::queue('active-fiscal-year-id', (string) $this->fiscalYearId);
+        $_COOKIE['active-fiscal-year-id'] = (string) $this->fiscalYearId;
 
         $this->user = User::factory()->create();
 
@@ -59,13 +59,13 @@ class VoidSellInvoiceTest extends TestCase
 
         $this->actingAs($this->user);
 
-        $this->importSubjects($this->companyId);
-        $this->importConfigs($this->companyId);
+        $this->importSubjects($this->fiscalYearId);
+        $this->importConfigs($this->fiscalYearId);
 
-        ProductGroup::factory()->withSubjects()->create(['name' => 'عمومی', 'vat' => 10, 'company_id' => $this->companyId]);
-        $customerGroup = CustomerGroup::factory()->withSubject()->create(['name' => 'عمومی', 'description' => 'گروه مشتریان عمومی', 'company_id' => $this->companyId]);
+        ProductGroup::factory()->withSubjects()->create(['name' => 'عمومی', 'vat' => 10, 'fiscal_year_id' => $this->fiscalYearId]);
+        $customerGroup = CustomerGroup::factory()->withSubject()->create(['name' => 'عمومی', 'description' => 'گروه مشتریان عمومی', 'fiscal_year_id' => $this->fiscalYearId]);
 
-        $this->customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create(['company_id' => $this->companyId]);
+        $this->customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
     }
 
     public function test_void_route_validates_required_fields(): void
@@ -186,10 +186,11 @@ class VoidSellInvoiceTest extends TestCase
     public function test_product_stock_can_be_recalculated_from_invoices_in_all_companies(): void
     {
         $product = $this->createProduct();
-        $otherCompany = Company::create(['name' => 'Other Company', 'fiscal_year' => 1404]);
+        $otherFiscalYear = FiscalYear::factory()->create(['year' => 1404]);
+        $otherFiscalYear->company->update(['name' => 'Other Fiscal Year']);
 
         $invoice = $this->buy([$this->productItem($product, 10, 100)], true, 7024, '2026-07-01')['invoice'];
-        $invoice->updateQuietly(['company_id' => $otherCompany->id]);
+        $invoice->updateQuietly(['fiscal_year_id' => $otherFiscalYear->id]);
 
         $product->update(['quantity' => 999]);
 
@@ -318,8 +319,8 @@ class VoidSellInvoiceTest extends TestCase
 
     public function test_void_index_lists_a_voided_service_sale(): void
     {
-        $serviceGroup = ServiceGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
-        $service = Service::factory()->withGroup($serviceGroup)->withSubject()->create(['company_id' => $this->companyId]);
+        $serviceGroup = ServiceGroup::factory()->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $service = Service::factory()->withGroup($serviceGroup)->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $sell = $this->sell([[
             'itemable_type' => 'service',
             'itemable_id' => $service->id,

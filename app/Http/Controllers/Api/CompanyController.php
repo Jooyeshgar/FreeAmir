@@ -11,15 +11,16 @@ class CompanyController extends Controller
     public function index(Request $request): JsonResponse
     {
         $companies = $request->user()
-            ->companies()
-            ->orderBy('name')
-            ->get(['companies.id', 'name', 'fiscal_year', 'currency', 'closed_at'])
-            ->map(fn ($company) => [
-                'id' => $company->id,
-                'name' => $company->name,
-                'fiscal_year' => $company->fiscal_year,
-                'currency' => $company->currency,
-                'closed_at' => $company->closed_at,
+            ->fiscalYears()
+            ->with('company')
+            ->orderBy('year')
+            ->get()
+            ->map(fn ($fiscalYear) => [
+                'id' => $fiscalYear->id,
+                'name' => $fiscalYear->company?->name,
+                'fiscal_year' => $fiscalYear->year,
+                'currency' => $fiscalYear->company?->currency,
+                'closed_at' => $fiscalYear->closed_at,
             ]);
 
         return response()->json(['data' => $companies]);

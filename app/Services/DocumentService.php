@@ -36,7 +36,7 @@ class DocumentService
             $data['number'] = Document::max('number') + 1;
         }
 
-        $data['company_id'] = isset($data['company_id']) ? $data['company_id'] : getActiveCompany();
+        $data['fiscal_year_id'] = isset($data['fiscal_year_id']) ? $data['fiscal_year_id'] : getActiveFiscalYear();
 
         $document = null;
         DB::transaction(function () use ($data, $transactions, $user, &$document) {

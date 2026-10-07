@@ -5,9 +5,9 @@ namespace App\Services;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Enums\PersonnelRequestStatus;
-use App\Models\Company;
 use App\Models\Document;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\MonthlyAttendance;
@@ -20,40 +20,40 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
-class CompanyOverviewService
+class FiscalYearOverviewService
 {
     public function __construct(private readonly SubjectService $subjectService) {}
 
     /**
-     * Build a business-level overview across every fiscal-year record with the same name.
+     * Build a business-level overview across every fiscal-year record for the same company.
      *
      * @return array<string, mixed>
      */
-    public function build(Company $company): array
+    public function build(FiscalYear $fiscalYear): array
     {
-        $fiscalYears = Company::query()
-            ->where('name', $company->name)
-            ->select('companies.*')
+        $fiscalYears = FiscalYear::query()
+            ->where('company_id', $fiscalYear->company_id)
+            ->select('fiscal_years.*')
             ->selectSub(
                 Document::withoutGlobalScopes()
                     ->selectRaw('COUNT(*)')
-                    ->whereColumn('documents.company_id', 'companies.id'),
+                    ->whereColumn('documents.fiscal_year_id', 'fiscal_years.id'),
                 'documents_count'
             )
             ->selectSub(
                 Invoice::withoutGlobalScopes()
                     ->selectRaw('COUNT(*)')
-                    ->whereColumn('invoices.company_id', 'companies.id'),
+                    ->whereColumn('invoices.fiscal_year_id', 'fiscal_years.id'),
                 'invoices_count'
             )
             ->withCount('users')
-            ->orderByDesc('fiscal_year')
+            ->orderByDesc('year')
             ->orderByDesc('id')
             ->get();
 
-        $companyIds = $fiscalYears->pluck('id');
+        $fiscalYearIds = $fiscalYears->pluck('id');
         $users = User::query()
-            ->whereHas('companies', fn ($query) => $query->whereIn('companies.id', $companyIds))
+            ->whereHas('fiscalYears', fn ($query) => $query->whereIn('fiscal_years.id', $fiscalYearIds))
             ->with('roles:id,name')
             ->orderBy('name')
             ->orderBy('id')
@@ -74,7 +74,7 @@ class CompanyOverviewService
     }
 
     /**
-     * Total approved or settled purchases for the active company and fiscal year.
+     * Total approved or settled purchases for the active fiscal year.
      */
     public function totalBuyAmount(): float
     {

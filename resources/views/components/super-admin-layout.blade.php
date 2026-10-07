@@ -4,9 +4,9 @@
     $user = auth()->user();
     $isRtl = app()->getLocale() === 'fa';
     $hasCurrentWorkspace = $user
-        ->companies()
-        ->whereKey(getActiveCompany())
-        ->where('fiscal_year', toEnglish(jdate('Y')))
+        ->fiscalYears()
+        ->whereKey(getActiveFiscalYear())
+        ->where('year', toEnglish(jdate('Y')))
         ->exists();
     $navigation = [
         [
@@ -20,6 +20,12 @@
             route('companies.index'),
             request()->routeIs('companies.*'),
             'M3 21h18M6 21V7l6-4 6 4v14M9 10h1m4 0h1M9 14h1m4 0h1',
+        ],
+        [
+            __('Fiscal years'),
+            route('fiscal-years.index'),
+            request()->routeIs('fiscal-years.*'),
+            'M3 5h18v16H3V5Zm4-3v6m10-6v6M3 11h18',
         ],
         [
             __('Users'),
@@ -170,7 +176,8 @@
         </div>
         <div class="drawer-side z-50">
             <label for="management-drawer" aria-label="{{ __('Close') }}" class="drawer-overlay"></label>
-            <aside id="management-sidebar" class="relative flex min-h-full w-[min(18rem,calc(100vw-1rem))] flex-col overflow-y-auto bg-[#15263b] text-slate-300 shadow-2xl md:w-56 lg:w-72" aria-label="{{ __('Super-Admin navigation') }}">
+            <aside id="management-sidebar" class="relative flex min-h-full w-[min(18rem,calc(100vw-1rem))] flex-col overflow-y-auto bg-[#15263b] text-slate-300 shadow-2xl md:w-56 lg:w-72"
+                aria-label="{{ __('Super-Admin navigation') }}">
                 <div class="grid-paper pointer-events-none absolute inset-0 opacity-70"></div>
                 <div class="relative flex h-20 items-center gap-3 border-b border-white/10 mr-1">
                     <a href="{{ route('management.dashboard') }}" class="flex min-w-0 flex-1 items-center gap-3 mt-2">

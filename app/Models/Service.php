@@ -23,7 +23,7 @@ class Service extends Model
         'selling_price',
         'vat',
         'description',
-        'company_id',
+        'fiscal_year_id',
     ];
 
     protected static function booted(): void
@@ -31,7 +31,7 @@ class Service extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function ($model) {
-            $model->company_id ??= getActiveCompany();
+            $model->fiscal_year_id ??= getActiveFiscalYear();
         });
     }
 

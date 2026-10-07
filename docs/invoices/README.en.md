@@ -56,10 +56,10 @@ Before entering an invoice, check that:
 | Field | Rule |
 |---|---|
 | Invoice type | Required; set by the menu path |
-| Customer | Required and belongs to the company |
+| Customer | Required and belongs to the fiscal year |
 | Warehouse | Required in the form |
 | Title | Optional; at most 255 characters |
-| Invoice number | Positive integer, unique within the company |
+| Invoice number | Positive integer, unique within the fiscal year |
 | Document number | If entered, a positive unique integer; required for simultaneous approval |
 | Date | Required, Jalali, and within the fiscal year |
 | Deductions | Nonnegative and no more than the line total before deductions |

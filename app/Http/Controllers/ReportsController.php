@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Company;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\Transaction;
-use App\Services\CompanyOverviewService;
 use App\Services\DocumentImportExport\DocumentImportExportService;
+use App\Services\FiscalYearOverviewService;
 use App\Services\InventoryTurnoverService;
 use App\Services\ReportExportService;
 use App\Services\SubjectService;
@@ -26,7 +26,7 @@ class ReportsController extends Controller
     public function __construct(
         private readonly SubjectService $subjectService,
         private readonly DocumentImportExportService $documentImportExportService,
-        private readonly CompanyOverviewService $companyOverviewService
+        private readonly FiscalYearOverviewService $fiscalYearOverviewService
     ) {}
 
     public function companyOverview(Request $request)
@@ -34,7 +34,7 @@ class ReportsController extends Controller
         $user = auth()->user();
 
         if ($user->can('access-super-admin-panel')) {
-            $hasCurrentWorkspace = $user->companies()->whereKey(getActiveCompany())->where('fiscal_year', toEnglish(jdate('Y')))->exists();
+            $hasCurrentWorkspace = $user->fiscalYears()->whereKey(getActiveFiscalYear())->where('year', toEnglish(jdate('Y')))->exists();
 
             if (! $hasCurrentWorkspace) {
                 return redirect()->route('management.dashboard');
@@ -84,10 +84,10 @@ class ReportsController extends Controller
 
         if ($canFinancial) {
             $profitFilters = $this->companyOverviewProfitFilters($request);
-            [$bankAccounts, $topTenBankAccountBalances] = $this->companyOverviewService->topTenBanksAccountBalances();
+            [$bankAccounts, $topTenBankAccountBalances] = $this->fiscalYearOverviewService->topTenBanksAccountBalances();
 
             ['incomeData' => $totalIncomesData, 'costData' => $totalCostsData, 'profit' => $profit] =
-                $this->companyOverviewService->profitFromNonPermanentSubjects(
+                $this->fiscalYearOverviewService->profitFromNonPermanentSubjects(
                     $profitFilters['start_date'],
                     $profitFilters['end_date']
                 );
@@ -95,8 +95,8 @@ class ReportsController extends Controller
             $data += [
                 'bankAccounts' => $bankAccounts,
                 'topTenBankAccountBalances' => $topTenBankAccountBalances,
-                'monthlyIncome' => $this->companyOverviewService->getMonthlyIncome(),
-                'monthlyCost' => $this->companyOverviewService->getMonthlyCost(),
+                'monthlyIncome' => $this->fiscalYearOverviewService->getMonthlyIncome(),
+                'monthlyCost' => $this->fiscalYearOverviewService->getMonthlyCost(),
                 'totalIncomesData' => $totalIncomesData,
                 'totalCostsData' => $totalCostsData,
                 'profit' => $profit,
@@ -105,23 +105,23 @@ class ReportsController extends Controller
         }
 
         if ($canSales) {
-            $data['monthlySellAmount'] = $this->companyOverviewService->getMonthlyProductsStat();
-            $data['sellAmountPerProducts'] = $this->companyOverviewService->getSellAmountPerProducts();
-            $data['buyAmountPerProducts'] = $this->companyOverviewService->getBuyAmountPerProducts();
-            $data['totalBuyAmount'] = $this->companyOverviewService->totalBuyAmount();
+            $data['monthlySellAmount'] = $this->fiscalYearOverviewService->getMonthlyProductsStat();
+            $data['sellAmountPerProducts'] = $this->fiscalYearOverviewService->getSellAmountPerProducts();
+            $data['buyAmountPerProducts'] = $this->fiscalYearOverviewService->getBuyAmountPerProducts();
+            $data['totalBuyAmount'] = $this->fiscalYearOverviewService->totalBuyAmount();
         }
 
         if ($canInventory) {
-            $data['monthlyWarehouse'] = $this->companyOverviewService->getMonthlyWarehouse();
-            $data['totalWarehouseValue'] = $this->companyOverviewService->totalWarehouseValue();
+            $data['monthlyWarehouse'] = $this->fiscalYearOverviewService->getMonthlyWarehouse();
+            $data['totalWarehouseValue'] = $this->fiscalYearOverviewService->totalWarehouseValue();
         }
 
         if ($canPopularItems) {
-            $data['popularProductsAndServices'] = $this->companyOverviewService->popularProductsAndServices();
+            $data['popularProductsAndServices'] = $this->fiscalYearOverviewService->popularProductsAndServices();
         }
 
         if ($canSeePersonalPortal) {
-            $personal = $this->companyOverviewService->employeePersonalData($user);
+            $personal = $this->fiscalYearOverviewService->employeePersonalData($user);
 
             if ($personal) {
                 $data += $personal;
@@ -147,8 +147,8 @@ class ReportsController extends Controller
             }
         }
 
-        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
-        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
         $startDate = $validated['start_date'] ?? null;
         $endDate = $validated['end_date'] ?? null;
 
@@ -182,24 +182,24 @@ class ReportsController extends Controller
     {
         abort_if(! config('app.debug') || config('app.env') === 'production', 404);
 
-        $companyId = (int) getActiveCompany();
+        $fiscalYearId = (int) getActiveFiscalYear();
         $user = auth()->user();
 
-        abort_unless($user->can('access-super-admin-panel') || $user->companies()->whereKey($companyId)->exists(), 403);
+        abort_unless($user->can('access-super-admin-panel') || $user->fiscalYears()->whereKey($fiscalYearId)->exists(), 403);
 
-        if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
+        if (! FiscalYear::withoutGlobalScopes()->whereKey($fiscalYearId)->exists()) {
             return redirect()->route('home')->with('error', __('Please select a valid company first.'));
         }
 
         // Seeders use this value when no HTTP cookie is available (for example when they are invoked through Artisan from this request).
-        config(['active-company-id' => $companyId]);
+        config(['active-fiscal-year-id' => $fiscalYearId]);
 
-        if (Document::withoutGlobalScopes()->where('company_id', $companyId)->exists()) {
+        if (Document::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->exists()) {
             return redirect()->route('home')->with('error', __('Cannot add demo data to a non-empty database.'));
         }
 
         try {
-            app(DemoSeeder::class)->run($companyId);
+            app(DemoSeeder::class)->run($fiscalYearId);
         } catch (\Exception $e) {
             return redirect()->route('home')->with('error', __('An error occurred while seeding demo data.'));
         }
@@ -229,7 +229,7 @@ class ReportsController extends Controller
             ]
         );
 
-        return $this->companyOverviewService->cashAndBanksBalances($data['type'], intval($data['duration']));
+        return $this->fiscalYearOverviewService->cashAndBanksBalances($data['type'], intval($data['duration']));
     }
 
     public function bankAccount(Request $request)
@@ -241,7 +241,7 @@ class ReportsController extends Controller
             ]
         );
 
-        return $this->companyOverviewService->balanceForSubjectIds([$data['subject_id']], intval($data['duration']));
+        return $this->fiscalYearOverviewService->balanceForSubjectIds([$data['subject_id']], intval($data['duration']));
     }
 
     public function ledger()

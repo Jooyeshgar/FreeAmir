@@ -25,7 +25,7 @@ class WarehouseService
 
     public function transfer(Product $product, Warehouse $from, Warehouse $to, float $quantity, ?string $description = null): WarehouseTransfer
     {
-        if ((int) $product->company_id !== (int) $from->company_id || (int) $from->company_id !== (int) $to->company_id) {
+        if ((int) $product->fiscal_year_id !== (int) $from->fiscal_year_id || (int) $from->fiscal_year_id !== (int) $to->fiscal_year_id) {
             throw ValidationException::withMessages(['from_warehouse_id' => __('The product and warehouses must belong to the same company.')]);
         }
 

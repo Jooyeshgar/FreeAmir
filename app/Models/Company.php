@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
-use Carbon\Carbon;
 use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 
@@ -17,27 +17,9 @@ class Company extends Model
 
     protected $guarded = [];
 
-    public function users()
+    public function fiscalYears(): HasMany
     {
-        return $this->belongsToMany(User::class);
-    }
-
-    public function documents()
-    {
-        return $this->hasMany(Document::class);
-    }
-
-    /**
-     * Return the inclusive Gregorian boundaries of this Jalali fiscal year.
-     */
-    public function fiscalYearRange(): array
-    {
-        $year = (int) $this->fiscal_year;
-
-        $start = Carbon::parse(jalali_to_gregorian($year, 1, 1, '/'))->startOfDay();
-        $end = Carbon::parse(jalali_to_gregorian($year + 1, 1, 1, '/'))->subDay()->endOfDay();
-
-        return [$start, $end];
+        return $this->hasMany(FiscalYear::class);
     }
 
     /**
@@ -69,26 +51,5 @@ class Company extends Model
         } catch (DecryptException $e) {
             return $raw;
         }
-    }
-
-    public function closedBy()
-    {
-        return $this->belongsTo(User::class, 'closed_by');
-    }
-
-    /**
-     * The Income Summary / P&L document created in Step 1 (closing temporary accounts).
-     */
-    public function plDocument()
-    {
-        return $this->belongsTo(Document::class, 'pl_document_id');
-    }
-
-    /**
-     * The closing document created in Step 3 (closing permanent accounts).
-     */
-    public function closingDocument()
-    {
-        return $this->belongsTo(Document::class, 'closing_document_id');
     }
 }

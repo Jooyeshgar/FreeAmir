@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\ProductGroup;
@@ -220,7 +220,7 @@ class WarehouseDashboardService
             ->where('invoice_items.itemable_type', Product::class)
             ->whereIn('invoices.status', array_map(fn (InvoiceStatus $s) => $s->value, InvoiceStatus::approvedOrSettled()))
             ->whereIn('invoices.invoice_type', array_map(fn (InvoiceType $t) => $t->value, array_merge(self::STOCK_IN_TYPES, self::STOCK_OUT_TYPES)))
-            ->where('invoices.company_id', getActiveCompany())
+            ->where('invoices.fiscal_year_id', getActiveFiscalYear())
             ->when($categoryId, function ($q, int $id) {
                 $q->join('products', 'products.id', '=', 'invoice_items.itemable_id')
                     ->where('products.group', $id);
@@ -629,7 +629,7 @@ class WarehouseDashboardService
             ],
             'rows' => $rows,
             'filterSummary' => $this->reportFilterSummary($name, $groupName, $minQuantity, $needOrder, $fyStart, $now),
-            'company' => Company::find(getActiveCompany()),
+            'fiscalYear' => FiscalYear::find(getActiveFiscalYear()),
             'logo' => $this->reportLogo(),
             'generatedAtDate' => toEnglish(jdate('Y/m/d', $now->timestamp)),
             'generatedAtTime' => toEnglish(jdate('H:i', $now->timestamp)),
@@ -850,11 +850,11 @@ class WarehouseDashboardService
 
     private function reportLogo(): ?string
     {
-        $company = Company::find(getActiveCompany());
+        $fiscalYear = FiscalYear::find(getActiveFiscalYear());
 
         $candidates = [];
-        if ($company?->logo) {
-            $candidates[] = storage_path('app/public/'.$company->logo);
+        if ($fiscalYear?->logo) {
+            $candidates[] = storage_path('app/public/'.$fiscalYear->logo);
         }
         $candidates[] = public_path('images/logo.png');
 

@@ -47,6 +47,7 @@ php artisan test --filter=Document      # Filter tests by class or method name
 namespace Tests\Feature;
 
 use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -57,10 +58,12 @@ class DocumentAccessTest extends TestCase
 
     public function test_authenticated_user_can_view_documents_index(): void
     {
-        $user = User::factory()->create();
         $company = Company::factory()->create();
+        $fiscalYear = FiscalYear::factory()->create(['company_id' => $company->id]);
+        $user = User::factory()->create();
+        $user->fiscalYears()->syncWithoutDetaching([$fiscalYear->id]);
 
-        session(['active-company-id' => $company->id]);
+        config(['active-fiscal-year-id' => $fiscalYear->id]);
 
         $this->actingAs($user);
         $this->withoutMiddleware('check-permission');
@@ -80,7 +83,7 @@ class DocumentAccessTest extends TestCase
 ```
 
 نکته‌ها:
-- بسیاری از مدل‌ها از `FiscalYearScope` استفاده می‌کنند و انتظار دارند شناسه‌ی شرکت فعال در session موجود باشد (`session(['active-company-id' => ...])`).
+- بسیاری از مدل‌ها از `FiscalYearScope` استفاده می‌کنند و شناسه سال فعال را از `getActiveFiscalYear()` می‌خوانند. در تست می‌توان مقدار آن را با `config(['active-fiscal-year-id' => $fiscalYear->id])` تعیین کرد. برای بررسی دسترسی، کاربر تست را به همان سال با رابطه `fiscalYears()` وصل کنید.
 - در صورت نیاز می‌توانید با `$this->withoutMiddleware()` برخی middlewareها مثل `check-permission` را غیرفعال کنید تا روی منطق اصلی تمرکز کنید.
 
 ## 🧩 نمونه‌ی تست واحد برای سرویس‌ها
@@ -93,6 +96,7 @@ class DocumentAccessTest extends TestCase
 namespace Tests\Unit;
 
 use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Document;
 use App\Models\Subject;
 use App\Models\User;
@@ -107,13 +111,14 @@ class DocumentServiceTest extends TestCase
     public function test_create_transaction_persists_value(): void
     {
         $company = Company::factory()->create();
+        $fiscalYear = FiscalYear::factory()->create(['company_id' => $company->id]);
         $user = User::factory()->create();
         $subject = Subject::factory()->create();
 
-        session(['active-company-id' => $company->id]);
+        config(['active-fiscal-year-id' => $fiscalYear->id]);
 
         $document = Document::factory()->create([
-            'company_id' => $company->id,
+            'fiscal_year_id' => $fiscalYear->id,
             'creator_id' => $user->id,
         ]);
 
@@ -139,6 +144,7 @@ class DocumentServiceTest extends TestCase
 تمامی Factoryها در مسیر `database/factories` برای ایجاد داده‌های تستی در دسترس هستند. برای مثال در ادامه چند نمونه آمده است: 
 
 - `CompanyFactory`
+- `FiscalYearFactory`
 - `UserFactory`
 - `SubjectFactory`
 - `DocumentFactory`
@@ -146,18 +152,20 @@ class DocumentServiceTest extends TestCase
 - `CustomerFactory`
 - `ProductFactory`
 
-پیش از استفاده از `DocumentFactory` مطمئن شوید حداقل یک شرکت و کاربر ایجاد کرده‌اید؛ این factory برای مقداردهی شناسه‌ها از رکوردهای موجود استفاده می‌کند.
+پیش از استفاده از `FiscalYearFactory` یک شرکت بسازید و آن را در `company_id` بدهید. برای تست مجوز دسترسی نیز کاربر را به سال مالی موردنظر متصل کنید.
 
 نمونه‌ی استفاده در تست:
 
 ```php
 $company = Company::factory()->create();
+$fiscalYear = FiscalYear::factory()->create(['company_id' => $company->id]);
 $user = User::factory()->create();
+$user->fiscalYears()->syncWithoutDetaching([$fiscalYear->id]);
 
-session(['active-company-id' => $company->id]);
+config(['active-fiscal-year-id' => $fiscalYear->id]);
 
 $document = Document::factory()->create([
-    'company_id' => $company->id,
+    'fiscal_year_id' => $fiscalYear->id,
     'creator_id' => $user->id,
 ]);
 ```

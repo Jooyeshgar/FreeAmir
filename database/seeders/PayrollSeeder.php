@@ -18,10 +18,10 @@ class PayrollSeeder extends Seeder
 {
     public function run(): void
     {
-        $companyId = (int) getActiveCompany();
+        $fiscalYearId = (int) getActiveFiscalYear();
         $adminId = User::withoutGlobalScopes()->first()?->id;
 
-        $employees = Employee::withoutGlobalScopes()->where('company_id', $companyId)->get();
+        $employees = Employee::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->get();
         if ($employees->isEmpty()) {
             return;
         }
@@ -30,7 +30,7 @@ class PayrollSeeder extends Seeder
         $nowMonth = (int) toEnglish(jdate('m', Carbon::now()->timestamp));
 
         foreach ($employees as $employee) {
-            $decree = SalaryDecree::withoutGlobalScopes()->where('company_id', $companyId)->where('employee_id', $employee->id)
+            $decree = SalaryDecree::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->where('employee_id', $employee->id)
                 ->where('is_active', true)->with('benefits.element')->first();
 
             if (! $decree) {
@@ -50,7 +50,7 @@ class PayrollSeeder extends Seeder
 
             $insuranceRate = isset($benefitValues['INSURANCE_EMP']) ? $benefitValues['INSURANCE_EMP'] / 100 : 0.07;
 
-            $attendances = MonthlyAttendance::withoutGlobalScopes()->where('company_id', $companyId)->where('employee_id', $employee->id)->get();
+            $attendances = MonthlyAttendance::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->where('employee_id', $employee->id)->get();
 
             foreach ($attendances as $attendance) {
                 $monthsAgo = ($nowYear - $attendance->year) * 12 + $nowMonth - $attendance->month;
@@ -109,7 +109,7 @@ class PayrollSeeder extends Seeder
                         'month' => $attendance->month,
                     ],
                     [
-                        'company_id' => $employee->company_id,
+                        'fiscal_year_id' => $employee->fiscal_year_id,
                         'decree_id' => $decree->id,
                         'monthly_attendance_id' => $attendance->id,
                         'total_earnings' => $totalEarnings,
@@ -306,7 +306,7 @@ class PayrollSeeder extends Seeder
         [$gy2, $gm2, $gd2] = jalali_to_gregorian($nextJYear, $nextJMonth, 1);
         $periodEnd = Carbon::createFromDate($gy2, $gm2, $gd2)->subDay()->endOfDay();
 
-        PersonnelRequest::withoutGlobalScopes()->where('company_id', $payroll->company_id)->where('employee_id', $payroll->employee_id)
+        PersonnelRequest::withoutGlobalScopes()->where('fiscal_year_id', $payroll->fiscal_year_id)->where('employee_id', $payroll->employee_id)
             ->whereBetween('start_date', [$periodStart, $periodEnd])->update(['payroll_id' => $payroll->id]);
     }
 }

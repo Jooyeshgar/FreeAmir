@@ -16,7 +16,7 @@ class CustomerGroup extends Model
         'subject_id',
         'name',
         'description',
-        'company_id',
+        'fiscal_year_id',
     ];
 
     protected static function boot()
@@ -26,7 +26,7 @@ class CustomerGroup extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function ($model) {
-            $model->company_id ??= getActiveCompany();
+            $model->fiscal_year_id ??= getActiveFiscalYear();
         });
     }
 

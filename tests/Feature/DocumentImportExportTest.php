@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Enums\SubjectType;
-use App\Models\Company;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use App\Models\Subject;
 use App\Models\Transaction;
@@ -24,7 +24,7 @@ class DocumentImportExportTest extends TestCase
 
     private User $user;
 
-    private Company $company;
+    private FiscalYear $fiscalYear;
 
     private DocumentImportExportService $service;
 
@@ -62,10 +62,10 @@ class DocumentImportExportTest extends TestCase
         return ob_get_clean() ?: '';
     }
 
-    private function runCsvImport(UploadedFile $file, string $format = 'free_amir', ?Company $company = null): array
+    private function runCsvImport(UploadedFile $file, string $format = 'free_amir', ?FiscalYear $fiscalYear = null): array
     {
-        $targetCompany = $company ?? $this->company;
-        config(['active-company-id' => $targetCompany->id]);
+        $targetFiscalYear = $fiscalYear ?? $this->fiscalYear;
+        config(['active-fiscal-year-id' => $targetFiscalYear->id]);
 
         return $this->service->importCsv($file, $this->user, $format);
     }
@@ -74,17 +74,17 @@ class DocumentImportExportTest extends TestCase
     {
         parent::setUp();
 
-        $this->company = Company::factory()->create();
+        $this->fiscalYear = FiscalYear::factory()->create();
         $this->user = User::factory()->create();
-        $this->company->users()->attach($this->user);
+        $this->fiscalYear->users()->attach($this->user);
 
         foreach (['documents.create', 'documents.index', 'documents.export', 'documents.import'] as $perm) {
             $this->user->givePermissionTo(Permission::firstOrCreate(['name' => $perm]));
         }
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => (string) $this->company->id]);
-        config(['active-company-id' => $this->company->id]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->fiscalYear->id]);
+        config(['active-fiscal-year-id' => $this->fiscalYear->id]);
 
         $this->service = new DocumentImportExportService;
         $this->resolver = new ImportSubjectResolver;
@@ -140,9 +140,9 @@ class DocumentImportExportTest extends TestCase
 
     public function test_export_csv_contains_transaction_rows_for_used_accounts(): void
     {
-        $root = Subject::factory()->create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets']);
-        $child = Subject::factory()->create(['company_id' => $this->company->id, 'code' => '001001', 'name' => 'Bank', 'parent_id' => $root->id]);
-        $document = Document::factory()->create(['company_id' => $this->company->id, 'number' => 1, 'date' => '2026-01-01']);
+        $root = Subject::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001', 'name' => 'Assets']);
+        $child = Subject::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001001', 'name' => 'Bank', 'parent_id' => $root->id]);
+        $document = Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'number' => 1, 'date' => '2026-01-01']);
         Transaction::create(['document_id' => $document->id, 'subject_id' => $child->id, 'value' => 1000, 'user_id' => $this->user->id]);
 
         $csv = $this->exportCsvViaService([]);
@@ -154,7 +154,7 @@ class DocumentImportExportTest extends TestCase
 
     public function test_csv_import_creates_subjects_and_documents(): void
     {
-        Subject::factory()->create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets']);
+        Subject::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001', 'name' => 'Assets']);
 
         $csv = $this->buildCsv([
             ['1', '2026-01-15', 'Test Doc', 'manual', 'unapproved', '001', '002', '', 'Bank', 'Payment', '5000', '0'],
@@ -165,8 +165,8 @@ class DocumentImportExportTest extends TestCase
 
         $this->assertSame(1, $result['documents_created']);
         $this->assertSame(0, count($result['errors']), 'No errors expected: '.implode(' | ', $result['errors']));
-        $this->assertDatabaseHas('documents', ['company_id' => $this->company->id, 'number' => 1]);
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'name' => 'Bank', 'code' => '001002']);
+        $this->assertDatabaseHas('documents', ['fiscal_year_id' => $this->fiscalYear->id, 'number' => 1]);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->fiscalYear->id, 'name' => 'Bank', 'code' => '001002']);
     }
 
     public function test_csv_import_auto_creates_missing_root_and_imports_document(): void
@@ -179,13 +179,13 @@ class DocumentImportExportTest extends TestCase
         $result = $this->runCsvImport($csv);
 
         $this->assertSame(1, $result['documents_created']);
-        $this->assertDatabaseHas('documents', ['company_id' => $this->company->id, 'number' => 1]);
+        $this->assertDatabaseHas('documents', ['fiscal_year_id' => $this->fiscalYear->id, 'number' => 1]);
 
-        $root = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '001')->first();
+        $root = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('code', '001')->first();
         $this->assertNotNull($root);
         $this->assertNotSame('001', $root->name, 'Auto-created root must have a level-prefixed name, not bare code');
 
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '001002', 'name' => 'Bank']);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001002', 'name' => 'Bank']);
     }
 
     public function test_csv_import_builds_missing_ancestor_from_a_later_row(): void
@@ -202,7 +202,7 @@ class DocumentImportExportTest extends TestCase
         $this->assertSame(2, $result['documents_created']);
         $this->assertSame(0, count($result['errors']), 'No errors expected: '.implode(' | ', $result['errors']));
 
-        $detail = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('name', 'Detail X')->first();
+        $detail = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('name', 'Detail X')->first();
         $this->assertNotNull($detail);
         $bank = Subject::withoutGlobalScope(FiscalYearScope::class)->find($detail->parent_id);
         $this->assertSame('Bank', $bank->name);
@@ -213,8 +213,8 @@ class DocumentImportExportTest extends TestCase
 
     public function test_csv_import_reuses_existing_subject_by_name_when_code_differs(): void
     {
-        $assets = Subject::create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets', 'parent_id' => null, 'type' => SubjectType::BOTH]);
-        $existingCash = Subject::create(['company_id' => $this->company->id, 'code' => '001009', 'name' => 'Cash', 'parent_id' => $assets->id, 'type' => SubjectType::BOTH]);
+        $assets = Subject::create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001', 'name' => 'Assets', 'parent_id' => null, 'type' => SubjectType::BOTH]);
+        $existingCash = Subject::create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001009', 'name' => 'Cash', 'parent_id' => $assets->id, 'type' => SubjectType::BOTH]);
 
         $csv = $this->buildCsv([
             ['1', '2026-01-01', 'D', 'manual', 'unapproved', '001', '002', '', 'Cash', 'd', '100', '0'],
@@ -224,18 +224,18 @@ class DocumentImportExportTest extends TestCase
         $result = $this->runCsvImport($csv);
 
         $this->assertSame(1, $result['documents_created']);
-        $this->assertSame(1, Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('name', 'Cash')->count(), 'No duplicate Cash subject should be created.');
+        $this->assertSame(1, Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('name', 'Cash')->count(), 'No duplicate Cash subject should be created.');
 
-        $document = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('number', 1)->first();
+        $document = Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('number', 1)->first();
         $this->assertTrue($document->transactions->pluck('subject_id')->contains($existingCash->id));
     }
 
     public function test_csv_import_keeps_same_named_subjects_under_different_parents_distinct(): void
     {
-        $products = Subject::create(['company_id' => $this->company->id, 'code' => '010', 'name' => 'Products', 'parent_id' => null, 'type' => SubjectType::BOTH]);
-        $services = Subject::create(['company_id' => $this->company->id, 'code' => '020', 'name' => 'Services', 'parent_id' => null, 'type' => SubjectType::BOTH]);
-        Subject::create(['company_id' => $this->company->id, 'code' => '010001', 'name' => 'Cash', 'parent_id' => $products->id, 'type' => SubjectType::BOTH]);
-        Subject::create(['company_id' => $this->company->id, 'code' => '020001', 'name' => 'Cash', 'parent_id' => $services->id, 'type' => SubjectType::BOTH]);
+        $products = Subject::create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '010', 'name' => 'Products', 'parent_id' => null, 'type' => SubjectType::BOTH]);
+        $services = Subject::create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '020', 'name' => 'Services', 'parent_id' => null, 'type' => SubjectType::BOTH]);
+        Subject::create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '010001', 'name' => 'Cash', 'parent_id' => $products->id, 'type' => SubjectType::BOTH]);
+        Subject::create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '020001', 'name' => 'Cash', 'parent_id' => $services->id, 'type' => SubjectType::BOTH]);
 
         $csv = $this->buildCsv([
             ['1', '2026-01-01', 'D', 'manual', 'unapproved', '010', '001', '', 'Cash', 'd', '100', '0'],
@@ -245,16 +245,16 @@ class DocumentImportExportTest extends TestCase
         $result = $this->runCsvImport($csv);
 
         $this->assertSame(1, $result['documents_created']);
-        $this->assertSame(2, Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('name', 'Cash')->count());
+        $this->assertSame(2, Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('name', 'Cash')->count());
 
-        $document = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('number', 1)->first();
+        $document = Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('number', 1)->first();
         $usedSubject = Subject::withoutGlobalScope(FiscalYearScope::class)->find($document->transactions->first()->subject_id);
         $this->assertSame($products->id, $usedSubject->parent_id, 'The Cash under Products must be used, not the one under Services.');
     }
 
     public function test_csv_import_matches_by_code_when_a_name_is_reused_for_several_codes_in_the_file(): void
     {
-        Subject::create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets', 'parent_id' => null, 'type' => SubjectType::BOTH]);
+        Subject::create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001', 'name' => 'Assets', 'parent_id' => null, 'type' => SubjectType::BOTH]);
 
         $csv = $this->buildCsv([
             ['1', '2026-01-01', 'D', 'manual', 'unapproved', '001', '002', '', 'Widget', 'd', '100', '0'],
@@ -264,9 +264,9 @@ class DocumentImportExportTest extends TestCase
         $result = $this->runCsvImport($csv);
 
         $this->assertSame(1, $result['documents_created']);
-        $this->assertSame(2, Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('name', 'Widget')->count());
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '001002', 'name' => 'Widget']);
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '001003', 'name' => 'Widget']);
+        $this->assertSame(2, Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('name', 'Widget')->count());
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001002', 'name' => 'Widget']);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001003', 'name' => 'Widget']);
     }
 
     public function test_csv_import_is_idempotent_for_documents(): void
@@ -276,18 +276,18 @@ class DocumentImportExportTest extends TestCase
         ]);
 
         $this->runCsvImport($csv);
-        $countAfterFirst = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->count();
+        $countAfterFirst = Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->count();
 
         $this->runCsvImport($csv);
-        $countAfterSecond = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->count();
+        $countAfterSecond = Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->count();
 
         $this->assertSame($countAfterFirst, $countAfterSecond, 'Re-importing the same CSV must not create duplicate documents');
     }
 
     public function test_csv_import_preserves_subject_hierarchy(): void
     {
-        $assets = Subject::create(['company_id' => $this->company->id, 'code' => '011', 'name' => 'Assets', 'parent_id' => null, 'type' => SubjectType::BOTH]);
-        Subject::create(['company_id' => $this->company->id, 'code' => '011004', 'name' => 'Bank', 'parent_id' => $assets->id, 'type' => SubjectType::BOTH]);
+        $assets = Subject::create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '011', 'name' => 'Assets', 'parent_id' => null, 'type' => SubjectType::BOTH]);
+        Subject::create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '011004', 'name' => 'Bank', 'parent_id' => $assets->id, 'type' => SubjectType::BOTH]);
 
         $csv = $this->buildCsv([
             ['2', '2026-01-10', 'T', 'manual', 'unapproved', '011', '004', '001', 'Mellat', 'x', '0', '0'],
@@ -295,7 +295,7 @@ class DocumentImportExportTest extends TestCase
 
         $this->runCsvImport($csv);
 
-        $mellat = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('name', 'Mellat')->first();
+        $mellat = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('name', 'Mellat')->first();
         $this->assertNotNull($mellat);
 
         $bank = Subject::withoutGlobalScope(FiscalYearScope::class)->find($mellat->parent_id);
@@ -308,45 +308,45 @@ class DocumentImportExportTest extends TestCase
 
     public function test_export_import_roundtrip_preserves_documents_and_hierarchy(): void
     {
-        $root = Subject::factory()->create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets']);
-        $child = Subject::factory()->create(['company_id' => $this->company->id, 'code' => '001001', 'name' => 'Bank', 'parent_id' => $root->id]);
-        $document = Document::factory()->create(['company_id' => $this->company->id, 'number' => 42, 'date' => '2026-06-01', 'title' => 'Round-trip doc']);
+        $root = Subject::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001', 'name' => 'Assets']);
+        $child = Subject::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001001', 'name' => 'Bank', 'parent_id' => $root->id]);
+        $document = Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'number' => 42, 'date' => '2026-06-01', 'title' => 'Round-trip doc']);
         Transaction::create(['document_id' => $document->id, 'subject_id' => $child->id, 'value' => 500, 'user_id' => $this->user->id]);
         Transaction::create(['document_id' => $document->id, 'subject_id' => $child->id, 'value' => -500, 'user_id' => $this->user->id]);
 
         $csv = $this->exportCsvViaService([]);
 
-        $newCompany = Company::factory()->create();
-        config(['active-company-id' => $newCompany->id]);
-        Subject::factory()->create(['company_id' => $newCompany->id, 'code' => '001', 'name' => 'Assets']);
+        $newFiscalYear = FiscalYear::factory()->create();
+        config(['active-fiscal-year-id' => $newFiscalYear->id]);
+        Subject::factory()->create(['fiscal_year_id' => $newFiscalYear->id, 'code' => '001', 'name' => 'Assets']);
 
-        $result = $this->runCsvImport($this->makeCsvFile($csv), 'free_amir', $newCompany);
+        $result = $this->runCsvImport($this->makeCsvFile($csv), 'free_amir', $newFiscalYear);
 
         $this->assertSame(1, $result['documents_created'], 'One document should be imported');
 
-        $importedDoc = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $newCompany->id)->where('number', 42)->first();
+        $importedDoc = Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $newFiscalYear->id)->where('number', 42)->first();
         $this->assertNotNull($importedDoc);
         $this->assertSame('Round-trip doc', $importedDoc->title);
 
-        $importedChild = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $newCompany->id)->where('name', 'Bank')->first();
+        $importedChild = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $newFiscalYear->id)->where('name', 'Bank')->first();
         $this->assertNotNull($importedChild);
 
-        $importedRoot = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $newCompany->id)->where('name', 'Assets')->first();
+        $importedRoot = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $newFiscalYear->id)->where('name', 'Assets')->first();
         $this->assertNotNull($importedRoot);
         $this->assertSame($importedRoot->id, $importedChild->parent_id);
     }
 
     public function test_build_query_returns_all_documents_with_no_filters(): void
     {
-        Document::factory()->count(3)->create(['company_id' => $this->company->id]);
+        Document::factory()->count(3)->create(['fiscal_year_id' => $this->fiscalYear->id]);
         $query = $this->service->buildQuery([]);
         $this->assertSame(3, $query->count());
     }
 
     public function test_build_query_filters_by_status_approved(): void
     {
-        Document::factory()->create(['company_id' => $this->company->id, 'approved_at' => now()]);
-        Document::factory()->create(['company_id' => $this->company->id, 'approved_at' => null]);
+        Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'approved_at' => now()]);
+        Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'approved_at' => null]);
 
         $query = $this->service->buildQuery(['status' => 'approved']);
         $this->assertSame(1, $query->count());
@@ -354,8 +354,8 @@ class DocumentImportExportTest extends TestCase
 
     public function test_build_query_filters_by_status_unapproved(): void
     {
-        Document::factory()->create(['company_id' => $this->company->id, 'approved_at' => now()]);
-        Document::factory()->create(['company_id' => $this->company->id, 'approved_at' => null]);
+        Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'approved_at' => now()]);
+        Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'approved_at' => null]);
 
         $query = $this->service->buildQuery(['status' => 'unapproved']);
 
@@ -364,9 +364,9 @@ class DocumentImportExportTest extends TestCase
 
     public function test_build_query_filters_by_document_number_range(): void
     {
-        Document::factory()->create(['company_id' => $this->company->id, 'number' => 1]);
-        Document::factory()->create(['company_id' => $this->company->id, 'number' => 5]);
-        Document::factory()->create(['company_id' => $this->company->id, 'number' => 10]);
+        Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'number' => 1]);
+        Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'number' => 5]);
+        Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'number' => 10]);
 
         $query = $this->service->buildQuery(['start_document_number' => 2, 'end_document_number' => 7]);
 
@@ -376,8 +376,8 @@ class DocumentImportExportTest extends TestCase
 
     public function test_build_query_filters_by_text_in_title(): void
     {
-        Document::factory()->create(['company_id' => $this->company->id, 'title' => 'Salary payment']);
-        Document::factory()->create(['company_id' => $this->company->id, 'title' => 'Office expenses']);
+        Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'title' => 'Salary payment']);
+        Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'title' => 'Office expenses']);
 
         $query = $this->service->buildQuery(['text' => 'Salary']);
 
@@ -387,7 +387,7 @@ class DocumentImportExportTest extends TestCase
 
     public function test_export_returns_streamed_response(): void
     {
-        Document::factory()->create(['company_id' => $this->company->id]);
+        Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
         $response = $this->service->export([]);
 
         $this->assertInstanceOf(StreamedResponse::class, $response);
@@ -397,16 +397,16 @@ class DocumentImportExportTest extends TestCase
 
     public function test_finds_existing_subject_by_code(): void
     {
-        $existing = Subject::factory()->create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets']);
+        $existing = Subject::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001', 'name' => 'Assets']);
         $result = $this->resolver->findOrCreate('001', 'Assets', '');
 
         $this->assertSame($existing->id, $result->id);
-        $this->assertSame(1, Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '001')->count());
+        $this->assertSame(1, Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('code', '001')->count());
     }
 
     public function test_creates_root_subject_when_not_found(): void
     {
-        $this->assertDatabaseMissing('subjects', ['code' => '099', 'company_id' => $this->company->id]);
+        $this->assertDatabaseMissing('subjects', ['code' => '099', 'fiscal_year_id' => $this->fiscalYear->id]);
         $result = $this->resolver->findOrCreate('099', 'NewRoot', '');
 
         $this->assertNotNull($result->id);
@@ -415,7 +415,7 @@ class DocumentImportExportTest extends TestCase
 
     public function test_creates_child_subject_with_existing_parent(): void
     {
-        $parent = Subject::create(['company_id' => $this->company->id, 'code' => '100', 'name' => 'Assets', 'parent_id' => null, 'type' => SubjectType::BOTH]);
+        $parent = Subject::create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '100', 'name' => 'Assets', 'parent_id' => null, 'type' => SubjectType::BOTH]);
         $child = $this->resolver->findOrCreate('100002', 'Bank', '100');
 
         $this->assertNotNull($child->id);
@@ -425,8 +425,8 @@ class DocumentImportExportTest extends TestCase
 
     public function test_falls_back_to_name_parent_match_when_code_missing(): void
     {
-        $parent = Subject::create(['company_id' => $this->company->id, 'code' => '200', 'name' => 'Liabilities', 'parent_id' => null, 'type' => SubjectType::BOTH]);
-        $existing = Subject::create(['company_id' => $this->company->id, 'code' => '200001', 'name' => 'Loans', 'parent_id' => $parent->id, 'type' => SubjectType::BOTH]);
+        $parent = Subject::create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '200', 'name' => 'Liabilities', 'parent_id' => null, 'type' => SubjectType::BOTH]);
+        $existing = Subject::create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '200001', 'name' => 'Loans', 'parent_id' => $parent->id, 'type' => SubjectType::BOTH]);
         $result = $this->resolver->findOrCreate('200999', 'Loans', '200');
 
         $this->assertSame($existing->id, $result->id, 'Should match by name + parent_id when code differs');
@@ -441,7 +441,7 @@ class DocumentImportExportTest extends TestCase
         ];
 
         $this->resolver->processSubjectRows($rows);
-        $mellat = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('name', 'Mellat')->first();
+        $mellat = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('name', 'Mellat')->first();
 
         $this->assertNotNull($mellat);
 
@@ -461,11 +461,11 @@ class DocumentImportExportTest extends TestCase
         ];
 
         $this->resolver->processSubjectRows($rows);
-        $countAfterFirst = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->count();
+        $countAfterFirst = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->count();
 
         $this->resolver->reset();
         $this->resolver->processSubjectRows($rows);
-        $countAfterSecond = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->count();
+        $countAfterSecond = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->count();
 
         $this->assertSame($countAfterFirst, $countAfterSecond, 'Importing same subjects twice must not create duplicates');
     }
@@ -521,7 +521,7 @@ class DocumentImportExportTest extends TestCase
         $this->assertSame(1, $result['documents_created']);
         $this->assertSame(0, count($result['errors']));
 
-        $doc = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('number', 503)->first();
+        $doc = Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('number', 503)->first();
         $this->assertNotNull($doc);
         $this->assertCount(2, $doc->transactions);
     }
@@ -535,9 +535,9 @@ class DocumentImportExportTest extends TestCase
 
         $this->runCsvImport($csv, 'parsian');
 
-        $pasargad = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '011004')->first();
-        $melli = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '011003')->first();
-        $kol11 = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '011')->first();
+        $pasargad = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('code', '011004')->first();
+        $melli = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('code', '011003')->first();
+        $kol11 = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('code', '011')->first();
 
         $this->assertNotNull($pasargad);
         $this->assertSame('بانک پاسارگاد', $pasargad->name);
@@ -557,9 +557,9 @@ class DocumentImportExportTest extends TestCase
 
         $this->runCsvImport($csv, 'parsian');
 
-        $leaf = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '019007001')->first();
-        $mid = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '019007')->first();
-        $root = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '019')->first();
+        $leaf = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('code', '019007001')->first();
+        $mid = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('code', '019007')->first();
+        $root = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('code', '019')->first();
 
         $this->assertNotNull($leaf);
         $this->assertSame('شریک - آقای امین‌زاده', $leaf->name);
@@ -577,10 +577,10 @@ class DocumentImportExportTest extends TestCase
         ]);
 
         $this->runCsvImport($csv, 'parsian');
-        $docsAfterFirst = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->count();
+        $docsAfterFirst = Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->count();
 
         $this->runCsvImport($csv, 'parsian');
-        $docsAfterSecond = Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->count();
+        $docsAfterSecond = Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->count();
 
         $this->assertSame($docsAfterFirst, $docsAfterSecond, 'Re-importing same Parsian CSV must not create duplicates');
     }
@@ -596,8 +596,8 @@ class DocumentImportExportTest extends TestCase
 
         $this->assertSame(2, $result['subjects_created']);
 
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '011', 'name' => 'بانک ها']);
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '019', 'name' => 'سایر حسابهای پرداختنی']);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->fiscalYear->id, 'code' => '011', 'name' => 'بانک ها']);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->fiscalYear->id, 'code' => '019', 'name' => 'سایر حسابهای پرداختنی']);
     }
 
     public function test_parsian_transaction_import_uses_trial_balance_kol_names(): void
@@ -613,7 +613,7 @@ class DocumentImportExportTest extends TestCase
         ]);
         $this->runCsvImport($transactionCsv, 'parsian');
 
-        $kol11 = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '011')->first();
+        $kol11 = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('code', '011')->first();
         $this->assertSame('بانک ها', $kol11->name);
     }
 
@@ -630,8 +630,8 @@ class DocumentImportExportTest extends TestCase
             $this->assertArrayHasKey('file', $e->errors());
         }
 
-        $this->assertSame(0, Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->count());
-        $this->assertSame(0, Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->count());
+        $this->assertSame(0, Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->count());
+        $this->assertSame(0, Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->count());
     }
 
     public function test_parsian_format_rejects_free_amir_file(): void
@@ -647,8 +647,8 @@ class DocumentImportExportTest extends TestCase
             $this->assertArrayHasKey('file', $e->errors());
         }
 
-        $this->assertSame(0, Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->count());
-        $this->assertSame(0, Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->count());
+        $this->assertSame(0, Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->count());
+        $this->assertSame(0, Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->count());
     }
 
     public function test_import_requires_a_format_to_be_selected(): void
@@ -660,13 +660,13 @@ class DocumentImportExportTest extends TestCase
         $response = $this->post(route('documents.import.store'), ['file' => $file]);
 
         $response->assertSessionHasErrors('format');
-        $this->assertSame(0, Document::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->count());
+        $this->assertSame(0, Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->count());
     }
 
     public function test_export_always_includes_mandatory_columns_even_when_none_selected(): void
     {
-        $root = Subject::factory()->create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets']);
-        $document = Document::factory()->create(['company_id' => $this->company->id, 'number' => 1, 'date' => '2026-01-01']);
+        $root = Subject::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001', 'name' => 'Assets']);
+        $document = Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'number' => 1, 'date' => '2026-01-01']);
         Transaction::create(['document_id' => $document->id, 'subject_id' => $root->id, 'value' => 1000, 'user_id' => $this->user->id]);
         $csv = $this->exportCsvViaService(['columns_selected' => 1, 'columns' => []]);
 
@@ -678,8 +678,8 @@ class DocumentImportExportTest extends TestCase
 
     public function test_export_column_ordering_is_preserved(): void
     {
-        $root = Subject::factory()->create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets']);
-        $document = Document::factory()->create(['company_id' => $this->company->id, 'number' => 1, 'date' => '2026-01-01']);
+        $root = Subject::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001', 'name' => 'Assets']);
+        $document = Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'number' => 1, 'date' => '2026-01-01']);
         Transaction::create(['document_id' => $document->id, 'subject_id' => $root->id, 'value' => 1000, 'user_id' => $this->user->id]);
         $csv = $this->exportCsvViaService(['columns_selected' => 1, 'columns' => ['transaction_desc', 'doc_title']]);
 
@@ -707,7 +707,7 @@ class DocumentImportExportTest extends TestCase
         $this->resolver->processSubjectRows($rows);
 
         $leaf = Subject::withoutGlobalScope(FiscalYearScope::class)
-            ->where('company_id', $this->company->id)
+            ->where('fiscal_year_id', $this->fiscalYear->id)
             ->where('code', '001001001001')
             ->first();
 
@@ -738,7 +738,7 @@ class DocumentImportExportTest extends TestCase
         $this->resolver->processSubjectRows($rows);
 
         $leaf = Subject::withoutGlobalScope(FiscalYearScope::class)
-            ->where('company_id', $this->company->id)
+            ->where('fiscal_year_id', $this->fiscalYear->id)
             ->where('code', '002001001001001')
             ->first();
 
@@ -763,10 +763,10 @@ class DocumentImportExportTest extends TestCase
 
         $this->resolver->processSubjectRows($rows);
 
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '003']);
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '003001001', 'name' => 'Leaf']);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->fiscalYear->id, 'code' => '003']);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->fiscalYear->id, 'code' => '003001001', 'name' => 'Leaf']);
 
-        $intermediate = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '003001')->first();
+        $intermediate = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('code', '003001')->first();
         $this->assertNotNull($intermediate, 'Intermediate level must be auto-created');
         $this->assertNotEmpty($intermediate->name);
     }
@@ -780,8 +780,8 @@ class DocumentImportExportTest extends TestCase
 
         $this->resolver->processSubjectRows($rows);
 
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '004001', 'name' => 'Child']);
-        $parent = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '004')->first();
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->fiscalYear->id, 'code' => '004001', 'name' => 'Child']);
+        $parent = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('code', '004')->first();
         $this->assertNotNull($parent);
         $this->assertNotSame('Parent', $parent->name);
         $this->assertNotEmpty($parent->name);
@@ -795,7 +795,7 @@ class DocumentImportExportTest extends TestCase
         ]);
 
         $this->runCsvImport($csv, 'parsian');
-        $root = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '011')->first();
+        $root = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('code', '011')->first();
 
         $this->assertNotNull($root);
         $this->assertNotSame('011', $root->name, 'Parsian root must get a level-prefixed name, not the bare code');
@@ -810,14 +810,14 @@ class DocumentImportExportTest extends TestCase
         ]);
 
         $this->runCsvImport($csv, 'parsian');
-        $moein = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '019007')->first();
+        $moein = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('code', '019007')->first();
 
         $this->assertNotNull($moein);
         $this->assertNotSame('019007', $moein->name, 'Parsian moein must get a level-prefixed name, not the bare code');
         $this->assertNotEmpty($moein->name);
 
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'name' => 'شریک الف']);
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'name' => 'شریک ب']);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->fiscalYear->id, 'name' => 'شریک الف']);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->fiscalYear->id, 'name' => 'شریک ب']);
     }
 
     public function test_parsian_top_level_uses_fixed_account_name_and_type(): void
@@ -828,8 +828,8 @@ class DocumentImportExportTest extends TestCase
         ]);
         $this->runCsvImport($csv, 'parsian');
 
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '011', 'name' => 'بانک ها', 'is_permanent' => true, 'type' => SubjectType::BOTH]);
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '050', 'name' => 'هزینه ها', 'is_permanent' => false]);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->fiscalYear->id, 'code' => '011', 'name' => 'بانک ها', 'is_permanent' => true, 'type' => SubjectType::BOTH]);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->fiscalYear->id, 'code' => '050', 'name' => 'هزینه ها', 'is_permanent' => false]);
     }
 
     public function test_parsian_builds_full_chain_from_fixed_top_level_for_deep_row(): void
@@ -840,9 +840,9 @@ class DocumentImportExportTest extends TestCase
         ]);
         $this->runCsvImport($csv, 'parsian');
 
-        $kol = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '011')->first();
-        $moein = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '011004')->first();
-        $tafsili = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '011004001')->first();
+        $kol = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('code', '011')->first();
+        $moein = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('code', '011004')->first();
+        $tafsili = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('code', '011004001')->first();
 
         $this->assertNotNull($kol);
         $this->assertSame('بانک ها', $kol->name, 'Top-level must use the fixed Parsian account name');
@@ -866,13 +866,13 @@ class DocumentImportExportTest extends TestCase
         ]);
         $this->runCsvImport($csv, 'parsian');
 
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '024', 'name' => 'ذخیره مالیات', 'type' => SubjectType::DEBTOR, 'is_permanent' => true]);
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '024001', 'type' => SubjectType::DEBTOR]);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->fiscalYear->id, 'code' => '024', 'name' => 'ذخیره مالیات', 'type' => SubjectType::DEBTOR, 'is_permanent' => true]);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->fiscalYear->id, 'code' => '024001', 'type' => SubjectType::DEBTOR]);
     }
 
     public function test_parsian_top_level_type_mismatch_reuses_existing_subject(): void
     {
-        $existing = Subject::create(['company_id' => $this->company->id, 'code' => '011', 'name' => 'My Custom Root', 'parent_id' => null, 'type' => SubjectType::BOTH, 'is_permanent' => false]);
+        $existing = Subject::create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '011', 'name' => 'My Custom Root', 'parent_id' => null, 'type' => SubjectType::BOTH, 'is_permanent' => false]);
 
         $csv = $this->buildParsianCsv([
             $this->parsianRow(703, '1404/05/05', 11, 4, 0, 1000, 0, 'desc', 'بانک پاسارگاد'),
@@ -883,7 +883,7 @@ class DocumentImportExportTest extends TestCase
         $this->assertSame(1, $result['documents_created']);
         $this->assertSame(0, count($result['errors']));
 
-        $roots = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '011')->get();
+        $roots = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('code', '011')->get();
         $this->assertCount(1, $roots, 'Type mismatch must not create a duplicate top-level account');
         $this->assertSame($existing->id, $roots->first()->id);
         $this->assertSame('My Custom Root', $roots->first()->name, 'Existing subject must not be renamed');
@@ -897,7 +897,7 @@ class DocumentImportExportTest extends TestCase
         ]);
         $this->runCsvImport($csv, 'parsian');
 
-        $root = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '099')->first();
+        $root = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('code', '099')->first();
         $this->assertNotNull($root);
         $this->assertNotSame('099', $root->name);
         $this->assertSame(0, (int) $root->is_permanent);
@@ -918,15 +918,15 @@ class DocumentImportExportTest extends TestCase
         $result = $this->runCsvImport($csv, 'free_amir');
 
         $this->assertSame(1, $result['documents_created']);
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '001002', 'name' => 'Tax Reserve', 'type' => SubjectType::DEBTOR, 'is_permanent' => true]);
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '003004', 'name' => 'Expense', 'type' => SubjectType::BOTH, 'is_permanent' => false]);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001002', 'name' => 'Tax Reserve', 'type' => SubjectType::DEBTOR, 'is_permanent' => true]);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->fiscalYear->id, 'code' => '003004', 'name' => 'Expense', 'type' => SubjectType::BOTH, 'is_permanent' => false]);
     }
 
     public function test_free_amir_export_includes_type_and_is_permanent_columns(): void
     {
-        $root = Subject::create(['company_id' => $this->company->id, 'code' => '001', 'name' => 'Assets', 'parent_id' => null, 'type' => SubjectType::BOTH, 'is_permanent' => true]);
-        $child = Subject::create(['company_id' => $this->company->id, 'code' => '001001', 'name' => 'Bank', 'parent_id' => $root->id, 'type' => SubjectType::DEBTOR, 'is_permanent' => true]);
-        $document = Document::factory()->create(['company_id' => $this->company->id, 'number' => 1, 'date' => '2026-01-01']);
+        $root = Subject::create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001', 'name' => 'Assets', 'parent_id' => null, 'type' => SubjectType::BOTH, 'is_permanent' => true]);
+        $child = Subject::create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001001', 'name' => 'Bank', 'parent_id' => $root->id, 'type' => SubjectType::DEBTOR, 'is_permanent' => true]);
+        $document = Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'number' => 1, 'date' => '2026-01-01']);
         Transaction::create(['document_id' => $document->id, 'subject_id' => $child->id, 'value' => 1000, 'user_id' => $this->user->id]);
 
         $csv = $this->exportCsvViaService([]);
@@ -945,7 +945,7 @@ class DocumentImportExportTest extends TestCase
         ]);
         $this->runCsvImport($csv, 'parsian');
 
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '050002', 'name' => 'هزینه اجاره', 'type' => SubjectType::BOTH, 'is_permanent' => false]);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->fiscalYear->id, 'code' => '050002', 'name' => 'هزینه اجاره', 'type' => SubjectType::BOTH, 'is_permanent' => false]);
     }
 
     public function test_parsian_three_level_tafsili_inherits_temporary_from_root(): void
@@ -957,7 +957,7 @@ class DocumentImportExportTest extends TestCase
         $this->runCsvImport($csv, 'parsian');
 
         foreach (['050', '050002', '050002003'] as $code) {
-            $subject = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', $code)->first();
+            $subject = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('code', $code)->first();
             $this->assertNotNull($subject, "Level {$code} must be created");
             $this->assertFalse((bool) $subject->is_permanent, "Level {$code} must inherit the temporary root");
             $this->assertSame(SubjectType::BOTH, $subject->type);
@@ -973,7 +973,7 @@ class DocumentImportExportTest extends TestCase
         $this->runCsvImport($csv, 'parsian');
 
         foreach (['024', '024001', '024001005'] as $code) {
-            $subject = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', $code)->first();
+            $subject = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('code', $code)->first();
             $this->assertNotNull($subject, "Level {$code} must be created");
             $this->assertSame(SubjectType::DEBTOR, $subject->type, "Level {$code} must inherit the debtor nature");
             $this->assertTrue((bool) $subject->is_permanent, "Level {$code} must inherit permanence");
@@ -989,7 +989,7 @@ class DocumentImportExportTest extends TestCase
         $result = $this->runCsvImport($csv, 'free_amir');
 
         $this->assertSame(1, $result['documents_created']);
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '001', 'name' => 'Cash Box', 'type' => SubjectType::DEBTOR, 'is_permanent' => true]);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001', 'name' => 'Cash Box', 'type' => SubjectType::DEBTOR, 'is_permanent' => true]);
     }
 
     public function test_free_amir_two_level_subject_applies_type_and_permanent(): void
@@ -1001,7 +1001,7 @@ class DocumentImportExportTest extends TestCase
         $result = $this->runCsvImport($csv, 'free_amir');
 
         $this->assertSame(1, $result['documents_created']);
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '001002', 'name' => 'Receivable', 'type' => SubjectType::CREDITOR, 'is_permanent' => false]);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001002', 'name' => 'Receivable', 'type' => SubjectType::CREDITOR, 'is_permanent' => false]);
     }
 
     public function test_free_amir_three_level_applies_type_to_leaf_only(): void
@@ -1013,9 +1013,9 @@ class DocumentImportExportTest extends TestCase
         $result = $this->runCsvImport($csv, 'free_amir');
         $this->assertSame(1, $result['documents_created']);
 
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->company->id, 'code' => '001002003', 'name' => 'Detail Account', 'type' => SubjectType::DEBTOR, 'is_permanent' => true]);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001002003', 'name' => 'Detail Account', 'type' => SubjectType::DEBTOR, 'is_permanent' => true]);
 
-        $moein = Subject::withoutGlobalScope(FiscalYearScope::class)->where('company_id', $this->company->id)->where('code', '001002')->first();
+        $moein = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $this->fiscalYear->id)->where('code', '001002')->first();
         $this->assertNotNull($moein);
         $this->assertSame(SubjectType::BOTH, $moein->type);
         $this->assertSame(0, (int) $moein->is_permanent);
@@ -1045,28 +1045,28 @@ class DocumentImportExportTest extends TestCase
 
     public function test_free_amir_export_drops_fourth_level_subject(): void
     {
-        $l1 = Subject::create(['company_id' => $this->company->id, 'code' => '001',         'name' => 'L1', 'parent_id' => null,  'type' => SubjectType::BOTH]);
-        $l2 = Subject::create(['company_id' => $this->company->id, 'code' => '001001',      'name' => 'L2', 'parent_id' => $l1->id, 'type' => SubjectType::BOTH]);
-        $l3 = Subject::create(['company_id' => $this->company->id, 'code' => '001001001',   'name' => 'L3', 'parent_id' => $l2->id, 'type' => SubjectType::BOTH]);
-        $l4 = Subject::create(['company_id' => $this->company->id, 'code' => '001001001001', 'name' => 'L4', 'parent_id' => $l3->id, 'type' => SubjectType::BOTH]);
+        $l1 = Subject::create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001',         'name' => 'L1', 'parent_id' => null,  'type' => SubjectType::BOTH]);
+        $l2 = Subject::create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001001',      'name' => 'L2', 'parent_id' => $l1->id, 'type' => SubjectType::BOTH]);
+        $l3 = Subject::create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001001001',   'name' => 'L3', 'parent_id' => $l2->id, 'type' => SubjectType::BOTH]);
+        $l4 = Subject::create(['fiscal_year_id' => $this->fiscalYear->id, 'code' => '001001001001', 'name' => 'L4', 'parent_id' => $l3->id, 'type' => SubjectType::BOTH]);
 
-        $document = Document::factory()->create(['company_id' => $this->company->id, 'number' => 99, 'date' => '2026-01-01']);
+        $document = Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'number' => 99, 'date' => '2026-01-01']);
         Transaction::create(['document_id' => $document->id, 'subject_id' => $l4->id, 'value' => 100, 'user_id' => $this->user->id]);
         Transaction::create(['document_id' => $document->id, 'subject_id' => $l4->id, 'value' => -100, 'user_id' => $this->user->id]);
 
         $csv = $this->exportCsvViaService([]);
 
-        $newCompany = Company::factory()->create();
-        Subject::create(['company_id' => $newCompany->id, 'code' => '001',       'name' => 'L1', 'parent_id' => null,  'type' => SubjectType::BOTH]);
-        Subject::create(['company_id' => $newCompany->id, 'code' => '001001',    'name' => 'L2', 'parent_id' => null,  'type' => SubjectType::BOTH]);
-        Subject::create(['company_id' => $newCompany->id, 'code' => '001001001', 'name' => 'L3', 'parent_id' => null,  'type' => SubjectType::BOTH]);
+        $newFiscalYear = FiscalYear::factory()->create();
+        Subject::create(['fiscal_year_id' => $newFiscalYear->id, 'code' => '001',       'name' => 'L1', 'parent_id' => null,  'type' => SubjectType::BOTH]);
+        Subject::create(['fiscal_year_id' => $newFiscalYear->id, 'code' => '001001',    'name' => 'L2', 'parent_id' => null,  'type' => SubjectType::BOTH]);
+        Subject::create(['fiscal_year_id' => $newFiscalYear->id, 'code' => '001001001', 'name' => 'L3', 'parent_id' => null,  'type' => SubjectType::BOTH]);
 
-        $result = $this->runCsvImport($this->makeCsvFile($csv), 'free_amir', $newCompany);
+        $result = $this->runCsvImport($this->makeCsvFile($csv), 'free_amir', $newFiscalYear);
 
         $this->assertSame(1, $result['documents_created']);
 
         $this->assertDatabaseMissing('subjects', [
-            'company_id' => $newCompany->id,
+            'fiscal_year_id' => $newFiscalYear->id,
             'code' => '001001001001',
         ]);
     }

@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\OrgChart;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -13,7 +13,7 @@ class OrgChartFactory extends Factory
     public function definition(): array
     {
         return [
-            'company_id' => Company::factory(),
+            'fiscal_year_id' => FiscalYear::factory(),
             'title' => $this->faker->jobTitle(),
             'parent_id' => null,
             'description' => $this->faker->optional()->sentence(),

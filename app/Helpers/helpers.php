@@ -1,28 +1,28 @@
 <?php
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
-function getActiveCompany(): int
+function getActiveFiscalYear(): int
 {
-    $configuredCompanyId = config('active-company-id');
-    if ($configuredCompanyId !== null) {
-        return (int) $configuredCompanyId;
+    $configuredFiscalYearId = config('active-fiscal-year-id');
+    if ($configuredFiscalYearId !== null) {
+        return (int) $configuredFiscalYearId;
     }
 
-    $cookieCompanyId = Cookie::get('active-company-id');
-    if ($cookieCompanyId !== null) {
-        return (int) $cookieCompanyId;
+    $cookieFiscalYearId = Cookie::get('active-fiscal-year-id');
+    if ($cookieFiscalYearId !== null) {
+        return (int) $cookieFiscalYearId;
     }
 
     // During tests/CLI execution there may be no request cookie. Use the
-    // first persisted company deterministically; fresh databases still use 1
-    // until the companies table is available.
+    // first persisted fiscal year deterministically; fresh databases still use 1
+    // until the fiscal years table is available.
     try {
-        return (int) (Company::withoutGlobalScopes()->orderBy('id')->value('id') ?? 1);
+        return (int) (FiscalYear::withoutGlobalScopes()->orderBy('id')->value('id') ?? 1);
     } catch (Throwable) {
         return 1;
     }

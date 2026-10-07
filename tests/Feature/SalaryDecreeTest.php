@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
 use App\Models\DecreeBenefit;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\OrgChart;
 use App\Models\PayrollElement;
 use App\Models\SalaryDecree;
@@ -20,7 +20,7 @@ class SalaryDecreeTest extends TestCase
 
     protected User $user;
 
-    protected int $companyId;
+    protected int $fiscalYearId;
 
     protected Employee $employee;
 
@@ -32,37 +32,37 @@ class SalaryDecreeTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create();
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'salary.salary-decrees.*'])
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
 
-        $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
 
-        $this->orgChart = OrgChart::factory()->create(['company_id' => $this->companyId]);
+        $this->orgChart = OrgChart::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
 
         $this->employee = Employee::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'work_site_id' => $workSite->id,
         ]);
 
         $this->payrollElement = PayrollElement::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
         ]);
     }
 
     private function makeDecree(array $overrides = []): SalaryDecree
     {
         return SalaryDecree::factory()->create(array_merge([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
         ], $overrides));
     }
@@ -111,15 +111,15 @@ class SalaryDecreeTest extends TestCase
 
     public function test_index_does_not_show_decrees_from_other_companies(): void
     {
-        $otherCompany = Company::factory()->create();
-        $otherWorkSite = WorkSite::factory()->create(['company_id' => $otherCompany->id]);
+        $otherFiscalYear = FiscalYear::factory()->create();
+        $otherWorkSite = WorkSite::factory()->create(['fiscal_year_id' => $otherFiscalYear->id]);
         $otherEmployee = Employee::factory()->create([
-            'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherFiscalYear->id,
             'work_site_id' => $otherWorkSite->id,
         ]);
 
         SalaryDecree::factory()->create([
-            'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherFiscalYear->id,
             'employee_id' => $otherEmployee->id,
             'name' => 'Foreign Decree',
         ]);
@@ -151,7 +151,7 @@ class SalaryDecreeTest extends TestCase
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('salary_decrees', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'name' => 'Decree-1403-001',
             'start_date' => jalali_to_gregorian_date('1403-01-01', '-', '-'),
@@ -247,7 +247,7 @@ class SalaryDecreeTest extends TestCase
             'element_value' => 1_000_000,
         ]);
 
-        $newElement = PayrollElement::factory()->create(['company_id' => $this->companyId]);
+        $newElement = PayrollElement::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
 
         $response = $this->put(
             route('salary.salary-decrees.update', $decree),

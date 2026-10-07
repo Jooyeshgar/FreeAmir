@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Management;
 
 use App\Http\Controllers\Controller;
 use App\Models\Activity;
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Services\ActivityLogService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -35,7 +35,7 @@ class ActivityLogController extends Controller
             'user_id' => ['nullable', 'integer'],
             'model_type' => ['nullable', 'string', 'max:255'],
             'model_reference' => ['nullable', 'string', 'max:100'],
-            'company_id' => ['nullable', 'integer'],
+            'fiscal_year_id' => ['nullable', 'integer'],
             'date_from' => ['nullable', 'string', 'max:10'],
             'date_to' => ['nullable', 'string', 'max:10'],
         ]);
@@ -72,7 +72,7 @@ class ActivityLogController extends Controller
             $activity->setAttribute('details', $details->put('models', $models->all()));
         }
 
-        $row = $this->activityRow($activity->load('user:id,name,email'), Company::query()->get()->keyBy('id'), collect());
+        $row = $this->activityRow($activity->load('user:id,name,email'), FiscalYear::query()->get()->keyBy('id'), collect());
 
         return response()->json([
             'html' => view('super-admin.activity-logs._details', ['activity' => $row])->render(),
@@ -85,14 +85,14 @@ class ActivityLogController extends Controller
      */
     private function viewData(array $data, Request $request): array
     {
-        $companyLookup = $data['companies']->keyBy('id');
+        $fiscalYearLookup = $data['fiscalYears']->keyBy('id');
         $impersonatedUsers = $data['impersonatedUsers'];
         $recordingEnabled = (bool) config('activitylog.enabled');
         $activeFilterCount = collect([
             $data['filters']['search'] ?? null,
             $data['filters']['action'] ?? null,
             $data['filters']['user_id'] ?? null,
-            $data['filters']['company_id'] ?? null,
+            $data['filters']['fiscal_year_id'] ?? null,
             $data['filters']['model_type'] ?? null,
             $data['filters']['model_reference'] ?? null,
             $request->input('date_from'),
@@ -101,7 +101,7 @@ class ActivityLogController extends Controller
 
         $rows = $data['activities']->getCollection()->map(fn (Activity $activity): array => $this->activityRow(
             $activity,
-            $companyLookup,
+            $fiscalYearLookup,
             $impersonatedUsers,
         ));
         $data['activities']->setCollection($this->mergeRequestRows($rows));
@@ -111,9 +111,9 @@ class ActivityLogController extends Controller
             'activeFilterCount' => $activeFilterCount,
             'activeFilterCountLabel' => localizeNumber($activeFilterCount),
             'actionOptions' => $this->actionOptions(),
-            'companyOptions' => $data['companies']->map(fn (Company $company): array => [
-                'value' => $company->id,
-                'label' => $company->name.' - '.localizeNumber($company->fiscal_year),
+            'fiscalYearOptions' => $data['fiscalYears']->map(fn (FiscalYear $fiscalYear): array => [
+                'value' => $fiscalYear->id,
+                'label' => $fiscalYear->company?->name.' - '.localizeNumber($fiscalYear->year),
             ]),
             'dateFromValue' => $request->input('date_from', ''),
             'dateToValue' => $request->input('date_to', ''),
@@ -175,14 +175,14 @@ class ActivityLogController extends Controller
         ];
     }
 
-    private function activityRow(Activity $activity, Collection $companyLookup, Collection $impersonatedUsers): array
+    private function activityRow(Activity $activity, Collection $fiscalYearLookup, Collection $impersonatedUsers): array
     {
         $details = $activity->details ?? collect();
         $aggregatedModels = collect($details->get('models', []));
         $attributes = collect($details->get('attributes', []));
         $old = collect($details->get('old', []));
         $changeKeys = $attributes->keys()->merge($old->keys())->unique();
-        $company = $companyLookup->get($details->get('company_id'));
+        $fiscalYear = $fiscalYearLookup->get($details->get('fiscal_year_id'));
         $impersonatedUser = $impersonatedUsers->get($details->get('impersonated_user_id'));
         $isRequest = $activity->source === 'request';
         $canonicalAction = match ($activity->action) {
@@ -213,8 +213,8 @@ class ActivityLogController extends Controller
             'userInitial' => mb_strtoupper(mb_substr($activity->user?->name ?? '?', 0, 1)),
             'userName' => $activity->user?->name ?? __('System'),
             'userUrl' => $activity->user ? route('users.show', $activity->user) : null,
-            'companyLabel' => $company ? $company->name.' - '.localizeNumber($company->fiscal_year) : null,
-            'companyUrl' => $company ? route('companies.show', $company) : null,
+            'companyLabel' => $fiscalYear ? $fiscalYear->company?->name.' - '.localizeNumber($fiscalYear->year) : null,
+            'companyUrl' => $fiscalYear ? route('companies.show', $fiscalYear->company_id) : null,
             'title' => $isRequest ? ($route ?: $activity->description) : $modelTitle,
             'titleDetail' => $isRequest ? null : $details->get('model_label', $hasNumberColumn ? null : '#'.$activity->model_id),
             'requestMethod' => $isRequest

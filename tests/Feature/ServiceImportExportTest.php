@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Service;
 use App\Models\ServiceGroup;
 use App\Models\Subject;
@@ -21,7 +21,7 @@ class ServiceImportExportTest extends TestCase
 
     protected ServiceGroup $serviceGroup;
 
-    protected int $companyId;
+    protected int $fiscalYearId;
 
     protected function setUp(): void
     {
@@ -29,11 +29,11 @@ class ServiceImportExportTest extends TestCase
 
         app()->setLocale('en');
 
-        $company = Company::factory()->create();
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create();
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo([
             Permission::firstOrCreate(['name' => 'services.index']),
@@ -42,10 +42,10 @@ class ServiceImportExportTest extends TestCase
             Permission::firstOrCreate(['name' => 'services.import.store']),
         ]);
 
-        $this->withCookies(['active-company-id' => $this->companyId]);
-        config(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
+        config(['active-fiscal-year-id' => $this->fiscalYearId]);
 
-        $this->serviceGroup = ServiceGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
+        $this->serviceGroup = ServiceGroup::factory()->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
     }
 
     private function upload(string $csv): UploadedFile
@@ -79,7 +79,7 @@ class ServiceImportExportTest extends TestCase
 
     public function test_export_returns_csv_with_services(): void
     {
-        $service = Service::factory()->withGroup($this->serviceGroup)->withSubject()->create(['company_id' => $this->companyId, 'name' => 'Consulting', 'code' => 6001]);
+        $service = Service::factory()->withGroup($this->serviceGroup)->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Consulting', 'code' => 6001]);
         $response = $this->actingAs($this->user)->get(route('services.export'));
         $response->assertStatus(200);
         $response->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
@@ -93,7 +93,7 @@ class ServiceImportExportTest extends TestCase
 
     public function test_export_includes_all_subject_codes(): void
     {
-        $service = Service::factory()->withGroup($this->serviceGroup)->withSubject()->create(['company_id' => $this->companyId, 'name' => 'Consulting', 'code' => 6002]);
+        $service = Service::factory()->withGroup($this->serviceGroup)->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Consulting', 'code' => 6002]);
         $service->loadMissing('subject', 'cogsSubject', 'salesReturnsSubject');
 
         $response = $this->actingAs($this->user)->get(route('services.export'));
@@ -109,7 +109,7 @@ class ServiceImportExportTest extends TestCase
     public function test_export_only_includes_selected_optional_columns(): void
     {
         Service::factory()->withGroup($this->serviceGroup)->withSubject()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Selected Service',
             'code' => 6003,
         ]);
@@ -125,7 +125,7 @@ class ServiceImportExportTest extends TestCase
     public function test_export_includes_service_subject_amounts(): void
     {
         $service = Service::factory()->withGroup($this->serviceGroup)->withSubject()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Accounted Service',
             'code' => 6004,
         ]);
@@ -149,7 +149,7 @@ class ServiceImportExportTest extends TestCase
         $response = $this->actingAs($this->user)->post(route('services.import.store'), ['file' => $this->upload($csv)]);
         $response->assertRedirect(route('services.index'));
         $response->assertSessionHas('success');
-        $this->assertDatabaseHas('service_groups', ['name' => 'Brand New Group', 'company_id' => $this->companyId]);
+        $this->assertDatabaseHas('service_groups', ['name' => 'Brand New Group', 'fiscal_year_id' => $this->fiscalYearId]);
         $service = Service::where('name', 'New Consulting')->first();
         $this->assertNotNull($service);
         $this->assertNotNull($service->code);
@@ -175,7 +175,7 @@ class ServiceImportExportTest extends TestCase
             $this->assertNotNull($subject);
             $this->assertSame($parent->id, $subject->parent_id);
             $this->assertSame($service->name, $subject->name);
-            $this->assertSame($service->company_id, $subject->company_id);
+            $this->assertSame($service->fiscal_year_id, $subject->fiscal_year_id);
             $this->assertSame($service->id, $subject->subjectable_id);
             $this->assertSame($service->getMorphClass(), $subject->subjectable_type);
         }
@@ -187,14 +187,14 @@ class ServiceImportExportTest extends TestCase
     {
         $csv = "name,group_name\n"."Reuse Consulting,{$this->serviceGroup->name}\n";
         $this->actingAs($this->user)->post(route('services.import.store'), ['file' => $this->upload($csv)])->assertSessionHas('success');
-        $this->assertSame(1, ServiceGroup::withoutGlobalScopes()->where('company_id', $this->companyId)->where('name', $this->serviceGroup->name)->count());
+        $this->assertSame(1, ServiceGroup::withoutGlobalScopes()->where('fiscal_year_id', $this->fiscalYearId)->where('name', $this->serviceGroup->name)->count());
         $service = Service::where('name', 'Reuse Consulting')->first();
         $this->assertSame($this->serviceGroup->id, $service->group);
     }
 
     public function test_import_updates_existing_service_when_code_matches(): void
     {
-        $existing = Service::factory()->withGroup($this->serviceGroup)->withSubject()->create(['company_id' => $this->companyId, 'name' => 'Old Name', 'code' => 8888, 'selling_price' => 100]);
+        $existing = Service::factory()->withGroup($this->serviceGroup)->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Old Name', 'code' => 8888, 'selling_price' => 100]);
         $csv = "code,name,group_name,selling_price\n"."8888,Updated Name,{$this->serviceGroup->name},300\n";
         $response = $this->actingAs($this->user)->post(route('services.import.store'), ['file' => $this->upload($csv)]);
         $response->assertRedirect(route('services.index'));

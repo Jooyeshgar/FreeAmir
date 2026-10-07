@@ -377,7 +377,7 @@ class AttendanceService
      */
     public function calculateAndStore(int $employeeId, Carbon $startDate, int $durationDays, int $jalaliYear, int $jalaliMonth): MonthlyAttendance
     {
-        $companyId = getActiveCompany();
+        $fiscalYearId = getActiveFiscalYear();
         $endDate = $startDate->copy()->addDays($durationDays - 1);
 
         $employee = Employee::with('workShift')->find($employeeId);
@@ -397,13 +397,13 @@ class AttendanceService
         /** @var MonthlyAttendance $attendance */
         $attendance = MonthlyAttendance::updateOrCreate(
             [
-                'company_id' => $companyId,
+                'fiscal_year_id' => $fiscalYearId,
                 'employee_id' => $employeeId,
                 'year' => $jalaliYear,
                 'month' => $jalaliMonth,
             ],
             array_merge($totals, [
-                'company_id' => $companyId,
+                'fiscal_year_id' => $fiscalYearId,
                 'employee_id' => $employeeId,
                 'year' => $jalaliYear,
                 'month' => $jalaliMonth,
@@ -576,7 +576,7 @@ class AttendanceService
 
         $start = $personnelRequest->start_date;
         $end = $personnelRequest->end_date;
-        $companyId = $personnelRequest->company_id;
+        $companyId = $personnelRequest->fiscal_year_id;
         $employeeId = $personnelRequest->employee_id;
         $delta = $subtract ? -1 : 1;
 
@@ -968,7 +968,7 @@ class AttendanceService
      * a signed delta to the specified field.
      * Returns the log (or null if nothing was changed).
      */
-    private function applyDeltaToLog(int $employeeId, int $companyId, Carbon $date, string $field, int $minutes): ?AttendanceLog
+    private function applyDeltaToLog(int $employeeId, int $fiscalYearId, Carbon $date, string $field, int $minutes): ?AttendanceLog
     {
         $log = AttendanceLog::where('employee_id', $employeeId)
             ->where('log_date', $date->toDateString())
@@ -980,7 +980,7 @@ class AttendanceService
             }
             $log = AttendanceLog::create([
                 'employee_id' => $employeeId,
-                'company_id' => $companyId,
+                'fiscal_year_id' => $fiscalYearId,
                 'log_date' => $date->toDateString(),
             ]);
         }

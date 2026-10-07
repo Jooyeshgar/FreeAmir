@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class WarehouseTransfer extends Model
 {
     protected $fillable = [
-        'company_id',
+        'fiscal_year_id',
         'product_id',
         'from_warehouse_id',
         'to_warehouse_id',
@@ -31,7 +31,7 @@ class WarehouseTransfer extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function (WarehouseTransfer $transfer) {
-            $transfer->company_id ??= getActiveCompany();
+            $transfer->fiscal_year_id ??= getActiveFiscalYear();
         });
     }
 

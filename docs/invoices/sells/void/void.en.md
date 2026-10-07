@@ -19,7 +19,7 @@ Voiding fully reverses an approved sale. It is not the same as deleting, returni
 - Each invoice can be voided only once.
 - The void date cannot precede the original sale date.
 - The date must fall in the active fiscal year.
-- The void invoice number must be a positive integer, unique within the company.
+- The void invoice number must be a positive integer, unique within the fiscal year.
 - An invoice transferred to another fiscal year cannot be voided.
 
 ## Steps

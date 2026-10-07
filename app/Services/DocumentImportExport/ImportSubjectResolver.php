@@ -175,7 +175,7 @@ class ImportSubjectResolver
         $subject = new Subject([
             'name' => $name,
             'parent_id' => $parent?->id,
-            'company_id' => getActiveCompany(),
+            'fiscal_year_id' => getActiveFiscalYear(),
             'type' => SubjectType::fromName($type ?? 'both'),
             'is_permanent' => $isPermanent ?? false,
         ]);

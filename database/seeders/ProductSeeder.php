@@ -13,9 +13,9 @@ class ProductSeeder extends Seeder
 {
     public function run(): void
     {
-        $groups = ProductGroup::withoutGlobalScopes()->where('company_id', getActiveCompany())->get();
-        $warehouses = Warehouse::withoutGlobalScopes()->where('company_id', getActiveCompany())->where('code', '!=', 'DAMAGED')->get();
-        $damagedWarehouse = Warehouse::withoutGlobalScopes()->where('company_id', getActiveCompany())->where('code', 'DAMAGED')->first();
+        $groups = ProductGroup::withoutGlobalScopes()->where('fiscal_year_id', getActiveFiscalYear())->get();
+        $warehouses = Warehouse::withoutGlobalScopes()->where('fiscal_year_id', getActiveFiscalYear())->where('code', '!=', 'DAMAGED')->get();
+        $damagedWarehouse = Warehouse::withoutGlobalScopes()->where('fiscal_year_id', getActiveFiscalYear())->where('code', 'DAMAGED')->first();
         $transferredToDamaged = false;
 
         foreach ($groups as $group) {

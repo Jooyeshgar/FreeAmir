@@ -14,7 +14,7 @@ class SalaryDecree extends Model
     use HasFactory;
 
     protected $fillable = [
-        'company_id',
+        'fiscal_year_id',
         'employee_id',
         'name',
         'start_date',

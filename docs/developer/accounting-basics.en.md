@@ -31,7 +31,7 @@ FreeAmir appends three digits at each level: a general subject can have code `01
 
 ### Relationship between groups and subjects
 
-Company-specific configuration connects customer and product groups to accounting subjects. Query `configs` with both the key (for example, `customer_default_subject` or `product_inventory_subject`) and `company_id = session('active-company-id')` to retrieve the corresponding subject.
+Fiscal-year-specific configuration connects customer and product groups to accounting subjects. Query `configs` with both the key (for example, `customer_default_subject` or `product_inventory_subject`) and the active fiscal-year ID from `getActiveFiscalYear()` to retrieve the corresponding subject.
 
 ### Let the model or service generate codes
 
@@ -63,7 +63,7 @@ The hierarchy is not limited to one detailed level: `010` → `011001` → `0110
 
 ### Overall structure
 
-A `Document` holds a number unique within its fiscal year, date, title, approval date, creator, approver, and company ID. It has many transactions and belongs to its creator and approver. A `Transaction` records its subject, document, user, description, and signed `value`. The debit accessor displays `-value` when the value is negative; the credit accessor displays a positive value. Date and approval fields are cast to dates.
+A `Document` holds a number unique within its fiscal year, date, title, approval date, creator, approver, and fiscal-year ID. It has many transactions and belongs to its creator and approver. A `Transaction` records its subject, document, user, description, and signed `value`. The debit accessor displays `-value` when the value is negative; the credit accessor displays a positive value. Date and approval fields are cast to dates.
 
 ### Example document in code
 
@@ -85,9 +85,13 @@ This service manages fiscal years and data migration. `exportData($fiscalYearId,
 
 ## Fiscal years and multiple companies
 
-### Fiscal-year concept in the guide
+A `Company` stores business identity and can have multiple `FiscalYear` records. Each `FiscalYear` stores its company ID, year, and closing state. Fiscal-year-scoped records reference it with `fiscal_year_id`. Users are assigned to fiscal years through the `fiscal_year_user` pivot; a user's access to one year does not grant access to the company's other years. Roles and permissions control which actions are available within the years the user can access.
 
-The original guide describes a fiscal year as a `Company` record, with a numeric `fiscal_year` such as 1403 and company details including name, logo, address, economic and national codes, postal code, and phone number. **Verify this model against current migrations before relying on it:** the project has evolved since this explanation was written.
+```php
+$company = Company::with('fiscalYears')->findOrFail($companyId);
+$fiscalYear = $company->fiscalYears()->where('year', 1405)->firstOrFail();
+$user->fiscalYears()->syncWithoutDetaching([$fiscalYear->id]);
+```
 
 ### Data isolation with `FiscalYearScope`
 
@@ -95,11 +99,11 @@ Scoped models add `FiscalYearScope` as a global scope. For exceptional cross-yea
 
 ### Fiscal-year migration and copying
 
-See [Fiscal-Year Export and Import](FiscalYearExportImport.en.md) for details. The guide gives `php artisan fiscal-year:export 1 --sections=subjects,customers` and `php artisan fiscal-year:import exported_data.json --name="Year 1404" --year=1404` as examples.
+See [Fiscal-Year Export and Import](FiscalYearExportImport.en.md) for details. Export and import operations identify their source and destination by fiscal-year ID.
 
 ### Company configuration
 
-The `configs` table stores settings separately for each company.
+The `configs` table stores settings separately for each fiscal year (with global settings represented separately).
 
 ## Financial reports
 
@@ -133,7 +137,7 @@ The guide describes `ConfigLoader` loading database settings into Laravel's `con
 
 ### Accessing settings
 
-Use `config('amir.cash_book')` or `config('amir.bank', null)` with a default. For a company-specific value, query `Config` with the active `company_id` and key (for example, `cash_book`).
+Use `config('amir.cash_book')` or `config('amir.bank', null)` with a default. For a fiscal-year-specific value, query `Config` with the active `fiscal_year_id` and key (for example, `cash_book`).
 
 ## Security and access control
 
@@ -159,8 +163,8 @@ Use `DocumentService::createDocument()` instead of a bare `Document::create()` s
 
 Generate a code with `$subject->generateCode()` and display it with `$subject->formattedCode()` (for example, `001/002/003`).
 
-### 7. Respect company scopes
+### 7. Respect fiscal-year scopes
 
-An ordinary `Subject::all()` query uses the global scope. Only bypass `FiscalYearScope` explicitly for an operation that really needs records outside the active scope.
+An ordinary `Subject::all()` query uses the global scope for the active fiscal year. Only bypass `FiscalYearScope` explicitly for an operation that really needs records outside the active scope.
 
 Accuracy and adherence to accounting rules matter more than speed in a financial system. Test changes repeatedly and use the project's services.

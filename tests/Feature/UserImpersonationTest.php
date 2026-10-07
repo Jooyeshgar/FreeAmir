@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
@@ -25,7 +25,7 @@ class UserImpersonationTest extends TestCase
         config(['app.email_verification' => false]);
     }
 
-    private function userWithRole(string $roleName, ?Company $company = null, bool $canImpersonate = false, bool $canViewUsers = false, array $attributes = []): User
+    private function userWithRole(string $roleName, ?FiscalYear $fiscalYear = null, bool $canImpersonate = false, bool $canViewUsers = false, array $attributes = []): User
     {
         $user = User::factory()->create($attributes);
         $role = $this->role($roleName);
@@ -40,8 +40,8 @@ class UserImpersonationTest extends TestCase
 
         $user->assignRole($role);
 
-        if ($company) {
-            $user->companies()->attach($company);
+        if ($fiscalYear) {
+            $user->fiscalYears()->attach($fiscalYear);
         }
 
         return $user;
@@ -59,9 +59,9 @@ class UserImpersonationTest extends TestCase
         return Permission::firstOrCreate(['name' => 'users.impersonate']);
     }
 
-    private function setActiveCompany(Company $company): void
+    private function setActiveCompany(FiscalYear $fiscalYear): void
     {
-        config(['active-company-id' => $company->id]);
+        config(['active-fiscal-year-id' => $fiscalYear->id]);
     }
 
     private function assertImpersonationSessionIsClear(): void
@@ -71,21 +71,19 @@ class UserImpersonationTest extends TestCase
         $this->assertFalse(session()->exists('impersonator_guard_using'));
     }
 
-    private function company(string $name): Company
+    private function fiscalYear(int $year): FiscalYear
     {
-        return Company::create([
-            'name' => $name,
-            'fiscal_year' => (int) toEnglish(jdate('Y')),
-            'currency' => 'Rial',
+        return FiscalYear::factory()->create([
+            'year' => $year,
         ]);
     }
 
     public function test_authorized_admin_can_impersonate_a_user_and_return(): void
     {
-        $company = $this->company('Shared Company');
-        $admin = $this->userWithRole('Admin', $company, canImpersonate: true);
-        $target = $this->userWithRole('Employee', $company, attributes: ['name' => 'Target User']);
-        $this->setActiveCompany($company);
+        $fiscalYear = $this->fiscalYear(1405);
+        $admin = $this->userWithRole('Admin', $fiscalYear, canImpersonate: true);
+        $target = $this->userWithRole('Employee', $fiscalYear, attributes: ['name' => 'Target User']);
+        $this->setActiveCompany($fiscalYear);
 
         $this->actingAs($admin)->post(route('users.impersonate', $target))->assertRedirect(route('about'))->assertSessionHas('success');
 
@@ -152,9 +150,9 @@ class UserImpersonationTest extends TestCase
 
     public function test_user_cannot_impersonate_itself(): void
     {
-        $company = $this->company('Shared Company');
-        $admin = $this->userWithRole('Admin', $company, canImpersonate: true);
-        $this->setActiveCompany($company);
+        $fiscalYear = $this->fiscalYear(1405);
+        $admin = $this->userWithRole('Admin', $fiscalYear, canImpersonate: true);
+        $this->setActiveCompany($fiscalYear);
 
         $this->actingAs($admin)->post(route('users.impersonate', $admin))->assertForbidden();
 
@@ -164,10 +162,10 @@ class UserImpersonationTest extends TestCase
 
     public function test_user_without_permission_cannot_impersonate(): void
     {
-        $company = $this->company('Shared Company');
-        $admin = $this->userWithRole('Admin', $company);
-        $target = $this->userWithRole('Employee', $company);
-        $this->setActiveCompany($company);
+        $fiscalYear = $this->fiscalYear(1405);
+        $admin = $this->userWithRole('Admin', $fiscalYear);
+        $target = $this->userWithRole('Employee', $fiscalYear);
+        $this->setActiveCompany($fiscalYear);
 
         $this->actingAs($admin)->post(route('users.impersonate', $target))->assertForbidden();
 
@@ -177,12 +175,12 @@ class UserImpersonationTest extends TestCase
 
     public function test_roleless_user_with_direct_permission_can_impersonate(): void
     {
-        $company = $this->company('Shared Company');
+        $fiscalYear = $this->fiscalYear(1405);
         $actor = User::factory()->create();
-        $actor->companies()->attach($company);
+        $actor->fiscalYears()->attach($fiscalYear);
         $actor->givePermissionTo($this->impersonationPermission());
-        $target = $this->userWithRole('Employee', $company);
-        $this->setActiveCompany($company);
+        $target = $this->userWithRole('Employee', $fiscalYear);
+        $this->setActiveCompany($fiscalYear);
 
         $this->actingAs($actor)->post(route('users.impersonate', $target))->assertRedirect(route('about'));
 
@@ -192,7 +190,7 @@ class UserImpersonationTest extends TestCase
     public function test_nested_impersonation_is_forbidden_and_original_session_is_preserved(): void
     {
         $superAdmin = $this->userWithRole('Super-Admin', canImpersonate: true);
-        $admin = $this->userWithRole('Admin', $this->company('Admin Company'), canImpersonate: true);
+        $admin = $this->userWithRole('Admin', $this->fiscalYear(1405), canImpersonate: true);
         $employee = $this->userWithRole('Employee');
 
         $this->actingAs($superAdmin)->post(route('users.impersonate', $admin))->assertRedirect(route('about'));
@@ -219,10 +217,10 @@ class UserImpersonationTest extends TestCase
     {
         Event::fake([TakeImpersonation::class, LeaveImpersonation::class]);
 
-        $company = $this->company('Shared Company');
-        $admin = $this->userWithRole('Admin', $company, canImpersonate: true);
-        $target = $this->userWithRole('Employee', $company);
-        $this->setActiveCompany($company);
+        $fiscalYear = $this->fiscalYear(1405);
+        $admin = $this->userWithRole('Admin', $fiscalYear, canImpersonate: true);
+        $target = $this->userWithRole('Employee', $fiscalYear);
+        $this->setActiveCompany($fiscalYear);
 
         $this->actingAs($admin)->post(route('users.impersonate', $target));
 
@@ -237,10 +235,10 @@ class UserImpersonationTest extends TestCase
     {
         Event::fake([TakeImpersonation::class]);
 
-        $company = $this->company('Shared Company');
-        $actor = $this->userWithRole('Admin', $company, canImpersonate: true);
-        $target = $this->userWithRole('Super-Admin', $company);
-        $this->setActiveCompany($company);
+        $fiscalYear = $this->fiscalYear(1405);
+        $actor = $this->userWithRole('Admin', $fiscalYear, canImpersonate: true);
+        $target = $this->userWithRole('Super-Admin', $fiscalYear);
+        $this->setActiveCompany($fiscalYear);
 
         $this->actingAs($actor)->post(route('users.impersonate', $target))->assertForbidden();
 
@@ -259,10 +257,10 @@ class UserImpersonationTest extends TestCase
 
     public function test_banner_remains_visible_across_impersonated_requests(): void
     {
-        $company = $this->company('Shared Company');
-        $admin = $this->userWithRole('Admin', $company, canImpersonate: true);
-        $target = $this->userWithRole('Employee', $company, attributes: ['name' => 'Persistent Target']);
-        $this->setActiveCompany($company);
+        $fiscalYear = $this->fiscalYear(1405);
+        $admin = $this->userWithRole('Admin', $fiscalYear, canImpersonate: true);
+        $target = $this->userWithRole('Employee', $fiscalYear, attributes: ['name' => 'Persistent Target']);
+        $this->setActiveCompany($fiscalYear);
 
         $this->actingAs($admin)->post(route('users.impersonate', $target));
 
@@ -274,12 +272,12 @@ class UserImpersonationTest extends TestCase
     public function test_unverified_users_with_a_company_can_be_impersonated_with_any_eligible_role(): void
     {
         $superAdmin = $this->userWithRole('Super-Admin', canImpersonate: true);
-        $company = $this->company('Target Company');
+        $fiscalYear = $this->fiscalYear(1405);
         $targets = [];
 
         foreach (['Admin', 'Accountant', 'Warehousekeeper', 'Seller', 'Employee', null] as $targetRole) {
             $target = $targetRole === null ? User::factory()->create(['email_verified_at' => null]) : $this->userWithRole($targetRole, attributes: ['email_verified_at' => null]);
-            $target->companies()->attach($company);
+            $target->fiscalYears()->attach($fiscalYear);
             $targets[] = $target;
 
             $this->actingAs($superAdmin)->post(route('users.impersonate', $target))->assertRedirect(route('about'));
@@ -324,10 +322,10 @@ class UserImpersonationTest extends TestCase
 
     public function test_logout_while_impersonating_ends_the_entire_authenticated_session(): void
     {
-        $company = $this->company('Shared Company');
-        $admin = $this->userWithRole('Admin', $company, canImpersonate: true);
-        $target = $this->userWithRole('Employee', $company);
-        $this->setActiveCompany($company);
+        $fiscalYear = $this->fiscalYear(1405);
+        $admin = $this->userWithRole('Admin', $fiscalYear, canImpersonate: true);
+        $target = $this->userWithRole('Employee', $fiscalYear);
+        $this->setActiveCompany($fiscalYear);
 
         $this->actingAs($admin)->post(route('users.impersonate', $target));
         $this->get(route('logout'))->assertRedirect('/login');
@@ -338,11 +336,11 @@ class UserImpersonationTest extends TestCase
 
     public function test_a_new_impersonation_can_start_after_leaving_the_previous_one(): void
     {
-        $company = $this->company('Shared Company');
-        $admin = $this->userWithRole('Admin', $company, canImpersonate: true);
-        $firstTarget = $this->userWithRole('Employee', $company);
-        $secondTarget = $this->userWithRole('Seller', $company);
-        $this->setActiveCompany($company);
+        $fiscalYear = $this->fiscalYear(1405);
+        $admin = $this->userWithRole('Admin', $fiscalYear, canImpersonate: true);
+        $firstTarget = $this->userWithRole('Employee', $fiscalYear);
+        $secondTarget = $this->userWithRole('Seller', $fiscalYear);
+        $this->setActiveCompany($fiscalYear);
 
         $this->actingAs($admin)->post(route('users.impersonate', $firstTarget));
         $this->post(route('impersonation.leave'));
@@ -355,7 +353,8 @@ class UserImpersonationTest extends TestCase
     public function test_super_admin_can_impersonate_admin_without_shared_company(): void
     {
         $superAdmin = $this->userWithRole('Super-Admin', canImpersonate: true);
-        $admin = $this->userWithRole('Admin', $this->company('Other Company'));
+        $fiscalYear = $this->fiscalYear(1405);
+        $admin = $this->userWithRole('Admin', $fiscalYear);
 
         $this->actingAs($superAdmin)->post(route('users.impersonate', $admin))->assertRedirect(route('about'));
 
@@ -366,7 +365,8 @@ class UserImpersonationTest extends TestCase
     {
         $superAdmin = $this->userWithRole('Super-Admin', canImpersonate: true);
         $superAdmin->assignRole($this->role('Admin'));
-        $admin = $this->userWithRole('Admin', $this->company('Admin Company'));
+        $fiscalYear = $this->fiscalYear(1405);
+        $admin = $this->userWithRole('Admin', $fiscalYear);
 
         $this->actingAs($superAdmin)->post(route('users.impersonate', $admin))->assertRedirect(route('about'));
 
@@ -376,7 +376,8 @@ class UserImpersonationTest extends TestCase
     public function test_no_user_can_impersonate_a_super_admin(): void
     {
         $actor = $this->userWithRole('Super-Admin', canImpersonate: true);
-        $target = $this->userWithRole('Super-Admin', $this->company('Super Admin Company'));
+        $fiscalYear = $this->fiscalYear(1405);
+        $target = $this->userWithRole('Super-Admin', $fiscalYear);
 
         $this->actingAs($actor)->post(route('users.impersonate', $target))->assertForbidden();
 
@@ -387,7 +388,8 @@ class UserImpersonationTest extends TestCase
     public function test_user_with_direct_platform_access_permission_cannot_be_impersonated(): void
     {
         $actor = $this->userWithRole('Super-Admin', canImpersonate: true);
-        $target = $this->userWithRole('Employee', $this->company('Platform User Company'));
+        $fiscalYear = $this->fiscalYear(1405);
+        $target = $this->userWithRole('Employee', $fiscalYear);
         $target->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
 
         $this->actingAs($actor)->post(route('users.impersonate', $target))->assertForbidden();
@@ -398,7 +400,8 @@ class UserImpersonationTest extends TestCase
     public function test_user_with_platform_access_inherited_from_a_role_cannot_be_impersonated(): void
     {
         $actor = $this->userWithRole('Super-Admin', canImpersonate: true);
-        $target = $this->userWithRole('Employee', $this->company('Platform Role Company'));
+        $fiscalYear = $this->fiscalYear(1405);
+        $target = $this->userWithRole('Employee', $fiscalYear);
         $platformRole = Role::create(['name' => 'Platform Auditor']);
         $platformRole->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
         $target->assignRole($platformRole);
@@ -410,14 +413,14 @@ class UserImpersonationTest extends TestCase
 
     public function test_admin_can_impersonate_every_non_super_admin_role_and_roleless_users(): void
     {
-        $company = $this->company('Shared Company');
-        $admin = $this->userWithRole('Admin', $company, canImpersonate: true);
-        $this->setActiveCompany($company);
+        $fiscalYear = $this->fiscalYear(1405);
+        $admin = $this->userWithRole('Admin', $fiscalYear, canImpersonate: true);
+        $this->setActiveCompany($fiscalYear);
         $this->actingAs($admin);
 
         foreach (['Admin', 'Accountant', 'Warehousekeeper', 'Seller', 'Employee', null] as $targetRole) {
             $target = $targetRole === null ? User::factory()->create() : $this->userWithRole($targetRole);
-            $target->companies()->attach($company);
+            $target->fiscalYears()->attach($fiscalYear);
 
             $this->post(route('users.impersonate', $target))->assertRedirect(route('about'));
             $this->assertAuthenticatedAs($target);
@@ -429,10 +432,10 @@ class UserImpersonationTest extends TestCase
 
     public function test_company_admin_can_impersonate_another_admin(): void
     {
-        $company = $this->company('Shared Company');
-        $actor = $this->userWithRole('Admin', $company, canImpersonate: true);
-        $target = $this->userWithRole('Admin', $company);
-        $this->setActiveCompany($company);
+        $fiscalYear = $this->fiscalYear(1405);
+        $actor = $this->userWithRole('Admin', $fiscalYear, canImpersonate: true);
+        $target = $this->userWithRole('Admin', $fiscalYear);
+        $this->setActiveCompany($fiscalYear);
 
         $this->actingAs($actor)->post(route('users.impersonate', $target))->assertRedirect(route('about'));
 
@@ -441,14 +444,14 @@ class UserImpersonationTest extends TestCase
 
     public function test_accountant_can_impersonate_every_non_super_admin_role_and_roleless_users(): void
     {
-        $company = $this->company('Shared Company');
-        $accountant = $this->userWithRole('Accountant', $company, canImpersonate: true);
-        $this->setActiveCompany($company);
+        $fiscalYear = $this->fiscalYear(1405);
+        $accountant = $this->userWithRole('Accountant', $fiscalYear, canImpersonate: true);
+        $this->setActiveCompany($fiscalYear);
         $this->actingAs($accountant);
 
         foreach (['Admin', 'Accountant', 'Warehousekeeper', 'Seller', 'Employee', null] as $targetRole) {
             $target = $targetRole === null ? User::factory()->create() : $this->userWithRole($targetRole);
-            $target->companies()->attach($company);
+            $target->fiscalYears()->attach($fiscalYear);
 
             $this->post(route('users.impersonate', $target))->assertRedirect(route('about'));
             $this->assertAuthenticatedAs($target);
@@ -460,10 +463,10 @@ class UserImpersonationTest extends TestCase
 
     public function test_accountant_cannot_impersonate_a_super_admin(): void
     {
-        $company = $this->company('Shared Company');
-        $accountant = $this->userWithRole('Accountant', $company, canImpersonate: true);
-        $this->setActiveCompany($company);
-        $target = $this->userWithRole('Super-Admin', $company);
+        $fiscalYear = $this->fiscalYear(1405);
+        $accountant = $this->userWithRole('Accountant', $fiscalYear, canImpersonate: true);
+        $this->setActiveCompany($fiscalYear);
+        $target = $this->userWithRole('Super-Admin', $fiscalYear);
 
         $this->actingAs($accountant)->post(route('users.impersonate', $target))->assertForbidden();
 
@@ -473,16 +476,16 @@ class UserImpersonationTest extends TestCase
 
     public function test_accountant_can_impersonate_user_with_accountant_and_lower_roles(): void
     {
-        $company = $this->company('Shared Company');
-        $accountant = $this->userWithRole('Accountant', $company, canImpersonate: true);
+        $fiscalYear = $this->fiscalYear(1405);
+        $accountant = $this->userWithRole('Accountant', $fiscalYear, canImpersonate: true);
         $target = User::factory()->create();
-        $target->companies()->attach($company);
+        $target->fiscalYears()->attach($fiscalYear);
         $target->assignRole([
             $this->role('Accountant'),
             $this->role('Seller'),
             $this->role('Employee'),
         ]);
-        $this->setActiveCompany($company);
+        $this->setActiveCompany($fiscalYear);
 
         $this->actingAs($accountant)->post(route('users.impersonate', $target))->assertRedirect(route('about'));
 
@@ -491,16 +494,16 @@ class UserImpersonationTest extends TestCase
 
     public function test_accountant_can_impersonate_user_with_multiple_lower_roles(): void
     {
-        $company = $this->company('Shared Company');
-        $accountant = $this->userWithRole('Accountant', $company, canImpersonate: true);
+        $fiscalYear = $this->fiscalYear(1405);
+        $accountant = $this->userWithRole('Accountant', $fiscalYear, canImpersonate: true);
         $target = User::factory()->create();
-        $target->companies()->attach($company);
+        $target->fiscalYears()->attach($fiscalYear);
         $target->assignRole([
             $this->role('Seller'),
             $this->role('Warehousekeeper'),
             $this->role('Employee'),
         ]);
-        $this->setActiveCompany($company);
+        $this->setActiveCompany($fiscalYear);
 
         $this->actingAs($accountant)->post(route('users.impersonate', $target))->assertRedirect(route('about'));
 
@@ -509,12 +512,12 @@ class UserImpersonationTest extends TestCase
 
     public function test_lower_roles_can_impersonate_with_direct_permission(): void
     {
-        $company = $this->company('Shared Company');
-        $target = $this->userWithRole('Employee', $company);
-        $this->setActiveCompany($company);
+        $fiscalYear = $this->fiscalYear(1405);
+        $target = $this->userWithRole('Employee', $fiscalYear);
+        $this->setActiveCompany($fiscalYear);
 
         foreach (['Warehousekeeper', 'Seller', 'Employee'] as $actorRole) {
-            $actor = $this->userWithRole($actorRole, $company);
+            $actor = $this->userWithRole($actorRole, $fiscalYear);
             $actor->givePermissionTo($this->impersonationPermission());
 
             $this->actingAs($actor)->post(route('users.impersonate', $target))->assertRedirect(route('about'));
@@ -528,8 +531,8 @@ class UserImpersonationTest extends TestCase
 
     public function test_company_admin_cannot_impersonate_user_outside_all_its_companies(): void
     {
-        $ownCompany = $this->company('Own Company');
-        $otherCompany = $this->company('Other Company');
+        $ownCompany = $this->fiscalYear(1405);
+        $otherCompany = $this->fiscalYear(1406);
         $admin = $this->userWithRole('Admin', $ownCompany, canImpersonate: true);
         $target = $this->userWithRole('Employee', $otherCompany);
         $this->setActiveCompany($ownCompany);
@@ -541,14 +544,14 @@ class UserImpersonationTest extends TestCase
 
     public function test_company_admin_cannot_impersonate_user_who_is_not_in_active_company(): void
     {
-        $activeCompany = $this->company('Active Company');
-        $secondCompany = $this->company('Second Company');
+        $activeCompany = $this->fiscalYear(1405);
+        $secondCompany = $this->fiscalYear(1406);
         $admin = $this->userWithRole('Admin', $activeCompany, canImpersonate: true);
-        $admin->companies()->attach($secondCompany);
+        $admin->fiscalYears()->attach($secondCompany);
         $target = $this->userWithRole('Employee', $secondCompany);
         $this->setActiveCompany($activeCompany);
 
-        $this->actingAs($admin)->withCookie('active-company-id', (string) $activeCompany->id)
+        $this->actingAs($admin)->withCookie('active-fiscal-year-id', (string) $activeCompany->id)
             ->post(route('users.impersonate', $target))->assertForbidden();
 
         $this->assertAuthenticatedAs($admin);
@@ -556,11 +559,11 @@ class UserImpersonationTest extends TestCase
 
     public function test_company_admin_cannot_impersonate_user_with_an_inaccessible_extra_company(): void
     {
-        $ownCompany = $this->company('Own Company');
-        $inaccessibleCompany = $this->company('Inaccessible Company');
+        $ownCompany = $this->fiscalYear(1405);
+        $inaccessibleCompany = $this->fiscalYear(1406);
         $admin = $this->userWithRole('Admin', $ownCompany, canImpersonate: true);
         $target = $this->userWithRole('Employee', $ownCompany);
-        $target->companies()->attach($inaccessibleCompany);
+        $target->fiscalYears()->attach($inaccessibleCompany);
         $this->setActiveCompany($ownCompany);
 
         $this->actingAs($admin)->post(route('users.impersonate', $target))->assertForbidden();
@@ -570,15 +573,15 @@ class UserImpersonationTest extends TestCase
 
     public function test_company_admin_can_impersonate_user_when_all_target_companies_are_accessible(): void
     {
-        $activeCompany = $this->company('Active Company');
-        $secondCompany = $this->company('Second Company');
+        $activeCompany = $this->fiscalYear(1405);
+        $secondCompany = $this->fiscalYear(1406);
         $admin = $this->userWithRole('Admin', $activeCompany, canImpersonate: true);
-        $admin->companies()->attach($secondCompany);
+        $admin->fiscalYears()->attach($secondCompany);
         $target = $this->userWithRole('Employee', $activeCompany);
-        $target->companies()->attach($secondCompany);
+        $target->fiscalYears()->attach($secondCompany);
         $this->setActiveCompany($activeCompany);
 
-        $this->actingAs($admin)->withCookie('active-company-id', (string) $activeCompany->id)
+        $this->actingAs($admin)->withCookie('active-fiscal-year-id', (string) $activeCompany->id)
             ->post(route('users.impersonate', $target))->assertRedirect(route('about'));
 
         $this->assertAuthenticatedAs($target);
@@ -587,7 +590,7 @@ class UserImpersonationTest extends TestCase
     public function test_platform_super_admin_bypasses_company_scope_for_eligible_target(): void
     {
         $superAdmin = $this->userWithRole('Super-Admin', canImpersonate: true);
-        $target = $this->userWithRole('Employee', $this->company('Unrelated Company'));
+        $target = $this->userWithRole('Employee', $this->fiscalYear(1407));
 
         $this->actingAs($superAdmin)->post(route('users.impersonate', $target))->assertRedirect(route('about'));
 
@@ -596,7 +599,7 @@ class UserImpersonationTest extends TestCase
 
     public function test_workspace_admin_list_shows_buttons_for_every_eligible_user(): void
     {
-        $company = $this->company('Shared Company');
+        $company = $this->fiscalYear(1405);
         $admin = $this->userWithRole('Admin', $company, canImpersonate: true, canViewUsers: true);
         $employee = $this->userWithRole('Employee', $company);
         $unverifiedEmployee = $this->userWithRole('Employee', $company, attributes: ['email_verified_at' => null]);
@@ -614,11 +617,11 @@ class UserImpersonationTest extends TestCase
 
     public function test_accountant_list_shows_buttons_for_every_eligible_user(): void
     {
-        $company = $this->company('Shared Company');
-        $accountant = $this->userWithRole('Accountant', $company, canImpersonate: true, canViewUsers: true);
-        $employee = $this->userWithRole('Employee', $company);
-        $otherAccountant = $this->userWithRole('Accountant', $company);
-        $this->setActiveCompany($company);
+        $fiscalYear = $this->fiscalYear(1405);
+        $accountant = $this->userWithRole('Accountant', $fiscalYear, canImpersonate: true, canViewUsers: true);
+        $employee = $this->userWithRole('Employee', $fiscalYear);
+        $otherAccountant = $this->userWithRole('Accountant', $fiscalYear);
+        $this->setActiveCompany($fiscalYear);
 
         $this->actingAs($accountant)->get(route('users.index'))->assertOk()
             ->assertSee(route('users.impersonate', $employee), false)
@@ -629,7 +632,7 @@ class UserImpersonationTest extends TestCase
     public function test_management_list_shows_admin_action_but_never_super_admin_action(): void
     {
         $actor = $this->userWithRole('Super-Admin', canImpersonate: true, canViewUsers: true);
-        $admin = $this->userWithRole('Admin', $this->company('Admin Company'));
+        $admin = $this->userWithRole('Admin', $this->fiscalYear(1405));
         $otherSuperAdmin = $this->userWithRole('Super-Admin');
 
         $this->actingAs($actor)->withSession(['interface_mode' => 'management'])->get(route('users.index'))->assertOk()
@@ -643,7 +646,7 @@ class UserImpersonationTest extends TestCase
 
     public function test_wildcard_users_permission_allows_an_eligible_admin_to_impersonate(): void
     {
-        $company = $this->company('Shared Company');
+        $company = $this->fiscalYear(1405);
         $admin = $this->userWithRole('Admin', $company);
         $admin->givePermissionTo(Permission::firstOrCreate(['name' => 'users.*']));
         $target = $this->userWithRole('Employee', $company);
@@ -656,17 +659,17 @@ class UserImpersonationTest extends TestCase
 
     public function test_localized_roles_can_impersonate_based_on_permission_after_locale_changes(): void
     {
-        $company = $this->company('Shared Company');
+        $company = $this->fiscalYear(1405);
         $adminRole = Role::create(['name' => trans('Admin', [], 'fa')]);
         $adminRole->givePermissionTo($this->impersonationPermission());
         $employeeRole = Role::create(['name' => trans('Employee', [], 'fa')]);
 
         $admin = User::factory()->create();
         $admin->assignRole($adminRole);
-        $admin->companies()->attach($company);
+        $admin->fiscalYears()->attach($company);
         $target = User::factory()->create();
         $target->assignRole($employeeRole);
-        $target->companies()->attach($company);
+        $target->fiscalYears()->attach($company);
         app()->setLocale('en');
         $this->setActiveCompany($company);
 

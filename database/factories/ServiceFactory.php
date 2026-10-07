@@ -2,7 +2,7 @@
 
 namespace Database\Factories;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Service;
 use App\Models\ServiceGroup;
 use App\Models\Subject;
@@ -10,25 +10,25 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 
 class ServiceFactory extends Factory
 {
-    private static array $generatedCodesByCompany = [];
+    private static array $generatedCodesByFiscalYear = [];
 
     public function definition(): array
     {
-        $companyId = (int) getActiveCompany();
-        if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
-            throw new \LogicException('An active company is required to create a service.');
+        $fiscalYearId = (int) getActiveFiscalYear();
+        if (! FiscalYear::withoutGlobalScopes()->whereKey($fiscalYearId)->exists()) {
+            throw new \LogicException('An active fiscal year is required to create a service.');
         }
 
-        self::$generatedCodesByCompany[$companyId] ??= [];
+        self::$generatedCodesByFiscalYear[$fiscalYearId] ??= [];
 
         do {
             $code = (int) $this->faker->numerify('#####');
         } while (
-            in_array($code, self::$generatedCodesByCompany[$companyId], true)
-            || Service::withoutGlobalScopes()->where('company_id', $companyId)->where('code', $code)->exists()
+            in_array($code, self::$generatedCodesByFiscalYear[$fiscalYearId], true)
+            || Service::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->where('code', $code)->exists()
         );
 
-        self::$generatedCodesByCompany[$companyId][] = $code;
+        self::$generatedCodesByFiscalYear[$fiscalYearId][] = $code;
 
         return [
             'code' => $code,
@@ -37,7 +37,7 @@ class ServiceFactory extends Factory
             'group' => null,
             'selling_price' => $this->faker->randomFloat(2, 0, 10000),
             'description' => $this->faker->persianSentence(),
-            'company_id' => $companyId,
+            'fiscal_year_id' => $fiscalYearId,
             'vat' => 0,
         ];
     }
@@ -45,12 +45,12 @@ class ServiceFactory extends Factory
     public function withGroup(?ServiceGroup $group = null): static
     {
         return $this->state(function (array $attributes) use ($group) {
-            $companyId = $attributes['company_id'] ?? Company::withoutGlobalScopes()->inRandomOrder()->value('id') ?? Company::factory()->create()->id;
+            $fiscalYearId = $attributes['fiscal_year_id'] ?? FiscalYear::withoutGlobalScopes()->inRandomOrder()->value('id') ?? FiscalYear::factory()->create()->id;
 
             $groupToUse = $group;
 
-            if (! $groupToUse || $groupToUse->company_id !== $companyId) {
-                $groupToUse = ServiceGroup::withoutGlobalScopes()->where('company_id', $companyId)
+            if (! $groupToUse || $groupToUse->fiscal_year_id !== $fiscalYearId) {
+                $groupToUse = ServiceGroup::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)
                     ->whereNotNull('subject_id')
                     ->whereNotNull('cogs_subject_id')
                     ->whereNotNull('sales_returns_subject_id')
@@ -59,12 +59,12 @@ class ServiceFactory extends Factory
             }
 
             if (! $groupToUse) {
-                $groupToUse = ServiceGroup::factory()->withSubject()->create(['company_id' => $companyId]);
+                $groupToUse = ServiceGroup::factory()->withSubject()->create(['fiscal_year_id' => $fiscalYearId]);
             }
 
             return [
                 'group' => $groupToUse->id,
-                'company_id' => $companyId,
+                'fiscal_year_id' => $fiscalYearId,
             ];
         });
     }
@@ -82,7 +82,7 @@ class ServiceFactory extends Factory
                 ->for($service, 'subjectable')
                 ->create([
                     'name' => $service->name,
-                    'company_id' => $service->company_id,
+                    'fiscal_year_id' => $service->fiscal_year_id,
                 ]);
 
             $cogsSubject = Subject::factory()
@@ -90,7 +90,7 @@ class ServiceFactory extends Factory
                 ->for($service, 'subjectable')
                 ->create([
                     'name' => $service->name,
-                    'company_id' => $service->company_id,
+                    'fiscal_year_id' => $service->fiscal_year_id,
                 ]);
 
             $salesReturnsSubject = Subject::factory()
@@ -98,7 +98,7 @@ class ServiceFactory extends Factory
                 ->for($service, 'subjectable')
                 ->create([
                     'name' => $service->name,
-                    'company_id' => $service->company_id,
+                    'fiscal_year_id' => $service->fiscal_year_id,
                 ]);
 
             $service->updateQuietly([

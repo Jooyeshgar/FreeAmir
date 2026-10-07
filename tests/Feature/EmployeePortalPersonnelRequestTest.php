@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\PersonnelRequest;
 use App\Models\User;
 use App\Models\WorkShift;
@@ -20,7 +20,7 @@ class EmployeePortalPersonnelRequestTest extends TestCase
 
     protected User $user;
 
-    protected int $companyId;
+    protected int $fiscalYearId;
 
     protected Employee $employee;
 
@@ -28,11 +28,11 @@ class EmployeePortalPersonnelRequestTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create();
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'employee-portal.dashboard'])
         );
@@ -40,18 +40,21 @@ class EmployeePortalPersonnelRequestTest extends TestCase
             Permission::firstOrCreate(['name' => 'home'])
         );
 
-        $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
-        $workShift = WorkShift::factory()->create(['company_id' => $this->companyId]);
+        $fiscalYear = FiscalYear::factory()->create();
+        $this->fiscalYearId = $fiscalYear->id;
+
+        $workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $workShift = WorkShift::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
 
         $this->employee = Employee::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'work_site_id' => $workSite->id,
             'work_shift_id' => $workShift->id,
             'user_id' => $this->user->id,
         ]);
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
     }
 
     private function validPayload(array $overrides = []): array
@@ -69,7 +72,7 @@ class EmployeePortalPersonnelRequestTest extends TestCase
     private function makePersonnelRequest(array $overrides = []): PersonnelRequest
     {
         return PersonnelRequest::factory()->create(array_merge([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'status' => PersonnelRequestStatus::PENDING,

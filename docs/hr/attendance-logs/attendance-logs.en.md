@@ -46,7 +46,7 @@ The importer treats any fourth-column value other than `0` or `2` as an exit. Us
 
 The importer works in two passes:
 
-1. It validates each line, resolves column 1 against employees in the active company, parses the Gregorian timestamp, and applies the optional date range.
+1. It validates each line, resolves column 1 against employees in the active fiscal year, parses the Gregorian timestamp, and applies the optional date range.
 2. It groups accepted rows by employee and Gregorian date, then creates or updates one attendance log for each employee and day.
 
 Within one employee-day group, the last entry row in the file supplies **Entry Time**, and the last exit row supplies **Exit Time**. File order therefore matters when a device exports several entries or exits for the same day. The importer does not select the earliest entry or latest exit.
@@ -57,7 +57,7 @@ The preview shows no more than 20 accepted source rows. Its total is the number 
 
 ### Duplicate mode
 
-A duplicate is an existing attendance log with the same active company, employee, and date.
+A duplicate is an existing attendance log with the same fiscal year, employee, and date.
 
 | Mode | Existing non-empty time | Existing empty time | Result when neither field changes |
 |---|---|---|---|

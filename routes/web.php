@@ -179,6 +179,7 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::delete('invoices/{invoice}/payments/{payment}/document', [Controllers\PaymentController::class, 'destroyDocument'])->name('invoices.payments.destroy-document');
     Route::post('invoices/{invoice}/transfer', [Controllers\InvoiceController::class, 'transfer'])->name('invoices.transfer');
     Route::group(['prefix' => 'management'], function () {
+        Route::resource('fiscal-years', Controllers\FiscalYearController::class);
         Route::resource('companies', Controllers\CompanyController::class);
         Route::post('companies/close-fiscal-year/{company}', [Controllers\CompanyController::class, 'closeFiscalYear'])->name('companies.close-fiscal-year');
         Route::get('companies/{company}/closing-wizard', [Controllers\CompanyController::class, 'closingWizard'])->name('companies.closing-wizard');

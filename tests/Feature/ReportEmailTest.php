@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Product;
 use App\Models\User;
 use App\Notifications\ReportExportNotification;
@@ -19,18 +19,18 @@ class ReportEmailTest extends TestCase
 
     private User $user;
 
-    private Company $company;
+    private FiscalYear $fiscalYear;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         app()->setLocale('en');
-        $this->company = Company::factory()->create();
+        $this->fiscalYear = FiscalYear::factory()->create();
         $this->user = User::factory()->create();
-        $this->company->users()->attach($this->user);
-        $this->withCookies(['active-company-id' => $this->company->id]);
-        config(['active-company-id' => $this->company->id]);
+        $this->fiscalYear->users()->attach($this->user);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYear->id]);
+        config(['active-fiscal-year-id' => $this->fiscalYear->id]);
     }
 
     public function test_user_can_email_an_authorized_csv_export_to_their_own_address(): void
@@ -40,7 +40,7 @@ class ReportEmailTest extends TestCase
             Permission::firstOrCreate(['name' => 'report']),
             Permission::firstOrCreate(['name' => 'products.export']),
         ]);
-        Product::factory()->create(['company_id' => $this->company->id, 'name' => 'Emailed Widget', 'code' => 'EMAIL-1']);
+        Product::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'name' => 'Emailed Widget', 'code' => 'EMAIL-1']);
 
         $response = $this->actingAs($this->user)->post(route('report'), [
             'export' => 'products_csv',
@@ -212,7 +212,7 @@ class ReportEmailTest extends TestCase
             Permission::firstOrCreate(['name' => 'report']),
             Permission::firstOrCreate(['name' => 'products.export']),
         ]);
-        Product::factory()->create(['company_id' => $this->company->id, 'name' => 'Private Filter Widget', 'code' => 'POST-1']);
+        Product::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'name' => 'Private Filter Widget', 'code' => 'POST-1']);
 
         $response = $this->actingAs($this->user)->post(route('report', ['delivery' => 'download']), [
             'export' => 'products_csv',
@@ -231,7 +231,7 @@ class ReportEmailTest extends TestCase
     public function test_original_product_export_route_still_downloads_the_shared_export(): void
     {
         $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'products.export']));
-        Product::factory()->create(['company_id' => $this->company->id, 'name' => 'Original Route Widget', 'code' => 'ROUTE-1']);
+        Product::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'name' => 'Original Route Widget', 'code' => 'ROUTE-1']);
 
         $response = $this->actingAs($this->user)->get(route('products.export', [
             'cols_submitted' => 1,

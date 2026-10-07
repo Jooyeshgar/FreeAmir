@@ -347,14 +347,14 @@
                         @forelse ($recentCompanies as $company)
                             <tr>
                                 <td><a href="{{ route('companies.show', $company) }}" class="font-bold transition hover:text-[#16a394] hover:underline">{{ $company->name }}</a></td>
-                                <td>{{ localizeNumber($company->fiscal_year) }}</td>
-                                <td>{{ localizeNumber($company->users_count) }}</td>
+                                <td>{{ localizeNumber($company->fiscalYears->pluck('year')->join(', ')) }}</td>
+                                <td>{{ localizeNumber($company->fiscalYears->flatMap->users->unique('id')->count()) }}</td>
                                 <td><span
                                         @class([
                                             'rounded-full px-2.5 py-1 text-[10px]',
-                                            'bg-emerald-50 text-emerald-600' => !$company->closed_at,
-                                            'bg-slate-100 text-slate-500' => $company->closed_at,
-                                        ])>{{ $company->closed_at ? __('Closed') : __('Open') }}</span>
+                                            'bg-emerald-50 text-emerald-600' => $company->fiscalYears->contains(fn ($year) => ! $year->closed_at),
+                                            'bg-slate-100 text-slate-500' => $company->fiscalYears->every(fn ($year) => $year->closed_at),
+                                        ])>{{ $company->fiscalYears->contains(fn ($year) => ! $year->closed_at) ? __('Open') : __('Closed') }}</span>
                                 </td>
                                 <td><a href="{{ route('companies.edit', $company) }}"
                                         class="text-xs text-[#16a394]">{{ __('Edit') }}</a></td>
@@ -421,7 +421,7 @@
                                     <span class="block text-[10px] text-slate-400">{{ $recentUser->email }}</span>
                                 </td>
                                 <td>{{ $recentUser->roles->pluck('name')->join('، ') ?: __('No role') }}</td>
-                                <td>{{ localizeNumber($recentUser->companies_count) }}</td>
+                                <td>{{ localizeNumber($recentUser->fiscal_years_count) }}</td>
                                 <td><span
                                         @class([
                                             'badge badge-sm md:badge-md',
@@ -446,8 +446,8 @@
                                             </form>
                                         @else
                                             <span class="btn btn-sm md:btn-sm whitespace-nowrap text-slate-300"
-                                                title="{{ (int) $recentUser->companies_count === 0 ? __('User has no company') : __('Impersonation is not available for this user.') }}">
-                                                {{ (int) $recentUser->companies_count === 0 ? __('User has no company') : __('Impersonate') }}
+                                                title="{{ (int) $recentUser->fiscal_years_count === 0 ? __('User has no company') : __('Impersonation is not available for this user.') }}">
+                                                {{ (int) $recentUser->fiscal_years_count === 0 ? __('User has no company') : __('Impersonate') }}
                                             </span>
                                         @endif
                                         <a href="{{ route('users.edit', $recentUser) }}"

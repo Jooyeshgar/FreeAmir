@@ -407,7 +407,7 @@
                             <label class="label">
                                 <span class="label-text font-semibold">{{ __('Target Fiscal Year') }}</span>
                             </label>
-                            <select name="target_company_id" class="select select-bordered w-full" required>
+                            <select name="target_fiscal_year_id" class="select select-bordered w-full" required>
                                 <option value="">{{ __('-- Select fiscal year --') }}</option>
                                 @foreach ($fiscalYears as $year)
                                     <option value="{{ $year->id }}">{{ $year->name }}</option>

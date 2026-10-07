@@ -191,7 +191,7 @@ class CustomerController extends Controller
     public function import(ImportCustomerRequest $request, CustomerImportService $importService): RedirectResponse
     {
         try {
-            $result = $importService->import($request->file('file'), getActiveCompany());
+            $result = $importService->import($request->file('file'), getActiveFiscalYear());
         } catch (ValidationException $e) {
             return redirect()->route('customers.import')->with('error', $e->getMessage());
         }

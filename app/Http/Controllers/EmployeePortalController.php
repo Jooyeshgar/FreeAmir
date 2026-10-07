@@ -212,7 +212,7 @@ class EmployeePortalController extends Controller
         $start = $monthlyAttendance->start_date->copy();
         $end = $start->copy()->addDays($monthlyAttendance->duration - 1);
         $holidayDates = PublicHoliday::withoutGlobalScopes()
-            ->where('company_id', $monthlyAttendance->company_id)
+            ->where('fiscal_year_id', $monthlyAttendance->fiscal_year_id)
             ->whereBetween('date', [$start->toDateString(), $end->toDateString()])
             ->pluck('date')
             ->map(fn ($d) => $d instanceof Carbon ? $d->toDateString() : (string) $d)
@@ -393,7 +393,7 @@ class EmployeePortalController extends Controller
 
         PersonnelRequest::create([
             'employee_id' => $employee->id,
-            'company_id' => getActiveCompany(),
+            'fiscal_year_id' => getActiveFiscalYear(),
             'request_type' => PersonnelRequestType::fromName($validated['request_type']),
             'start_date' => $startDatetime,
             'end_date' => $endDatetime,

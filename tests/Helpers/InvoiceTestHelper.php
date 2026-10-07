@@ -17,18 +17,18 @@ trait InvoiceTestHelper
     private function createProduct(array $overrides = []): Product
     {
         $group = ProductGroup::withoutGlobalScopes()
-            ->where('company_id', $this->companyId)
+            ->where('fiscal_year_id', $this->fiscalYearId)
             ->firstOrFail();
 
         $warehouse = Warehouse::withoutGlobalScopes()->firstOrCreate(
-            ['company_id' => $this->companyId, 'code' => 'MAIN'],
+            ['fiscal_year_id' => $this->fiscalYearId, 'code' => 'MAIN'],
             ['name' => 'انبار اصلی']
         );
 
         $product = Product::factory()
             ->withGroup($group)
             ->withSubjects()
-            ->create(array_merge(['company_id' => $this->companyId], $overrides));
+            ->create(array_merge(['fiscal_year_id' => $this->fiscalYearId], $overrides));
 
         WarehouseProductStock::firstOrCreate(
             ['warehouse_id' => $warehouse->id, 'product_id' => $product->id],

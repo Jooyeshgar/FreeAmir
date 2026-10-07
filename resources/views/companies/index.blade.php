@@ -74,7 +74,7 @@
                                         {{ mb_strtoupper(mb_substr($company->name, 0, 1)) }}
                                     </span>
                                     <div>
-                                        <a href="{{ route('companies.show', $company) }}"
+                                        <a href="{{ route('companies.show', $company->company_id) }}"
                                             class="font-semibold text-slate-900 transition hover:text-emerald-700 hover:underline dark:text-white dark:hover:text-emerald-300">{{ $company->name }}</a>
                                         <p class="mt-0.5 max-w-56 truncate text-xs text-slate-500">
                                             {{ $company->address ? localizeNumber($company->address) : __('No address') }}
@@ -114,6 +114,9 @@
                             </td>
                             <td>
                                 <div class="flex justify-end gap-1">
+                                    @can('fiscal-years.show')
+                                        <a href="{{ route('fiscal-years.show', $company) }}" class="btn btn-ghost btn-sm rounded-lg">{{ __('Fiscal year') }}</a>
+                                    @endcan
                                     @can('companies.edit')
                                         <a href="{{ route('companies.edit', $company) }}"
                                             class="btn btn-ghost btn-sm rounded-lg">{{ __('Edit') }}</a>

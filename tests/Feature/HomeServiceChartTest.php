@@ -5,11 +5,11 @@ namespace Tests\Feature;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Enums\SubjectType;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Payroll;
 use App\Models\Product;
@@ -32,26 +32,26 @@ class HomeServiceChartTest extends TestCase
 
     private Customer $customer;
 
-    private int $companyId;
+    private int $fiscalYearId;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $company = Company::factory()->create(['fiscal_year' => 1405]);
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create(['year' => 1405]);
+        $this->fiscalYearId = $fiscalYear->id;
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
 
-        $this->withCookies(['active-company-id' => (string) $this->companyId]);
-        $_COOKIE['active-company-id'] = (string) $this->companyId;
-        config(['active-company-id' => $this->companyId, 'active-company-fiscal-year' => 1405]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->fiscalYearId]);
+        $_COOKIE['active-fiscal-year-id'] = (string) $this->fiscalYearId;
+        config(['active-fiscal-year-id' => $this->fiscalYearId, 'active-company-fiscal-year' => 1405]);
 
-        $this->importSubjects($this->companyId);
-        $this->importConfigs($this->companyId);
+        $this->importSubjects($this->fiscalYearId);
+        $this->importConfigs($this->fiscalYearId);
 
-        $customerGroup = CustomerGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
-        $this->customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create(['company_id' => $this->companyId]);
+        $customerGroup = CustomerGroup::factory()->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $this->customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
     }
 
     public function test_total_sell_amount_includes_only_approved_or_settled_sales(): void
@@ -69,11 +69,11 @@ class HomeServiceChartTest extends TestCase
     {
         $this->makeInvoice(jalali_to_gregorian(1405, 2, 1, '-'), InvoiceType::SELL, InvoiceStatus::APPROVED, amount: 400);
 
-        $otherCompany = Company::factory()->create(['fiscal_year' => 1405]);
-        config(['active-company-id' => $otherCompany->id]);
+        $otherFiscalYear = FiscalYear::factory()->create(['year' => 1405]);
+        config(['active-fiscal-year-id' => $otherFiscalYear->id]);
         $this->makeInvoice(jalali_to_gregorian(1405, 2, 2, '-'), InvoiceType::SELL, InvoiceStatus::APPROVED, amount: 9000);
 
-        config(['active-company-id' => $this->companyId]);
+        config(['active-fiscal-year-id' => $this->fiscalYearId]);
 
         $this->assertSame(400.0, $this->service()->totalSellAmount());
     }
@@ -115,10 +115,10 @@ class HomeServiceChartTest extends TestCase
 
     public function test_employee_payroll_summary_uses_the_latest_payroll(): void
     {
-        $employee = Employee::factory()->create(['company_id' => $this->companyId, 'user_id' => $this->user->id]);
-        Payroll::factory()->create(['company_id' => $this->companyId, 'employee_id' => $employee->id, 'year' => 1405, 'month' => 1]);
+        $employee = Employee::factory()->create(['fiscal_year_id' => $this->fiscalYearId, 'user_id' => $this->user->id]);
+        Payroll::factory()->create(['fiscal_year_id' => $this->fiscalYearId, 'employee_id' => $employee->id, 'year' => 1405, 'month' => 1]);
         Payroll::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $employee->id,
             'year' => 1405,
             'month' => 2,
@@ -309,7 +309,7 @@ class HomeServiceChartTest extends TestCase
             'code' => '900',
             'name' => 'Filtered income',
             'parent_id' => null,
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'type' => SubjectType::CREDITOR,
             'is_permanent' => false,
         ]);
@@ -418,7 +418,7 @@ class HomeServiceChartTest extends TestCase
             'employee-portal.payrolls',
             'employee-portal.personnel-requests.index',
         ]);
-        Employee::factory()->create(['company_id' => $this->companyId, 'user_id' => $user->id]);
+        Employee::factory()->create(['fiscal_year_id' => $this->fiscalYearId, 'user_id' => $user->id]);
 
         $this->get(route('home'))->assertOk()
             ->assertViewHas('homeVariant', 'employee')
@@ -453,7 +453,7 @@ class HomeServiceChartTest extends TestCase
             'code' => '900',
             'name' => 'Dashboard income',
             'parent_id' => null,
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'type' => SubjectType::CREDITOR,
             'is_permanent' => false,
         ]);
@@ -461,7 +461,7 @@ class HomeServiceChartTest extends TestCase
             'code' => '901',
             'name' => 'Dashboard cost',
             'parent_id' => null,
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'type' => SubjectType::DEBTOR,
             'is_permanent' => false,
         ]);
@@ -562,9 +562,9 @@ class HomeServiceChartTest extends TestCase
     public function test_employee_private_payroll_metrics_are_fetched_independently(): void
     {
         $user = $this->signInWith(['home.summary', 'employee-portal.dashboard']);
-        $employee = Employee::factory()->create(['company_id' => $this->companyId, 'user_id' => $user->id]);
+        $employee = Employee::factory()->create(['fiscal_year_id' => $this->fiscalYearId, 'user_id' => $user->id]);
         Payroll::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $employee->id,
             'year' => 1405,
             'month' => 2,
@@ -605,7 +605,7 @@ class HomeServiceChartTest extends TestCase
     private function signInWith(array $permissions): User
     {
         $user = User::factory()->create();
-        Company::find($this->companyId)->users()->attach($user);
+        FiscalYear::find($this->fiscalYearId)->users()->attach($user);
 
         $permissionModels = collect(['home', ...$permissions])->unique()->map(fn (string $name) => Permission::firstOrCreate(['name' => $name]));
 
@@ -622,9 +622,9 @@ class HomeServiceChartTest extends TestCase
 
     private function makeProduct(): Product
     {
-        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId]);
+        $group = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId]);
 
-        return Product::factory()->withGroup($group)->withSubjects()->create(['company_id' => $this->companyId]);
+        return Product::factory()->withGroup($group)->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId]);
     }
 
     private function makeInvoice(
@@ -654,7 +654,7 @@ class HomeServiceChartTest extends TestCase
             'date' => $date,
             'creator_id' => $this->user->id,
             'title' => 'test',
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
         ]);
     }
 }
