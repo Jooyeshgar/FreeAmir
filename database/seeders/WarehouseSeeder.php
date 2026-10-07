@@ -7,9 +7,9 @@ use Illuminate\Database\Seeder;
 
 class WarehouseSeeder extends Seeder
 {
-    public function run(?int $companyId = null): void
+    public function run(?int $fiscalYearId = null): void
     {
-        $companyId ??= (int) getActiveCompany();
+        $fiscalYearId ??= (int) getActiveFiscalYear();
 
         foreach ([
             ['name' => 'انبار اصلی', 'code' => 'MAIN'],
@@ -18,7 +18,7 @@ class WarehouseSeeder extends Seeder
             ['name' => 'انبار معیوب', 'code' => 'DAMAGED'],
         ] as $warehouse) {
             Warehouse::withoutGlobalScopes()->updateOrCreate(
-                ['company_id' => $companyId, 'name' => $warehouse['name']],
+                ['fiscal_year_id' => $fiscalYearId, 'name' => $warehouse['name']],
                 ['code' => $warehouse['code']],
             );
         }

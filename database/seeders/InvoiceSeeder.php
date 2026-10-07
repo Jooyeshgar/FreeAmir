@@ -2,7 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
@@ -11,12 +11,12 @@ class InvoiceSeeder extends Seeder
 {
     public function run(): void
     {
-        $company = Company::withoutGlobalScopes()->find(getActiveCompany());
+        $fiscalYear = FiscalYear::withoutGlobalScopes()->find(getActiveFiscalYear());
 
-        if (! $company) {
+        if (! $fiscalYear) {
             return;
         }
-        $date = jalali_to_gregorian($company->fiscal_year, 1, 1);
+        $date = jalali_to_gregorian($fiscalYear->year, 1, 1);
         $startOfYear = Carbon::create($date[0], $date[1], $date[2]);
         $randomDateInMonth = function (int $monthOffset) use ($startOfYear) {
             $monthStart = (clone $startOfYear)->addMonths($monthOffset)->startOfMonth();

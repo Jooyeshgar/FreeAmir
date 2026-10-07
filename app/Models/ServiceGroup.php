@@ -16,7 +16,7 @@ class ServiceGroup extends Model
         'name',
         'vat',
         'sstid',
-        'company_id',
+        'fiscal_year_id',
         'subject_id',
         'cogs_subject_id',
         'sales_returns_subject_id',
@@ -27,7 +27,7 @@ class ServiceGroup extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function ($model) {
-            $model->company_id ??= getActiveCompany();
+            $model->fiscal_year_id ??= getActiveFiscalYear();
         });
     }
 

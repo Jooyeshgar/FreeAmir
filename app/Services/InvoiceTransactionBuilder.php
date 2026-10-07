@@ -512,7 +512,7 @@ class InvoiceTransactionBuilder
 
         if (! $subject && $customer->subject_id) {
             $subject = Subject::query()
-                ->where('company_id', $customer->company_id)
+                ->where('fiscal_year_id', $customer->fiscal_year_id)
                 ->find($customer->subject_id);
         }
 
@@ -529,7 +529,7 @@ class InvoiceTransactionBuilder
     {
         $subjectId = (int) config('amir.beginning_inventory');
         $subject = $subjectId
-            ? Subject::where('company_id', getActiveCompany())->find($subjectId)
+            ? Subject::where('fiscal_year_id', getActiveFiscalYear())->find($subjectId)
             : null;
 
         if (! $subject) {

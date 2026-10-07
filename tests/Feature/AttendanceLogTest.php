@@ -7,8 +7,8 @@ use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\PersonnelRequest;
 use App\Models\PublicHoliday;
 use App\Models\User;
@@ -27,7 +27,7 @@ class AttendanceLogTest extends TestCase
 
     protected User $user;
 
-    protected int $companyId;
+    protected int $fiscalYearId;
 
     protected Employee $employee;
 
@@ -35,24 +35,24 @@ class AttendanceLogTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create();
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'attendance.*'])
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
-        config(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
+        config(['active-fiscal-year-id' => $this->fiscalYearId]);
 
-        $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
 
         $this->employee = Employee::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'work_site_id' => $workSite->id,
         ]);
     }
@@ -60,7 +60,7 @@ class AttendanceLogTest extends TestCase
     private function makeAttendanceLog(array $overrides = []): AttendanceLog
     {
         return AttendanceLog::factory()->create(array_merge([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
         ], $overrides));
     }
@@ -98,9 +98,9 @@ class AttendanceLogTest extends TestCase
 
     public function test_index_filters_by_employee(): void
     {
-        $workSite2 = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $workSite2 = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $other = Employee::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'work_site_id' => $workSite2->id,
         ]);
 
@@ -155,7 +155,7 @@ class AttendanceLogTest extends TestCase
         ]);
         $this->employee->update(['user_id' => $this->user->id]);
 
-        $otherEmployee = Employee::factory()->create(['company_id' => $this->companyId]);
+        $otherEmployee = Employee::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $log = $this->makeAttendanceLog(['employee_id' => $otherEmployee->id]);
 
         $this->get(route('attendance.attendance-logs.show', $log))->assertOk();
@@ -169,7 +169,7 @@ class AttendanceLogTest extends TestCase
         ]);
         $this->employee->update(['user_id' => $this->user->id]);
 
-        $otherEmployee = Employee::factory()->create(['company_id' => $this->companyId]);
+        $otherEmployee = Employee::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $log = $this->makeAttendanceLog(['employee_id' => $otherEmployee->id]);
 
         $this->get(route('attendance.attendance-logs.show', $log))->assertOk();
@@ -182,7 +182,7 @@ class AttendanceLogTest extends TestCase
         ]);
         $this->employee->update(['user_id' => $this->user->id]);
 
-        $otherEmployee = Employee::factory()->create(['company_id' => $this->companyId]);
+        $otherEmployee = Employee::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $log = $this->makeAttendanceLog(['employee_id' => $otherEmployee->id]);
 
         $this->get(route('attendance.attendance-logs.show', $log))->assertForbidden();
@@ -220,7 +220,7 @@ class AttendanceLogTest extends TestCase
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('attendance_logs', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'log_date' => '2026-02-10',
             'entry_time' => '08:00:00',
@@ -400,7 +400,7 @@ class AttendanceLogTest extends TestCase
     public function test_import_recalculates_each_created_attendance_log(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'start_time' => '08:00:00',
             'end_time' => '17:00:00',
             'break' => 60,
@@ -423,7 +423,7 @@ class AttendanceLogTest extends TestCase
 
         /** @var AttendanceLogImportService $service */
         $service = app(AttendanceLogImportService::class);
-        $result = $service->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->companyId);
+        $result = $service->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->fiscalYearId);
 
         $this->assertEquals(1, $result['imported']);
 
@@ -463,16 +463,16 @@ class AttendanceLogTest extends TestCase
 
     public function test_bulk_search_employee_returns_only_matching_active_employees(): void
     {
-        $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $active = Employee::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'work_site_id' => $workSite->id,
             'first_name' => 'Zahra',
             'last_name' => 'Karimi',
             'is_active' => true,
         ]);
         $inactive = Employee::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'work_site_id' => $workSite->id,
             'first_name' => 'Zahra',
             'last_name' => 'Inactive',
@@ -489,9 +489,9 @@ class AttendanceLogTest extends TestCase
 
     public function test_bulk_store_creates_logs_for_each_selected_employee(): void
     {
-        $workSite2 = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $workSite2 = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $employee2 = Employee::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'work_site_id' => $workSite2->id,
         ]);
 
@@ -505,12 +505,12 @@ class AttendanceLogTest extends TestCase
 
         // Monday 2026-02-02 is a regular workday — log must exist for both
         $this->assertDatabaseHas('attendance_logs', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'log_date' => '2026-02-02',
         ]);
         $this->assertDatabaseHas('attendance_logs', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $employee2->id,
             'log_date' => '2026-02-02',
         ]);
@@ -518,9 +518,9 @@ class AttendanceLogTest extends TestCase
 
     public function test_bulk_store_only_creates_for_selected_employees(): void
     {
-        $workSite2 = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $workSite2 = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $unselected = Employee::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'work_site_id' => $workSite2->id,
         ]);
 
@@ -530,12 +530,12 @@ class AttendanceLogTest extends TestCase
         );
 
         $this->assertDatabaseHas('attendance_logs', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'log_date' => '2026-02-02',
         ]);
         $this->assertDatabaseMissing('attendance_logs', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $unselected->id,
         ]);
     }
@@ -543,14 +543,14 @@ class AttendanceLogTest extends TestCase
     public function test_bulk_store_overwrites_existing_log_with_shift_times_when_override_enabled(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'start_time' => '08:00:00',
             'end_time' => '17:00:00',
         ]);
         $this->employee->update(['work_shift_id' => $workShift->id]);
 
         AttendanceLog::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'log_date' => '2026-02-02',
             'entry_time' => '09:30:00',
@@ -561,7 +561,7 @@ class AttendanceLogTest extends TestCase
 
         // Existing log must be overwritten with shift times
         $this->assertDatabaseHas('attendance_logs', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'log_date' => '2026-02-02',
             'entry_time' => '08:00:00',
@@ -577,14 +577,14 @@ class AttendanceLogTest extends TestCase
     public function test_bulk_store_keeps_existing_log_when_override_disabled(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'start_time' => '08:00:00',
             'end_time' => '17:00:00',
         ]);
         $this->employee->update(['work_shift_id' => $workShift->id]);
 
         AttendanceLog::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'log_date' => '2026-02-02',
             'entry_time' => '09:30:00',
@@ -595,7 +595,7 @@ class AttendanceLogTest extends TestCase
 
         // Existing log must be left untouched (no override)
         $this->assertDatabaseHas('attendance_logs', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'log_date' => '2026-02-02',
             'entry_time' => '09:30:00',
@@ -609,16 +609,16 @@ class AttendanceLogTest extends TestCase
 
     public function test_bulk_create_lists_only_active_employees(): void
     {
-        $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $active = Employee::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'work_site_id' => $workSite->id,
             'first_name' => 'Active',
             'last_name' => 'Person',
             'is_active' => true,
         ]);
         $inactive = Employee::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'work_site_id' => $workSite->id,
             'first_name' => 'Inactive',
             'last_name' => 'Person',
@@ -634,9 +634,9 @@ class AttendanceLogTest extends TestCase
 
     public function test_bulk_store_rejects_inactive_employee_id(): void
     {
-        $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $inactive = Employee::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'work_site_id' => $workSite->id,
             'is_active' => false,
         ]);
@@ -648,7 +648,7 @@ class AttendanceLogTest extends TestCase
 
         $response->assertSessionHasErrors(['employee_ids.0']);
         $this->assertDatabaseMissing('attendance_logs', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $inactive->id,
         ]);
     }
@@ -677,7 +677,7 @@ class AttendanceLogTest extends TestCase
     {
         // Pre-existing manual log on Monday 2026-02-02
         AttendanceLog::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'log_date' => '2026-02-02',
             'entry_time' => '09:30:00',
@@ -713,14 +713,14 @@ class AttendanceLogTest extends TestCase
     public function test_bulk_store_with_override_overwrites_existing_and_creates_missing_days(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'start_time' => '08:00:00',
             'end_time' => '17:00:00',
         ]);
         $this->employee->update(['work_shift_id' => $workShift->id]);
 
         AttendanceLog::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'log_date' => '2026-02-02',
             'entry_time' => '09:30:00',
@@ -746,15 +746,15 @@ class AttendanceLogTest extends TestCase
 
     public function test_bulk_store_applies_independently_per_employee_with_override(): void
     {
-        $workSite2 = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $workSite2 = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $employee2 = Employee::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'work_site_id' => $workSite2->id,
         ]);
 
         // Only employee1 has a pre-existing log on 2026-02-02.
         AttendanceLog::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'log_date' => '2026-02-02',
             'entry_time' => '09:30:00',
@@ -784,13 +784,13 @@ class AttendanceLogTest extends TestCase
 
         // 2026-02-06 is a Friday — no log
         $this->assertDatabaseMissing('attendance_logs', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'log_date' => '2026-02-06',
         ]);
         // 2026-02-02 is a Monday — log exists
         $this->assertDatabaseHas('attendance_logs', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'log_date' => '2026-02-02',
         ]);
@@ -800,14 +800,14 @@ class AttendanceLogTest extends TestCase
     {
         // Mark Tuesday 2026-02-03 as a public holiday
         PublicHoliday::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'date' => '2026-02-03',
         ]);
 
         $this->post(route('attendance.attendance-logs.bulk-store'), $this->validBulkPayload());
 
         $this->assertDatabaseMissing('attendance_logs', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'log_date' => '2026-02-03',
         ]);
@@ -816,7 +816,7 @@ class AttendanceLogTest extends TestCase
     public function test_bulk_store_skips_thursday_when_shift_is_holiday(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'thursday_status' => ThursdayStatus::HOLIDAY,
         ]);
         $this->employee->update(['work_shift_id' => $workShift->id]);
@@ -825,7 +825,7 @@ class AttendanceLogTest extends TestCase
 
         // 2026-02-05 is a Thursday — skipped because shift marks it as holiday
         $this->assertDatabaseMissing('attendance_logs', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'log_date' => '2026-02-05',
         ]);
@@ -834,7 +834,7 @@ class AttendanceLogTest extends TestCase
     public function test_bulk_store_creates_thursday_log_when_shift_is_full_day(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'thursday_status' => ThursdayStatus::FULL_DAY,
             'start_time' => '08:00:00',
             'end_time' => '17:00:00',
@@ -844,7 +844,7 @@ class AttendanceLogTest extends TestCase
         $this->post(route('attendance.attendance-logs.bulk-store'), $this->validBulkPayload());
 
         $this->assertDatabaseHas('attendance_logs', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'log_date' => '2026-02-05',
             'entry_time' => '08:00:00',
@@ -855,7 +855,7 @@ class AttendanceLogTest extends TestCase
     public function test_bulk_store_uses_thursday_exit_time_for_half_day(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'thursday_status' => ThursdayStatus::HALF_DAY,
             'start_time' => '08:00:00',
             'end_time' => '17:00:00',
@@ -867,7 +867,7 @@ class AttendanceLogTest extends TestCase
 
         // Thursday gets early exit per shift config
         $this->assertDatabaseHas('attendance_logs', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'log_date' => '2026-02-05',
             'entry_time' => '08:00:00',
@@ -878,7 +878,7 @@ class AttendanceLogTest extends TestCase
     public function test_bulk_store_uses_shift_times_for_entry_and_exit(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'start_time' => '08:30:00',
             'end_time' => '16:30:00',
         ]);
@@ -887,7 +887,7 @@ class AttendanceLogTest extends TestCase
         $this->post(route('attendance.attendance-logs.bulk-store'), $this->validBulkPayload());
 
         $this->assertDatabaseHas('attendance_logs', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'log_date' => '2026-02-02',
             'entry_time' => '08:30:00',
@@ -942,7 +942,7 @@ class AttendanceLogTest extends TestCase
     public function test_import_fills_missing_times_in_ignore_mode(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'start_time' => '08:00:00',
             'end_time' => '17:00:00',
             'break' => 60,
@@ -958,7 +958,7 @@ class AttendanceLogTest extends TestCase
 
         $logDate = '2026-02-11';
         AttendanceLog::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'log_date' => $logDate,
             'worked' => 999,
@@ -974,7 +974,7 @@ class AttendanceLogTest extends TestCase
 
         /** @var AttendanceLogImportService $service */
         $service = app(AttendanceLogImportService::class);
-        $result = $service->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->companyId, null, null, 'ignore');
+        $result = $service->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->fiscalYearId, null, null, 'ignore');
 
         $this->assertEquals(1, $result['imported']);
         $this->assertEquals(0, $result['skipped']);
@@ -990,7 +990,7 @@ class AttendanceLogTest extends TestCase
     public function test_import_fills_times_for_log_created_by_approved_hourly_leave(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'start_time' => '07:30:00',
             'end_time' => '15:30:00',
             'break' => 30,
@@ -1003,7 +1003,7 @@ class AttendanceLogTest extends TestCase
 
         $logDate = '2026-02-11';
         $personnelRequest = PersonnelRequest::create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'status' => PersonnelRequestStatus::PENDING,
             'request_type' => PersonnelRequestType::LEAVE_HOURLY,
@@ -1031,7 +1031,7 @@ class AttendanceLogTest extends TestCase
         $uploadedFile = new UploadedFile($tmpPath, 'attendance.tsv', 'text/plain', null, true);
 
         $attendanceLogImport = app(AttendanceLogImportService::class);
-        $result = $attendanceLogImport->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->companyId, null, null, 'ignore');
+        $result = $attendanceLogImport->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->fiscalYearId, null, null, 'ignore');
 
         $this->assertEquals(1, $result['imported']);
         $this->assertEquals(0, $result['skipped']);
@@ -1046,7 +1046,7 @@ class AttendanceLogTest extends TestCase
     public function test_import_calculates_times_correctly_with_late_entry_overtime_and_hourly_leave_after_shift(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'start_time' => '07:30:00',
             'end_time' => '15:30:00',
             'break' => 30,
@@ -1059,7 +1059,7 @@ class AttendanceLogTest extends TestCase
 
         $logDate = '2026-02-11';
         $personnelRequest = PersonnelRequest::create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'status' => PersonnelRequestStatus::PENDING,
             'request_type' => PersonnelRequestType::LEAVE_HOURLY,
@@ -1082,7 +1082,7 @@ class AttendanceLogTest extends TestCase
         $uploadedFile = new UploadedFile($tmpPath, 'attendance.tsv', 'text/plain', null, true);
 
         $attendanceLogImport = app(AttendanceLogImportService::class);
-        $result = $attendanceLogImport->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->companyId, null, null, 'ignore');
+        $result = $attendanceLogImport->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->fiscalYearId, null, null, 'ignore');
 
         $this->assertEquals(1, $result['imported']);
         $this->assertEquals(0, $result['skipped']);
@@ -1100,7 +1100,7 @@ class AttendanceLogTest extends TestCase
 
         $logDate2 = '2026-02-12';
         $personnelRequest_2 = PersonnelRequest::create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'status' => PersonnelRequestStatus::PENDING,
             'request_type' => PersonnelRequestType::LEAVE_HOURLY,
@@ -1121,7 +1121,7 @@ class AttendanceLogTest extends TestCase
         $uploadedFile = new UploadedFile($tmpPath, 'attendance.tsv', 'text/plain', null, true);
 
         $attendanceLogImport = app(AttendanceLogImportService::class);
-        $result = $attendanceLogImport->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->companyId, null, null, 'ignore');
+        $result = $attendanceLogImport->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->fiscalYearId, null, null, 'ignore');
 
         $this->assertEquals(1, $result['imported']);
         $this->assertEquals(0, $result['skipped']);
@@ -1139,7 +1139,7 @@ class AttendanceLogTest extends TestCase
 
         $logDate3 = '2026-02-14';
         $personnelRequest_3 = PersonnelRequest::create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'status' => PersonnelRequestStatus::PENDING,
             'request_type' => PersonnelRequestType::LEAVE_HOURLY,
@@ -1160,7 +1160,7 @@ class AttendanceLogTest extends TestCase
         $uploadedFile = new UploadedFile($tmpPath, 'attendance.tsv', 'text/plain', null, true);
 
         $attendanceLogImport = app(AttendanceLogImportService::class);
-        $result = $attendanceLogImport->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->companyId, null, null, 'ignore');
+        $result = $attendanceLogImport->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->fiscalYearId, null, null, 'ignore');
 
         $this->assertEquals(1, $result['imported']);
         $this->assertEquals(0, $result['skipped']);
@@ -1178,7 +1178,7 @@ class AttendanceLogTest extends TestCase
     public function test_recalculation_applies_hourly_leave_at_shift_start_without_delay_or_early_leave(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'start_time' => '07:30:00',
             'end_time' => '15:30:00',
             'break' => 30,
@@ -1191,7 +1191,7 @@ class AttendanceLogTest extends TestCase
 
         $logDate = '2026-02-11';
         $personnelRequest = PersonnelRequest::create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'status' => PersonnelRequestStatus::PENDING,
             'request_type' => PersonnelRequestType::LEAVE_HOURLY,
@@ -1210,7 +1210,7 @@ class AttendanceLogTest extends TestCase
         $uploadedFile = new UploadedFile($tmpPath, 'attendance.tsv', 'text/plain', null, true);
 
         $attendanceLogImport = app(AttendanceLogImportService::class);
-        $result = $attendanceLogImport->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->companyId, null, null, 'ignore');
+        $result = $attendanceLogImport->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->fiscalYearId, null, null, 'ignore');
 
         $this->assertEquals(1, $result['imported']);
         $this->assertEquals(0, $result['skipped']);
@@ -1227,7 +1227,7 @@ class AttendanceLogTest extends TestCase
     public function test_recalculation_applies_hourly_leave_until_entry_and_calculates_overtime(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'start_time' => '08:00:00',
             'end_time' => '16:00:00',
             'break' => 30,
@@ -1240,7 +1240,7 @@ class AttendanceLogTest extends TestCase
 
         $logDate = '2026-02-11';
         $personnelRequest = PersonnelRequest::create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'status' => PersonnelRequestStatus::PENDING,
             'request_type' => PersonnelRequestType::LEAVE_HOURLY,
@@ -1262,7 +1262,7 @@ class AttendanceLogTest extends TestCase
         $uploadedFile = new UploadedFile($tmpPath, 'attendance.tsv', 'text/plain', null, true);
 
         $attendanceLogImport = app(AttendanceLogImportService::class);
-        $result = $attendanceLogImport->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->companyId, null, null, 'ignore');
+        $result = $attendanceLogImport->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->fiscalYearId, null, null, 'ignore');
 
         $this->assertEquals(1, $result['imported']);
         $this->assertEquals(0, $result['skipped']);
@@ -1279,7 +1279,7 @@ class AttendanceLogTest extends TestCase
     public function test_hourly_leave_before_entry_uses_remaining_float_without_early_leave(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'start_time' => '07:30:00',
             'end_time' => '15:30:00',
             'break' => 30,
@@ -1292,7 +1292,7 @@ class AttendanceLogTest extends TestCase
 
         $logDate = '2026-07-20'; // 1405/04/29
         $personnelRequest = PersonnelRequest::create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'status' => PersonnelRequestStatus::APPROVED,
             'request_type' => PersonnelRequestType::LEAVE_HOURLY,
@@ -1310,7 +1310,7 @@ class AttendanceLogTest extends TestCase
         $uploadedFile = new UploadedFile($tmpPath, 'attendance.tsv', 'text/plain', null, true);
 
         $attendanceLogImport = app(AttendanceLogImportService::class);
-        $result = $attendanceLogImport->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->companyId, null, null, 'ignore');
+        $result = $attendanceLogImport->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->fiscalYearId, null, null, 'ignore');
 
         $this->assertEquals(1, $result['imported']);
         $this->assertEquals(0, $result['skipped']);
@@ -1326,7 +1326,7 @@ class AttendanceLogTest extends TestCase
     public function test_hourly_leave_within_shift_with_float_calculates_paid_leave_and_no_delay(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'start_time' => '07:30:00',
             'end_time' => '15:30:00',
             'break' => 30,
@@ -1340,7 +1340,7 @@ class AttendanceLogTest extends TestCase
 
         $logDate = '2026-08-19'; // 1405/05/28
         $personnelRequest_1 = PersonnelRequest::create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'status' => PersonnelRequestStatus::APPROVED,
             'request_type' => PersonnelRequestType::LEAVE_HOURLY,
@@ -1351,7 +1351,7 @@ class AttendanceLogTest extends TestCase
         $attendanceService->syncPersonnelRequestLogs($personnelRequest_1);
 
         $personnelRequest_2 = PersonnelRequest::create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'status' => PersonnelRequestStatus::APPROVED,
             'request_type' => PersonnelRequestType::LEAVE_HOURLY,
@@ -1368,7 +1368,7 @@ class AttendanceLogTest extends TestCase
         $uploadedFile = new UploadedFile($tmpPath, 'attendance.tsv', 'text/plain', null, true);
 
         $attendanceLogImport = app(AttendanceLogImportService::class);
-        $result = $attendanceLogImport->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->companyId, null, null, 'ignore');
+        $result = $attendanceLogImport->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->fiscalYearId, null, null, 'ignore');
 
         $this->assertEquals(1, $result['imported']);
         $this->assertEquals(0, $result['skipped']);
@@ -1384,7 +1384,7 @@ class AttendanceLogTest extends TestCase
     public function test_hourly_leave_at_shift_start_with_overtime_calculation(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'start_time' => '07:30:00',
             'end_time' => '15:30:00',
             'break' => 30,
@@ -1397,7 +1397,7 @@ class AttendanceLogTest extends TestCase
 
         $logDate = '2026-07-25'; // 1405/05/03
         $personnelRequest = PersonnelRequest::create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'status' => PersonnelRequestStatus::APPROVED,
             'request_type' => PersonnelRequestType::LEAVE_HOURLY,
@@ -1415,7 +1415,7 @@ class AttendanceLogTest extends TestCase
         $uploadedFile = new UploadedFile($tmpPath, 'attendance.tsv', 'text/plain', null, true);
 
         $attendanceLogImport = app(AttendanceLogImportService::class);
-        $result = $attendanceLogImport->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->companyId, null, null, 'ignore');
+        $result = $attendanceLogImport->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->fiscalYearId, null, null, 'ignore');
         $this->assertEquals(1, $result['imported']);
         $this->assertEquals(0, $result['skipped']);
 
@@ -1430,7 +1430,7 @@ class AttendanceLogTest extends TestCase
     public function test_hourly_leave_with_float_covers_delay_without_overtime(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'start_time' => '07:30:00',
             'end_time' => '15:30:00',
             'break' => 30,
@@ -1443,7 +1443,7 @@ class AttendanceLogTest extends TestCase
 
         $logDate = '2026-08-05'; // 1405/05/14
         $personnelRequest = PersonnelRequest::create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'status' => PersonnelRequestStatus::APPROVED,
             'request_type' => PersonnelRequestType::LEAVE_HOURLY,
@@ -1461,7 +1461,7 @@ class AttendanceLogTest extends TestCase
         $uploadedFile = new UploadedFile($tmpPath, 'attendance.tsv', 'text/plain', null, true);
 
         $attendanceLogImport = app(AttendanceLogImportService::class);
-        $result = $attendanceLogImport->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->companyId, null, null, 'ignore');
+        $result = $attendanceLogImport->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->fiscalYearId, null, null, 'ignore');
         $this->assertEquals(1, $result['imported']);
         $this->assertEquals(0, $result['skipped']);
 
@@ -1476,14 +1476,14 @@ class AttendanceLogTest extends TestCase
     public function test_recalculate_hourly_leave_before_entry_uses_remaining_float_without_early_leave(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'start_time' => '07:30:00', 'end_time' => '15:30:00',
             'break' => 30, 'float' => 60, 'max_auto_overtime' => 60,
         ]);
         $this->employee->update(['work_shift_id' => $workShift->id]);
         $logDate = '2026-07-20';
         PersonnelRequest::create([
-            'company_id' => $this->companyId, 'employee_id' => $this->employee->id,
+            'fiscal_year_id' => $this->fiscalYearId, 'employee_id' => $this->employee->id,
             'status' => PersonnelRequestStatus::APPROVED, 'request_type' => PersonnelRequestType::LEAVE_HOURLY,
             'start_date' => $logDate.' 07:30:00', 'end_date' => $logDate.' 11:19:00',
             'approved_by' => auth()->id(),
@@ -1506,7 +1506,7 @@ class AttendanceLogTest extends TestCase
     public function test_recalculate_hourly_leave_within_shift_calculates_paid_leave_and_no_delay(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'start_time' => '07:30:00', 'end_time' => '15:30:00',
             'break' => 30, 'float' => 60, 'max_auto_overtime' => 60,
         ]);
@@ -1514,7 +1514,7 @@ class AttendanceLogTest extends TestCase
         $logDate = '2026-08-19';
         foreach ([['08:15:00', '08:47:00'], ['10:20:00', '11:00:00']] as [$start, $end]) {
             PersonnelRequest::create([
-                'company_id' => $this->companyId, 'employee_id' => $this->employee->id,
+                'fiscal_year_id' => $this->fiscalYearId, 'employee_id' => $this->employee->id,
                 'status' => PersonnelRequestStatus::APPROVED, 'request_type' => PersonnelRequestType::LEAVE_HOURLY,
                 'start_date' => $logDate.' '.$start, 'end_date' => $logDate.' '.$end,
                 'approved_by' => auth()->id(),
@@ -1538,14 +1538,14 @@ class AttendanceLogTest extends TestCase
     public function test_recalculate_hourly_leave_at_shift_start_calculates_overtime(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'start_time' => '07:30:00', 'end_time' => '15:30:00',
             'break' => 30, 'float' => 60, 'max_auto_overtime' => 120,
         ]);
         $this->employee->update(['work_shift_id' => $workShift->id]);
         $logDate = '2026-07-25';
         PersonnelRequest::create([
-            'company_id' => $this->companyId, 'employee_id' => $this->employee->id,
+            'fiscal_year_id' => $this->fiscalYearId, 'employee_id' => $this->employee->id,
             'status' => PersonnelRequestStatus::APPROVED, 'request_type' => PersonnelRequestType::LEAVE_HOURLY,
             'start_date' => $logDate.' 07:30:00', 'end_date' => $logDate.' 10:35:00',
             'approved_by' => auth()->id(),
@@ -1568,14 +1568,14 @@ class AttendanceLogTest extends TestCase
     public function test_recalculate_hourly_leave_with_float_covers_delay_without_overtime(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'start_time' => '07:30:00', 'end_time' => '15:30:00',
             'break' => 30, 'float' => 60, 'max_auto_overtime' => 120,
         ]);
         $this->employee->update(['work_shift_id' => $workShift->id]);
         $logDate = '2026-08-05';
         PersonnelRequest::create([
-            'company_id' => $this->companyId, 'employee_id' => $this->employee->id,
+            'fiscal_year_id' => $this->fiscalYearId, 'employee_id' => $this->employee->id,
             'status' => PersonnelRequestStatus::APPROVED, 'request_type' => PersonnelRequestType::LEAVE_HOURLY,
             'start_date' => $logDate.' 08:13:00', 'end_date' => $logDate.' 09:00:00',
             'approved_by' => auth()->id(),
@@ -1598,14 +1598,14 @@ class AttendanceLogTest extends TestCase
     public function test_recalculate_hourly_leave_after_shift_start_calculates_overtime(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'start_time' => '07:30:00', 'end_time' => '15:30:00',
             'break' => 30, 'float' => 60, 'max_auto_overtime' => 120,
         ]);
         $this->employee->update(['work_shift_id' => $workShift->id]);
         $logDate = '2026-08-16';
         PersonnelRequest::create([
-            'company_id' => $this->companyId, 'employee_id' => $this->employee->id,
+            'fiscal_year_id' => $this->fiscalYearId, 'employee_id' => $this->employee->id,
             'status' => PersonnelRequestStatus::APPROVED, 'request_type' => PersonnelRequestType::LEAVE_HOURLY,
             'start_date' => $logDate.' 08:14:00', 'end_date' => $logDate.' 09:50:00',
             'approved_by' => auth()->id(),
@@ -1628,14 +1628,14 @@ class AttendanceLogTest extends TestCase
     public function test_recalculate_hourly_leave_from_shift_start_calculates_overtime(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'start_time' => '07:30:00', 'end_time' => '15:30:00',
             'break' => 30, 'float' => 60, 'max_auto_overtime' => 120,
         ]);
         $this->employee->update(['work_shift_id' => $workShift->id]);
         $logDate = '2026-08-19';
         PersonnelRequest::create([
-            'company_id' => $this->companyId, 'employee_id' => $this->employee->id,
+            'fiscal_year_id' => $this->fiscalYearId, 'employee_id' => $this->employee->id,
             'status' => PersonnelRequestStatus::APPROVED, 'request_type' => PersonnelRequestType::LEAVE_HOURLY,
             'start_date' => $logDate.' 07:30:00', 'end_date' => $logDate.' 10:53:00',
             'approved_by' => auth()->id(),
@@ -1658,7 +1658,7 @@ class AttendanceLogTest extends TestCase
     public function test_attendance_service_recalculates_hourly_leave_from_shift_start_with_overtime(): void
     {
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'start_time' => '07:30:00',
             'end_time' => '15:30:00',
             'break' => 30,
@@ -1669,7 +1669,7 @@ class AttendanceLogTest extends TestCase
 
         $logDate = '2026-08-19';
         PersonnelRequest::create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'status' => PersonnelRequestStatus::APPROVED,
             'request_type' => PersonnelRequestType::LEAVE_HOURLY,
