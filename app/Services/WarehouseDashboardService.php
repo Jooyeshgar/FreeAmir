@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\ProductGroup;
@@ -63,8 +63,8 @@ class WarehouseDashboardService
     public function dashboard(array $rawFilters = []): array
     {
         $filters = $this->normalizeFilters($rawFilters);
-        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
-        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+        $company = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        [$fiscalStart, $fiscalEnd] = $company->range();
         [$from, $to] = $this->periodRange($filters['period'], $fiscalStart, $fiscalEnd);
 
         $productGroups = ProductGroup::orderBy('name')->get(['id', 'name']);
@@ -233,7 +233,7 @@ class WarehouseDashboardService
                 fn (InvoiceType $type) => $type->value,
                 [InvoiceType::BEGINNING_INVENTORY, ...self::STOCK_IN_TYPES, ...self::STOCK_OUT_TYPES]
             ))
-            ->where('invoices.company_id', getActiveCompany())
+            ->where('invoices.fiscal_year_id', getActiveFiscalYear())
             ->whereBetween('invoices.date', [$fiscalStart->toDateString(), $to->toDateString()])
             ->when($categoryId, function ($q, int $id) {
                 $q->join('products', 'products.id', '=', 'invoice_items.itemable_id')
@@ -600,7 +600,7 @@ class WarehouseDashboardService
             ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
             ->where('invoice_items.itemable_type', Product::class)
             ->whereIn('invoice_items.itemable_id', $productIds)
-            ->where('invoices.company_id', getActiveCompany())
+            ->where('invoices.fiscal_year_id', getActiveFiscalYear())
             ->whereIn('invoices.status', array_map(fn (InvoiceStatus $status) => $status->value, InvoiceStatus::approvedOrSettled()))
             ->whereIn('invoices.invoice_type', array_map(fn (InvoiceType $type) => $type->value, $movementTypes))
             ->where('invoices.date', '>=', $fiscalStart->toDateString())
@@ -754,7 +754,7 @@ class WarehouseDashboardService
             ],
             'rows' => $rows,
             'filterSummary' => $this->reportFilterSummary($name, $groupName, $minQuantity, $needOrder, $fyStart, $now),
-            'company' => Company::find(getActiveCompany()),
+            'fiscalYear' => FiscalYear::find(getActiveFiscalYear()),
             'logo' => $this->reportLogo(),
             'generatedAtDate' => toEnglish(jdate('Y/m/d', $now->timestamp)),
             'generatedAtTime' => toEnglish(jdate('H:i', $now->timestamp)),
@@ -895,8 +895,8 @@ class WarehouseDashboardService
 
     private function fiscalYearToDate(): array
     {
-        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
-        [$from, $fiscalEnd] = $company->fiscalYearRange();
+        $company = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        [$from, $fiscalEnd] = $company->range();
         $to = Carbon::now()->endOfDay();
 
         if ($to->greaterThan($fiscalEnd)) {
@@ -954,7 +954,7 @@ class WarehouseDashboardService
         return Transaction::query()
             ->whereIn('subject_id', $subjectIds)
             ->join('documents', 'documents.id', '=', 'transactions.document_id')
-            ->where('documents.company_id', getActiveCompany())
+            ->where('documents.fiscal_year_id', getActiveFiscalYear())
             ->whereBetween('documents.date', [$from->toDateString(), $to->toDateString()])
             ->selectRaw('subject_id, SUM(value) as total')
             ->groupBy('subject_id')->pluck('total', 'subject_id')->map(fn ($value) => (float) $value)->all();
@@ -985,11 +985,10 @@ class WarehouseDashboardService
 
     private function reportLogo(): ?string
     {
-        $company = Company::find(getActiveCompany());
 
         $candidates = [];
-        if ($company?->logo) {
-            $candidates[] = storage_path('app/public/'.$company->logo);
+        if ($fiscalYear?->logo) {
+            $candidates[] = storage_path('app/public/'.$fiscalYear->logo);
         }
         $candidates[] = public_path('images/logo.png');
 

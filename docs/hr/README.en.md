@@ -26,7 +26,7 @@ Related English guides:
 
 Each page requires authentication and the permission for the requested action. List, create, edit, delete, export, approve, and reject permissions are separate.
 
-Employee records, units, chart positions, and requests are limited to the active company context. Check the active company and fiscal year before adding or changing records.
+Employee records, units, chart positions, and requests are limited to the active fiscal year. Check the company name and active year before adding or changing records.
 
 ## Recommended setup order
 
@@ -69,7 +69,7 @@ Changing an earlier record does not always rebuild calculated records. After a s
 
 ## Difference with employee portal
 
-The employee portal shows the signed-in employee's own profile, attendance, monthly attendance, payrolls, and requests. HR pages manage records for all employees permitted in the active company. Request approval, organizational setup, and full employee-record editing belong to the management pages.
+The employee portal shows the signed-in employee's own profile, attendance, monthly attendance, payrolls, and requests. HR pages manage records for employees in the active fiscal year. Request approval, organizational setup, and full employee-record editing belong to the management pages.
 
 | Action | Employee portal | HR management |
 |---|---:|---:|

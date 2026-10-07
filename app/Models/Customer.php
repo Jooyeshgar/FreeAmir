@@ -42,7 +42,7 @@ class Customer extends Model
         'marked',
         'reason',
         'disc_rate',
-        'company_id',
+        'fiscal_year_id',
         'type',
     ];
 

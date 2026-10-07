@@ -22,7 +22,7 @@ class AncillaryCost extends Model
         'date',
         'invoice_id',
         'status',
-        'company_id',
+        'fiscal_year_id',
         'document_id',
         'customer_id',
     ];

@@ -32,7 +32,7 @@ class Invoice extends Model
         'amount',
         'title',
         'returned_invoice_id',
-        'company_id',
+        'fiscal_year_id',
         'warehouse_id',
         'taxID',
     ];
@@ -49,7 +49,7 @@ class Invoice extends Model
     {
         static::addGlobalScope(new FiscalYearScope);
         static::creating(function ($model) {
-            $model->company_id = getActiveCompany();
+            $model->fiscal_year_id = getActiveFiscalYear();
         });
     }
 
@@ -63,9 +63,9 @@ class Invoice extends Model
         return $this->belongsTo(Customer::class, 'customer_id');
     }
 
-    public function company()
+    public function fiscalYear()
     {
-        return $this->belongsTo(Company::class);
+        return $this->belongsTo(FiscalYear::class);
     }
 
     public function warehouse()

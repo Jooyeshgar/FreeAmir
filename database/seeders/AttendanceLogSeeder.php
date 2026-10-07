@@ -11,8 +11,8 @@ class AttendanceLogSeeder extends Seeder
 {
     public function run(): void
     {
-        $companyId = (int) getActiveCompany();
-        $employees = Employee::withoutGlobalScopes()->where('company_id', $companyId)->get();
+        $fiscalYearId = (int) getActiveFiscalYear();
+        $employees = Employee::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->get();
         if ($employees->isEmpty()) {
             return;
         }
@@ -55,7 +55,7 @@ class AttendanceLogSeeder extends Seeder
                 'log_date' => $date->toDateString(),
             ],
             [
-                'company_id' => $employee->company_id,
+                'fiscal_year_id' => $employee->fiscal_year_id,
                 'monthly_attendance_id' => null,
                 'entry_time' => $entry,
                 'exit_time' => $exit,

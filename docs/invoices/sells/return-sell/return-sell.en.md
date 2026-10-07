@@ -4,7 +4,7 @@ Menu path: **Invoices → Sales → Return Sell List**. A sales return reverses 
 
 ## Before you start and record the return
 
-Select the correct company and fiscal year. The source must be a sale in the same company, and the return's customer must match the sale's customer. Select the warehouse and check the quantity and amount still returnable after earlier returns.
+Select the correct fiscal year. The source must be a sale in that fiscal year, and the return's customer must match the sale's customer. Select the warehouse and check the quantity and amount still returnable after earlier returns.
 
 1. From Return Sell List, select the source invoice; its customer and lines are transferred to the form.
 2. Remove unrelated lines and adjust the return quantity.
@@ -36,4 +36,4 @@ Editing, deleting, or revoking approval may be blocked by an approved return, a 
 - [ ] Cost of goods sold and customer balance were corrected.
 - [ ] Receipts on the original invoice were reviewed separately.
 
-If the source is invalid, check its type, company, and year. If the amount or quantity exceeds the balance, inspect prior returns. For a blocked status change, inspect later documents, payments, and ancillary costs.
+If the source is invalid, check its type and fiscal year. If the amount or quantity exceeds the balance, inspect prior returns. For a blocked status change, inspect later documents, payments, and ancillary costs.

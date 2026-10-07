@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\OrgChart;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,30 +15,30 @@ class OrgChartTest extends TestCase
 
     protected User $user;
 
-    protected int $companyId;
+    protected int $fiscalYearId;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create(['year' => 1405]);
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'hr.org-charts.*'])
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
     }
 
     private function makeNode(array $overrides = []): OrgChart
     {
         return OrgChart::factory()->create(array_merge([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
         ], $overrides));
     }
 
@@ -81,9 +81,9 @@ class OrgChartTest extends TestCase
 
     public function test_index_does_not_show_nodes_from_other_companies(): void
     {
-        $otherCompany = Company::factory()->create();
+        $otherFiscalYear = FiscalYear::factory()->create(['year' => 1406]);
         OrgChart::factory()->create([
-            'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherFiscalYear->id,
             'title' => 'Foreign Node',
         ]);
 
@@ -124,7 +124,7 @@ class OrgChartTest extends TestCase
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('org_charts', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'title' => 'Chief Executive Officer',
             'parent_id' => null,
         ]);
@@ -144,7 +144,7 @@ class OrgChartTest extends TestCase
         $response->assertRedirect(route('hr.org-charts.index'));
 
         $this->assertDatabaseHas('org_charts', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'title' => 'CTO',
             'parent_id' => $parent->id,
         ]);

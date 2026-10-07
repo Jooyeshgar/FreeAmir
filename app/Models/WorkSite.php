@@ -12,7 +12,7 @@ class WorkSite extends Model
     use HasFactory;
 
     protected $fillable = [
-        'company_id',
+        'fiscal_year_id',
         'name',
         'code',
         'address',

@@ -25,7 +25,7 @@ Choose **Add** and complete these fields:
 | Field | Description |
 |---|---|
 | Name | Required; at most 150 characters |
-| Code | Optional; at most 50 characters and unique per company |
+| Code | Optional; at most 50 characters and unique per fiscal year |
 | Parent unit | Optional; creates a multilevel hierarchy |
 | Active | Determines whether the unit is currently active |
 | Description | Optional explanation of the unit's responsibility or scope |

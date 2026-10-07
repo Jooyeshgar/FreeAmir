@@ -56,7 +56,7 @@ class ChequeService
             $status = $this->initialStatus($direction, $purpose);
 
             $cheque = Cheque::create([
-                'company_id' => getActiveCompany(),
+                'fiscal_year_id' => getActiveFiscalYear(),
                 'title' => filled($data['title'] ?? null) ? trim($data['title']) : __('Cheque #').($data['cheque_number'] ?? ''),
                 'amount' => $data['amount'],
                 'write_date' => $data['issue_date'],
@@ -377,9 +377,9 @@ class ChequeService
         if (! preg_match('/^\d{16}$/', (string) ($data['sayad_number'] ?? ''))) {
             throw ValidationException::withMessages(['sayad_number' => __('validation.regex', ['attribute' => __('16-digit Sayad number')])]);
         }
-        $companyId = $except?->company_id ?? getActiveCompany();
+        $fiscalYearId = $except?->fiscal_year_id ?? getActiveFiscalYear();
         $duplicateSayad = Cheque::withoutGlobalScopes()
-            ->where('company_id', $companyId)
+            ->where('fiscal_year_id', $fiscalYearId)
             ->where('sayad_number', $data['sayad_number'])
             ->when($except, fn ($query) => $query->where('id', '!=', $except->id))
             ->exists();
@@ -515,7 +515,7 @@ class ChequeService
     private function subject(string $configKey): int
     {
         $subjectId = (int) config('amir.'.$configKey);
-        $subject = $subjectId ? Subject::where('company_id', getActiveCompany())->find($subjectId) : null;
+        $subject = $subjectId ? Subject::where('fiscal_year_id', getActiveFiscalYear())->find($subjectId) : null;
         if (! $subject) {
             throw ValidationException::withMessages(['accounting' => __('Accounting subject configuration :key is missing or invalid.', ['key' => $configKey])]);
         }
@@ -535,12 +535,12 @@ class ChequeService
 
     private function customerSubject(Customer $customer, Cheque $cheque): int
     {
-        if ((int) $customer->company_id != (int) $cheque->company_id) {
+        if ((int) $customer->fiscal_year_id != (int) $cheque->fiscal_year_id) {
             throw ValidationException::withMessages(['customer_id' => __('The selected account side is invalid.')]);
         }
 
         $subjectId = (int) ($customer->subject_id ?: $customer->subject?->id);
-        $subjectBelongsToCompany = $subjectId && Subject::where('company_id', $cheque->company_id)->whereKey($subjectId)->exists();
+        $subjectBelongsToCompany = $subjectId && Subject::where('fiscal_year_id', $cheque->fiscal_year_id)->whereKey($subjectId)->exists();
         if (! $subjectBelongsToCompany) {
             throw ValidationException::withMessages(['customer_id' => __('The account side has no accounting subject.')]);
         }

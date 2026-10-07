@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Enums\PayrollStatus;
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\Payroll;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -17,7 +17,7 @@ class PayrollDashboardTest extends TestCase
 
     private User $user;
 
-    private int $companyId;
+    private int $fiscalYearId;
 
     private Employee $employee;
 
@@ -25,21 +25,21 @@ class PayrollDashboardTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create(['fiscal_year' => 1405]);
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create(['year' => 1405]);
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
 
         $this->employee = Employee::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'first_name' => 'Amir',
             'last_name' => 'Payroll',
             'code' => 'EMP-HR-1',
         ]);
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
     }
 
     public function test_payroll_dashboard_permission_can_view_dashboard(): void
@@ -73,7 +73,7 @@ class PayrollDashboardTest extends TestCase
     private function makePayroll(array $overrides = []): Payroll
     {
         return Payroll::withoutGlobalScopes()->create(array_merge([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'year' => 1405,
             'month' => 12,
