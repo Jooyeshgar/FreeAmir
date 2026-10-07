@@ -3,9 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\AttendanceLog;
-use App\Models\Company;
 use App\Models\Document;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\User;
 use App\Models\WorkShift;
@@ -13,6 +13,7 @@ use App\Models\WorkSite;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use PHPUnit\Framework\Attributes\RunInSeparateProcess;
 use RuntimeException;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -23,7 +24,7 @@ class ApiTest extends TestCase
 
     protected User $user;
 
-    protected Company $company;
+    protected FiscalYear $fiscalYear;
 
     protected string $token;
 
@@ -31,9 +32,9 @@ class ApiTest extends TestCase
     {
         parent::setUp();
 
-        $this->company = Company::factory()->create();
+        $this->fiscalYear = FiscalYear::factory()->create();
         $this->user = User::factory()->create();
-        $this->company->users()->attach($this->user);
+        $this->fiscalYear->users()->attach($this->user);
 
         $permissions = [
             'api.access',
@@ -63,17 +64,17 @@ class ApiTest extends TestCase
 
     protected function companyApiUrl(string $path): string
     {
-        return '/api/companies/'.$this->company->id.$path;
+        return '/api/companies/'.$this->fiscalYear->id.$path;
     }
 
     public function test_api_requires_api_access_permission_for_token_requests(): void
     {
         $user = User::factory()->create();
-        $this->company->users()->attach($user);
+        $this->fiscalYear->users()->attach($user);
         $user->givePermissionTo(Permission::firstOrCreate(['name' => 'hr.employees.index']));
         $token = $user->createToken('limited', ['hr.employees.index'])->plainTextToken;
 
-        $response = $this->getJson('/api/companies/'.$this->company->id.'/employees', [
+        $response = $this->getJson('/api/companies/'.$this->fiscalYear->id.'/employees', [
             'Authorization' => 'Bearer '.$token,
         ]);
 
@@ -84,8 +85,8 @@ class ApiTest extends TestCase
     {
         $token = $this->user->createToken('read-only', ['hr.employees.index'])->plainTextToken;
 
-        $workSite = WorkSite::factory()->create(['company_id' => $this->company->id]);
-        $workShift = WorkShift::factory()->create(['company_id' => $this->company->id]);
+        $workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
+        $workShift = WorkShift::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
 
         $response = $this->postJson($this->companyApiUrl('/employees'), [
             'code' => 'EMP-API-1',
@@ -103,10 +104,10 @@ class ApiTest extends TestCase
 
     public function test_employee_api_lists_ids_and_creates_employee(): void
     {
-        $workSite = WorkSite::factory()->create(['company_id' => $this->company->id]);
-        $workShift = WorkShift::factory()->create(['company_id' => $this->company->id]);
+        $workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
+        $workShift = WorkShift::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
         $employee = Employee::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'work_site_id' => $workSite->id,
             'work_shift_id' => $workShift->id,
         ]);
@@ -129,10 +130,10 @@ class ApiTest extends TestCase
 
     public function test_attendance_api_accepts_batch_and_filters_by_period(): void
     {
-        $workSite = WorkSite::factory()->create(['company_id' => $this->company->id]);
-        $workShift = WorkShift::factory()->create(['company_id' => $this->company->id]);
+        $workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
+        $workShift = WorkShift::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
         $employee = Employee::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'work_site_id' => $workSite->id,
             'work_shift_id' => $workShift->id,
         ]);
@@ -157,7 +158,7 @@ class ApiTest extends TestCase
             ->assertJsonPath('meta.count', 2);
 
         AttendanceLog::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'employee_id' => $employee->id,
             'log_date' => '2026-04-30',
         ]);
@@ -177,31 +178,34 @@ class ApiTest extends TestCase
     {
         $this->getJson('/api/companies/0/employees', $this->apiHeaders())
             ->assertStatus(422)
-            ->assertJsonPath('message', __('The company path parameter must be a valid company ID.'));
+            ->assertJsonPath('message', __('The fiscal year path parameter must be a valid fiscal year ID.'));
     }
 
-    public function test_company_scoped_api_rejects_unattached_company_id(): void
+    public function test_company_scoped_api_rejects_unattached_fiscal_year_id(): void
     {
-        $otherCompany = Company::factory()->create();
+        $otherFiscalYear = FiscalYear::factory()->create();
 
-        $this->getJson('/api/companies/'.$otherCompany->id.'/employees', $this->apiHeaders())
+        $this->getJson('/api/companies/'.$otherFiscalYear->id.'/employees', $this->apiHeaders())
             ->assertForbidden()
-            ->assertJsonPath('message', __('You do not have access to this company.'));
+            ->assertJsonPath('message', __('You do not have access to this fiscal year.'));
     }
 
     public function test_api_lists_available_companies(): void
     {
-        $secondCompany = Company::factory()->create(['name' => 'Second API Company']);
-        $unattachedCompany = Company::factory()->create(['name' => 'Hidden API Company']);
-        $this->company->update(['name' => 'First API Company']);
-        $this->user->companies()->attach($secondCompany);
+        $secondFiscalYear = FiscalYear::factory()->create(['year' => 1401]);
+        $secondFiscalYear->company->update(['name' => 'Second API Fiscal Year']);
+        $unattachedFiscalYear = FiscalYear::factory()->create(['year' => 1402]);
+        $this->fiscalYear->update(['year' => 1400]);
+        $unattachedFiscalYear->company->update(['name' => 'Hidden API Fiscal Year']);
+        $this->fiscalYear->company->update(['name' => 'First API Fiscal Year']);
+        $this->user->fiscalYears()->attach($secondFiscalYear);
 
         $this->getJson('/api/companies', $this->apiHeaders())
             ->assertOk()
             ->assertJsonCount(2, 'data')
-            ->assertJsonPath('data.0.name', 'First API Company')
-            ->assertJsonPath('data.1.name', 'Second API Company')
-            ->assertJsonMissing(['id' => $unattachedCompany->id]);
+            ->assertJsonPath('data.0.name', 'First API Fiscal Year')
+            ->assertJsonPath('data.1.name', 'Second API Fiscal Year')
+            ->assertJsonMissing(['id' => $unattachedFiscalYear->id]);
     }
 
     public function test_api_companies_requires_user_permission_and_token_ability(): void
@@ -213,7 +217,7 @@ class ApiTest extends TestCase
         ])->assertForbidden();
 
         $userWithoutPermission = User::factory()->create();
-        $this->company->users()->attach($userWithoutPermission);
+        $this->fiscalYear->users()->attach($userWithoutPermission);
         $userWithoutPermission->givePermissionTo(Permission::firstOrCreate(['name' => 'api.access']));
         $token = $userWithoutPermission->createToken('companies', ['companies.index'])->plainTextToken;
 
@@ -222,13 +226,13 @@ class ApiTest extends TestCase
         ])->assertForbidden();
     }
 
-    #[\PHPUnit\Framework\Attributes\RunInSeparateProcess]
+    #[RunInSeparateProcess]
     public function test_attendance_batch_rolls_back_when_one_insert_fails(): void
     {
-        $workSite = WorkSite::factory()->create(['company_id' => $this->company->id]);
-        $workShift = WorkShift::factory()->create(['company_id' => $this->company->id]);
+        $workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
+        $workShift = WorkShift::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
         $employee = Employee::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'work_site_id' => $workSite->id,
             'work_shift_id' => $workShift->id,
         ]);
@@ -265,7 +269,7 @@ class ApiTest extends TestCase
         }
 
         $this->assertDatabaseMissing('attendance_logs', [
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'employee_id' => $employee->id,
             'log_date' => '2026-05-01',
         ]);
@@ -275,8 +279,8 @@ class ApiTest extends TestCase
     {
         Storage::fake('public');
 
-        $debitSubject = Subject::factory()->create(['company_id' => $this->company->id]);
-        $creditSubject = Subject::factory()->create(['company_id' => $this->company->id]);
+        $debitSubject = Subject::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
+        $creditSubject = Subject::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
 
         $response = $this->postJson($this->companyApiUrl('/documents'), [
             'title' => 'API document',
@@ -292,7 +296,7 @@ class ApiTest extends TestCase
         $this->assertNotNull($documentId);
         $this->assertDatabaseHas('documents', [
             'id' => $documentId,
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
         ]);
 
         $this->getJson($this->companyApiUrl('/documents/'.$documentId), $this->apiHeaders())
@@ -317,7 +321,7 @@ class ApiTest extends TestCase
         ]);
         $this->assertDatabaseHas('documents', [
             'id' => $documentId,
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
         ]);
         $this->assertSame(0.0, (float) Document::find($documentId)->transactions()->sum('value'));
     }

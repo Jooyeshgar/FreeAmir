@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\User;
 use App\Models\WorkSite;
 use App\Models\WorkSiteContract;
@@ -16,7 +16,7 @@ class WorkSiteContractTest extends TestCase
 
     protected User $user;
 
-    protected int $companyId;
+    protected int $fiscalYearId;
 
     protected WorkSite $workSite;
 
@@ -24,20 +24,20 @@ class WorkSiteContractTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create();
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'salary.work-site-contracts.*'])
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
 
-        $this->workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $this->workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
     }
 
     private function makeContract(array $overrides = []): WorkSiteContract

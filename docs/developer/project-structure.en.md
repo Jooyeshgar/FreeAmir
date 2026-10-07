@@ -52,12 +52,14 @@ Eloquent models manage stored data and relationships:
 
 - `Document` and `Transaction` represent accounting documents and their entries.
 - `Subject` models the parent/child account hierarchy.
-- `Company` and `User` hold company and user information and their relationships.
+- `Company` stores business identity and has many fiscal years.
+- `FiscalYear` stores a company's accounting period, closing state, and closing/opening document links.
+- `User` holds user data and fiscal-year access relationships.
 - `Customer`/`CustomerGroup`, `Product`/`ProductGroup`, and `Invoice`/`InvoiceItem` represent their respective business records.
 - `Bank`, `BankAccount`, `Cheque`, and `ChequeHistory` represent banking and check records.
 - `Config` and `Payment` hold system configuration and payments.
 
-`Models/Scopes/FiscalYearScope.php` restricts relevant records to the active company or fiscal year. The older Persian guide says there is no `FiscalYear` model and that the active year is managed through `Company`; this is historical guidance, so verify it against the current repository before relying on it.
+`Models/Scopes/FiscalYearScope.php` restricts related records to the active fiscal-year ID. It reads the active ID through `getActiveFiscalYear()`, which uses request configuration or the `active-fiscal-year-id` cookie. The `fiscal_year_user` many-to-many relationship assigns user access by fiscal year. `Company` and `FiscalYear` are separate entities: each fiscal year belongs to one company, and a company can have multiple years.
 
 #### `Services/`
 
@@ -71,7 +73,7 @@ Important examples are `config/app.php` for application defaults such as the Per
 
 ### `migrations/`
 
-Migrations define table structure. A document migration may declare an ID, a nullable numeric document number, title and dates, creator and approver foreign keys, a company foreign key, and timestamps. Refer to the actual migrations for the current schema.
+Migrations define table structure. A document migration may declare an ID, a nullable numeric document number, title and dates, creator and approver foreign keys, a `fiscal_year_id` foreign key to `fiscal_years`, and timestamps. Refer to the actual migrations for the current schema.
 
 ### `seeders/`
 
@@ -95,7 +97,7 @@ Vite manages JavaScript and CSS assets.
 
 ### `api.php`
 
-The original guide illustrates Sanctum-protected company and company-scoped API routes for attendance logs, employees, documents, and document attachments. They use `auth:sanctum`, `api-company`, and specific `check-permission` rules. Consult the current [`routes/api.php`](../../routes/api.php) before adding routes to a group. The older note saying this file contains only Laravel's default sample conflicts with its own example and should not be used as a current inventory.
+Fiscal-year-scoped API requests are intended to use Sanctum authentication, `SetApiFiscalYear`, and specific `check-permission` rules. `SetApiFiscalYear` expects a `fiscal_year` route parameter and should check the user's `fiscalYears()` assignment before setting the active ID. **Current limitation:** `routes/api.php` still uses `companies/{company}`, while the middleware reads `fiscal_year` and checks the removed `companies()` relation. Those routes and the access check are not aligned with the refactor. Consult the current [`routes/api.php`](../../routes/api.php) before adding routes to a group.
 
 ## 🧪 Tests (`tests/`)
 

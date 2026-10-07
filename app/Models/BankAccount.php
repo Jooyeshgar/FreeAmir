@@ -37,8 +37,8 @@ class BankAccount extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function ($bankAccount) {
-            if (! isset($bankAccount->company_id)) {
-                $bankAccount->company_id = getActiveCompany();
+            if (! isset($bankAccount->fiscal_year_id)) {
+                $bankAccount->fiscal_year_id = getActiveFiscalYear();
             }
         });
     }

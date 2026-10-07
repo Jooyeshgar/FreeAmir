@@ -12,7 +12,7 @@ class TaxSlab extends Model
     use HasFactory;
 
     protected $fillable = [
-        'company_id',
+        'fiscal_year_id',
         'income_to',
         'tax_rate',
         'calc_type',

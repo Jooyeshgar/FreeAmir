@@ -6,13 +6,11 @@ use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Enums\SubjectType;
 use App\Http\Requests\StoreInvoiceRequest;
-use App\Models\Company;
-use App\Models\Config;
 use App\Models\Customer;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Product;
-use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -29,7 +27,7 @@ class BeginningInventoryTest extends TestCase
 {
     use RefreshDatabase;
 
-    private Company $company;
+    private FiscalYear $fiscalYear;
 
     private User $user;
 
@@ -48,8 +46,8 @@ class BeginningInventoryTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create();
-        $this->company = Company::factory()->create();
-        config(['active-company-id' => $this->company->id]);
+        $this->fiscalYear = FiscalYear::factory()->create();
+        config(['active-fiscal-year-id' => $this->fiscalYear->id]);
         $this->actingAs($this->user);
 
         foreach (['create', 'edit', 'index', 'show', 'store', 'update', 'destroy', 'approve'] as $ability) {
@@ -156,7 +154,7 @@ class BeginningInventoryTest extends TestCase
         $this->setStock($product, $this->otherWarehouse, 0, 0);
         $counterparty = Customer::create([
             'name' => 'Counterparty',
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'subject_id' => $counterpartySubjectId,
         ]);
 
@@ -240,23 +238,6 @@ class BeginningInventoryTest extends TestCase
         $this->assertQuantity($this->product, $this->mainWarehouse, 2);
     }
 
-    public function test_migration_adds_the_beginning_inventory_config_for_existing_companies(): void
-    {
-        $migration = require database_path('migrations/2026_09_09_000001_add_beginning_inventory_subject_config.php');
-
-        $migration->up();
-
-        $this->assertDatabaseHas('configs', [
-            'company_id' => $this->company->id,
-            'key' => 'beginning_inventory',
-            'value' => (string) $this->beginningInventorySubjectId,
-        ]);
-        $this->assertSame('067001', Subject::withoutGlobalScopes()->findOrFail((int) Config::withoutGlobalScopes()
-            ->where('company_id', $this->company->id)
-            ->where('key', 'beginning_inventory')
-            ->value('value'))->code);
-    }
-
     public function test_recalculation_only_includes_approved_beginning_inventory(): void
     {
         $this->createBeginningInventory($this->product, 6, $this->mainWarehouse, 900, true);
@@ -313,7 +294,7 @@ class BeginningInventoryTest extends TestCase
             'invoice_type' => 'sell',
             'invoice_id' => $invoice->id,
             'invoice_number' => 2,
-            'customer_id' => Customer::create(['name' => 'Customer', 'company_id' => $this->company->id])->id,
+            'customer_id' => Customer::create(['name' => 'Customer', 'fiscal_year_id' => $this->fiscalYear->id])->id,
             'document_number' => 20,
             'warehouse_id' => $this->otherWarehouse->id,
             'transactions' => [[
@@ -387,7 +368,7 @@ class BeginningInventoryTest extends TestCase
         $this->setStock($product, $this->mainWarehouse, 0, 0);
         $opening = $this->createBeginningInventory($product, 5, $this->mainWarehouse, 100, true, $openingNumber, '2026-01-01');
         $subjectId = DB::table('subjects')->insertGetId([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'parent_id' => null,
             'code' => '100',
             'name' => 'Inventory test subject',
@@ -400,7 +381,7 @@ class BeginningInventoryTest extends TestCase
         $product->update(['inventory_subject_id' => $subjectId]);
         $customer = Customer::create([
             'name' => 'Supplier',
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'subject_id' => $subjectId,
         ]);
 
@@ -473,7 +454,7 @@ class BeginningInventoryTest extends TestCase
 
     private function warehouse(string $name): Warehouse
     {
-        return Warehouse::create(['company_id' => $this->company->id, 'name' => $name, 'code' => strtoupper($name)]);
+        return Warehouse::create(['fiscal_year_id' => $this->fiscalYear->id, 'name' => $name, 'code' => strtoupper($name)]);
     }
 
     private function product(string $code, float $averageCost): Product
@@ -488,14 +469,14 @@ class BeginningInventoryTest extends TestCase
             'vat' => 0,
             'average_cost' => $averageCost,
             'inventory_subject_id' => $this->inventorySubjectId,
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
         ]);
     }
 
     private function subject(string $code, string $name): int
     {
         $existingId = DB::table('subjects')
-            ->where('company_id', $this->company->id)
+            ->where('fiscal_year_id', $this->fiscalYear->id)
             ->where('code', $code)
             ->value('id');
 
@@ -504,7 +485,7 @@ class BeginningInventoryTest extends TestCase
         }
 
         return DB::table('subjects')->insertGetId([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'parent_id' => null,
             'code' => $code,
             'name' => $name,
