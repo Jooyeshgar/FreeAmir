@@ -17,9 +17,6 @@
                         <x-input name="name" id="name" title="{{ __('Company name') }}" :value="old('name', $company->name ?? '')" required />
                     </div>
                     <div class="col-span-2 md:col-span-1">
-                        <x-input name="fiscal_year" id="fiscal_year" title="{{ __('Fiscal year') }}" :value="old('fiscal_year', $company->fiscal_year ?? '')" required />
-                    </div>
-                    <div class="col-span-2 md:col-span-1">
                         <x-input name="currency" id="currency" title="{{ __('Currency') }}" :value="old('currency', $company->currency ?? '')" />
                     </div>
                     <div class="flex flex-wrap gap-2">
