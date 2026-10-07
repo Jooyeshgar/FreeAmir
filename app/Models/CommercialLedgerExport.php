@@ -12,7 +12,7 @@ class CommercialLedgerExport extends Model
     use HasFactory;
 
     protected $fillable = [
-        'company_id',
+        'fiscal_year_id',
         'creator_id',
         'from_date',
         'to_date',
@@ -41,8 +41,8 @@ class CommercialLedgerExport extends Model
         return $this->belongsTo(User::class, 'creator_id');
     }
 
-    public function company()
+    public function fiscalYear()
     {
-        return $this->belongsTo(Company::class, 'company_id');
+        return $this->belongsTo(FiscalYear::class, 'fiscal_year_id');
     }
 }

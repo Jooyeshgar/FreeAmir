@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Enums\PayrollElementCalcType;
 use App\Enums\PayrollElementCategory;
 use App\Enums\PayrollElementSystemCode;
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\PayrollElement;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -18,30 +18,30 @@ class PayrollElementTest extends TestCase
 
     protected User $user;
 
-    protected int $companyId;
+    protected int $fiscalYearId;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create();
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'salary.payroll-elements.*'])
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
     }
 
     private function makeElement(array $overrides = []): PayrollElement
     {
         return PayrollElement::factory()->create(array_merge([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'is_system_locked' => false,
         ], $overrides));
     }
@@ -119,7 +119,7 @@ class PayrollElementTest extends TestCase
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('payroll_elements', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'title' => 'Housing Allowance',
             'system_code' => PayrollElementSystemCode::HOUSING_ALLOWANCE->value,
             'category' => PayrollElementCategory::EARNING->value,
@@ -173,7 +173,7 @@ class PayrollElementTest extends TestCase
 
         $response->assertRedirect(route('salary.payroll-elements.index'));
         $this->assertDatabaseHas('payroll_elements', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'default_amount' => null,
             'gl_account_code' => null,
         ]);

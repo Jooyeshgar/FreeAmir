@@ -2,13 +2,13 @@
 
 use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\ConfigLoader;
-use App\Http\Middleware\DefaultCompany;
+use App\Http\Middleware\DefaultFiscalYear;
 use App\Http\Middleware\EncryptCookies;
 use App\Http\Middleware\EnsureEmployee;
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\LogUserActivity;
 use App\Http\Middleware\PreventRequestsDuringMaintenance;
-use App\Http\Middleware\SetApiCompany;
+use App\Http\Middleware\SetApiFiscalYear;
 use App\Http\Middleware\TrimStrings;
 use App\Http\Middleware\TrustProxies;
 use App\Http\Middleware\VerifyCsrfToken;
@@ -50,7 +50,7 @@ return Application::configure(basePath: dirname(__DIR__))
             ShareErrorsFromSession::class,
             VerifyCsrfToken::class,
             SubstituteBindings::class,
-            DefaultCompany::class,
+            DefaultFiscalYear::class,
             LogUserActivity::class,
         ]);
 
@@ -62,7 +62,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => PermissionMiddleware::class,
             'check-permission' => CheckPermission::class,
             'ensure-employee' => EnsureEmployee::class,
-            'api-company' => SetApiCompany::class,
+            'api-fiscal-year' => SetApiFiscalYear::class,
             'ensure-feature-enabled' => EnsureFeatureEnabled::class,
         ]);
     })

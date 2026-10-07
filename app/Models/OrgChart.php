@@ -14,7 +14,7 @@ class OrgChart extends Model
     use HasFactory;
 
     protected $fillable = [
-        'company_id',
+        'fiscal_year_id',
         'title',
         'parent_id',
         'description',

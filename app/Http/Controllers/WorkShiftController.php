@@ -53,7 +53,7 @@ class WorkShiftController extends Controller
         $validated['thursday_status'] = ThursdayStatus::fromName($validated['thursday_status']);
 
         WorkShift::create(array_merge($validated, [
-            'company_id' => getActiveCompany(),
+            'fiscal_year_id' => getActiveFiscalYear(),
             'is_active' => $request->boolean('is_active', true),
         ]));
 

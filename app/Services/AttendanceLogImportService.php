@@ -70,7 +70,7 @@ class AttendanceLogImportService
     //   5 – ignored
     //   6 – ignored
     // -----------------------------------------------------------------------
-    private function importDeviceTsv(UploadedFile|string $file, int $companyId, ?string $dateFrom = null, ?string $dateTo = null, string $duplicateMode = 'ignore'): array
+    private function importDeviceTsv(UploadedFile|string $file, int $fiscalYearId, ?string $dateFrom = null, ?string $dateTo = null, string $duplicateMode = 'ignore'): array
     {
         $lines = array_filter(
             explode("\n", $this->readContents($file)),
@@ -78,7 +78,7 @@ class AttendanceLogImportService
         );
 
         /** @var Collection<string,Employee> $deviceMap */
-        $deviceMap = Employee::where('company_id', $companyId)
+        $deviceMap = Employee::where('fiscal_year_id', $fiscalYearId)
             ->whereNotNull('device_id')
             ->get()
             ->keyBy('device_id');
@@ -167,7 +167,7 @@ class AttendanceLogImportService
         foreach ($pending as $employeeId => $dates) {
             foreach ($dates as $logDate => $times) {
                 $existing = AttendanceLog::withoutGlobalScopes()
-                    ->where('company_id', $companyId)
+                    ->where('fiscal_year_id', $fiscalYearId)
                     ->where('employee_id', $employeeId)
                     ->where('log_date', $logDate)
                     ->first();
@@ -198,7 +198,7 @@ class AttendanceLogImportService
                     }
                 } else {
                     $log = AttendanceLog::create([
-                        'company_id' => $companyId,
+                        'fiscal_year_id' => $fiscalYearId,
                         'employee_id' => $employeeId,
                         'log_date' => $logDate,
                         'entry_time' => $times['entry_time'],
@@ -223,7 +223,7 @@ class AttendanceLogImportService
     /**
      * Parse TSV file and return preview data without persisting anything.
      */
-    private function previewDeviceTsv(UploadedFile|string $file, int $companyId, ?string $dateFrom = null, ?string $dateTo = null): array
+    private function previewDeviceTsv(UploadedFile|string $file, int $fiscalYearId, ?string $dateFrom = null, ?string $dateTo = null): array
     {
         $lines = array_filter(
             explode("\n", $this->readContents($file)),
@@ -231,7 +231,7 @@ class AttendanceLogImportService
         );
 
         /** @var Collection<string,Employee> $deviceMap */
-        $deviceMap = Employee::where('company_id', $companyId)
+        $deviceMap = Employee::where('fiscal_year_id', $fiscalYearId)
             ->whereNotNull('device_id')
             ->get()
             ->keyBy('device_id');

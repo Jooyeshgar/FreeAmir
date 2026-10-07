@@ -9,7 +9,7 @@ class OrgChartSeeder extends Seeder
 {
     public function run(): void
     {
-        $companyId = (int) getActiveCompany();
+        $fiscalYearId = (int) getActiveFiscalYear();
 
         $tree = [
             [
@@ -43,14 +43,14 @@ class OrgChartSeeder extends Seeder
             ],
         ];
 
-        $this->seedNodes($tree, null, $companyId);
+        $this->seedNodes($tree, null, $fiscalYearId);
     }
 
-    private function seedNodes(array $nodes, ?int $parentId, int $companyId): void
+    private function seedNodes(array $nodes, ?int $parentId, int $fiscalYearId): void
     {
         foreach ($nodes as $node) {
             $record = OrgChart::withoutGlobalScopes()->firstOrCreate(
-                ['company_id' => $companyId, 'title' => $node['title']],
+                ['fiscal_year_id' => $fiscalYearId, 'title' => $node['title']],
                 [
                     'parent_id' => $parentId,
                     'description' => $node['description'] ?? null,
@@ -58,7 +58,7 @@ class OrgChartSeeder extends Seeder
             );
 
             if (! empty($node['children'])) {
-                $this->seedNodes($node['children'], $record->id, $companyId);
+                $this->seedNodes($node['children'], $record->id, $fiscalYearId);
             }
         }
     }

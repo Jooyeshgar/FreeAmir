@@ -53,7 +53,7 @@ class Employee extends Model
         'contract_framework_id',
         'user_id',
         'is_active',
-        'company_id',
+        'fiscal_year_id',
         'device_id',
         'leave_remain',
     ];

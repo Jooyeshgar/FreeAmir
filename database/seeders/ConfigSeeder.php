@@ -10,35 +10,35 @@ use RuntimeException;
 
 class ConfigSeeder extends Seeder
 {
-    public function run(?int $companyId = null): void
+    public function run(?int $fiscalYearId = null): void
     {
-        $companyId ??= (int) getActiveCompany();
+        $fiscalYearId ??= (int) getActiveFiscalYear();
         $configs = [
-            ['type' => 3, 'category' => 1, 'key' => 'payroll', 'value' => '10', 'desc' => 'حقوق و دستمزد', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'cust_subject', 'value' => '4', 'desc' => 'مشتریان', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'cash_book', 'value' => '3', 'desc' => 'موجودی نقدی', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'cost', 'value' => '2', 'desc' => 'هزینه ها', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'sundry_cost', 'value' => '32', 'desc' => 'هزینه های متفرقه', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'bank', 'value' => '1', 'desc' => 'بانکها', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'income', 'value' => '23', 'desc' => 'درآمد', 'company_id' => 1],
-            ['type' => 2, 'category' => 1, 'key' => 'sell_discount', 'value' => '99', 'desc' => 'تخفیفات فروش', 'company_id' => 1],
-            ['type' => 2, 'category' => 1, 'key' => 'buy_discount', 'value' => '98', 'desc' => 'تخفیفات خرید', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'sell_vat', 'value' => '41', 'desc' => 'مالیات فروش', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'buy_vat', 'value' => '40', 'desc' => 'مالیات خرید', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'inventory', 'value' => '9', 'desc' => 'موجودی کالا', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'beginning_inventory', 'value' => '15', 'desc' => 'تراز افتتاحیه', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'sales_returns', 'value' => '43', 'desc' => 'برگشت از فروش', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'cost_of_goods_sold', 'value' => '105', 'desc' => 'بهای تمام شده کالا فروش رقته', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'cogs_service', 'value' => '106', 'desc' => 'بهای تمام شده خدمات', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'sales_revenue', 'value' => '104', 'desc' => 'درآمد فروش', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'service_revenue', 'value' => '103', 'desc' => 'درآمد خدمات', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'cheque_documents_receivable', 'value' => '44', 'desc' => 'اسناد دریافتنی', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'cheque_documents_in_collection', 'value' => '68', 'desc' => 'اسناد در جریان وصول', 'company_id' => 1],
-            ['type' => 3, 'category' => 1, 'key' => 'cheque_documents_payable', 'value' => '46', 'desc' => 'اسناد پرداختنی', 'company_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'payroll', 'value' => '10', 'desc' => 'حقوق و دستمزد', 'fiscal_year_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'cust_subject', 'value' => '4', 'desc' => 'مشتریان', 'fiscal_year_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'cash_book', 'value' => '3', 'desc' => 'موجودی نقدی', 'fiscal_year_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'cost', 'value' => '2', 'desc' => 'هزینه ها', 'fiscal_year_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'sundry_cost', 'value' => '32', 'desc' => 'هزینه های متفرقه', 'fiscal_year_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'bank', 'value' => '1', 'desc' => 'بانکها', 'fiscal_year_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'income', 'value' => '23', 'desc' => 'درآمد', 'fiscal_year_id' => 1],
+            ['type' => 2, 'category' => 1, 'key' => 'sell_discount', 'value' => '99', 'desc' => 'تخفیفات فروش', 'fiscal_year_id' => 1],
+            ['type' => 2, 'category' => 1, 'key' => 'buy_discount', 'value' => '98', 'desc' => 'تخفیفات خرید', 'fiscal_year_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'sell_vat', 'value' => '41', 'desc' => 'مالیات فروش', 'fiscal_year_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'buy_vat', 'value' => '40', 'desc' => 'مالیات خرید', 'fiscal_year_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'inventory', 'value' => '9', 'desc' => 'موجودی کالا', 'fiscal_year_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'beginning_inventory', 'value' => '15', 'desc' => 'تراز افتتاحیه', 'fiscal_year_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'sales_returns', 'value' => '43', 'desc' => 'برگشت از فروش', 'fiscal_year_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'cost_of_goods_sold', 'value' => '105', 'desc' => 'بهای تمام شده کالا فروش رقته', 'fiscal_year_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'cogs_service', 'value' => '106', 'desc' => 'بهای تمام شده خدمات', 'fiscal_year_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'sales_revenue', 'value' => '104', 'desc' => 'درآمد فروش', 'fiscal_year_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'service_revenue', 'value' => '103', 'desc' => 'درآمد خدمات', 'fiscal_year_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'cheque_documents_receivable', 'value' => '44', 'desc' => 'اسناد دریافتنی', 'fiscal_year_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'cheque_documents_in_collection', 'value' => '68', 'desc' => 'اسناد در جریان وصول', 'fiscal_year_id' => 1],
+            ['type' => 3, 'category' => 1, 'key' => 'cheque_documents_payable', 'value' => '46', 'desc' => 'اسناد پرداختنی', 'fiscal_year_id' => 1],
         ];
 
         $subjectCodes = $this->subjectCodes();
-        $subjects = Subject::withoutGlobalScopes()->where('company_id', $companyId)->whereIn('code', array_values($subjectCodes))->get()->keyBy('code');
+        $subjects = Subject::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->whereIn('code', array_values($subjectCodes))->get()->keyBy('code');
 
         foreach ($configs as &$config) {
             $subject = $subjects->get($subjectCodes[$config['key']]);
@@ -47,19 +47,19 @@ class ConfigSeeder extends Seeder
                 throw new RuntimeException("Missing seeded subject for config [{$config['key']}].");
             }
 
-            $config['company_id'] = $companyId;
+            $config['fiscal_year_id'] = $fiscalYearId;
             $config['value'] = (string) $subject->id;
         }
         unset($config);
 
-        Config::upsert($configs, ['key', 'company_id'], ['type', 'category', 'value', 'desc']);
+        Config::upsert($configs, ['key', 'fiscal_year_id'], ['type', 'category', 'value', 'desc']);
         foreach ($configs as $config) {
             config(['amir.'.$config['key'] => $config['value']]);
         }
 
         foreach (['app_env', 'app_locale', 'app_debug', 'app_registration', 'app_email_verification', 'app_activity_logger_enabled'] as $key) {
             Config::withoutGlobalScope(FiscalYearScope::class)->updateOrCreate(
-                ['key' => $key, 'company_id' => null],
+                ['key' => $key, 'fiscal_year_id' => null],
                 ['value' => null, 'type' => 3, 'category' => 1, 'desc' => __($key)],
             );
         }

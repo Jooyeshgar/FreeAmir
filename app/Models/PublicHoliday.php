@@ -12,7 +12,7 @@ class PublicHoliday extends Model
     use HasFactory;
 
     protected $fillable = [
-        'company_id',
+        'fiscal_year_id',
         'date',
         'name',
     ];

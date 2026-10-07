@@ -112,16 +112,16 @@ class ProductImportService
      *
      * @throws ValidationException
      */
-    public function import(UploadedFile|string $file, int $companyId): array
+    public function import(UploadedFile|string $file, int $fiscalYearId): array
     {
-        $warehouses = Warehouse::where('company_id', $companyId)->orderBy('name')->get(['id', 'name']);
+        $warehouses = Warehouse::where('fiscal_year_id', $fiscalYearId)->orderBy('name')->get(['id', 'name']);
         $rows = $this->parse($file, $warehouses);
 
         if (empty($rows)) {
             $this->fail(__('The import file is empty or has no data rows.'));
         }
 
-        return DB::transaction(function () use ($rows, $companyId) {
+        return DB::transaction(function () use ($rows, $fiscalYearId): array {
             $imported = 0;
             $updated = 0;
             $groupsCreated = 0;
@@ -152,7 +152,7 @@ class ProductImportService
                     if (! $group) {
                         $group = $this->productGroupService->create([
                             'name' => $groupName,
-                            'company_id' => $companyId,
+                            'fiscal_year_id' => $fiscalYearId,
                         ]);
                         $groupsCreated++;
                     }
@@ -164,7 +164,7 @@ class ProductImportService
                 $data = [
                     'name' => $name,
                     'group' => $group->id,
-                    'company_id' => $companyId,
+                    'fiscal_year_id' => $fiscalYearId,
                     'oversell' => $this->normalizeBool($row['oversell'] ?? null),
                 ];
 
@@ -187,12 +187,12 @@ class ProductImportService
                     ? Product::where('code', $code)->first()
                     : null;
 
-                $data = array_merge($data, $this->resolveSubjects($row, $group, $name, $companyId, $existing, $line));
+                $data = array_merge($data, $this->resolveSubjects($row, $group, $name, $fiscalYearId, $existing, $line));
 
                 $warehouseQuantities = $this->warehouseQuantities($row);
 
                 $warehouse = $warehouseQuantities === []
-                    ? $this->legacyWarehouse($row, $companyId)
+                    ? $this->legacyWarehouse($row, $fiscalYearId)
                     : null;
 
                 try {
@@ -377,16 +377,16 @@ class ProductImportService
         $product->save();
     }
 
-    private function legacyWarehouse(array $row, int $companyId): Warehouse
+    private function legacyWarehouse(array $row, int $fiscalYearId): Warehouse
     {
         $warehouseName = trim((string) ($row['warehouse'] ?? ''));
         $warehouse = $warehouseName !== ''
-            ? Warehouse::where('company_id', $companyId)->where('name', $warehouseName)->first()
-            : Warehouse::where('company_id', $companyId)->orderBy('id')->first();
+            ? Warehouse::where('fiscal_year_id', $fiscalYearId)->where('name', $warehouseName)->first()
+            : Warehouse::where('fiscal_year_id', $fiscalYearId)->orderBy('id')->first();
 
         return $warehouse ?? Warehouse::create([
             'name' => $warehouseName !== '' ? $warehouseName : __('Main warehouse'),
-            'company_id' => $companyId,
+            'fiscal_year_id' => $fiscalYearId,
         ]);
     }
 
@@ -420,7 +420,7 @@ class ProductImportService
      * Resolve exported subject codes to the correct product account branches.
      * Missing subjects are created with the requested code under the selected group.
      */
-    private function resolveSubjects(array $row, ProductGroup $group, string $name, int $companyId, ?Product $existing, int $line): array
+    private function resolveSubjects(array $row, ProductGroup $group, string $name, int $fiscalYearId, ?Product $existing, int $line): array
     {
         $group->loadMissing(array_column(self::SUBJECT_COLUMNS, 'group_relation'));
         $resolved = [];
@@ -448,7 +448,7 @@ class ProductImportService
                 ]));
             }
 
-            $subject = Subject::withoutGlobalScopes()->where('company_id', $companyId)->where('code', $subjectCode)->first();
+            $subject = Subject::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->where('code', $subjectCode)->first();
 
             if ($existing && $existing->{$config['id_column']} && (int) $existing->{$config['id_column']} !== (int) $subject?->id) {
                 $this->fail(__('Line :line: subject code :code does not match the existing product account relation.', [
@@ -469,7 +469,7 @@ class ProductImportService
                 $subject = $this->subjectService->createSubject([
                     'name' => $name,
                     'parent_id' => $parent->id,
-                    'company_id' => $companyId,
+                    'fiscal_year_id' => $fiscalYearId,
                     'code' => substr($subjectCode, -3),
                 ]);
             }

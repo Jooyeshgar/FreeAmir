@@ -15,7 +15,7 @@ class Config extends Model
         'desc',
         'type',
         'category',
-        'company_id',
+        'fiscal_year_id',
     ];
 
     public static function booted(): void
