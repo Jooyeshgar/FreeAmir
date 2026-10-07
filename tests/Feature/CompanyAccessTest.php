@@ -116,6 +116,36 @@ class CompanyAccessTest extends TestCase
         $this->get(route('companies.closing-wizard', $this->accessibleCompany))->assertOk();
     }
 
+    public function test_closing_another_accessible_company_reports_a_validation_error_without_changing_it(): void
+    {
+        $otherCompany = Company::factory()->create(['name' => 'Other Accessible Company']);
+        $otherCompany->users()->attach($this->user);
+        $this->user->givePermissionTo(
+            Permission::firstOrCreate(['name' => 'companies.close-fiscal-year']),
+            Permission::firstOrCreate(['name' => 'companies.closing-wizard']),
+            Permission::firstOrCreate(['name' => 'companies.closing-wizard.step1']),
+            Permission::firstOrCreate(['name' => 'companies.closing-wizard.step3']),
+            Permission::firstOrCreate(['name' => 'companies.closing-wizard.recalculate']),
+        );
+
+        foreach (['companies.close-fiscal-year', 'companies.closing-wizard.step1', 'companies.closing-wizard.step3', 'companies.closing-wizard.recalculate'] as $route) {
+            $response = $this->from(route('companies.closing-wizard', $otherCompany))
+                ->post(route($route, $otherCompany));
+
+            $response->assertRedirect(route('companies.closing-wizard', $otherCompany));
+            $response->assertSessionHasErrors([
+                'company' => __('Select this company as the active company before closing its fiscal year.'),
+            ]);
+        }
+
+        $this->get(route('companies.closing-wizard', $otherCompany))
+            ->assertOk()
+            ->assertSee(__('Select this company as the active company before closing its fiscal year.'));
+
+        $this->assertNull($otherCompany->fresh()->pl_document_id);
+        $this->assertNull($otherCompany->closed_at);
+    }
+
     public function test_user_can_delete_an_accessible_company(): void
     {
         Storage::fake('public');

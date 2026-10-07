@@ -486,6 +486,8 @@ class CompanyController extends Controller
             abort(403);
         }
 
+        $this->validateActiveCompanyForClosing($company);
+
         [$newFiscalYear, $validationErrors] = FiscalYearService::closeFiscalYear($company, $request->user());
 
         if (! $newFiscalYear && ! empty($validationErrors)) {
@@ -532,6 +534,8 @@ class CompanyController extends Controller
             abort(403);
         }
 
+        $this->validateActiveCompanyForClosing($company);
+
         if ($company->closed_at) {
             return redirect()->route('companies.closing-wizard', $company)
                 ->with('error', __('This fiscal year is already closed.'));
@@ -561,6 +565,8 @@ class CompanyController extends Controller
         if (! $company->users->contains($request->user()->id)) {
             abort(403);
         }
+
+        $this->validateActiveCompanyForClosing($company);
 
         if ($company->closed_at) {
             return redirect()->route('companies.closing-wizard', $company)
@@ -600,6 +606,8 @@ class CompanyController extends Controller
             abort(403);
         }
 
+        $this->validateActiveCompanyForClosing($company);
+
         try {
             FiscalYearService::recalculateClosingDocument($company, $request->user());
         } catch (ValidationException $e) {
@@ -612,5 +620,14 @@ class CompanyController extends Controller
 
         return redirect()->route('companies.closing-wizard', $company)
             ->with('success', __('Closing recalculation started. Complete all three closing steps again.'));
+    }
+
+    private function validateActiveCompanyForClosing(Company $company): void
+    {
+        if ((int) config('active-company-id') !== $company->id) {
+            throw ValidationException::withMessages([
+                'company' => __('Select this company as the active company before closing its fiscal year.'),
+            ]);
+        }
     }
 }
