@@ -181,11 +181,12 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::group(['prefix' => 'management'], function () {
         Route::resource('fiscal-years', Controllers\FiscalYearController::class);
         Route::resource('companies', Controllers\CompanyController::class);
-        Route::post('companies/close-fiscal-year/{company}', [Controllers\CompanyController::class, 'closeFiscalYear'])->name('companies.close-fiscal-year');
-        Route::get('companies/{company}/closing-wizard', [Controllers\CompanyController::class, 'closingWizard'])->name('companies.closing-wizard');
-        Route::post('companies/{company}/closing-wizard/step1', [Controllers\CompanyController::class, 'closingWizardStep1'])->name('companies.closing-wizard.step1');
-        Route::post('companies/{company}/closing-wizard/step3', [Controllers\CompanyController::class, 'closingWizardStep3'])->name('companies.closing-wizard.step3');
-        Route::post('companies/{company}/closing-wizard/recalculate', [Controllers\CompanyController::class, 'recalculateClosingDocument'])->name('companies.closing-wizard.recalculate');
+        Route::post('companies/close-fiscal-year/{fiscalYear}', [Controllers\CompanyController::class, 'closeFiscalYear'])->name('companies.close-fiscal-year');
+        Route::get('companies/{fiscalYear}/closing-wizard', [Controllers\CompanyController::class, 'closingWizard'])->name('companies.closing-wizard');
+        Route::post('companies/{fiscalYear}/closing-wizard/step1', [Controllers\CompanyController::class, 'closingWizardStep1'])->name('companies.closing-wizard.step1');
+        Route::post('companies/{fiscalYear}/closing-wizard/step3', [Controllers\CompanyController::class, 'closingWizardStep3'])->name('companies.closing-wizard.step3');
+        Route::post('companies/{fiscalYear}/closing-wizard/recalculate', [Controllers\CompanyController::class, 'recalculateClosingDocument'])->name('companies.closing-wizard.recalculate');
+        Route::post('companies/{fiscalYear}/closing-wizard/recreate-opening', [Controllers\CompanyController::class, 'recreateOpeningDocument'])->name('companies.closing-wizard.recreate-opening');
         Route::post('users/{user}/create-employee', [Controllers\Management\UserController::class, 'createEmployee'])
             ->name('users.create-employee');
         Route::post('users/{user}/impersonate', [Controllers\Management\UserController::class, 'impersonate'])

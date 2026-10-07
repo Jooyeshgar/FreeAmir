@@ -120,8 +120,9 @@ class CompanyAccessTest extends TestCase
 
     public function test_closing_another_accessible_company_reports_a_validation_error_without_changing_it(): void
     {
-        $otherCompany = Company::factory()->create(['name' => 'Other Accessible Company']);
-        $otherCompany->users()->attach($this->user);
+        $otherFiscalYear = FiscalYear::factory()->create(['year' => 1404]);
+        $otherFiscalYear->company->update(['name' => 'Other Accessible Company']);
+        $otherFiscalYear->users()->syncWithoutDetaching([$this->user->id]);
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'companies.close-fiscal-year']),
             Permission::firstOrCreate(['name' => 'companies.closing-wizard']),
@@ -131,21 +132,40 @@ class CompanyAccessTest extends TestCase
         );
 
         foreach (['companies.close-fiscal-year', 'companies.closing-wizard.step1', 'companies.closing-wizard.step3', 'companies.closing-wizard.recalculate'] as $route) {
-            $response = $this->from(route('companies.closing-wizard', $otherCompany))
-                ->post(route($route, $otherCompany));
+            $response = $this->from(route('companies.closing-wizard', $otherFiscalYear))
+                ->post(route($route, $otherFiscalYear));
 
-            $response->assertRedirect(route('companies.closing-wizard', $otherCompany));
+            $response->assertRedirect(route('companies.closing-wizard', $otherFiscalYear));
             $response->assertSessionHasErrors([
-                'company' => __('Select this company as the active company before closing its fiscal year.'),
+                'fiscal_year' => __('Select this fiscal year as the active fiscal year before closing it.'),
             ]);
         }
 
-        $this->get(route('companies.closing-wizard', $otherCompany))
+        $this->get(route('companies.closing-wizard', $otherFiscalYear))
             ->assertOk()
-            ->assertSee(__('Select this company as the active company before closing its fiscal year.'));
+            ->assertSee('Other Accessible Company')
+            ->assertSee('1404')
+            ->assertSee(__('Select this fiscal year as the active fiscal year before closing it.'));
 
-        $this->assertNull($otherCompany->fresh()->pl_document_id);
-        $this->assertNull($otherCompany->closed_at);
+        $this->assertNull($otherFiscalYear->fresh()->pl_document_id);
+        $this->assertNull($otherFiscalYear->closed_at);
+    }
+
+    public function test_closing_another_accessible_fiscal_year_of_the_active_company_requires_switching_years(): void
+    {
+        $otherFiscalYear = FiscalYear::factory()->create([
+            'company_id' => $this->accessibleFiscalYear->company_id,
+            'year' => 1403,
+        ]);
+        $otherFiscalYear->users()->syncWithoutDetaching([$this->user->id]);
+        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'companies.close-fiscal-year']));
+
+        $this->post(route('companies.close-fiscal-year', $otherFiscalYear))
+            ->assertSessionHasErrors([
+                'fiscal_year' => __('Select this fiscal year as the active fiscal year before closing it.'),
+            ]);
+
+        $this->assertNull($otherFiscalYear->fresh()->closed_at);
     }
 
     public function test_user_can_delete_an_accessible_company(): void

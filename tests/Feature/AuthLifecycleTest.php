@@ -86,7 +86,7 @@ class AuthLifecycleTest extends TestCase
         $companies->assertSee('Admin Company');
         $companies->assertDontSee('Other Company');
         $companies->assertDontSee(__('Companies and fiscal years'));
-        $this->actingAs($admin)->get(route('companies.edit', $otherFiscalYear->id))->assertForbidden();
+        $this->actingAs($admin)->get(route('companies.edit', $otherFiscalYear->company))->assertForbidden();
 
         $users = $this->actingAs($admin)->get(route('users.index'));
         $users->assertOk();

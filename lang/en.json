@@ -2580,6 +2580,7 @@
     "Some Unused Document Numbers": "Some Unused Document Numbers",
     "Some forecasts overlap because an ancestor and descendant have the same forecast type. Each row shows its full subtree actual, while summary actuals count overlapping transactions only once.": "Some forecasts overlap because an ancestor and descendant have the same forecast type. Each row shows its full subtree actual, while summary actuals count overlapping transactions only once.",
     "Select this company as the active company before closing its fiscal year.": "Select this company as the active company before closing its fiscal year.",
+    "Select this fiscal year as the active fiscal year before closing it.": "Select this fiscal year as the active fiscal year before closing it.",
     "Something went wrong creating the invoice": "Something went wrong creating the invoice.",
     "Sort Documents Number": "Sort Documents Number",
     "Sorting Numbers": "Sorting Numbers",
@@ -3491,5 +3492,16 @@
     "This step recalculates only the Closing Document for fiscal year :year.": "This step recalculates only the Closing Document for fiscal year :year.",
     "The next fiscal year and its Opening Document will not be changed. Update the Opening Document manually if you have access.": "The next fiscal year and its Opening Document will not be changed. Update the Opening Document manually if you have access.",
     "This will recalculate only the Closing Document for fiscal year :year. The next fiscal year will not be changed. Are you sure?": "This will recalculate only the Closing Document for fiscal year :year. The next fiscal year will not be changed. Are you sure?",
-    "Only a closed fiscal year can have its closing document recalculated.": "Only a closed fiscal year can have its closing document recalculated."
+    "Only a closed fiscal year can have its closing document recalculated.": "Only a closed fiscal year can have its closing document recalculated.",
+    "The next fiscal year and its Opening Document will not be changed. Recreate the Opening Document after recalculating the Closing Document.": "The next fiscal year and its Opening Document will not be changed. Recreate the Opening Document after recalculating the Closing Document.",
+    "Opening Document": "Opening Document",
+    "Closing Document": "Closing Document",
+    "Remove and Recreate Opening Document": "Remove and Recreate Opening Document",
+    "Remove and recreate the Opening Document for fiscal year :year from the current Closing Document?": "Remove and recreate the Opening Document for fiscal year :year from the current Closing Document?",
+    "Complete fiscal year closing before recreating the Opening Document.": "Complete fiscal year closing before recreating the Opening Document.",
+    "The next fiscal year or Closing Document was not found.": "The next fiscal year or Closing Document was not found.",
+    "Document #1 cannot be replaced because it is not an unlinked Opening Document.": "Document #1 cannot be replaced because it is not an unlinked Opening Document.",
+    "Opening Document recreated successfully.": "Opening Document recreated successfully.",
+    "The Closing Document is unbalanced or its accounts are missing from the next fiscal year.": "The Closing Document is unbalanced or its accounts are missing from the next fiscal year.",
+    "You do not have access to the next fiscal year.": "You do not have access to the next fiscal year."
 }

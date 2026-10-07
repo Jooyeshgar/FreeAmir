@@ -2565,6 +2565,7 @@
     "Some Unused Document Numbers": "چند شماره سند استفاده‌نشده",
     "Some forecasts overlap because an ancestor and descendant have the same forecast type. Each row shows its full subtree actual, while summary actuals count overlapping transactions only once.": "برخی پیش‌بینی‌ها هم‌پوشانی دارند، زیرا برای سرفصل والد و یکی از زیرمجموعه‌های آن نوع پیش‌بینی یکسان ثبت شده است. هر ردیف عملکرد واقعی کل زیرمجموعه خود را نمایش می‌دهد، اما تراکنش‌های هم‌پوشان در جمع عملکرد واقعی فقط یک‌بار محاسبه می‌شوند.",
     "Select this company as the active company before closing its fiscal year.": "پیش از بستن سال مالی، این شرکت را به‌عنوان شرکت فعال انتخاب کنید.",
+    "Select this fiscal year as the active fiscal year before closing it.": "پیش از بستن این سال مالی، آن را به‌عنوان سال مالی فعال انتخاب کنید.",
     "Something went wrong creating the invoice": "هنگام ایجاد فاکتور مشکلی رخ داد.",
     "Sort Documents Number": "مرتب‌سازی شماره اسناد",
     "Sorting Numbers": "مرتب‌سازی شماره‌ها",
@@ -3492,5 +3493,16 @@
     "This step recalculates only the Closing Document for fiscal year :year.": "این مرحله فقط سند اختتامیه سال مالی :year را دوباره محاسبه می‌کند.",
     "The next fiscal year and its Opening Document will not be changed. Update the Opening Document manually if you have access.": "سال مالی بعد و سند افتتاحیه آن تغییر نمی‌کنند. در صورت داشتن دسترسی، سند افتتاحیه را دستی اصلاح کنید.",
     "This will recalculate only the Closing Document for fiscal year :year. The next fiscal year will not be changed. Are you sure?": "این کار فقط سند اختتامیه سال مالی :year را دوباره محاسبه می‌کند. سال مالی بعد تغییر نمی‌کند. آیا مطمئن هستید؟",
-    "Only a closed fiscal year can have its closing document recalculated.": "محاسبه مجدد سند اختتامیه فقط برای سال مالی بسته‌شده امکان‌پذیر است."
+    "Only a closed fiscal year can have its closing document recalculated.": "محاسبه مجدد سند اختتامیه فقط برای سال مالی بسته‌شده امکان‌پذیر است.",
+    "The next fiscal year and its Opening Document will not be changed. Recreate the Opening Document after recalculating the Closing Document.": "سال مالی بعد و سند افتتاحیه آن تغییر نمی‌کنند. پس از محاسبه مجدد سند اختتامیه، سند افتتاحیه را دوباره ایجاد کنید.",
+    "Opening Document": "سند افتتاحیه",
+    "Closing Document": "سند اختتامیه",
+    "Remove and Recreate Opening Document": "حذف و ایجاد مجدد سند افتتاحیه",
+    "Remove and recreate the Opening Document for fiscal year :year from the current Closing Document?": "سند افتتاحیه سال مالی :year از روی سند اختتامیه فعلی حذف و دوباره ایجاد شود؟",
+    "Complete fiscal year closing before recreating the Opening Document.": "پیش از ایجاد مجدد سند افتتاحیه، بستن سال مالی را تکمیل کنید.",
+    "The next fiscal year or Closing Document was not found.": "سال مالی بعد یا سند اختتامیه پیدا نشد.",
+    "Document #1 cannot be replaced because it is not an unlinked Opening Document.": "سند شماره ۱ سند افتتاحیه بدون پیوست یا رکورد مرتبط نیست و نمی‌توان آن را جایگزین کرد.",
+    "Opening Document recreated successfully.": "سند افتتاحیه با موفقیت دوباره ایجاد شد.",
+    "The Closing Document is unbalanced or its accounts are missing from the next fiscal year.": "سند اختتامیه تراز نیست یا حساب‌های آن در سال مالی بعد پیدا نشدند.",
+    "You do not have access to the next fiscal year.": "به سال مالی بعد دسترسی ندارید."
 }

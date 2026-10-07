@@ -30,10 +30,10 @@ class CompanyControllerFiscalYearTest extends TestCase
         $request = Request::create(route('companies.index'), 'GET', ['search' => 'Source']);
         $request->setLaravelSession(app('session')->driver());
 
-        $companies = app(CompanyController::class)->index($request)->getData()['companies'];
+        $fiscalYears = app(CompanyController::class)->index($request)->getData()['fiscalYears'];
 
-        $this->assertSame([$assignedYear->id], $companies->pluck('id')->all());
-        $this->assertSame('Accessible Source', $companies->first()->name);
+        $this->assertSame([$assignedYear->id], $fiscalYears->pluck('id')->all());
+        $this->assertSame('Accessible Source', $fiscalYears->first()->name);
     }
 
     public function test_deleting_one_fiscal_year_keeps_the_company_and_other_year(): void
@@ -91,21 +91,43 @@ class CompanyControllerFiscalYearTest extends TestCase
         $this->assertTrue($fiscalYear->users()->whereKey($user->id)->exists());
     }
 
-    public function test_update_saves_company_details_and_fiscal_year_separately(): void
+    public function test_edit_and_update_company_details_leave_fiscal_years_unchanged(): void
     {
         $user = User::factory()->create();
         $company = Company::factory()->create(['name' => 'Original']);
         $fiscalYear = FiscalYear::create(['company_id' => $company->id, 'year' => 1402]);
+        $otherFiscalYear = FiscalYear::create(['company_id' => $company->id, 'year' => 1403]);
         $fiscalYear->users()->attach($user);
 
         $this->withoutMiddleware(CheckPermission::class)->actingAs($user)
-            ->put(route('companies.update', $fiscalYear), [
+            ->get(route('companies.edit', $company))
+            ->assertOk()
+            ->assertSee('Original')
+            ->assertDontSee('name="fiscal_year"', false);
+
+        $this->withoutMiddleware(CheckPermission::class)->actingAs($user)
+            ->put(route('companies.update', $company), [
                 'name' => 'Updated',
-                'fiscal_year' => 1403,
+                'fiscal_year' => 1404,
             ])
             ->assertRedirect(route('companies.index'));
 
         $this->assertSame('Updated', $company->fresh()->name);
-        $this->assertSame(1403, (int) $fiscalYear->fresh()->year);
+        $this->assertSame(1402, (int) $fiscalYear->fresh()->year);
+        $this->assertSame(1403, (int) $otherFiscalYear->fresh()->year);
+    }
+
+    public function test_company_edit_requires_access_to_one_of_its_fiscal_years(): void
+    {
+        $user = User::factory()->create();
+        $accessibleCompany = Company::factory()->create();
+        $inaccessibleCompany = Company::factory()->create();
+        FiscalYear::create(['company_id' => $accessibleCompany->id, 'year' => 1402])->users()->attach($user);
+        FiscalYear::create(['company_id' => $inaccessibleCompany->id, 'year' => 1403]);
+
+        $this->withoutMiddleware(CheckPermission::class)->actingAs($user)
+            ->get(route('companies.edit', $inaccessibleCompany))->assertForbidden();
+        $this->put(route('companies.update', $inaccessibleCompany), ['name' => 'Changed'])->assertForbidden();
+        $this->assertNotSame('Changed', $inaccessibleCompany->fresh()->name);
     }
 }
