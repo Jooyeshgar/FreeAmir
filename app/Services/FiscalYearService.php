@@ -2927,6 +2927,81 @@ class FiscalYearService
         });
     }
 
+    /** Rebuild the next year's opening document from this year's current closing document.*/
+    public static function recreateOpeningDocument(FiscalYear $fiscalYear, User $user): Document
+    {
+        return DB::transaction(function () use ($fiscalYear, $user) {
+            $fiscalYear = FiscalYear::query()->lockForUpdate()->findOrFail($fiscalYear->id);
+
+            if ($fiscalYear->closed_at === null || $fiscalYear->closing_recalculation_step !== null) {
+                throw ValidationException::withMessages([
+                    'fiscal_year' => __('Complete fiscal year closing before recreating the Opening Document.'),
+                ]);
+            }
+
+            $nextFiscalYear = FiscalYear::query()
+                ->where('company_id', $fiscalYear->company_id)
+                ->where('year', $fiscalYear->year + 1)
+                ->first();
+            $closingDocument = Document::withoutGlobalScope(FiscalYearScope::class)
+                ->where('fiscal_year_id', $fiscalYear->id)
+                ->find($fiscalYear->closing_document_id);
+
+            if (! $nextFiscalYear || ! $closingDocument) {
+                throw ValidationException::withMessages([
+                    'fiscal_year' => __('The next fiscal year or Closing Document was not found.'),
+                ]);
+            }
+
+            if (! $nextFiscalYear->users()->whereKey($user->id)->exists()) {
+                throw ValidationException::withMessages([
+                    'fiscal_year' => __('You do not have access to the next fiscal year.'),
+                ]);
+            }
+
+            $sourceTransactions = $closingDocument->transactions()->get();
+            $sourceCodes = Subject::withoutGlobalScope(FiscalYearScope::class)
+                ->where('fiscal_year_id', $fiscalYear->id)
+                ->whereIn('id', $sourceTransactions->pluck('subject_id'))
+                ->pluck('code', 'id');
+            $targetCodes = Subject::withoutGlobalScope(FiscalYearScope::class)
+                ->where('fiscal_year_id', $nextFiscalYear->id)
+                ->whereIn('code', $sourceCodes->values()->filter())
+                ->pluck('code')->all();
+
+            if ($sourceTransactions->isEmpty() || (float) $sourceTransactions->sum('value') !== 0.0
+                || $sourceTransactions->contains(fn ($transaction) => ! in_array($sourceCodes[$transaction->subject_id] ?? null, $targetCodes, true))) {
+                throw ValidationException::withMessages([
+                    'fiscal_year' => __('The Closing Document is unbalanced or its accounts are missing from the next fiscal year.'),
+                ]);
+            }
+
+            $openingDocument = Document::withoutGlobalScope(FiscalYearScope::class)
+                ->where('fiscal_year_id', $nextFiscalYear->id)
+                ->where('number', 1)
+                ->first();
+
+            if ($openingDocument) {
+                if (! in_array($openingDocument->title, [__('Fiscal year opening Document', [], 'en'), __('Fiscal year opening Document', [], 'fa')], true)
+                    || $openingDocument->documentFiles()->exists() || $openingDocument->documentable_type !== null) {
+                    throw ValidationException::withMessages([
+                        'fiscal_year' => __('Document #1 cannot be replaced because it is not an unlinked Opening Document.'),
+                    ]);
+                }
+
+                app(ActivityLogService::class)->deleteModels(Transaction::query()->where('document_id', $openingDocument->id));
+                app(ActivityLogService::class)->deleteModels(Document::withoutGlobalScope(FiscalYearScope::class)->whereKey($openingDocument->id));
+            }
+
+            self::createOpeningDocument($nextFiscalYear, $closingDocument, $user);
+
+            return Document::withoutGlobalScope(FiscalYearScope::class)
+                ->where('fiscal_year_id', $nextFiscalYear->id)
+                ->where('number', 1)
+                ->firstOrFail();
+        });
+    }
+
     protected static function newFiscalYear(FiscalYear $fiscalYear): FiscalYear
     {
         $newFiscalYearData = collect($fiscalYear->getAttributes())->except([
