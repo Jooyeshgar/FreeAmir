@@ -19,11 +19,13 @@ class PaymentController extends Controller
     {
         $request->merge([
             'amount' => convertToFloat($request->input('amount', 0)),
+            'service_fee' => $request->filled('service_fee') ? convertToFloat($request->input('service_fee')) : 0,
             'date' => $request->input('date') ? convertToGregorian($request->input('date')) : null,
         ]);
 
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'gt:0'],
+            'service_fee' => ['required', 'numeric', 'min:0'],
             'subject_id' => ['required', 'integer', 'exists:subjects,id'],
             'date' => ['nullable', 'date'],
             'description' => ['nullable', 'string', 'max:1000'],
@@ -45,6 +47,7 @@ class PaymentController extends Controller
 
         $normalized = [
             'amount' => convertToFloat($request->input('amount', 0)),
+            'service_fee' => $request->filled('service_fee') ? convertToFloat($request->input('service_fee')) : 0,
             'sayad_number' => preg_replace('/\D/', '', toEnglish((string) $request->input('sayad_number'))),
             'serial' => trim(toEnglish((string) $request->input('serial'))),
             'cheque_number' => trim(toEnglish((string) $request->input('cheque_number'))),
@@ -58,6 +61,8 @@ class PaymentController extends Controller
 
         $validated = Validator::make(array_replace($request->all(), $normalized), [
             'amount' => ['required', 'numeric', 'gt:0'],
+            'service_fee' => ['required', 'numeric', 'min:0'],
+            'fee_subject_id' => ['nullable', 'integer', 'exists:subjects,id'],
             'issue_date' => ['required', 'date'],
             'due_date' => ['required', 'date', 'after_or_equal:issue_date'],
             'serial' => ['nullable', 'string', 'max:50'],

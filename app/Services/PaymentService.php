@@ -79,8 +79,21 @@ class PaymentService
             $decision->addMessage('error', __('The selected settlement account is not a valid bank or cash subject.'));
         }
 
-        if (isset($data['amount']) && $data['amount'] > $this->remainingAmount($invoice, $except) + 0.001) {
+        $fee = (float) ($data['service_fee'] ?? 0);
+        if ($fee < 0) {
+            $decision->addMessage('error', __('Service fee must be zero or greater.'));
+        }
+
+        if (isset($data['amount']) && (float) $data['amount'] + $fee > $this->remainingAmount($invoice, $except) + $fee + 0.001) {
             $decision->addMessage('error', __('Payment amount exceeds the remaining balance of the invoice.'));
+        }
+
+        if ($fee > 0 && ! $this->feeExpenseSubjectId()) {
+            $decision->addMessage('error', __('Service fee expense account is missing or invalid for this fiscal year.'));
+        }
+
+        if ($fee > 0 && array_key_exists('fee_subject_id', $data) && ! in_array((int) $data['fee_subject_id'], $this->settlementSubjectIds(), true)) {
+            $decision->addMessage('error', __('The selected fee account is not a valid bank or cash subject.'));
         }
 
         return $decision;
@@ -96,12 +109,15 @@ class PaymentService
 
             $subjectId = (int) $data['subject_id'];
             $date = $data['date'] ?? now()->toDateString();
-            $document = $this->paymentDocument($user, $invoice, $subjectId, $data['amount'], $date);
+            $fee = (float) ($data['service_fee'] ?? 0);
+            $document = $this->paymentDocument($user, $invoice, $subjectId, $data['amount'], $date, $fee);
 
             $payment = Payment::create([
                 'invoice_id' => $invoice->id,
                 'payer_id' => $invoice->customer_id,
                 'amount' => $data['amount'],
+                'service_fee' => $fee,
+                'fee_subject_id' => $fee > 0 ? $subjectId : null,
                 'date' => $date,
                 'description' => $data['description'] ?? null,
                 'reference_number' => $data['reference_number'] ?? null,
@@ -118,11 +134,13 @@ class PaymentService
         });
     }
 
-    public function saveChequePayment(User $user, ?Invoice $invoice, Cheque $cheque, Document $document, int $settlementSubjectId, ?Payment $payment = null): Payment
+    public function saveChequePayment(User $user, ?Invoice $invoice, Cheque $cheque, Document $document, int $settlementSubjectId, ?Payment $payment = null, float $fee = 0, ?int $feeSubjectId = null): Payment
     {
         if ($invoice) {
             $decision = $this->validateInvoicePayment($invoice, [
                 'amount' => (float) $cheque->amount,
+                'service_fee' => $fee,
+                'fee_subject_id' => $feeSubjectId,
                 'date' => $cheque->write_date->toDateString(),
             ], $payment);
             if ($decision->hasErrors()) {
@@ -137,6 +155,8 @@ class PaymentService
             'cheque_id' => $cheque->id,
             'payer_id' => $cheque->direction === ChequeType::RECEIVABLE ? $cheque->customer_id : null,
             'amount' => $cheque->amount,
+            'service_fee' => $fee,
+            'fee_subject_id' => $feeSubjectId,
             'date' => $cheque->write_date,
             'description' => $cheque->desc,
             'reference_number' => $cheque->sayad_number,
@@ -179,7 +199,15 @@ class PaymentService
         }
     }
 
-    private function paymentDocument(User $user, Invoice $invoice, int $settlementSubjectId, float $amount, ?string $date = null)
+    public function feeExpenseSubjectId(): ?int
+    {
+        $subjectId = (int) config('amir.service_fee_expense');
+        $subject = $subjectId ? Subject::where('fiscal_year_id', getActiveFiscalYear())->find($subjectId) : null;
+
+        return $subject ? (int) $subject->id : null;
+    }
+
+    private function paymentDocument(User $user, Invoice $invoice, int $settlementSubjectId, float $amount, ?string $date = null, float $fee = 0)
     {
         $customerSubjectId = $invoice->customer->subject?->id ?? $invoice->customer->subject_id;
         $customerSign = in_array($invoice->invoice_type, [InvoiceType::SELL, InvoiceType::RETURN_BUY]) ? 1 : -1;
@@ -197,6 +225,11 @@ class PaymentService
                 'value' => -$customerSign * $amount,
             ],
         ];
+
+        if ($fee > 0) {
+            $transactions[] = ['subject_id' => $this->feeExpenseSubjectId(), 'desc' => __('Service fee'), 'value' => -$fee];
+            $transactions[] = ['subject_id' => $settlementSubjectId, 'desc' => __('Service fee'), 'value' => $fee];
+        }
 
         $documentData = [
             'date' => $date ?? now()->toDateString(),
@@ -300,7 +333,16 @@ class PaymentService
                 return $decision;
             }
 
-            $document = $this->paymentDocument($user, $invoice, $settlementSubjectId, (float) $payment->amount, $payment->date?->toDateString());
+            $decision = $this->validateInvoicePayment($invoice, [
+                'amount' => (float) $payment->amount,
+                'service_fee' => (float) $payment->service_fee,
+                'subject_id' => $settlementSubjectId,
+            ], $payment);
+            if ($decision->hasErrors()) {
+                return $decision;
+            }
+
+            $document = $this->paymentDocument($user, $invoice, $settlementSubjectId, (float) $payment->amount, $payment->date?->toDateString(), (float) $payment->service_fee);
 
             $payment->document_id = $document->id;
             $payment->save();

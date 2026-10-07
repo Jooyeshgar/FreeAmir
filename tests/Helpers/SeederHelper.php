@@ -16,6 +16,7 @@ trait SeederHelper
             ['type' => 3, 'category' => 1, 'key' => 'inventory', 'value' => '4', 'desc' => 'موجودی کالا', 'fiscal_year_id' => $fiscalYearId],
             ['type' => 3, 'category' => 1, 'key' => 'cost', 'value' => '6', 'desc' => 'هزینه ها', 'fiscal_year_id' => $fiscalYearId],
             ['type' => 3, 'category' => 1, 'key' => 'sundry_cost', 'value' => '7', 'desc' => 'هزینه های متفرقه', 'fiscal_year_id' => $fiscalYearId],
+            ['type' => 3, 'category' => 1, 'key' => 'service_fee_expense', 'value' => '7', 'desc' => 'هزینه کارمزد خدمات', 'fiscal_year_id' => $fiscalYearId],
             ['type' => 3, 'category' => 1, 'key' => 'cost_of_goods_sold', 'value' => '9', 'desc' => 'بهای تمام شده کالا فروش رقته', 'fiscal_year_id' => $fiscalYearId],
             ['type' => 3, 'category' => 1, 'key' => 'cogs_service', 'value' => '10', 'desc' => 'بهای تمام شده خدمات', 'fiscal_year_id' => $fiscalYearId],
             ['type' => 3, 'category' => 1, 'key' => 'buy_vat', 'value' => '12', 'desc' => 'مالیات خرید', 'fiscal_year_id' => $fiscalYearId],

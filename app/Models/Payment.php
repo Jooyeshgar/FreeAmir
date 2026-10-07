@@ -8,6 +8,8 @@ class Payment extends Model
 {
     protected $fillable = [
         'amount',
+        'service_fee',
+        'fee_subject_id',
         'date',
         'reference_number',
         'description',
@@ -21,6 +23,7 @@ class Payment extends Model
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'service_fee' => 'decimal:2',
         'date' => 'date',
     ];
 

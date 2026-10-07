@@ -3504,5 +3504,12 @@
     "Document #1 cannot be replaced because it is not an unlinked Opening Document.": "سند شماره ۱ سند افتتاحیه بدون پیوست یا رکورد مرتبط نیست و نمی‌توان آن را جایگزین کرد.",
     "Opening Document recreated successfully.": "سند افتتاحیه با موفقیت دوباره ایجاد شد.",
     "The Closing Document is unbalanced or its accounts are missing from the next fiscal year.": "سند اختتامیه تراز نیست یا حساب‌های آن در سال مالی بعد پیدا نشدند.",
-    "You do not have access to the next fiscal year.": "به سال مالی بعد دسترسی ندارید."
+    "You do not have access to the next fiscal year.": "به سال مالی بعد دسترسی ندارید.",
+    "Service fee": "کارمزد خدمات",
+    "Service fee expense": "هزینه کارمزد خدمات",
+    "Fee account": "حساب کارمزد",
+    "Service fee must be zero or greater.": "کارمزد خدمات باید صفر یا بیشتر باشد.",
+    "Service fee expense account is missing or invalid for this fiscal year.": "حساب هزینه کارمزد خدمات برای این سال مالی تنظیم نشده یا نامعتبر است.",
+    "The selected fee account is not a valid bank or cash subject.": "حساب انتخاب‌شده برای کارمزد، حساب بانکی یا نقدی معتبر نیست.",
+    "Select a bank or cash account for the service fee.": "برای کارمزد خدمات یک حساب بانکی یا نقدی انتخاب کنید."
 }

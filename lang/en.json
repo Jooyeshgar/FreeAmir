@@ -3503,5 +3503,12 @@
     "Document #1 cannot be replaced because it is not an unlinked Opening Document.": "Document #1 cannot be replaced because it is not an unlinked Opening Document.",
     "Opening Document recreated successfully.": "Opening Document recreated successfully.",
     "The Closing Document is unbalanced or its accounts are missing from the next fiscal year.": "The Closing Document is unbalanced or its accounts are missing from the next fiscal year.",
-    "You do not have access to the next fiscal year.": "You do not have access to the next fiscal year."
+    "You do not have access to the next fiscal year.": "You do not have access to the next fiscal year.",
+    "Service fee": "Service fee",
+    "Service fee expense": "Service fee expense",
+    "Fee account": "Fee account",
+    "Service fee must be zero or greater.": "Service fee must be zero or greater.",
+    "Service fee expense account is missing or invalid for this fiscal year.": "Service fee expense account is missing or invalid for this fiscal year.",
+    "The selected fee account is not a valid bank or cash subject.": "The selected fee account is not a valid bank or cash subject.",
+    "Select a bank or cash account for the service fee.": "Select a bank or cash account for the service fee."
 }

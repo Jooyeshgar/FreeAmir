@@ -73,9 +73,11 @@ class ChequeService
                 'desc' => $data['description'] ?? null,
             ]);
 
-            $document = $this->postInitialDocument($user, $cheque);
+            $fee = $invoice ? (float) ($data['service_fee'] ?? 0) : 0;
+            $feeSubjectId = $fee > 0 ? (int) $data['fee_subject_id'] : null;
+            $document = $this->postInitialDocument($user, $cheque, $fee, $feeSubjectId);
             $paymentSubject = $direction === ChequeType::RECEIVABLE ? self::DOCUMENTS_RECEIVABLE_CONFIG : self::DOCUMENTS_PAYABLE_CONFIG;
-            $payment = $invoice ? $this->paymentService->saveChequePayment($user, $invoice, $cheque, $document, $this->subject($paymentSubject)) : null;
+            $payment = $invoice ? $this->paymentService->saveChequePayment($user, $invoice, $cheque, $document, $this->subject($paymentSubject), null, $fee, $feeSubjectId) : null;
 
             $this->history($cheque, $user, null, $status, $document, $payment, $data['description'] ?? null);
 
@@ -129,10 +131,12 @@ class ChequeService
                 'desc' => $data['description'] ?? null,
             ]);
 
-            $document = $this->postInitialDocument($user, $lockedCheque);
+            $fee = $invoice ? (float) ($data['service_fee'] ?? $initialPayment?->service_fee ?? 0) : 0;
+            $feeSubjectId = $fee > 0 ? (int) ($data['fee_subject_id'] ?? $initialPayment?->fee_subject_id) : null;
+            $document = $this->postInitialDocument($user, $lockedCheque, $fee, $feeSubjectId);
             if ($initialPayment && $document) {
                 $paymentSubject = $direction === ChequeType::RECEIVABLE ? self::DOCUMENTS_RECEIVABLE_CONFIG : self::DOCUMENTS_PAYABLE_CONFIG;
-                $initialPayment = $this->paymentService->saveChequePayment($user, $invoice, $lockedCheque, $document, $this->subject($paymentSubject), $initialPayment);
+                $initialPayment = $this->paymentService->saveChequePayment($user, $invoice, $lockedCheque, $document, $this->subject($paymentSubject), $initialPayment, $fee, $feeSubjectId);
             } elseif ($initialPayment) {
                 $initialPayment->delete();
                 $initialPayment = null;
@@ -349,7 +353,7 @@ class ChequeService
         };
     }
 
-    private function postInitialDocument(User $user, Cheque $cheque): ?Document
+    private function postInitialDocument(User $user, Cheque $cheque, float $fee = 0, ?int $feeSubjectId = null): ?Document
     {
         if ($cheque->purpose === ChequeType::GUARANTEE) {
             return null;
@@ -358,15 +362,22 @@ class ChequeService
         $amount = (float) $cheque->amount;
         $writeDate = Carbon::parse($cheque->getRawOriginal('write_date'))->toDateString();
 
-        return $cheque->direction === ChequeType::RECEIVABLE
-            ? $this->post($user, $cheque, 'register', [
+        $entries = $cheque->direction === ChequeType::RECEIVABLE
+            ? [
                 [$this->subject(self::DOCUMENTS_RECEIVABLE_CONFIG), -$amount],
                 [$this->accountSideSubject($cheque), $amount],
-            ], $writeDate)
-            : $this->post($user, $cheque, 'issue', [
+            ]
+            : [
                 [$this->accountSideSubject($cheque), -$amount],
                 [$this->subject(self::DOCUMENTS_PAYABLE_CONFIG), $amount],
-            ], $writeDate);
+            ];
+
+        if ($fee > 0) {
+            $entries[] = [$this->paymentService->feeExpenseSubjectId(), -$fee];
+            $entries[] = [$feeSubjectId, $fee];
+        }
+
+        return $this->post($user, $cheque, $cheque->direction === ChequeType::RECEIVABLE ? 'register' : 'issue', $entries, $writeDate);
     }
 
     private function validateRegistrationData(array $data, ChequeType $direction, ?Cheque $except = null): void
@@ -424,10 +435,15 @@ class ChequeService
 
         $decision = $this->paymentService->validateInvoicePayment($invoice, [
             'amount' => (float) $data['amount'],
+            'service_fee' => (float) ($data['service_fee'] ?? $except?->service_fee ?? 0),
+            'fee_subject_id' => $data['fee_subject_id'] ?? $except?->fee_subject_id,
             'date' => $data['issue_date'],
         ], $except);
         if ($decision->hasErrors()) {
             throw ValidationException::withMessages(['invoice_id' => $decision->messages->pluck('text')->all()]);
+        }
+        if ((float) ($data['service_fee'] ?? $except?->service_fee ?? 0) > 0 && empty($data['fee_subject_id'] ?? $except?->fee_subject_id)) {
+            throw ValidationException::withMessages(['fee_subject_id' => __('Select a bank or cash account for the service fee.')]);
         }
     }
 

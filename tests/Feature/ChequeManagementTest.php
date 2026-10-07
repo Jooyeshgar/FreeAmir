@@ -522,6 +522,47 @@ class ChequeManagementTest extends TestCase
         $this->assertTrue($invoice->fresh()->status->isPaid());
     }
 
+    public function test_invoice_cheque_posts_fee_to_fiscal_year_expense_and_selected_bank_account(): void
+    {
+        DB::table('subjects')->insert(['id' => 204, 'code' => '040013', 'name' => 'Service fee expense', 'parent_id' => null, 'type' => 3, 'fiscal_year_id' => $this->fiscalYearId]);
+        config(['amir.service_fee_expense' => 204, 'amir.bank' => 1]);
+        $invoice = $this->invoice(InvoiceType::SELL, $this->customer, 1000);
+        $data = $this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 1000);
+        $data['service_fee'] = 2;
+        $data['fee_subject_id'] = 203;
+
+        $this->service->register($this->user, $data);
+        $payment = $invoice->payments()->firstOrFail();
+
+        $this->assertSame('2.00', $payment->service_fee);
+        $this->assertSame(203, $payment->fee_subject_id);
+        $this->assertBalanced($payment->document);
+        $this->assertEqualsWithDelta(-2, $payment->document->transactions()->where('subject_id', 204)->sum('value'), 0.01);
+        $this->assertEqualsWithDelta(2, $payment->document->transactions()->where('subject_id', 203)->sum('value'), 0.01);
+        $this->assertTrue($invoice->fresh()->status->isPaid());
+    }
+
+    public function test_buy_invoice_cheque_keeps_fee_after_document_rebuild(): void
+    {
+        DB::table('subjects')->insert(['id' => 204, 'code' => '040013', 'name' => 'Service fee expense', 'parent_id' => null, 'type' => 3, 'fiscal_year_id' => $this->fiscalYearId]);
+        config(['amir.service_fee_expense' => 204, 'amir.bank' => 1]);
+        $invoice = $this->invoice(InvoiceType::BUY, $this->vendor, 1000);
+        $data = $this->invoiceChequeData($invoice, ChequeType::PAYABLE, 1000);
+        $data['service_fee'] = 2;
+        $data['fee_subject_id'] = 203;
+
+        $cheque = $this->service->register($this->user, $data);
+        $update = $this->invoiceChequeData($invoice, ChequeType::PAYABLE, 800);
+        $update['sayad_number'] = $cheque->sayad_number;
+        $this->service->update($cheque, $this->user, $update);
+        $payment = $invoice->payments()->firstOrFail();
+
+        $this->assertSame('2.00', $payment->service_fee);
+        $this->assertBalanced($payment->document);
+        $this->assertEqualsWithDelta(-2, $payment->document->transactions()->where('subject_id', 204)->sum('value'), 0.01);
+        $this->assertTrue($invoice->fresh()->status->isPartiallyPaid());
+    }
+
     public function test_deleting_invoice_cheque_payment_removes_cheque_and_accounting_document(): void
     {
         $this->withoutMiddleware(CheckPermission::class);

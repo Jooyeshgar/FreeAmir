@@ -708,6 +708,7 @@
                                     <th class="px-4 py-3">{{ __('Date') }}</th>
                                     <th class="px-4 py-3">{{ __('Settlement Account') }}</th>
                                     <th class="px-4 py-3 text-right">{{ __('Amount') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ __('Service fee') }}</th>
                                     <th class="px-4 py-3">{{ __('Doc Number') }}</th>
                                     <th class="px-4 py-3">{{ __('Description') }}</th>
                                     <th class="px-4 py-3">{{ __('Action') }}</th>
@@ -737,6 +738,7 @@
                                         </td>
                                         <td class="px-4 py-3 text-right">{{ formatNumber((float) $payment->amount) }}
                                         </td>
+                                        <td class="px-4 py-3 text-right">{{ formatNumber((float) $payment->service_fee) }}</td>
                                         <td class="px-4 py-3">
                                             @if ($payment->document)
                                                 @can('documents.show')
@@ -913,6 +915,11 @@
                                         {{ formatNumber($remainingAmount) }}</span>
                                 </div>
                                 <div>
+                                    <label class="label"><span class="label-text">{{ __('Service fee') }}</span></label>
+                                    <x-text-input input_name="service_fee" input_class="input-bordered locale-number"
+                                        input_value="0" inputmode="decimal" />
+                                </div>
+                                <div>
                                     <label class="label"><span class="label-text">{{ __('Date') }}</span></label>
                                     <x-text-input data-jdp input_name="date" id_input="invoice_payment_date"
                                         autocomplete="off" readonly
@@ -963,6 +970,20 @@
                                                     input_value="{{ $remainingAmount }}" required x-model="amountInput"
                                                     @input="amountInput = $store.utils.cleanupNumber($event.target.value)"
                                                     x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(amountInput))" />
+                                            </div>
+                                            <div>
+                                                <label class="label"><span class="label-text">{{ __('Service fee') }}</span></label>
+                                                <x-text-input input_name="service_fee" input_class="input-bordered locale-number"
+                                                    input_value="0" inputmode="decimal" />
+                                            </div>
+                                            <div>
+                                                <label class="label"><span class="label-text">{{ __('Fee account') }}</span></label>
+                                                <select name="fee_subject_id" class="select select-bordered w-full">
+                                                    <option value="">{{ __('Select an account') }}</option>
+                                                    @foreach($settlementSubjects as $subject)
+                                                        <option value="{{ $subject->id }}">{{ $subject->fullname() }}</option>
+                                                    @endforeach
+                                                </select>
                                             </div>
                                             <div>
                                                 <label class="label"><span class="label-text">{{ __('16-digit Sayad number') }}</span></label>

@@ -2723,14 +2723,16 @@ class FiscalYearService
             $oldPayerId = $paymentData['payer_id'] ?? null;
             $oldDocumentId = $paymentData['document_id'] ?? null;
             $oldSubjectId = $paymentData['settlement_subject_id'] ?? null;
+            $oldFeeSubjectId = $paymentData['fee_subject_id'] ?? null;
 
             $newPayment = new Payment;
-            $newPayment->fill(collect($paymentData)->except(['id', 'invoice_id', 'cheque_id', 'payer_id', 'payee_id', 'document_id', 'settlement_subject_id'])->toArray());
+            $newPayment->fill(collect($paymentData)->except(['id', 'invoice_id', 'cheque_id', 'payer_id', 'payee_id', 'document_id', 'settlement_subject_id', 'fee_subject_id'])->toArray());
             $newPayment->invoice_id = $oldInvoiceId !== null ? $invoiceMapping[$oldInvoiceId] : null;
             $newPayment->cheque_id = $oldChequeId !== null ? $chequeMapping[$oldChequeId] : null;
             $newPayment->payer_id = $oldPayerId !== null ? ($customerMapping[$oldPayerId] ?? null) : null;
             $newPayment->document_id = $oldDocumentId !== null ? ($documentMapping[$oldDocumentId] ?? null) : null;
             $newPayment->settlement_subject_id = $oldSubjectId !== null ? ($subjectMapping[$oldSubjectId] ?? null) : null;
+            $newPayment->fee_subject_id = $oldFeeSubjectId !== null ? ($subjectMapping[$oldFeeSubjectId] ?? null) : null;
             $newPayment->save();
 
             $mapping[$paymentData['id']] = $newPayment->id;
