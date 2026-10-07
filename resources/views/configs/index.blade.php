@@ -1,5 +1,4 @@
 <x-app-layout :title="__('Configs')">
-    <x-user-guide-link source="management/system/configs/configs.md" />
     <div class="card bg-base-100 shadow-xl">
         <x-card class="bg-yellow-50 border-l-4 border-yellow-400 mb-5">
             <div class="flex">
@@ -20,7 +19,9 @@
         </x-card>
 
         <div class="card-body">
-            <div class="card-title">{{ __('Edit Config') }}</div>
+            <div class="card-title">{{ __('Configs') }}
+                <x-user-guide-link source="management/system/configs/configs.md" />
+            </div>
             <x-show-message-bags />
             <div class="card-body overflow-auto">
                 <table class="table w-full mt-4">

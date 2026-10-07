@@ -1,11 +1,12 @@
 <x-platform-layout :title="__('Users')">
     <x-show-message-bags />
-    <x-user-guide-link source="management/system/users/users.md" />
 
     <div class="mb-6 px-2 flex flex-col justify-between gap-4 sm:flex-row sm:items-end mt-2">
         <div>
             <p class="text-xs font-bold uppercase tracking-[0.16em] text-violet-600 dark:text-violet-400">{{ __('Identity and access') }}</p>
-            <h2 class="mt-1 text-2xl font-bold tracking-tight">{{ __('Platform users') }}</h2>
+            <h2 class="mt-1 text-2xl font-bold tracking-tight">{{ __('Platform users') }}
+                <x-user-guide-link source="management/system/users/users.md" />
+            </h2>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">{{ __('Manage accounts, company assignments, and access roles.') }}</p>
         </div>
         @can('users.create')

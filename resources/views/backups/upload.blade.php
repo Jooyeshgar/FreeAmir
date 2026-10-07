@@ -1,17 +1,19 @@
 <x-app-layout :title="__('Upload Backup')">
     <x-show-message-bags />
-    <x-user-guide-link source="management/system/upload-backup/upload-backup.md" />
 
     <div class="card bg-base-100 ">
         <div class="card-body">
-            <span class="card-title">{{ __('Upload Backup') }}</span>
+            <span class="card-title">
+                {{ __('Upload Backup') }}
+                <x-user-guide-link source="management/system/upload-backup/upload-backup.md" />
+            </span>
             <form action="{{ route('backups.import') }}" method="POST" enctype="multipart/form-data">
                 @csrf
 
                 <div class="grid grid-cols-2 gap-4">
                     <div class="col-span-2 md:col-span-1">
-                        <x-input title="{{ __('Company name') }}" name="company_name" id="company_name"
-                            :value="old('company_name', '')" placeholder="{{ __('Please enter the company name') }}" />
+                        <x-input title="{{ __('Company name') }}" name="company_name" id="company_name" :value="old('company_name', '')"
+                            placeholder="{{ __('Please enter the company name') }}" />
                     </div>
                     <div class="col-span-2 md:col-span-1" x-data="{ fiscalYear: '{{ old('fiscal_year', '') }}' }">
                         <x-input name="fiscal_year" id="fiscal_year" title="{{ __('Fiscal year') }}"

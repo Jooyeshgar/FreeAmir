@@ -2,7 +2,6 @@
     <div class="card bg-base-100">
         <div class="card-body">
             <h2 class="card-title flex-wrap">
-                <x-user-guide-link source="invoices/sells/moadian-histories/how-to-use-moadian.md" />
                 @if(isset($invoice))
                     {{ __('Moadian Histories') }}
                     <a href="{{ route('invoices.show', $invoice) }}" class="link-hover">
@@ -11,6 +10,7 @@
                 @else
                     {{ __('Moadian Histories') }}
                 @endif
+                <x-user-guide-link source="invoices/sells/moadian-histories/how-to-use-moadian.md" />
             </h2>
 
             <x-show-message-bags />
