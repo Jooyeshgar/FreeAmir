@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Enums\FiscalYearSection;
-use App\Http\Requests\TestMoadianConnectionRequest;
 use App\Models\Company;
 use App\Models\Document;
 use App\Models\DocumentFile;
@@ -373,14 +372,21 @@ class CompanyController extends Controller
         }];
     }
 
-    public function testMoadianConnection(TestMoadianConnectionRequest $request, Company $company, MoadianService $moadianService): JsonResponse
+    public function testMoadianConnection(Request $request, Company $company, MoadianService $moadianService): JsonResponse
     {
         $this->ensureCompanyAccess($company);
 
+        $validated = $request->validate([
+            'moadian_username' => ['required', 'string', 'max:20'],
+            'tax_id' => ['required', 'string', 'regex:/^(\d{11}|\d{14})$/'],
+            'certificate' => ['required', 'file', 'extensions:crt,cer', 'max:1024'],
+            'private_key' => ['required', 'file', 'extensions:pem', 'max:1024'],
+        ]);
+
         try {
             $connected = $moadianService->testConnection(
-                $request->validated('moadian_username'),
-                $request->validated('tax_id'),
+                $validated['moadian_username'],
+                $validated['tax_id'],
                 $request->file('private_key')->getContent(),
                 $request->file('certificate')->getContent(),
             );

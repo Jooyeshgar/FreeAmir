@@ -3498,6 +3498,11 @@
     "All stock levels were above their reorder points at period end": "All stock levels were above their reorder points at period end",
     ":count item(s) had no movement for :days days as of period end": ":count item(s) had no movement for :days days as of period end",
     "No stagnant inventory at period end": "No stagnant inventory at period end",
+    "Test Moadian Connection": "Test Moadian Connection",
+    "The connection test uses saved settings. Save any changes first.": "The connection test uses saved settings. Save any changes first.",
+    "Connection to Moadian succeeded.": "Connection to Moadian succeeded.",
+    "Connection to Moadian failed. Please check the saved settings and try again.": "Connection to Moadian failed. Please check the saved settings and try again.",
+    "Configure the Moadian username, certificate and private key before checking the connection or invoice status.": "Configure the Moadian username, certificate and private key before checking the connection or invoice status.",
     "The connection test uses the entered settings and selected key files without saving. Select both key files for each test.": "The connection test uses the entered settings and selected key files without saving. Select both key files for each test.",
     "Connection to Moadian failed. Please check the entered settings and try again.": "Connection to Moadian failed. Please check the entered settings and try again."
 }
