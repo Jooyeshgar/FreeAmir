@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
@@ -106,8 +106,8 @@ class TrialBalanceService
 
     private function validateTrialBalanceFilters(Request $request): void
     {
-        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
-        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
         $fiscalStartDate = $fiscalStart->toDateString();
         $fiscalEndDate = $fiscalEnd->toDateString();
 
@@ -161,8 +161,8 @@ class TrialBalanceService
 
     private function normalizeTrialBalanceFilters(Request $request): array
     {
-        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
-        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
 
         return [
             'start_date' => $request->filled('start_date') ? jalaliInputToGregorian($request->input('start_date'), 'start_date') : $fiscalStart->toDateString(),

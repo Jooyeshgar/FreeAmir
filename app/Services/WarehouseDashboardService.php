@@ -63,8 +63,8 @@ class WarehouseDashboardService
     public function dashboard(array $rawFilters = []): array
     {
         $filters = $this->normalizeFilters($rawFilters);
-        $company = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
-        [$fiscalStart, $fiscalEnd] = $company->range();
+        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
         [$from, $to] = $this->periodRange($filters['period'], $fiscalStart, $fiscalEnd);
 
         $productGroups = ProductGroup::orderBy('name')->get(['id', 'name']);
@@ -176,7 +176,8 @@ class WarehouseDashboardService
             ->whereHas('invoice', function (Builder $q) use ($from, $to) {
                 $q->whereIn('status', InvoiceStatus::approvedOrSettled())
                     ->whereIn('invoice_type', array_merge(self::STOCK_IN_TYPES, self::STOCK_OUT_TYPES))
-                    ->whereBetween('date', [$from->toDateString(), $to->toDateString()]);
+                    ->whereDate('date', '>=', $from->toDateString())
+                    ->whereDate('date', '<=', $to->toDateString());
             })
             ->when($categoryId, function (Builder $q, int $id) {
                 $q->whereHasMorph('itemable', Product::class, fn (Builder $p) => $p->where('group', $id));
@@ -234,7 +235,8 @@ class WarehouseDashboardService
                 [InvoiceType::BEGINNING_INVENTORY, ...self::STOCK_IN_TYPES, ...self::STOCK_OUT_TYPES]
             ))
             ->where('invoices.fiscal_year_id', getActiveFiscalYear())
-            ->whereBetween('invoices.date', [$fiscalStart->toDateString(), $to->toDateString()])
+            ->whereDate('invoices.date', '>=', $fiscalStart->toDateString())
+            ->whereDate('invoices.date', '<=', $to->toDateString())
             ->when($categoryId, function ($q, int $id) {
                 $q->join('products', 'products.id', '=', 'invoice_items.itemable_id')
                     ->where('products.group', $id);
@@ -572,7 +574,9 @@ class WarehouseDashboardService
         return Transaction::query()
             ->whereIn('subject_id', $subjectIds)
             ->join('documents', 'documents.id', '=', 'transactions.document_id')
-            ->whereBetween('documents.date', [$fiscalStart->toDateString(), $to->toDateString()])
+            ->where('documents.fiscal_year_id', getActiveFiscalYear())
+            ->whereDate('documents.date', '>=', $fiscalStart->toDateString())
+            ->whereDate('documents.date', '<=', $to->toDateString())
             ->selectRaw('subject_id, SUM(value) as total')
             ->groupBy('subject_id')
             ->pluck('total', 'subject_id')
@@ -895,8 +899,8 @@ class WarehouseDashboardService
 
     private function fiscalYearToDate(): array
     {
-        $company = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
-        [$from, $fiscalEnd] = $company->range();
+        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        [$from, $fiscalEnd] = $fiscalYear->range();
         $to = Carbon::now()->endOfDay();
 
         if ($to->greaterThan($fiscalEnd)) {
@@ -916,7 +920,8 @@ class WarehouseDashboardService
             ->whereHas('invoice', function (Builder $q) use ($from, $to) {
                 $q->where('status', InvoiceStatus::APPROVED)
                     ->whereIn('invoice_type', array_merge(self::STOCK_IN_TYPES, self::STOCK_OUT_TYPES))
-                    ->whereBetween('date', [$from->toDateString(), $to->toDateString()]);
+                    ->whereDate('date', '>=', $from->toDateString())
+                    ->whereDate('date', '<=', $to->toDateString());
             })->with('invoice:id,invoice_type')->get(['id', 'invoice_id', 'itemable_id', 'quantity']);
 
         $map = [];
@@ -985,10 +990,11 @@ class WarehouseDashboardService
 
     private function reportLogo(): ?string
     {
+        $company = FiscalYear::find(getActiveFiscalYear())?->company;
 
         $candidates = [];
-        if ($fiscalYear?->logo) {
-            $candidates[] = storage_path('app/public/'.$fiscalYear->logo);
+        if ($company?->logo) {
+            $candidates[] = storage_path('app/public/'.$company->logo);
         }
         $candidates[] = public_path('images/logo.png');
 

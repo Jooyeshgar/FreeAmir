@@ -344,12 +344,12 @@ class HomeServiceChartTest extends TestCase
             'code' => '901',
             'name' => 'Fiscal year income',
             'parent_id' => null,
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'type' => SubjectType::CREDITOR,
             'is_permanent' => false,
         ]);
-        $company = Company::withoutGlobalScopes()->findOrFail($this->companyId);
-        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail($this->fiscalYearId);
+        [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
 
         foreach ([
             [$fiscalStart->copy()->subDay()->toDateString(), 100],
