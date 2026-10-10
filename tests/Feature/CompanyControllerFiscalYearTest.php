@@ -139,7 +139,8 @@ class CompanyControllerFiscalYearTest extends TestCase
         $company = Company::factory()->create();
         $assignedYear = FiscalYear::create(['company_id' => $company->id, 'year' => 1402]);
         $assignedYear->users()->attach($user);
-        $unassignedYear = FiscalYear::factory()->create();
+        $unassignedCompany = Company::factory()->create();
+        $unassignedYear = FiscalYear::create(['company_id' => $unassignedCompany->id, 'year' => 1403]);
 
         $this->mock(MoadianService::class)
             ->shouldReceive('testConnection')
