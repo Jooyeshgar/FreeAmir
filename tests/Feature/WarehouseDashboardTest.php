@@ -271,10 +271,48 @@ class WarehouseDashboardTest extends TestCase
         $this->assertSame(7.0, $data['belowReorderItems']->first()['quantity']);
     }
 
+    public function test_dashboard_excludes_other_years_and_companies_even_with_shared_product_references(): void
+    {
+        $year = FiscalYear::findOrFail($this->fiscalYearId);
+        $otherYear = FiscalYear::create(['company_id' => $year->company_id, 'year' => 1404]);
+        $otherCompanyYear = FiscalYear::factory()->create(['year' => 1405]);
+        $group = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $year->id]);
+        $product = Product::factory()->withGroup($group)->withSubjects()->create(['fiscal_year_id' => $year->id]);
+        $date = Carbon::now()->subDays(5)->toDateString();
+        $this->stockMovement($product, InvoiceType::BEGINNING_INVENTORY, 10, 1, $date);
+        $this->inventoryBalance($product, -1000, $date);
+
+        foreach ([$otherYear, $otherCompanyYear] as $foreignYear) {
+            $invoice = $this->invoice(InvoiceType::SELL, InvoiceStatus::APPROVED, 2, $date, 900);
+            $invoice->update(['fiscal_year_id' => $foreignYear->id]);
+            InvoiceItem::factory()->create([
+                'invoice_id' => $invoice->id,
+                'itemable_type' => Product::class,
+                'itemable_id' => $product->id,
+                'quantity' => 9,
+                'cog_after' => 100,
+            ]);
+            $document = Document::factory()->create(['fiscal_year_id' => $foreignYear->id, 'date' => $date]);
+            Transaction::create([
+                'document_id' => $document->id,
+                'subject_id' => $product->inventory_subject_id,
+                'user_id' => $this->user->id,
+                'value' => -9000,
+            ]);
+        }
+
+        $data = app(WarehouseDashboardService::class)->dashboard(['period' => 'month']);
+
+        $this->assertSame(10.0, $data['summary']['total_stock_quantity']);
+        $this->assertSame(1000.0, $data['summary']['total_inventory_value']);
+        $this->assertTrue($data['topSellers']->isEmpty());
+        $this->assertSame(0.0, $data['categoryBreakdown']->first()['units_out']);
+    }
+
     public function test_holding_days_include_both_period_endpoints_for_every_preset(): void
     {
-        $company = FiscalYear::withoutGlobalScopes()->findOrFail($this->fiscalYearId);
-        [$fiscalStart, $fiscalEnd] = $company->range();
+        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail($this->fiscalYearId);
+        [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
         $group = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $product = Product::factory()->withGroup($group)->withSubjects()->create([
             'fiscal_year_id' => $this->fiscalYearId,
@@ -441,9 +479,9 @@ class WarehouseDashboardTest extends TestCase
 
     public function test_report_clamps_movements_to_the_end_of_a_closed_fiscal_year(): void
     {
-        $company = FiscalYear::withoutGlobalScopes()->findOrFail($this->fiscalYearId);
-        $company->update(['year' => 1404]);
-        [$fiscalStart, $fiscalEnd] = $company->range();
+        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail($this->fiscalYearId);
+        $fiscalYear->update(['year' => 1404]);
+        [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
 
         $group = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $product = Product::factory()->withGroup($group)->withSubjects()->create([

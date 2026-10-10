@@ -147,8 +147,8 @@ class ReportsController extends Controller
             }
         }
 
-        $company = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
-        [$fiscalStart, $fiscalEnd] = $company->range();
+        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
         $startDate = $validated['start_date'] ?? $fiscalStart->toDateString();
         $endDate = $validated['end_date'] ?? $fiscalEnd->toDateString();
 
@@ -335,8 +335,8 @@ class ReportsController extends Controller
             }
         })->validate();
 
-        $company = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
-        [$fiscalStart, $fiscalEnd] = $company->range();
+        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
         $startDate = isset($validated['start_date']) ? jalaliInputToGregorian($validated['start_date'], 'start_date') : $fiscalStart->toDateString();
         $endDate = isset($validated['end_date']) ? jalaliInputToGregorian($validated['end_date'], 'end_date') : $fiscalEnd->toDateString();
 
