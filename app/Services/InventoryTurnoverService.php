@@ -8,7 +8,6 @@ use App\Models\Company;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Warehouse;
-use Carbon\Carbon;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -97,6 +96,11 @@ class InventoryTurnoverService
 
     private function validateFilters(array $rawFilters): array
     {
+        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
+        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+        $fiscalStartDate = $fiscalStart->toDateString();
+        $fiscalEndDate = $fiscalEnd->toDateString();
+
         $dateRule = function (string $attribute, mixed $value, $fail): void {
             try {
                 jalaliInputToGregorian((string) $value, $attribute);
@@ -110,28 +114,44 @@ class InventoryTurnoverService
             'end_date' => ['bail', 'nullable', 'string', $dateRule],
             'warehouse_id' => ['nullable', 'integer', Rule::exists('warehouses', 'id')->where('company_id', getActiveCompany())],
             'product_group' => ['nullable', 'integer', Rule::exists('product_groups', 'id')->where('company_id', getActiveCompany())],
-        ])->after(function ($validator) use ($rawFilters): void {
-            if (empty($rawFilters['start_date']) || empty($rawFilters['end_date']) || $validator->errors()->hasAny(['start_date', 'end_date'])) {
+        ])->after(function ($validator) use ($rawFilters, $fiscalStartDate, $fiscalEndDate): void {
+            if ($validator->errors()->hasAny(['start_date', 'end_date'])) {
                 return;
             }
 
-            if (jalaliInputToGregorian($rawFilters['start_date'], 'start_date') > jalaliInputToGregorian($rawFilters['end_date'], 'end_date')) {
+            $startDate = ! empty($rawFilters['start_date'])
+                ? jalaliInputToGregorian($rawFilters['start_date'], 'start_date')
+                : $fiscalStartDate;
+            $endDate = ! empty($rawFilters['end_date'])
+                ? jalaliInputToGregorian($rawFilters['end_date'], 'end_date')
+                : $fiscalEndDate;
+
+            if ($startDate < $fiscalStartDate || $startDate > $fiscalEndDate) {
+                $validator->errors()->add('start_date', __('The start date must be within the active fiscal year.'));
+            }
+
+            if ($endDate < $fiscalStartDate || $endDate > $fiscalEndDate) {
+                $validator->errors()->add('end_date', __('The end date must be within the active fiscal year.'));
+            }
+
+            if ($startDate > $endDate) {
                 $validator->errors()->add('start_date', __('Start date cannot be greater than end date.'));
             }
         })->validate();
 
-        $company = Company::query()->findOrFail(getActiveCompany());
-        $defaultStartDate = Carbon::parse(jalali_to_gregorian($company->fiscal_year, 1, 1, '/'))->addDays(4)->format('Y-m-d');
-        $defaultEndDate = Carbon::parse(jalali_to_gregorian($company->fiscal_year, jdate('m'), jdate('d'), '/'))->format('Y-m-d');
-        $selectedStartDate = ! empty($rawFilters['start_date']) ? jalaliInputToGregorian($rawFilters['start_date'], 'start_date') : $defaultStartDate;
-        $selectedEndDate = ! empty($rawFilters['end_date']) ? jalaliInputToGregorian($rawFilters['end_date'], 'end_date') : $defaultEndDate;
+        $selectedStartDate = ! empty($rawFilters['start_date'])
+            ? jalaliInputToGregorian($rawFilters['start_date'], 'start_date')
+            : $fiscalStartDate;
+        $selectedEndDate = ! empty($rawFilters['end_date'])
+            ? jalaliInputToGregorian($rawFilters['end_date'], 'end_date')
+            : $fiscalEndDate;
 
         return [
             'start_date' => $selectedStartDate,
             'end_date' => $selectedEndDate,
             'warehouse_id' => ! empty($rawFilters['warehouse_id']) ? (int) $rawFilters['warehouse_id'] : null,
             'product_group' => ! empty($rawFilters['product_group']) ? (int) $rawFilters['product_group'] : null,
-            'is_interval' => $selectedStartDate !== $defaultStartDate || $selectedEndDate !== $defaultEndDate,
+            'is_interval' => $selectedStartDate !== $fiscalStartDate || $selectedEndDate !== $fiscalEndDate,
         ];
     }
 

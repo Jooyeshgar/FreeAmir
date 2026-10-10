@@ -149,8 +149,8 @@ class ReportsController extends Controller
 
         $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
         [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
-        $startDate = $validated['start_date'] ?? null;
-        $endDate = $validated['end_date'] ?? null;
+        $startDate = $validated['start_date'] ?? $fiscalStart->toDateString();
+        $endDate = $validated['end_date'] ?? $fiscalEnd->toDateString();
 
         if ($startDate && ($startDate < $fiscalStart->toDateString() || $startDate > $fiscalEnd->toDateString())) {
             throw ValidationException::withMessages([
@@ -173,8 +173,8 @@ class ReportsController extends Controller
         return [
             'start_date' => $startDate,
             'end_date' => $endDate,
-            'start_date_input' => $startDate ? convertToJalali($startDate, true) : '',
-            'end_date_input' => $endDate ? convertToJalali($endDate, true) : '',
+            'start_date_input' => convertToJalali($startDate, true),
+            'end_date_input' => convertToJalali($endDate, true),
         ];
     }
 
@@ -303,10 +303,6 @@ class ReportsController extends Controller
             'end_date' => $this->normalizeReportDateInput($request->input('end_date')),
         ]);
 
-        if ($request->input('action') === 'preview') {
-            return redirect()->route('transactions.index', $request->except(['action', 'report_for']));
-        }
-
         $dateRule = function (string $attribute, mixed $value, $fail): void {
             try {
                 jalaliInputToGregorian((string) $value, $attribute);
@@ -339,13 +335,36 @@ class ReportsController extends Controller
             }
         })->validate();
 
-        $startDate = isset($validated['start_date']) ? jalaliInputToGregorian($validated['start_date'], 'start_date') : null;
-        $endDate = isset($validated['end_date']) ? jalaliInputToGregorian($validated['end_date'], 'end_date') : null;
+        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
+        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+        $startDate = isset($validated['start_date']) ? jalaliInputToGregorian($validated['start_date'], 'start_date') : $fiscalStart->toDateString();
+        $endDate = isset($validated['end_date']) ? jalaliInputToGregorian($validated['end_date'], 'end_date') : $fiscalEnd->toDateString();
+
+        if ($startDate && ($startDate < $fiscalStart->toDateString() || $startDate > $fiscalEnd->toDateString())) {
+            throw ValidationException::withMessages([
+                'start_date' => __('The start date must be within the active fiscal year.'),
+            ]);
+        }
+
+        if ($endDate && ($endDate < $fiscalStart->toDateString() || $endDate > $fiscalEnd->toDateString())) {
+            throw ValidationException::withMessages([
+                'end_date' => __('The end date must be within the active fiscal year.'),
+            ]);
+        }
 
         if ($startDate && $endDate && Carbon::parse($startDate)->isAfter(Carbon::parse($endDate))) {
             throw ValidationException::withMessages([
                 'start_date' => __('Start date cannot be greater than end date.'),
             ]);
+        }
+
+        $request->merge([
+            'start_date' => $validated['start_date'] ?? convertToJalali($startDate, true),
+            'end_date' => $validated['end_date'] ?? convertToJalali($endDate, true),
+        ]);
+
+        if ($request->input('action') === 'preview') {
+            return redirect()->route('transactions.index', $request->except(['action', 'report_for']));
         }
 
         if ($request->report_for == 'Journal' && $request->input('action') === 'export_csv') {

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Models\Company;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Employee;
@@ -264,8 +265,19 @@ class ReportExportService
             }
         })->validate();
 
-        $startDate = $this->reportDate($validated['start_date'] ?? null, 'start_date');
-        $endDate = $this->reportDate($validated['end_date'] ?? null, 'end_date');
+        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
+        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+        $startDate = $this->reportDate($validated['start_date'] ?? null, 'start_date') ?? $fiscalStart->toDateString();
+        $endDate = $this->reportDate($validated['end_date'] ?? null, 'end_date') ?? $fiscalEnd->toDateString();
+
+        if ($startDate && ($startDate < $fiscalStart->toDateString() || $startDate > $fiscalEnd->toDateString())) {
+            throw ValidationException::withMessages(['start_date' => __('The start date must be within the active fiscal year.')]);
+        }
+
+        if ($endDate && ($endDate < $fiscalStart->toDateString() || $endDate > $fiscalEnd->toDateString())) {
+            throw ValidationException::withMessages(['end_date' => __('The end date must be within the active fiscal year.')]);
+        }
+
         if ($startDate && $endDate && Carbon::parse($startDate)->isAfter(Carbon::parse($endDate))) {
             throw ValidationException::withMessages(['start_date' => __('Start date cannot be greater than end date.')]);
         }
@@ -274,8 +286,8 @@ class ReportExportService
             $documentFilters = [
                 'start_document_number' => $validated['start_document_number'] ?? null,
                 'end_document_number' => $validated['end_document_number'] ?? null,
-                'start_date' => $validated['start_date'] ?? null,
-                'end_date' => $validated['end_date'] ?? null,
+                'start_date' => $validated['start_date'] ?? convertToJalali($startDate, true),
+                'end_date' => $validated['end_date'] ?? convertToJalali($endDate, true),
                 'text' => $validated['search'] ?? null,
                 'columns_selected' => $validated['columns_selected'] ?? null,
                 'columns' => $validated['columns'] ?? [],

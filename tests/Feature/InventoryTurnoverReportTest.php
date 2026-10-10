@@ -47,7 +47,7 @@ class InventoryTurnoverReportTest extends TestCase
         parent::setUp();
 
         app()->setLocale('en');
-        $this->company = Company::factory()->create(['name' => 'Test Company', 'fiscal_year' => 1405]);
+        $this->company = Company::factory()->create(['name' => 'Test Company', 'fiscal_year' => 1404]);
         $this->user = User::factory()->create();
         $this->company->users()->attach($this->user);
         $this->withCookies(['active-company-id' => (string) $this->company->id]);
@@ -115,8 +115,8 @@ class InventoryTurnoverReportTest extends TestCase
     public function test_full_fiscal_year_values_imports_and_exports_at_the_product_average_cost(): void
     {
         $this->product->update(['average_cost' => 135]);
-        $this->movement(InvoiceType::BUY, '2026-04-05', 4, -400, 1, cogAfter: 100);
-        $this->movement(InvoiceType::SELL, '2026-04-06', 2, 200, 2, cogAfter: 100);
+        $this->movement(InvoiceType::BUY, '2026-02-05', 4, -400, 1, cogAfter: 100);
+        $this->movement(InvoiceType::SELL, '2026-02-06', 2, 200, 2, cogAfter: 100);
 
         $service = app(InventoryTurnoverService::class);
         $report = $service->report();
@@ -281,6 +281,27 @@ class InventoryTurnoverReportTest extends TestCase
             'start_date' => '2026/03/01',
             'end_date' => '2026/02/28',
         ]))->assertRedirect(route('reports.inventory-turnover'))->assertSessionHasErrors('start_date');
+    }
+
+    public function test_report_defaults_to_fiscal_year_and_rejects_dates_outside_it(): void
+    {
+        [$fiscalStart, $fiscalEnd] = $this->company->fiscalYearRange();
+
+        $report = app(InventoryTurnoverService::class)->report();
+
+        $this->assertSame($fiscalStart->toDateString(), $report['filters']['start_date']);
+        $this->assertSame($fiscalEnd->toDateString(), $report['filters']['end_date']);
+
+        $this->grant('reports.inventory-turnover');
+        $this->actingAs($this->user)->get(route('reports.inventory-turnover', [
+            'start_date' => $fiscalStart->copy()->subDay()->toDateString(),
+            'end_date' => $fiscalEnd->toDateString(),
+        ]))->assertSessionHasErrors('start_date');
+
+        $this->actingAs($this->user)->get(route('reports.inventory-turnover', [
+            'start_date' => $fiscalStart->toDateString(),
+            'end_date' => $fiscalEnd->copy()->addDay()->toDateString(),
+        ]))->assertSessionHasErrors('end_date');
     }
 
     public function test_pdf_has_company_creation_date_and_page_count_in_its_header(): void

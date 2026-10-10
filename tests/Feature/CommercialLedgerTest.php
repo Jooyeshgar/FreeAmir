@@ -250,6 +250,23 @@ class CommercialLedgerTest extends TestCase
         $this->post(route('commercial-ledgers.store'), $payload)->assertSessionHasErrors('from_date');
     }
 
+    public function test_generation_rejects_dates_outside_the_active_fiscal_year(): void
+    {
+        $payload = $this->payload('csv');
+        $payload['from_date'] = '1402/12/29';
+
+        $this->post(route('commercial-ledgers.store'), $payload)
+            ->assertSessionHasErrors('from_date');
+
+        $payload = $this->payload('csv');
+        $payload['to_date'] = '1404/01/01';
+
+        $this->post(route('commercial-ledgers.store'), $payload)
+            ->assertSessionHasErrors('to_date');
+
+        $this->assertDatabaseCount('commercial_ledger_exports', 0);
+    }
+
     public function test_generation_rejects_unbalanced_documents_before_writing_a_file(): void
     {
         $this->createTransaction(15, '1403/05/10', -125000, 'خرید ناقص');

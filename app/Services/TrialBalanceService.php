@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Company;
 use App\Models\Subject;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
@@ -33,7 +34,7 @@ class TrialBalanceService
             // Opening columns: only documents 1 and 2
             $documentNumbers = $filters['start_document_number'] <= 2 ? [$filters['start_document_number'] - 1] : [1, 2];
 
-            [$openingDebit, $openingCredit] = $this->aggregateSubjectColumns($subject, [], $documentNumbers);
+            [$openingDebit, $openingCredit] = $this->aggregateSubjectColumns($subject, $filters, $documentNumbers);
 
             // Turnover columns: respect filters, by default starting from document 3 and excluding 1 and 2
             [$turnoverDebit, $turnoverCredit] = $this->aggregateSubjectColumns($subject, $filters);
@@ -53,8 +54,8 @@ class TrialBalanceService
             'subject_name' => $subjectName,
             'currentParent' => $currentParent,
             'include_children' => $includeChildren,
-            'start_date' => $request->input('start_date'),
-            'end_date' => $request->input('end_date'),
+            'start_date' => convertToJalali($filters['start_date'], true),
+            'end_date' => convertToJalali($filters['end_date'], true),
             'start_document_number' => $request->input('start_document_number', 3),
             'end_document_number' => $request->input('end_document_number'),
         ];
@@ -105,6 +106,11 @@ class TrialBalanceService
 
     private function validateTrialBalanceFilters(Request $request): void
     {
+        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
+        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+        $fiscalStartDate = $fiscalStart->toDateString();
+        $fiscalEndDate = $fiscalEnd->toDateString();
+
         $dateRule = function (string $attribute, mixed $value, $fail): void {
             try {
                 jalaliInputToGregorian((string) $value, $attribute);
@@ -121,30 +127,46 @@ class TrialBalanceService
             'end_document_number' => 'nullable|numeric',
             'start_date' => ['bail', 'nullable', 'string', $dateRule],
             'end_date' => ['bail', 'nullable', 'string', $dateRule],
-        ])->after(function ($validator) use ($request) {
+        ])->after(function ($validator) use ($request, $fiscalStartDate, $fiscalEndDate) {
             if ($request->filled('start_document_number') && $request->filled('end_document_number')) {
                 if ((int) $request->start_document_number > (int) $request->end_document_number) {
                     $validator->errors()->add('start_document_number', __('Start document number cannot be greater than end document number.'));
                 }
             }
 
-            if ($request->filled('start_date') && $request->filled('end_date')
-                && ! $validator->errors()->hasAny(['start_date', 'end_date'])) {
-                $startDate = jalaliInputToGregorian($request->input('start_date'), 'start_date');
-                $endDate = jalaliInputToGregorian($request->input('end_date'), 'end_date');
+            if ($validator->errors()->hasAny(['start_date', 'end_date'])) {
+                return;
+            }
 
-                if ($startDate > $endDate) {
-                    $validator->errors()->add('start_date', __('Start date cannot be greater than end date.'));
-                }
+            $startDate = $request->filled('start_date')
+                ? jalaliInputToGregorian($request->input('start_date'), 'start_date')
+                : null;
+            $endDate = $request->filled('end_date')
+                ? jalaliInputToGregorian($request->input('end_date'), 'end_date')
+                : null;
+
+            if ($startDate && ($startDate < $fiscalStartDate || $startDate > $fiscalEndDate)) {
+                $validator->errors()->add('start_date', __('The start date must be within the active fiscal year.'));
+            }
+
+            if ($endDate && ($endDate < $fiscalStartDate || $endDate > $fiscalEndDate)) {
+                $validator->errors()->add('end_date', __('The end date must be within the active fiscal year.'));
+            }
+
+            if ($startDate && $endDate && $startDate > $endDate) {
+                $validator->errors()->add('start_date', __('Start date cannot be greater than end date.'));
             }
         })->validate();
     }
 
     private function normalizeTrialBalanceFilters(Request $request): array
     {
+        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
+        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+
         return [
-            'start_date' => $request->filled('start_date') ? jalaliInputToGregorian($request->input('start_date'), 'start_date') : null,
-            'end_date' => $request->filled('end_date') ? jalaliInputToGregorian($request->input('end_date'), 'end_date') : null,
+            'start_date' => $request->filled('start_date') ? jalaliInputToGregorian($request->input('start_date'), 'start_date') : $fiscalStart->toDateString(),
+            'end_date' => $request->filled('end_date') ? jalaliInputToGregorian($request->input('end_date'), 'end_date') : $fiscalEnd->toDateString(),
             'start_document_number' => $request->filled('start_document_number') ? (int) $request->input('start_document_number') : 3,
             'end_document_number' => $request->filled('end_document_number') ? (int) $request->input('end_document_number') : null,
         ];
@@ -167,13 +189,14 @@ class TrialBalanceService
                 $query->where('documents.number', '<=', $filters['end_document_number']);
             }
 
-            if ($filters['start_date']) {
-                $query->where('documents.date', '>=', $filters['start_date']);
-            }
+        }
 
-            if ($filters['end_date']) {
-                $query->where('documents.date', '<=', $filters['end_date']);
-            }
+        if ($filters['start_date']) {
+            $query->where('documents.date', '>=', $filters['start_date']);
+        }
+
+        if ($filters['end_date']) {
+            $query->where('documents.date', '<=', $filters['end_date']);
         }
 
         $sums = $query->selectRaw('
