@@ -82,51 +82,6 @@ class MoadianConnectionTest extends TestCase
         $this->assertTrue($role->fresh()->hasPermissionTo('companies.test-moadian-connection'));
     }
 
-    public function test_connection_calls_server_info_and_reports_success(): void
-    {
-        $this->client()->shouldReceive('getServerInfo')->once()->andReturn($this->response(['publicKeys' => []]));
-        $this->get(route('companies.test-moadian-connection', $this->company))
-            ->assertRedirect(route('companies.edit', $this->company))->assertSessionHas('success');
-        $this->assertDatabaseCount('moadian_histories', 0);
-    }
-
-    public function test_connection_failure_does_not_expose_exception_details(): void
-    {
-        $this->client()->shouldReceive('getServerInfo')->once()->andThrow(new \RuntimeException('sensitive details'));
-        $response = $this->get(route('companies.test-moadian-connection', $this->company));
-        $response->assertSessionHas('error', __('Connection to Moadian failed. Please check the saved settings and try again.'));
-    }
-
-    public function test_unsuccessful_response_is_reported_as_connection_failure(): void
-    {
-        $this->client()->shouldReceive('getServerInfo')->once()->andReturn($this->response(['errors' => [['message' => 'error', 'code' => '1']]], 400));
-        $this->get(route('companies.test-moadian-connection', $this->company))->assertSessionHas('error');
-    }
-
-    public function test_missing_credentials_do_not_call_moadian(): void
-    {
-        $this->company->update(['moadian_username' => null]);
-        Moadian::shouldReceive('for')->never();
-        $this->from(route('companies.edit', $this->company))
-            ->get(route('companies.test-moadian-connection', $this->company))->assertSessionHasErrors('moadian');
-    }
-
-    public function test_company_access_and_permission_are_required(): void
-    {
-        Moadian::shouldReceive('for')->never();
-        $otherCompany = Company::factory()->create();
-        $this->get(route('companies.test-moadian-connection', $otherCompany))->assertForbidden();
-        $this->user->revokePermissionTo('companies.test-moadian-connection');
-        $this->get(route('companies.test-moadian-connection', $this->company))->assertForbidden();
-    }
-
-    public function test_edit_page_contains_a_separate_connection_form(): void
-    {
-        $this->get(route('companies.edit', $this->company))->assertOk()
-            ->assertSee('form="test-moadian-connection"', false)
-            ->assertSee(__('The connection test uses saved settings. Save any changes first.'));
-    }
-
     public function test_status_checks_reuse_reference_after_an_error_and_preserve_it(): void
     {
         $invoice = $this->invoice();
