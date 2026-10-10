@@ -83,6 +83,18 @@ class Invoice extends Model
         return $this->hasMany(AncillaryCost::class, 'invoice_id');
     }
 
+    public function moadianReferenceNumber(): ?string
+    {
+        foreach ($this->moadianHistories()->orderByDesc('id')->get() as $history) {
+            $referenceNumber = $history->data['referenceNumber'] ?? null;
+            if (is_string($referenceNumber) && trim($referenceNumber) !== '') {
+                return $referenceNumber;
+            }
+        }
+
+        return null;
+    }
+
     public function moadianHistories()
     {
         return $this->hasMany(MoadianHistory::class, 'invoice_id');

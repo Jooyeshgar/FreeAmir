@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\CompanyOverviewService;
 use App\Services\FiscalYearService;
+use App\Services\MoadianService;
 use Cookie;
 use Database\Seeders\BankSeeder;
 use Database\Seeders\ConfigSeeder;
@@ -19,6 +20,7 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\ServiceGroupSeeder;
 use Database\Seeders\SubjectSeeder;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -368,6 +370,34 @@ class CompanyController extends Controller
                 $fail(__('The certificate file must contain a valid X.509 certificate.'));
             }
         }];
+    }
+
+    public function testMoadianConnection(Request $request, Company $company, MoadianService $moadianService): JsonResponse
+    {
+        $this->ensureCompanyAccess($company);
+
+        $validated = $request->validate([
+            'moadian_username' => ['required', 'string', 'max:20'],
+            'tax_id' => ['required', 'string', 'regex:/^(\d{11}|\d{14})$/'],
+            'certificate' => ['required', 'file', 'extensions:crt,cer', 'max:1024'],
+            'private_key' => ['required', 'file', 'extensions:pem', 'max:1024'],
+        ]);
+
+        try {
+            $connected = $moadianService->testConnection(
+                $validated['moadian_username'],
+                $validated['tax_id'],
+                $request->file('private_key')->getContent(),
+                $request->file('certificate')->getContent(),
+            );
+        } catch (\Exception $e) {
+            $connected = false;
+        }
+
+        return response()->json([
+            'connected' => $connected,
+            'message' => $connected ? __('Connection to Moadian succeeded.') : __('Connection to Moadian failed. Please check the entered settings and try again.'),
+        ]);
     }
 
     private function ensureCompanyAccess(Company $company): void

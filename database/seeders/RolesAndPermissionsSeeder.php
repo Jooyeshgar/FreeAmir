@@ -84,7 +84,7 @@ class RolesAndPermissionsSeeder extends Seeder
             // Companies + fiscal-year wizard
             'companies' => [
                 ...self::CRUD,
-                'close-fiscal-year',
+                'close-fiscal-year', 'test-moadian-connection',
                 'closing-wizard', 'closing-wizard.step1', 'closing-wizard.step3', 'closing-wizard.recalculate',
             ],
 
