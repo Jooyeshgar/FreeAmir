@@ -4,10 +4,10 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\Service;
@@ -265,8 +265,8 @@ class ReportExportService
             }
         })->validate();
 
-        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
-        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
         $startDate = $this->reportDate($validated['start_date'] ?? null, 'start_date') ?? $fiscalStart->toDateString();
         $endDate = $this->reportDate($validated['end_date'] ?? null, 'end_date') ?? $fiscalEnd->toDateString();
 

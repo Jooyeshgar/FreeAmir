@@ -190,6 +190,36 @@ class ApiTest extends TestCase
             ->assertJsonPath('message', __('You do not have access to this fiscal year.'));
     }
 
+    public function test_api_requires_a_separate_grant_for_another_year_of_the_same_company(): void
+    {
+        $otherYear = FiscalYear::create([
+            'company_id' => $this->fiscalYear->company_id,
+            'year' => 1405,
+        ]);
+
+        $this->getJson('/api/companies/'.$otherYear->id.'/employees', $this->apiHeaders())
+            ->assertForbidden();
+    }
+
+    public function test_document_api_isolates_assigned_years_of_the_same_and_other_companies(): void
+    {
+        $sameCompanyYear = FiscalYear::create([
+            'company_id' => $this->fiscalYear->company_id,
+            'year' => 1405,
+        ]);
+        $otherCompanyYear = FiscalYear::factory()->create(['year' => 1405]);
+        $this->user->fiscalYears()->syncWithoutDetaching([$sameCompanyYear->id, $otherCompanyYear->id]);
+        $document = Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
+
+        $this->getJson($this->companyApiUrl('/documents/'.$document->id), $this->apiHeaders())
+            ->assertOk();
+
+        foreach ([$sameCompanyYear, $otherCompanyYear] as $year) {
+            $this->getJson('/api/companies/'.$year->id.'/documents/'.$document->id, $this->apiHeaders())
+                ->assertNotFound();
+        }
+    }
+
     public function test_api_lists_available_companies(): void
     {
         $secondFiscalYear = FiscalYear::factory()->create(['year' => 1401]);
