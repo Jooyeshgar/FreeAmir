@@ -3,8 +3,8 @@
 namespace Tests\Feature;
 
 use App\Enums\SubjectType;
-use App\Models\Company;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -18,7 +18,7 @@ class AccountingReportFiscalYearTest extends TestCase
 
     private User $user;
 
-    private Company $company;
+    private FiscalYear $fiscalYear;
 
     private int $subjectId;
 
@@ -28,13 +28,13 @@ class AccountingReportFiscalYearTest extends TestCase
 
         app()->setLocale('fa');
 
-        $company = Company::factory()->create(['fiscal_year' => 1405]);
-        $this->company = $company;
+        $fiscalYear = FiscalYear::factory()->create(['year' => 1405]);
+        $this->fiscalYear = $fiscalYear;
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
         $subjectType = DB::connection()->getDriverName() === 'sqlite' ? 'both' : SubjectType::BOTH->value;
         $this->subjectId = DB::table('subjects')->insertGetId([
-            'company_id' => $company->id,
+            'fiscal_year_id' => $fiscalYear->id,
             'code' => '001',
             'name' => 'Test subject',
             'type' => $subjectType,
@@ -44,13 +44,13 @@ class AccountingReportFiscalYearTest extends TestCase
         $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'reports.result']));
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => (string) $company->id]);
-        config(['active-company-id' => $company->id]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $fiscalYear->id]);
+        config(['active-fiscal-year-id' => $fiscalYear->id]);
     }
 
     public function test_missing_accounting_report_dates_default_to_the_fiscal_year_for_html_preview_and_csv(): void
     {
-        [$fiscalStart, $fiscalEnd] = $this->company->fiscalYearRange();
+        [$fiscalStart, $fiscalEnd] = $this->fiscalYear->range();
         $before = $this->transaction($fiscalStart->copy()->subDay()->toDateString(), 10, 'before fiscal year');
         $inside = $this->transaction($fiscalStart->copy()->addDay()->toDateString(), 11, 'inside fiscal year');
         $after = $this->transaction($fiscalEnd->copy()->addDay()->toDateString(), 12, 'after fiscal year');
@@ -154,7 +154,7 @@ class AccountingReportFiscalYearTest extends TestCase
     private function transaction(string $date, int $number, string $description): Transaction
     {
         $document = Document::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'date' => $date,
             'number' => $number,
             'title' => $description,

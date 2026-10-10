@@ -8,6 +8,7 @@ use App\Models\FiscalYear;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Warehouse;
+use Carbon\Carbon;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -89,15 +90,15 @@ class InventoryTurnoverService
             ],
             'warehouses' => Warehouse::query()->orderBy('name')->get(['id', 'name']),
             'productGroups' => ProductGroup::query()->orderBy('name')->get(['id', 'name']),
-            'company' => $fiscalYear->company,
+            'company' => FiscalYear::findOrFail(getActiveFiscalYear())->company,
             'generatedAt' => formatDateTime(now()),
         ];
     }
 
     private function validateFilters(array $rawFilters): array
     {
-        $company = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
-        [$fiscalStart, $fiscalEnd] = $company->range();
+        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
         $fiscalStartDate = $fiscalStart->toDateString();
         $fiscalEndDate = $fiscalEnd->toDateString();
 
