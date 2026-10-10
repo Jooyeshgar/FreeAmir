@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\CompanyOverviewService;
 use App\Services\FiscalYearService;
+use App\Services\MoadianService;
 use Cookie;
 use Database\Seeders\BankSeeder;
 use Database\Seeders\ConfigSeeder;
@@ -368,6 +369,24 @@ class CompanyController extends Controller
                 $fail(__('The certificate file must contain a valid X.509 certificate.'));
             }
         }];
+    }
+
+    public function testMoadianConnection(Company $company, MoadianService $moadianService): RedirectResponse
+    {
+        $this->ensureCompanyAccess($company);
+
+        try {
+            $connected = $moadianService->testConnection($company);
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            $connected = false;
+        }
+
+        return redirect()->route('companies.edit', $company)->with(
+            $connected ? 'success' : 'error',
+            $connected ? __('Connection to Moadian succeeded.') : __('Connection to Moadian failed. Please check the saved settings and try again.')
+        );
     }
 
     private function ensureCompanyAccess(Company $company): void

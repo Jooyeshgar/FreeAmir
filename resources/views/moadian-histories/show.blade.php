@@ -33,19 +33,24 @@
                 </form>
 
                 <div>
-                    @if ($latestHistoryStatus === 'UNKNOWN')
-                        <form method="POST" action="{{ route('invoices.moadian-check-status', $invoice) }}">
-                            @csrf
-                            <button type="submit" class="btn btn-sm btn-warning">{{ __('Check Status') }}</button>
-                        </form>
-                    @elseif($latestHistoryStatus === 'FAILED')
-                        <form method="POST" action="{{ route('invoices.send-moadian', $invoice) }}">
-                            @csrf
-                            <button type="submit" class="btn btn-sm btn-secondary">{{ __('Send Again') }}</button>
-                        </form>
-                    @elseif($latestHistoryStatus === 'SUCCESS')
-                        <span class="btn btn-sm btn-disabled">{{ __('Sent') }}</span>
-                    @endif
+                    @can('invoices.moadian-check-status')
+                        @if ($referenceNumber)
+                            <form method="POST" action="{{ route('invoices.moadian-check-status', $invoice) }}">
+                                @csrf
+                                <button type="submit" class="btn btn-sm btn-warning">{{ __('Check Status') }}</button>
+                            </form>
+                        @endif
+                    @endcan
+                    @can('invoices.send-moadian')
+                        @if($latestHistoryStatus === 'FAILED')
+                            <form method="POST" action="{{ route('invoices.send-moadian', $invoice) }}">
+                                @csrf
+                                <button type="submit" class="btn btn-sm btn-secondary">{{ __('Send Again') }}</button>
+                            </form>
+                        @elseif($latestHistoryStatus === 'SUCCESS')
+                            <span class="btn btn-sm btn-disabled">{{ __('Sent') }}</span>
+                        @endif
+                    @endcan
                 </div>
             </div>
 

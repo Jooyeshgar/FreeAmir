@@ -53,6 +53,12 @@
                                 <p class="text-sm text-base-content/60 mt-1">{{ __('Current file') }}: {{ basename($company->private_key_path) }}</p>
                             @endif
                         </div>
+                        @can('companies.test-moadian-connection')
+                            <div class="sm:col-span-2">
+                                <button type="submit" form="test-moadian-connection" class="btn btn-outline">{{ __('Test Moadian Connection') }}</button>
+                                <p class="text-sm mt-2">{{ __('The connection test uses saved settings. Save any changes first.') }}</p>
+                            </div>
+                        @endcan
                     </fieldset>
                     <div class="col-span-2">
                         <div class="col-span-2">
@@ -76,6 +82,10 @@
                     <button type="submit" class="btn btn-primary">{{ __('Edit') }}</button>
                 </div>
             </form>
+            @can('companies.test-moadian-connection')
+                <form id="test-moadian-connection" action="{{ route('companies.test-moadian-connection', $company) }}" method="GET">
+                </form>
+            @endcan
         </div>
     </div>
 </x-platform-layout>

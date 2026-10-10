@@ -57,18 +57,21 @@ class MoadianHistoryController extends Controller
 
         $moadianHistories = $query->latest()->paginate(10)->withQueryString();
 
-        return view('moadian-histories.show', compact('moadianHistories', 'invoice', 'latestHistoryStatus'));
+        $referenceNumber = $invoice->moadianReferenceNumber();
+
+        return view('moadian-histories.show', compact('moadianHistories', 'invoice', 'latestHistoryStatus', 'referenceNumber'));
     }
 
     public function checkStatus(Invoice $invoice): RedirectResponse
     {
-        $latestHistory = $invoice->moadianHistories()->latest()->first();
+        abort_unless($invoice->company_id === getActiveCompany() && auth()->user()->companies()->whereKey($invoice->company_id)->exists(), 403);
+        $referenceNumber = $invoice->moadianReferenceNumber();
 
-        if (! $latestHistory || ! isset($latestHistory->data['referenceNumber'])) {
+        if (! $referenceNumber) {
             return redirect()->back()->with('error', __('No reference number available to check status.'));
         }
 
-        $statusData = $this->moadianService->moadianStatus($latestHistory->data['referenceNumber'], $invoice);
+        $statusData = $this->moadianService->moadianStatus($referenceNumber, $invoice);
 
         if (strtoupper($statusData['status'] ?? '') === 'FAILED') {
             return redirect()->back()->with('error', __('Failed to check status from Moadian. Please try again.'));

@@ -3498,5 +3498,10 @@
     ":count item(s) were at or below their reorder point at period end": ":count کالا در پایان دوره روی نقطه سفارش یا پایین‌تر از آن بود",
     "All stock levels were above their reorder points at period end": "در پایان دوره موجودی همه کالاها بالاتر از نقطه سفارش بود",
     ":count item(s) had no movement for :days days as of period end": ":count کالا تا پایان دوره به مدت :days روز بدون گردش بود",
-    "No stagnant inventory at period end": "در پایان دوره موجودی راکدی وجود نداشت"
+    "No stagnant inventory at period end": "در پایان دوره موجودی راکدی وجود نداشت",
+    "Test Moadian Connection": "تست اتصال به سامانه مودیان",
+    "The connection test uses saved settings. Save any changes first.": "تست اتصال با تنظیمات ذخیره‌شده انجام می‌شود. ابتدا تغییرات را ذخیره کنید.",
+    "Connection to Moadian succeeded.": "اتصال به سامانه مودیان موفق بود.",
+    "Connection to Moadian failed. Please check the saved settings and try again.": "اتصال به سامانه مودیان ناموفق بود. تنظیمات ذخیره‌شده را بررسی و دوباره تلاش کنید.",
+    "Configure the Moadian username, certificate and private key before checking the connection or invoice status.": "پیش از تست اتصال یا بررسی وضعیت فاکتور، نام کاربری، گواهی و کلید خصوصی سامانه مودیان را تنظیم کنید."
 }

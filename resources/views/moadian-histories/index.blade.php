@@ -77,14 +77,15 @@
                                 <td>
                                     <div class="flex items-center justify-center py-2">
                                         @if($isLatest)
-                                            @if(isset($history->data['referenceNumber']) && $status === 'UNKNOWN')
+                                            @if($history->invoice?->moadianReferenceNumber())
                                                 @can('invoices.moadian-check-status')
                                                     <form method="POST" action="{{ route('invoices.moadian-check-status', $history->invoice_id) }}">
                                                         @csrf
                                                         <button type="submit" class="btn btn-xs btn-info">{{ __('Check Status') }}</button>
                                                     </form>
                                                 @endcan
-                                            @elseif($status === 'FAILED')
+                                            @endif
+                                            @if($status === 'FAILED')
                                                 @can('invoices.send-moadian')
                                                     <form method="POST" action="{{ route('invoices.send-moadian', $history->invoice_id) }}">
                                                         @csrf

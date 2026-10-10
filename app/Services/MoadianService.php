@@ -8,6 +8,7 @@ use App\Enums\InvoiceType;
 use App\Models\Company;
 use App\Models\Invoice;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\ValidationException;
 use Jooyeshgar\Moadian\Facades\Moadian;
 use Jooyeshgar\Moadian\Invoice as MoadianInvoice;
 use Jooyeshgar\Moadian\InvoiceHeader;
@@ -25,6 +26,25 @@ class MoadianService
     private Invoice $invoice;
 
     public MoadianInvoice $moadianInvoice;
+
+    public function testConnection(Company $company): bool
+    {
+        return $this->clientFor($company)->getServerInfo()->isSuccessful();
+    }
+
+    private function clientFor(Company $company): \Jooyeshgar\Moadian\Moadian
+    {
+        $privateKey = $company->decryptedPrivateKey();
+        $certificate = $company->decryptedCertificate();
+
+        if (! $company->moadian_username || ! $privateKey || ! $certificate) {
+            throw ValidationException::withMessages([
+                'moadian' => __('Configure the Moadian username, certificate and private key before checking the connection or invoice status.'),
+            ]);
+        }
+
+        return Moadian::for($privateKey, $certificate, $company->moadian_username);
+    }
 
     public function sendInvoice(Invoice $invoice): bool
     {
@@ -108,18 +128,21 @@ class MoadianService
 
     public function moadianStatus(string $referenceNumber, Invoice $invoice): array
     {
-        $company = Company::find(getActiveCompany());
-
-        $privateKey = $company->decryptedPrivateKey();
-        $certificate = $company->decryptedCertificate();
+        $company = Company::findOrFail($invoice->company_id);
+        $client = $this->clientFor($company);
 
         try {
-            $response = Moadian::for($privateKey, $certificate, $company->moadian_username)
-                ->inquiryByReferenceNumbers($referenceNumber);
+            $response = $client->inquiryByReferenceNumbers($referenceNumber);
             $statusData = $response->getBody()[0] ?? [];
+
+            if (! $response->isSuccessful() || empty($statusData['status'])) {
+                throw new \RuntimeException('Invalid Moadian status response.');
+            }
         } catch (\Exception $e) {
             $statusData = ['status' => 'FAILED', 'error' => $e->getMessage()];
         }
+
+        $statusData['referenceNumber'] = $referenceNumber;
 
         $invoice->moadianHistories()->create(['data' => $statusData]);
 
