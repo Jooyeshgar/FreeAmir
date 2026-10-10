@@ -3503,5 +3503,7 @@
     "The connection test uses saved settings. Save any changes first.": "تست اتصال با تنظیمات ذخیره‌شده انجام می‌شود. ابتدا تغییرات را ذخیره کنید.",
     "Connection to Moadian succeeded.": "اتصال به سامانه مودیان موفق بود.",
     "Connection to Moadian failed. Please check the saved settings and try again.": "اتصال به سامانه مودیان ناموفق بود. تنظیمات ذخیره‌شده را بررسی و دوباره تلاش کنید.",
-    "Configure the Moadian username, certificate and private key before checking the connection or invoice status.": "پیش از تست اتصال یا بررسی وضعیت فاکتور، نام کاربری، گواهی و کلید خصوصی سامانه مودیان را تنظیم کنید."
+    "Configure the Moadian username, certificate and private key before checking the connection or invoice status.": "پیش از تست اتصال یا بررسی وضعیت فاکتور، نام کاربری، گواهی و کلید خصوصی سامانه مودیان را تنظیم کنید.",
+    "The connection test uses the entered settings and selected key files without saving. Select both key files for each test.": "تست اتصال با اطلاعات واردشده و فایل‌های کلید انتخاب‌شده، بدون ذخیره انجام می‌شود. برای هر تست، هر دو فایل کلید را انتخاب کنید.",
+    "Connection to Moadian failed. Please check the entered settings and try again.": "اتصال به سامانه مودیان ناموفق بود. اطلاعات واردشده را بررسی و دوباره تلاش کنید."
 }

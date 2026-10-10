@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\FiscalYearSection;
+use App\Http\Requests\TestMoadianConnectionRequest;
 use App\Models\Company;
 use App\Models\Document;
 use App\Models\DocumentFile;
@@ -20,6 +21,7 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\ServiceGroupSeeder;
 use Database\Seeders\SubjectSeeder;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -371,22 +373,25 @@ class CompanyController extends Controller
         }];
     }
 
-    public function testMoadianConnection(Company $company, MoadianService $moadianService): RedirectResponse
+    public function testMoadianConnection(TestMoadianConnectionRequest $request, Company $company, MoadianService $moadianService): JsonResponse
     {
         $this->ensureCompanyAccess($company);
 
         try {
-            $connected = $moadianService->testConnection($company);
-        } catch (ValidationException $e) {
-            throw $e;
+            $connected = $moadianService->testConnection(
+                $request->validated('moadian_username'),
+                $request->validated('tax_id'),
+                $request->file('private_key')->getContent(),
+                $request->file('certificate')->getContent(),
+            );
         } catch (\Exception $e) {
             $connected = false;
         }
 
-        return redirect()->route('companies.edit', $company)->with(
-            $connected ? 'success' : 'error',
-            $connected ? __('Connection to Moadian succeeded.') : __('Connection to Moadian failed. Please check the saved settings and try again.')
-        );
+        return response()->json([
+            'connected' => $connected,
+            'message' => $connected ? __('Connection to Moadian succeeded.') : __('Connection to Moadian failed. Please check the entered settings and try again.'),
+        ]);
     }
 
     private function ensureCompanyAccess(Company $company): void

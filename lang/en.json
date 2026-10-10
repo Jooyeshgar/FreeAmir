@@ -3497,5 +3497,7 @@
     ":count item(s) were at or below their reorder point at period end": ":count item(s) were at or below their reorder point at period end",
     "All stock levels were above their reorder points at period end": "All stock levels were above their reorder points at period end",
     ":count item(s) had no movement for :days days as of period end": ":count item(s) had no movement for :days days as of period end",
-    "No stagnant inventory at period end": "No stagnant inventory at period end"
+    "No stagnant inventory at period end": "No stagnant inventory at period end",
+    "The connection test uses the entered settings and selected key files without saving. Select both key files for each test.": "The connection test uses the entered settings and selected key files without saving. Select both key files for each test.",
+    "Connection to Moadian failed. Please check the entered settings and try again.": "Connection to Moadian failed. Please check the entered settings and try again."
 }

@@ -28,7 +28,43 @@
                         </div>
                     </div>
                     <img class="block w-12 h-auto rounded-full" src="{{ asset("storage/{$company->logo}") }}">
-                    <fieldset class="col-span-2 grid grid-cols-1 gap-6 border p-5 sm:grid-cols-2">
+                    <fieldset class="col-span-2 grid grid-cols-1 gap-6 border p-5 sm:grid-cols-2"
+                        x-data="{
+                            testing: false,
+                            message: '',
+                            connected: false,
+                            async testConnection() {
+                                this.testing = true;
+                                this.message = '';
+                                const data = new FormData();
+                                const form = this.$el.closest('form');
+                                for (const name of ['_token', 'moadian_username', 'tax_id']) {
+                                    data.append(name, form.elements[name].value);
+                                }
+                                for (const name of ['certificate', 'private_key']) {
+                                    if (form.elements[name].files[0]) {
+                                        data.append(name, form.elements[name].files[0]);
+                                    }
+                                }
+                                try {
+                                    const response = await fetch(@js(route('companies.test-moadian-connection', $company)), {
+                                        method: 'POST',
+                                        headers: { Accept: 'application/json' },
+                                        body: data,
+                                    });
+                                    const result = await response.json();
+                                    this.connected = response.ok &amp;&amp; result.connected === true;
+                                    this.message = result.errors
+                                        ? Object.values(result.errors).flat().join(' ')
+                                        : result.message;
+                                } catch (error) {
+                                    this.connected = false;
+                                    this.message = @js(__('Connection to Moadian failed. Please check the entered settings and try again.'));
+                                } finally {
+                                    this.testing = false;
+                                }
+                            }
+                        }">
                         <legend>
                             <span class="inline-flex items-center gap-1">
                                 {{ __('Moadian') }}
@@ -55,8 +91,13 @@
                         </div>
                         @can('companies.test-moadian-connection')
                             <div class="sm:col-span-2">
-                                <button type="submit" form="test-moadian-connection" class="btn btn-outline">{{ __('Test Moadian Connection') }}</button>
-                                <p class="text-sm mt-2">{{ __('The connection test uses saved settings. Save any changes first.') }}</p>
+                                <button type="button" @click="testConnection()" :disabled="testing" class="btn btn-outline">
+                                    <span x-show="testing" class="loading loading-spinner loading-sm"></span>
+                                    {{ __('Test Moadian Connection') }}
+                                </button>
+                                <p class="text-sm mt-2">{{ __('The connection test uses the entered settings and selected key files without saving. Select both key files for each test.') }}</p>
+                                <p x-cloak x-show="message" x-text="message" role="status" aria-live="polite"
+                                    :class="connected ? 'text-success' : 'text-error'" class="text-sm mt-2"></p>
                             </div>
                         @endcan
                     </fieldset>
@@ -82,10 +123,6 @@
                     <button type="submit" class="btn btn-primary">{{ __('Edit') }}</button>
                 </div>
             </form>
-            @can('companies.test-moadian-connection')
-                <form id="test-moadian-connection" action="{{ route('companies.test-moadian-connection', $company) }}" method="GET">
-                </form>
-            @endcan
         </div>
     </div>
 </x-platform-layout>

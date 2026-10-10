@@ -27,9 +27,11 @@ class MoadianService
 
     public MoadianInvoice $moadianInvoice;
 
-    public function testConnection(Company $company): bool
+    public function testConnection(string $username, string $taxId, string $privateKey, string $certificate): bool
     {
-        return $this->clientFor($company)->getServerInfo()->isSuccessful();
+        $client = Moadian::for($privateKey, $certificate, $username);
+
+        return $client->getServerInfo()->isSuccessful() && $client->getEconomicCodeInformation($taxId)->isSuccessful();
     }
 
     private function clientFor(Company $company): \Jooyeshgar\Moadian\Moadian
