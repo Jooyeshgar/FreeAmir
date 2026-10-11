@@ -320,13 +320,16 @@
             @endcanany
 
             {{-- System --}}
-            @canany(['companies.index', 'users.index', 'configs.index', 'backups.create'])
+            @canany(['companies.index', 'fiscal-years.index', 'users.index', 'configs.index', 'backups.create'])
                 <li>
                     <details>
                         <summary>{{ __('System') }}</summary>
                         <ul>
                             @can('companies.index')
                                 <li><a href="{{ route('companies.index') }}">{{ __('Companies') }}</a></li>
+                            @endcan
+                            @can('fiscal-years.index')
+                                <li><a href="{{ route('fiscal-years.index') }}">{{ __('Fiscal years') }}</a></li>
                             @endcan
                             @can('users.index')
                                 <li><a href="{{ route('users.index') }}">{{ __('Users') }}</a></li>
