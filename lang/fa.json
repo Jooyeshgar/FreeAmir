@@ -3014,6 +3014,7 @@
     "User does not have access to this company.": "این کاربر به این شرکت دسترسی ندارد.",
     "User growth": "رشد کاربران",
     "User has no company": "کاربر شرکتی ندارد",
+    "User has no assigned fiscal year": "کاربر سال مالی تخصیص‌یافته ندارد",
     "User is not verified": "کاربر تأیید نشده است",
     "User menu": "منوی کاربر",
     "User requests": "درخواست‌های کاربران",
@@ -3526,5 +3527,13 @@
     "Document #1 cannot be replaced because it is not an unlinked Opening Document.": "سند شماره ۱ سند افتتاحیه بدون پیوست یا رکورد مرتبط نیست و نمی‌توان آن را جایگزین کرد.",
     "Opening Document recreated successfully.": "سند افتتاحیه با موفقیت دوباره ایجاد شد.",
     "The Closing Document is unbalanced or its accounts are missing from the next fiscal year.": "سند اختتامیه تراز نیست یا حساب‌های آن در سال مالی بعد پیدا نشدند.",
-    "You do not have access to the next fiscal year.": "به سال مالی بعد دسترسی ندارید."
+    "You do not have access to the next fiscal year.": "به سال مالی بعد دسترسی ندارید.",
+    "Fiscal year overview": "نمای کلی سال مالی",
+    "Fiscal year details": "اطلاعات سال مالی",
+    "Closed by": "بسته‌شده توسط",
+    "Income Summary Document": "سند خلاصه سود و زیان",
+    "Not created": "ایجاد نشده",
+    "Company details": "اطلاعات شرکت",
+    "People with access to this fiscal year.": "افرادی که به این سال مالی دسترسی دارند.",
+    "No users are assigned to this fiscal year.": "هیچ کاربری به این سال مالی اختصاص داده نشده است."
 }

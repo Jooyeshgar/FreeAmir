@@ -285,7 +285,7 @@ class AuthLifecycleTest extends TestCase
             ->assertSee(route('users.show', $target), false)
             ->assertSee(route('users.verify', $target), false)
             ->assertSee('Recent Companyless User')
-            ->assertSee(__('User has no company'))
+            ->assertSee(__('User has no assigned fiscal year'))
             ->assertDontSee(route('users.impersonate', $companylessTarget), false);
     }
 

@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Document;
 use App\Models\DocumentFile;
 use App\Models\FiscalYear;
+use App\Models\Invoice;
 use App\Models\Warehouse;
 use App\Services\FiscalYearService;
 use Database\Seeders\BankSeeder;
@@ -100,7 +101,18 @@ class FiscalYearController extends Controller
     {
         $this->authorizeYear($request, $fiscalYear);
 
-        return view('fiscal-years.show', ['fiscalYear' => $fiscalYear->load('company:id,name', 'closedBy:id,name')->loadCount(['users', 'documents'])]);
+        $fiscalYear->load('company', 'closedBy:id,name')->loadCount([
+            'users',
+            'documents' => fn ($query) => $query->withoutGlobalScopes(),
+        ]);
+        $users = $fiscalYear->users()->with('roles:id,name')->orderBy('name')->orderBy('users.id')->get();
+        $invoicesCount = Invoice::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYear->id)->count();
+        $closingDocuments = Document::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYear->id)
+            ->whereIn('id', array_filter([$fiscalYear->pl_document_id, $fiscalYear->closing_document_id]))
+            ->get(['id', 'number', 'title', 'date'])->keyBy('id');
+        [$startDate, $endDate] = $fiscalYear->range();
+
+        return view('fiscal-years.show', compact('fiscalYear', 'users', 'invoicesCount', 'closingDocuments', 'startDate', 'endDate'));
     }
 
     public function edit(Request $request, FiscalYear $fiscalYear): View
