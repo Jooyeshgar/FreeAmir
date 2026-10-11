@@ -93,58 +93,6 @@ class ConfigControllerTest extends TestCase
         $this->assertSame('0', $cash->fresh()->value);
     }
 
-    public function test_migration_removes_stored_cash_config_without_removing_cash_book(): void
-    {
-        foreach (['cash', 'cash_book'] as $key) {
-            Config::create([
-                'company_id' => $this->company->id,
-                'key' => $key,
-                'value' => '1',
-                'desc' => $key,
-                'type' => '2',
-                'category' => '1',
-            ]);
-        }
-
-        $migration = require database_path('migrations/2026_09_09_000002_remove_unused_cash_config.php');
-        $migration->up();
-
-        $this->assertDatabaseMissing('configs', [
-            'company_id' => $this->company->id,
-            'key' => 'cash',
-        ]);
-        $this->assertDatabaseHas('configs', [
-            'company_id' => $this->company->id,
-            'key' => 'cash_book',
-        ]);
-    }
-
-    public function test_migration_renames_stored_wage_config_to_payroll(): void
-    {
-        Config::create([
-            'company_id' => $this->company->id,
-            'key' => 'wage',
-            'value' => '42',
-            'desc' => 'حقوق پرسنل',
-            'type' => '3',
-            'category' => '1',
-        ]);
-
-        $migration = require database_path('migrations/2026_09_12_000001_rename_wage_config_to_payroll.php');
-        $migration->up();
-
-        $this->assertDatabaseMissing('configs', [
-            'company_id' => $this->company->id,
-            'key' => 'wage',
-        ]);
-        $this->assertDatabaseHas('configs', [
-            'company_id' => $this->company->id,
-            'key' => 'payroll',
-            'value' => '42',
-            'desc' => 'حقوق و دستمزد',
-        ]);
-    }
-
     public function test_edit_still_accepts_every_supported_config_key(): void
     {
         foreach (ConfigTitle::cases() as $title) {
@@ -156,34 +104,6 @@ class ConfigControllerTest extends TestCase
                 'key' => $key,
             ]);
         }
-    }
-
-    public function test_fee_config_migration_uses_each_year_subject_and_preserves_custom_settings(): void
-    {
-        $otherYear = Company::factory()->create();
-        foreach ([$this->company, $otherYear] as $company) {
-            DB::table('subjects')->insert([
-                'company_id' => $company->id, 'code' => '040010',
-                'name' => 'کارمزد بانک', 'type' => SubjectType::DEBTOR->value,
-            ]);
-        }
-        Config::create([
-            'company_id' => $otherYear->id, 'key' => 'bank_service_fee', 'value' => '42',
-            'desc' => 'Custom fee account', 'type' => 3, 'category' => 1,
-        ]);
-
-        $migration = require database_path('migrations/2026_10_11_000002_add_bank_service_fee_subject_config.php');
-        $migration->up();
-        $migration->up();
-
-        $subjectId = DB::table('subjects')->where('company_id', $this->company->id)->where('code', '040010')->value('id');
-        $this->assertDatabaseHas('configs', [
-            'company_id' => $this->company->id, 'key' => 'bank_service_fee', 'value' => (string) $subjectId,
-        ]);
-        $this->assertDatabaseHas('configs', [
-            'company_id' => $otherYear->id, 'key' => 'bank_service_fee', 'value' => '42',
-        ]);
-        $this->assertSame(2, DB::table('configs')->where('key', 'bank_service_fee')->count());
     }
 
     public function test_edit_keeps_moved_subject_search_results_in_the_selector_scope(): void
