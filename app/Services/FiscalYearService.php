@@ -3021,7 +3021,7 @@ class FiscalYearService
         self::copyMoadianKeys($fiscalYear, $newFiscalYear);
 
         $userIds = $fiscalYear->users()->pluck('users.id')->toArray();
-        $newFiscalYear->users()->attach($userIds);
+        $newFiscalYear->users()->syncWithoutDetaching($userIds);
 
         return $newFiscalYear;
     }

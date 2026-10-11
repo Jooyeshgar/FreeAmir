@@ -86,7 +86,7 @@ Create a new fiscal year and populate it with data (banks, customers, products, 
 ## Usage
 
 ```bash
-php artisan fiscal-year:import <file> <fiscal_year> --name=<new_name> [options]
+php artisan fiscal-year:import <file> <fiscal_year> --name=<new_company_name> [options]
 ```
 
 ## Arguments
@@ -101,22 +101,23 @@ php artisan fiscal-year:import <file> <fiscal_year> --name=<new_name> [options]
 
 | Option    | Description                                                                                                                            | Required | Default |
 |-----------|----------------------------------------------------------------------------------------------------------------------------------------|----------|---------|
-| `--name`  | Destination company name in the current command interface; the command must be adapted to the separate `Company` and `FiscalYear` models. | Yes | |
-| `--force` | Skip the confirmation prompt before starting the import. Use with caution, especially in production environments.                        | No       | `false` |
+| `--name`     | Name of the new company created for the imported data.                                            | Yes      | —       |
+| `--force`    | Skip the confirmation prompt before starting the import. Use with caution.                        | No       | `false` |
 
-> **Current limitation:** The CLI still passes `name` and `fiscal_year` to the service, while `FiscalYear` requires `company_id` and `year`. It also has no option to select a destination company. Do not use this command to create a fiscal year until the command and service are aligned with the separate models.
+After running the command, assign user access to the fiscal year through user management. Web imports grant access to the authenticated user.
 
 ## Examples
 
-1.  **Import data from `exports/fy1_backup.json` into a new fiscal year named "Fiscal Year 2024" with fiscal year identifier 2024:**
+1.  **Import data from `exports/fy1_backup.json` into a new company and fiscal year 1403:**
     ```bash
-    sail artisan fiscal-year:import exports/fy1_backup.json 2024 --name="Fiscal Year 2024"
+    sail artisan fiscal-year:import exports/fy1_backup.json 1403 --name="Example Company"
     ```
     >   This will prompt for confirmation before proceeding.
+    >   After importing through the CLI command, assign users access to the new fiscal year in user management.
 
 2.  **Import data from `archive/old_data.json` forcefully (no confirmation):**
     ```bash
-    sail artisan fiscal-year:import archive/old_data.json 2023 --name="Restored FY" --force
+    sail artisan fiscal-year:import archive/old_data.json 1403 --name="Restored Company" --force
     ```
 
 ## Process
@@ -130,8 +131,7 @@ php artisan fiscal-year:import <file> <fiscal_year> --name=<new_name> [options]
     *   Prompts the user to confirm unless `--force` is used.
 3.  **Import Execution:**
     *   Reads and decodes the JSON file.
-    *   The intended target data must identify the destination company (`company_id`) and fiscal-year number (`year`).
-    *   Calls `FiscalYearService::importData` to create the fiscal-year record and copy selected data to it. The current CLI payload mismatch described above prevents this flow from working with the refactored schema until updated.
+    *   Creates a new company and a separate fiscal-year record, then copies the imported data into that year.
 4.  **Output:**
     *   On success, prints a confirmation message including the new fiscal-year ID.
     *   On failure, displays an error message.

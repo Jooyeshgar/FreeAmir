@@ -61,7 +61,7 @@ class FiscalYearCopySubjectableIntegrityTest extends TestCase
     {
         $user = User::factory()->create();
         $source = FiscalYear::factory()->create(['year' => 1402]);
-        $source->users()->attach($user);
+        $source->users()->syncWithoutDetaching($user);
         $this->actingAs($user);
         $this->buildCustomerSubjectTree($source);
 
