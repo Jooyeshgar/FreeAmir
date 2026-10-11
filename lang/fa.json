@@ -3530,6 +3530,7 @@
     "The Closing Document is unbalanced or its accounts are missing from the next fiscal year.": "سند اختتامیه تراز نیست یا حساب‌های آن در سال مالی بعد پیدا نشدند.",
     "You do not have access to the next fiscal year.": "به سال مالی بعد دسترسی ندارید.",
     "Fiscal year overview": "نمای کلی سال مالی",
+<<<<<<< HEAD
     "Fiscal year details": "جزئیات سال مالی",
     "Closed by": "بسته‌شده توسط",
     "Income Summary Document": "سند خلاصه درآمد",
@@ -3544,4 +3545,13 @@
     "Enter only the fee charged at this stage. Leave zero if no fee was charged.": "فقط کارمزد این مرحله را وارد کنید. اگر کارمزدی پرداخت نشده است، مقدار صفر را وارد کنید.",
     "Record bank service fee": "ثبت کارمزد بانک",
     "Enter a bank service fee greater than zero.": "کارمزد بانک باید بیشتر از صفر باشد."
+=======
+    "Fiscal year details": "اطلاعات سال مالی",
+    "Closed by": "بسته‌شده توسط",
+    "Income Summary Document": "سند خلاصه سود و زیان",
+    "Not created": "ایجاد نشده",
+    "Company details": "اطلاعات شرکت",
+    "People with access to this fiscal year.": "افرادی که به این سال مالی دسترسی دارند.",
+    "No users are assigned to this fiscal year.": "هیچ کاربری به این سال مالی اختصاص داده نشده است."
+>>>>>>> 9eb560acf (Refactor user management and fiscal year access)
 }

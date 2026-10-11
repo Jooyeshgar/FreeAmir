@@ -3535,6 +3535,7 @@
     "Not created": "Not created",
     "Company details": "Company details",
     "People with access to this fiscal year.": "People with access to this fiscal year.",
+<<<<<<< HEAD
     "No users are assigned to this fiscal year.": "No users are assigned to this fiscal year.",
     "Create missing customer, products, services, and their accounting subjects in the target fiscal year": "Create missing customer, products, services, and their accounting subjects in the target fiscal year",
     "Bank service fee": "Bank service fee",
@@ -3543,4 +3544,7 @@
     "Enter only the fee charged at this stage. Leave zero if no fee was charged.": "Enter only the fee charged at this stage. Leave zero if no fee was charged.",
     "Record bank service fee": "Record bank service fee",
     "Enter a bank service fee greater than zero.": "Enter a bank service fee greater than zero."
+=======
+    "No users are assigned to this fiscal year.": "No users are assigned to this fiscal year."
+>>>>>>> 9eb560acf (Refactor user management and fiscal year access)
 }
