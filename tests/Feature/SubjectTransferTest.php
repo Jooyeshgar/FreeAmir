@@ -34,7 +34,7 @@ class SubjectTransferTest extends TestCase
 
         $this->user = User::factory()->create();
         $this->fiscalYear = FiscalYear::factory()->create(['year' => 1403]);
-        $this->user->fiscalYears()->attach([$this->fiscalYear->id]);
+        $this->user->fiscalYears()->syncWithoutDetaching([$this->fiscalYear->id]);
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'subjects.index']),
             Permission::firstOrCreate(['name' => 'subjects.destroy']),

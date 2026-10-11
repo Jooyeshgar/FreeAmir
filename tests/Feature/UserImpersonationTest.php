@@ -313,7 +313,7 @@ class UserImpersonationTest extends TestCase
         }
 
         $response = $this->withSession(['interface_mode' => 'management'])->get(route('users.index'))->assertOk();
-        $response->assertSee(__('User has no company'));
+        $response->assertSee(__('User has no assigned fiscal year'));
 
         foreach ($targets as $target) {
             $response->assertDontSee(route('users.impersonate', $target), false);
