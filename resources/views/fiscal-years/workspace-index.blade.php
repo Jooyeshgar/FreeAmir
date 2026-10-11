@@ -13,18 +13,6 @@
                     @endcan
                 </div>
             </div>
-            <form action="{{ route('fiscal-years.index') }}" method="GET" class="flex flex-wrap items-center gap-2">
-                <input type="search" name="search" value="{{ request('search') }}" placeholder="{{ __('Search companies') }}" class="input input-bordered w-64 max-w-full">
-                <select name="status" class="select select-bordered" aria-label="{{ __('Status') }}">
-                    <option value="">{{ __('All statuses') }}</option>
-                    <option value="open" @selected(request('status') === 'open')>{{ __('Open') }}</option>
-                    <option value="closed" @selected(request('status') === 'closed')>{{ __('Closed') }}</option>
-                </select>
-                <button type="submit" class="btn btn-neutral">{{ __('Filter') }}</button>
-                @if (request()->hasAny(['search', 'status']))
-                    <a href="{{ route('fiscal-years.index') }}" class="btn btn-ghost">{{ __('Clear') }}</a>
-                @endif
-            </form>
             <div class="overflow-auto">
                 <table class="table w-full mt-4">
                     <thead>
