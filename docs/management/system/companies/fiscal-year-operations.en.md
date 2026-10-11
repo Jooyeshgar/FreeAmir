@@ -15,14 +15,12 @@ A company is the business identity and can have multiple fiscal years. Each fisc
 
 ## Create a fiscal year
 
-> **Current limitation:** The creation form and controller still pass the old company/year payload and relationships. The steps below describe the intended flow after the refactor is completed; do not use this page to create or copy a year yet.
-
-1. In the companies and fiscal-years area, choose the fiscal-year creation option.
-2. Select the source fiscal year (optional).
-3. Select the sections to transfer (required if you select a source year).
-4. Enter or select the destination company and fiscal-year number.
+1. In the Fiscal Years section, choose **Create Fiscal Year**.
+2. Enter the destination company and fiscal-year number.
+3. If needed, select a source fiscal year. It must belong to the same destination company.
+4. If you selected a source year, choose the sections to copy. The form selects all sections by default.
 5. Select **Create** and wait for the operation to finish.
-6. Once successful, the new fiscal year becomes the active scope.
+6. After creation, the new fiscal-year page opens. To work in that year, select it from the active fiscal-year selector; creating a year does not change the active scope by itself.
 
 ### Sections available for transfer
 
@@ -64,9 +62,9 @@ If the application returns `HTTP 409`, read the message. A conflict usually poin
 
 ## Backups
 
-> **Current limitation:** The export service builds data from a fiscal-year ID, but the year-selection page still reads the old `companies` relationship. Backup downloads through the UI are not reliable until that selector is updated.
+On the Backup page, select the fiscal year you need. The export is built from that fiscal year and does not include the company's other fiscal years. Keep a backup before sensitive operations and record its filename and creation date.
 
-Each backup contains data for one fiscal year, not all years owned by the company. Keep a backup before sensitive operations and record its filename and creation date. The current download and upload pages are not aligned with the separate company and fiscal-year models; see their guides for the limits of each screen.
+Uploading a backup asks for a company name and fiscal-year number, then creates a new company and fiscal year for the imported data. The form does not let you choose an existing company as the destination. See the download and upload guides for details about each page.
 
 ## Export and import a fiscal year
 
@@ -88,7 +86,7 @@ The current command accepts a name and year instead of a destination `company_id
 
 ## Fiscal-year closing wizard
 
-> **Current limitation:** The wizard routes and controller still use `Company` as the fiscal year, while closing state now belongs to `FiscalYear`. Do not run the wizard until those parts are aligned.
+Before running the wizard, select the fiscal year you want to close from the active fiscal-year selector. The wizard closes that fiscal year only.
 
 The closing wizard has three stages:
 

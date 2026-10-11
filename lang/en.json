@@ -3029,6 +3029,7 @@
     "User does not have access to this company.": "User does not have access to this company.",
     "User growth": "User growth",
     "User has no company": "User has no company",
+    "User has no assigned fiscal year": "User has no assigned fiscal year",
     "User is not verified": "User is not verified",
     "User menu": "User menu",
     "User requests": "User requests",
@@ -3525,5 +3526,13 @@
     "Document #1 cannot be replaced because it is not an unlinked Opening Document.": "Document #1 cannot be replaced because it is not an unlinked Opening Document.",
     "Opening Document recreated successfully.": "Opening Document recreated successfully.",
     "The Closing Document is unbalanced or its accounts are missing from the next fiscal year.": "The Closing Document is unbalanced or its accounts are missing from the next fiscal year.",
-    "You do not have access to the next fiscal year.": "You do not have access to the next fiscal year."
+    "You do not have access to the next fiscal year.": "You do not have access to the next fiscal year.",
+    "Fiscal year overview": "Fiscal year overview",
+    "Fiscal year details": "Fiscal year details",
+    "Closed by": "Closed by",
+    "Income Summary Document": "Income Summary Document",
+    "Not created": "Not created",
+    "Company details": "Company details",
+    "People with access to this fiscal year.": "People with access to this fiscal year.",
+    "No users are assigned to this fiscal year.": "No users are assigned to this fiscal year."
 }

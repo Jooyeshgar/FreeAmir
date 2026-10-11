@@ -36,13 +36,15 @@ FreeAmir/
 #### `Console/Commands/`
 دستورات سفارشی Artisan برای عملیات خاص:
 
-```php
-// Example: دستور مدیریت سال مالی
-php artisan fiscal-year:export --year=1403
-php artisan fiscal-year:import --file=data.json --year=1404
+```bash
+# نمونه: دستورهای مدیریت سال مالی
+php artisan fiscal-year:export 1
+php artisan fiscal-year:import data.json 1404 --name="شرکت نمونه"
 ```
 
-#### `/Enums`
+در نمونهٔ خروجی‌گیری، `1` شناسهٔ سال مالی است؛ نمونهٔ واردسازی شرکت و سال مالی جدید می‌سازد. پس از واردسازی، دسترسی کاربران به سال مالی جدید را از بخش مدیریت کاربران تخصیص دهید.
+
+#### `Enums/`
 انواع داده‌های ثابت پروژه:
 
 ```php
@@ -467,7 +469,7 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('api.companies.index');
 });
 
-Route::prefix('fiscal-years/{fiscal_year}')->middleware(['auth:sanctum', 'api-fiscal-year'])->group(function () {
+Route::prefix('companies/{fiscal_year}')->middleware(['auth:sanctum', 'api-fiscal-year'])->group(function () {
     Route::post('attendance/logs', [AttendanceLogController::class, 'store'])
         ->middleware('check-permission:attendance.attendance-logs.store')
         ->name('api.attendance-logs.store');
@@ -494,9 +496,7 @@ Route::prefix('fiscal-years/{fiscal_year}')->middleware(['auth:sanctum', 'api-fi
 });
 ```
 
-میان‌افزار `SetApiFiscalYear` دقیقاً پارامتر مسیر `{fiscal_year}` را می‌خواند و دسترسی کاربر به همان سال مالی را بررسی می‌کند. نام پارامتر مسیر در تعریف واقعی `routes/api.php` باید با این قرارداد یکسان باشد.
-
-**وضعیت فعلی:** گروه API هنوز از `companies/{company}` استفاده می‌کند، پس میان‌افزار پارامتر مورد انتظار را پیدا نمی‌کند. همچنین خود میان‌افزار رابطه قدیمی `companies()` را بررسی می‌کند، درحالی‌که مدل کاربر دسترسی را از `fiscalYears()` می‌گیرد. مسیرها و بررسی دسترسی API هنوز با refactor هماهنگ نشده‌اند.
+مسیرهای API وابسته به سال مالی زیر پیشوند `companies/{fiscal_year}` و میان‌افزارهای `auth:sanctum` و `api-fiscal-year` تعریف می‌شوند. میان‌افزار `SetApiFiscalYear` شناسه سال مالی را اعتبارسنجی می‌کند، دسترسی کاربر را از رابطه `fiscalYears()` بررسی می‌کند و شناسه همان سال را برای درخواست فعال می‌سازد.
 
 ## 🧪 تست‌ها (`tests/`)
 
@@ -508,7 +508,7 @@ tests/
 └── Unit/ExampleTest.php      # تست ساده صحت true
 ```
 
-برای گسترش پوشش تست‌ها می‌توانید فایل‌های جدید با دستور `php artisan make:test` بسازید یا همین نمونه‌ها را ویرایش کنید. راهنمای تست در `docs/developer/testing-guide.md` توضیحات بیشتری ارائه می‌دهد.
+برای گسترش پوشش تست‌ها می‌توانید فایل‌های جدید با دستور `php artisan make:test` بسازید یا همین نمونه‌ها را ویرایش کنید. [راهنمای تست](testing-guide.md) توضیحات بیشتری ارائه می‌دهد.
 
 ## 🔧 ابزارهای توسعه
 
