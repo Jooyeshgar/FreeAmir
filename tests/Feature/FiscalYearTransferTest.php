@@ -48,8 +48,8 @@ class FiscalYearTransferTest extends TestCase
         $this->user = User::factory()->create();
         $this->source = FiscalYear::factory()->create(['year' => 1402]);
         $this->target = FiscalYear::factory()->create(['year' => 1403]);
-        $this->source->users()->attach($this->user);
-        $this->target->users()->attach($this->user);
+        $this->source->users()->syncWithoutDetaching($this->user);
+        $this->target->users()->syncWithoutDetaching($this->user);
 
         $this->actingAs($this->user);
         $this->activate($this->source);

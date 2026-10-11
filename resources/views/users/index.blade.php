@@ -36,7 +36,7 @@
 
         <div class="overflow-x-auto">
             <table class="table table-lg">
-                <thead class="bg-slate-50/80 dark:bg-slate-950/30"><tr><th>{{ __('User') }}</th><th>{{ __('Roles') }}</th><th>{{ __('Companies') }}</th><th>{{ __('Verification') }}</th><th class="text-end">{{ __('Actions') }}</th></tr></thead>
+                <thead class="bg-slate-50/80 dark:bg-slate-950/30"><tr><th>{{ __('User') }}</th><th>{{ __('Roles') }}</th><th>{{ __('Fiscal years') }}</th><th>{{ __('Verification') }}</th><th class="text-end">{{ __('Actions') }}</th></tr></thead>
                 <tbody>
                     @forelse ($users as $user)
                         <tr class="border-slate-100 transition-colors hover:bg-slate-50/70 dark:border-slate-800 dark:hover:bg-slate-800/30">
@@ -54,7 +54,7 @@
                                 </div>
                             </td>
                             <td><div class="flex max-w-64 flex-wrap gap-1">@forelse ($user->roles as $role)<span class="badge badge-ghost badge-sm">{{ $role->name }}</span>@empty<span class="text-xs text-slate-400">{{ __('No role') }}</span>@endforelse</div></td>
-                            <td><span class="badge badge-sm lg:badge-md badge-ghost">{{ localizeNumber(number_format($user->companies_count)) }}</span></td>
+                            <td><span class="badge badge-sm lg:badge-md badge-ghost">{{ localizeNumber(number_format($user->fiscal_years_count)) }}</span></td>
                             <td><span @class(['badge badge-sm lg:badge-md', 'badge-success badge-outline' => $user->hasVerifiedEmail(), 'badge-warning badge-outline' => ! $user->hasVerifiedEmail()])>{{ $user->hasVerifiedEmail() ? __('Verified') : __('Pending') }}</span></td>
                             <td>
                                 <div class="flex justify-end gap-1">
@@ -71,7 +71,7 @@
                                             <button type="submit" class="whitespace-nowrap btn btn-ghost btn-sm rounded-lg text-violet-600 dark:text-violet-400">{{ __('Impersonate') }}</button>
                                         </form>
                                     @else
-                                        @php($impersonationUnavailableReason = (int) $user->companies_count === 0 ? __('User has no company') : __('Impersonation is not available for this user.'))
+                                        @php($impersonationUnavailableReason = (int) $user->fiscal_years_count === 0 ? __('User has no assigned fiscal year') : __('Impersonation is not available for this user.'))
                                         <span class="lg:tooltip" data-tip="{{ $impersonationUnavailableReason }}">
                                             <button type="button" disabled aria-disabled="true" title="{{ $impersonationUnavailableReason }}" class="whitespace-nowrap btn btn-ghost btn-sm btn-disabled cursor-not-allowed rounded-lg">{{ __('Impersonate') }}</button>
                                         </span>

@@ -383,7 +383,7 @@ $user->fiscalYears()->syncWithoutDetaching([$fiscalYear->id]);
 ```
 
 ### جداسازی داده‌ها با FiscalYearScope
-مدل‌های دارای اسکوپ سال مالی از `FiscalYearScope` استفاده می‌کنند:
+مدل‌های دارای scope سال مالی از `FiscalYearScope` استفاده می‌کنند:
 
 ```php
 protected static function booted()
@@ -399,8 +399,10 @@ $allData = SomeModel::withoutGlobalScope(FiscalYearScope::class)->get();
 برای اطلاعات بیشتر [FiscalYearExportImport.md](FiscalYearExportImport.md)
 ```php
 php artisan fiscal-year:export 1 --sections=subjects,customers
-php artisan fiscal-year:import exported_data.json --name="سال 1404" --year=1404
+php artisan fiscal-year:import exported_data.json 1404 --name="شرکت نمونه"
 ```
+
+پس از واردسازی با فرمان CLI، دسترسی کاربران به سال مالی جدید را از بخش مدیریت کاربران تخصیص دهید.
 
 ### تنظیمات شرکت‌ها
 
@@ -615,7 +617,7 @@ echo $subject->formattedCode();  // "001/002/003"
 ```
 
 
-### 7. همیشه اسکوپ سال مالی را در نظر بگیرید
+### 7. همیشه scope سال مالی را در نظر بگیرید
 ```php
 $subjects = Subject::all(); // درست ✅ - با scope خودکار
 
