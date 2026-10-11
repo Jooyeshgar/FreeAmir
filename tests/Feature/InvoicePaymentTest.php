@@ -5,9 +5,11 @@ namespace Tests\Feature;
 use App\Enums\FiscalYearSection;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Http\Middleware\CheckPermission;
 use App\Models\AncillaryCost;
 use App\Models\Bank;
 use App\Models\BankAccount;
+use App\Models\Config;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
@@ -16,6 +18,7 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\ProductGroup;
 use App\Models\Subject;
+use App\Models\Transaction;
 use App\Models\User;
 use App\Services\AncillaryCostService;
 use App\Services\FiscalYearService;
@@ -24,6 +27,7 @@ use App\Services\ProductService;
 use Cookie;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\Helpers\InvoiceTestHelper;
@@ -97,6 +101,20 @@ class InvoicePaymentTest extends TestCase
         ]);
 
         return (int) $account->subject_id;
+    }
+
+    private function feeSubjectId(): int
+    {
+        $subject = Subject::factory()->withParent(Subject::findOrFail((int) config('amir.cost')))->create([
+            'name' => 'کارمزد بانک',
+            'company_id' => $this->companyId,
+        ]);
+        Config::create([
+            'key' => 'bank_service_fee', 'value' => (string) $subject->id,
+            'desc' => 'کارمزد بانک', 'type' => 3, 'category' => 1, 'company_id' => $this->companyId,
+        ]);
+
+        return (int) $subject->id;
     }
 
     private function approvedSell(float $unit, int $qty): Invoice
@@ -334,10 +352,12 @@ class InvoicePaymentTest extends TestCase
 
     public function test_deleting_payment_reverses_document_and_restores_status(): void
     {
+        $this->feeSubjectId();
         $sell = $this->approvedSell(1000, 2);
 
-        $payment = $this->recordPayment($sell, ['amount' => 2000, 'subject_id' => $this->cashSubjectId()]);
+        $payment = $this->recordPayment($sell, ['amount' => 2000, 'bank_service_fee' => 2, 'subject_id' => $this->cashSubjectId()]);
         $documentId = $payment->document_id;
+        $transactionIds = $payment->document->transactions->pluck('id');
 
         $this->assertTrue($this->findInvoice($sell->id)->status->isPaid());
 
@@ -345,6 +365,7 @@ class InvoicePaymentTest extends TestCase
 
         $this->assertNull(Payment::withoutGlobalScopes()->find($payment->id));
         $this->assertNull(Document::withoutGlobalScopes()->find($documentId));
+        $this->assertSame(0, Transaction::whereIn('id', $transactionIds)->count());
         $this->assertTrue($this->findInvoice($sell->id)->status->isApproved());
     }
 
@@ -405,7 +426,8 @@ class InvoicePaymentTest extends TestCase
     public function test_payments_are_exported_and_imported_with_the_fiscal_year(): void
     {
         $sell = $this->approvedSell(1000, 2);
-        $this->recordPayment($sell, ['amount' => 800, 'subject_id' => $this->cashSubjectId()]);
+        $this->feeSubjectId();
+        $this->recordPayment($sell, ['amount' => 800, 'bank_service_fee' => 2, 'subject_id' => $this->cashSubjectId()]);
 
         $sections = [
             FiscalYearSection::SUBJECTS->value,
@@ -431,6 +453,7 @@ class InvoicePaymentTest extends TestCase
         $importedPayment = $importedPayments->first();
         $this->assertEqualsWithDelta(800, (float) $importedPayment->amount, 0.01);
         $this->assertNotNull($importedPayment->document_id);
+        $this->assertSame('2.00', $importedPayment->bank_service_fee);
     }
 
     public function test_return_sell_payment_refunds_customer_with_reversed_signs(): void
@@ -506,8 +529,9 @@ class InvoicePaymentTest extends TestCase
 
     public function test_recreating_payment_document_restores_paid_status(): void
     {
+        $expenseSubjectId = $this->feeSubjectId();
         $sell = $this->approvedSell(1000, 2);
-        $payment = $this->recordPayment($sell, ['amount' => 2000, 'subject_id' => $this->cashSubjectId()]);
+        $payment = $this->recordPayment($sell, ['amount' => 2000, 'bank_service_fee' => 2, 'subject_id' => $this->cashSubjectId()]);
         $this->paymentService->removePaymentDocument($payment);
         $this->assertTrue($this->findInvoice($sell->id)->status->isApproved());
 
@@ -516,7 +540,181 @@ class InvoicePaymentTest extends TestCase
         $payment->refresh();
         $this->assertNotNull($payment->document_id);
         $this->assertNotNull($payment->document);
+        $this->assertSame('2.00', $payment->bank_service_fee);
+        $this->assertEquals(-2, $payment->document->transactions->where('subject_id', $expenseSubjectId)->sum('value'));
         $this->assertEqualsWithDelta(0, $payment->document->transactions->sum('value'), 0.01);
         $this->assertTrue($this->findInvoice($sell->id)->status->isPaid());
+    }
+
+    public static function feePaymentCases(): array
+    {
+        $cases = [];
+        foreach ([InvoiceType::SELL, InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::RETURN_BUY] as $type) {
+            foreach (['cash', 'bank'] as $method) {
+                $cases[$type->name.' '.$method] = [$type, $method];
+            }
+        }
+
+        return $cases;
+    }
+
+    #[DataProvider('feePaymentCases')]
+    public function test_fee_is_separate_from_settlement_for_each_invoice_type_and_account(InvoiceType $type, string $method): void
+    {
+        $expenseSubjectId = $this->feeSubjectId();
+        $settlementSubjectId = $method === 'cash' ? $this->cashSubjectId() : $this->bankAccountSubjectId();
+        $invoice = Invoice::create([
+            'number' => ++$this->nextInvoiceNumber, 'date' => now()->toDateString(),
+            'creator_id' => $this->user->id, 'customer_id' => $this->customer->id,
+            'amount' => 100, 'subtraction' => 0, 'vat' => 0,
+            'invoice_type' => $type, 'status' => InvoiceStatus::APPROVED,
+        ]);
+        $payment = $this->recordPayment($invoice, [
+            'amount' => 100, 'bank_service_fee' => 2, 'subject_id' => $settlementSubjectId,
+        ]);
+
+        $this->assertSame('2.00', $payment->bank_service_fee);
+        $this->assertSame('100.00', $payment->amount);
+        $this->assertTrue($invoice->fresh()->status->isPaid());
+        $this->assertEquals(100, $this->paymentService->paidAmount($invoice));
+        $transactions = $payment->document->transactions;
+        $this->assertEqualsWithDelta(0, $transactions->sum('value'), 0.001);
+        $this->assertEquals(-2, $transactions->where('subject_id', $expenseSubjectId)->sum('value'));
+        $customerCredit = in_array($type, [InvoiceType::SELL, InvoiceType::RETURN_BUY]) ? 100 : -100;
+        $this->assertEquals($customerCredit + 2, $transactions->where('subject_id', $invoice->customer->subject_id)->sum('value'));
+        $this->assertEquals(-$customerCredit, $transactions->where('subject_id', $settlementSubjectId)->sum('value'));
+    }
+
+    public function test_fee_does_not_allow_overpayment_and_does_not_reduce_partial_balance(): void
+    {
+        $this->feeSubjectId();
+        $invoice = $this->approvedSell(100, 1);
+        $data = ['subject_id' => $this->cashSubjectId(), 'amount' => 101, 'bank_service_fee' => 2];
+        $before = Document::count();
+        $this->assertTrue($this->paymentService->createPayment($this->user, $invoice, $data)->hasErrors());
+        $this->assertSame($before, Document::count());
+        $this->assertSame(0, $invoice->payments()->count());
+
+        $data['amount'] = 40;
+        $this->recordPayment($invoice, $data);
+        $this->assertEquals(60, $this->paymentService->remainingAmount($invoice));
+        $this->assertTrue($invoice->fresh()->status->isPartiallyPaid());
+    }
+
+    public function test_negative_fee_is_rejected_by_the_service_without_posting(): void
+    {
+        $invoice = $this->approvedSell(100, 1);
+        $before = Document::count();
+        $decision = $this->paymentService->createPayment($this->user, $invoice, [
+            'subject_id' => $this->cashSubjectId(), 'amount' => 100, 'bank_service_fee' => -2,
+        ]);
+        $this->assertTrue($decision->hasErrors());
+        $this->assertSame($before, Document::count());
+        $this->assertSame(0, $invoice->payments()->count());
+    }
+
+    public static function httpFeeCases(): array
+    {
+        return ['blank' => ['', '0.00'], 'zero' => ['0', '0.00'], 'Persian fee' => ['۲', '2.00'], 'decimal fee' => ['۲٫۵۰', '2.50']];
+    }
+
+    #[DataProvider('httpFeeCases')]
+    public function test_http_normalizes_optional_and_persian_fees(string $fee, string $expected): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+        $this->feeSubjectId();
+        $invoice = $this->approvedSell(100, 1);
+        $this->post(route('invoices.payments.store', $invoice), [
+            'subject_id' => $this->cashSubjectId(), 'amount' => '۱۰۰', 'bank_service_fee' => $fee,
+        ])->assertSessionHasNoErrors()->assertRedirect(route('invoices.show', $invoice));
+        $payment = $invoice->payments()->firstOrFail();
+        $this->assertSame($expected, $payment->bank_service_fee);
+        $this->assertCount($expected === '0.00' ? 2 : 4, $payment->document->transactions);
+    }
+
+    public static function invalidFees(): array
+    {
+        return ['negative' => ['-۲'], 'text' => ['invalid'], 'array' => [['2']]];
+    }
+
+    #[DataProvider('invalidFees')]
+    public function test_http_rejects_invalid_fee(mixed $fee): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+        $invoice = $this->approvedSell(100, 1);
+        $this->post(route('invoices.payments.store', $invoice), [
+            'subject_id' => $this->cashSubjectId(), 'amount' => 100, 'bank_service_fee' => $fee,
+        ])->assertSessionHasErrors('bank_service_fee');
+        $this->assertSame(0, $invoice->payments()->count());
+    }
+
+    public function test_positive_fee_requires_an_expense_subject_in_the_active_fiscal_year(): void
+    {
+        $invoice = $this->approvedSell(100, 1);
+        $expenseSubjectId = $this->feeSubjectId();
+        $otherYear = FiscalYear::factory()->create();
+        Subject::withoutGlobalScopes()->whereKey($expenseSubjectId)->update(['fiscal_year_id' => $otherYear->id]);
+        // A cached setting from another year must never bypass fiscal-year scoping.
+        config(['amir.bank_service_fee' => $expenseSubjectId]);
+        $decision = $this->paymentService->createPayment($this->user, $invoice, [
+            'subject_id' => $this->cashSubjectId(), 'amount' => 100, 'bank_service_fee' => 2,
+        ]);
+        $this->assertTrue($decision->hasErrors());
+        $this->assertSame(0, $invoice->payments()->count());
+
+        Config::where('key', 'bank_service_fee')->delete();
+        $decision = $this->paymentService->createPayment($this->user, $invoice, [
+            'subject_id' => $this->cashSubjectId(), 'amount' => 100, 'bank_service_fee' => 2,
+        ]);
+        $this->assertTrue($decision->hasErrors());
+    }
+
+    public function test_fee_uses_the_current_year_setting_even_when_cached_setting_is_from_another_year(): void
+    {
+        $expenseSubjectId = $this->feeSubjectId();
+        $otherYear = FiscalYear::factory()->create();
+        $otherSubject = Subject::factory()->create(['fiscal_year_id' => $otherYear->id, 'parent_id' => null]);
+        Config::create([
+            'fiscal_year_id' => $otherYear->id, 'key' => 'bank_service_fee', 'value' => (string) $otherSubject->id,
+            'desc' => 'Other year fee', 'type' => 3, 'category' => 1,
+        ]);
+        config(['amir.bank_service_fee' => $otherSubject->id]);
+        $invoice = $this->approvedSell(100, 1);
+        $payment = $this->recordPayment($invoice, [
+            'amount' => 100, 'bank_service_fee' => 2, 'subject_id' => $this->cashSubjectId(),
+        ]);
+        $this->assertEquals(-2, $payment->document->transactions->where('subject_id', $expenseSubjectId)->sum('value'));
+        $this->assertCount(0, $payment->document->transactions->where('subject_id', $otherSubject->id));
+    }
+
+    public function test_invoice_page_renders_fee_input_and_recorded_fee(): void
+    {
+        $this->user->givePermissionTo([
+            Permission::findOrCreate('invoices.show'), Permission::findOrCreate('invoices.payments.store'),
+        ]);
+        $this->feeSubjectId();
+        $invoice = $this->approvedSell(100, 1);
+        $this->recordPayment($invoice, [
+            'amount' => 40, 'bank_service_fee' => 2, 'subject_id' => $this->cashSubjectId(),
+        ]);
+        $this->get(route('invoices.show', $invoice))->assertOk()
+            ->assertSee(__('Bank service fee'))
+            ->assertSee('name="bank_service_fee"', false)
+            ->assertSee('id="invoice_payment_fee"', false);
+    }
+
+    public function test_recreating_fee_payment_document_rejects_overpayment_after_a_new_payment(): void
+    {
+        $this->feeSubjectId();
+        $invoice = $this->approvedSell(100, 1);
+        $data = ['amount' => 100, 'bank_service_fee' => 2, 'subject_id' => $this->cashSubjectId()];
+        $original = $this->recordPayment($invoice, $data);
+        $this->paymentService->removePaymentDocument($original);
+        $this->recordPayment($invoice->fresh(), $data);
+
+        $decision = $this->paymentService->createPaymentDocument($this->user, $original->fresh());
+        $this->assertTrue($decision->hasErrors());
+        $this->assertNull($original->fresh()->document_id);
+        $this->assertEquals(100, $this->paymentService->paidAmount($invoice));
     }
 }

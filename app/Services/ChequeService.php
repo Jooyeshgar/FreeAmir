@@ -73,9 +73,10 @@ class ChequeService
                 'desc' => $data['description'] ?? null,
             ]);
 
-            $document = $this->postInitialDocument($user, $cheque);
+            $fee = $invoice ? round((float) ($data['bank_service_fee'] ?? 0), 2) : 0;
+            $document = $this->postInitialDocument($user, $cheque, $fee);
             $paymentSubject = $direction === ChequeType::RECEIVABLE ? self::DOCUMENTS_RECEIVABLE_CONFIG : self::DOCUMENTS_PAYABLE_CONFIG;
-            $payment = $invoice ? $this->paymentService->saveChequePayment($user, $invoice, $cheque, $document, $this->subject($paymentSubject)) : null;
+            $payment = $invoice ? $this->paymentService->saveChequePayment($user, $invoice, $cheque, $document, $this->subject($paymentSubject), fee: $fee) : null;
 
             $this->history($cheque, $user, null, $status, $document, $payment, $data['description'] ?? null);
 
@@ -102,6 +103,7 @@ class ChequeService
             $initialHistory = $lockedCheque->histories()->whereNull('from_status')->oldest('id')->first();
             $initialPayment = $initialHistory?->payment;
             $invoice = $initialPayment?->invoice;
+            $data['bank_service_fee'] ??= $initialPayment?->bank_service_fee ?? 0;
             if ($invoice) {
                 $this->validateInvoicePaymentData($invoice, $direction, $purpose, $data, $initialPayment);
             }
@@ -129,10 +131,11 @@ class ChequeService
                 'desc' => $data['description'] ?? null,
             ]);
 
-            $document = $this->postInitialDocument($user, $lockedCheque);
+            $fee = $invoice ? round((float) $data['bank_service_fee'], 2) : 0;
+            $document = $this->postInitialDocument($user, $lockedCheque, $fee);
             if ($initialPayment && $document) {
                 $paymentSubject = $direction === ChequeType::RECEIVABLE ? self::DOCUMENTS_RECEIVABLE_CONFIG : self::DOCUMENTS_PAYABLE_CONFIG;
-                $initialPayment = $this->paymentService->saveChequePayment($user, $invoice, $lockedCheque, $document, $this->subject($paymentSubject), $initialPayment);
+                $initialPayment = $this->paymentService->saveChequePayment($user, $invoice, $lockedCheque, $document, $this->subject($paymentSubject), $initialPayment, $fee);
             } elseif ($initialPayment) {
                 $initialPayment->delete();
                 $initialPayment = null;
@@ -349,7 +352,7 @@ class ChequeService
         };
     }
 
-    private function postInitialDocument(User $user, Cheque $cheque): ?Document
+    private function postInitialDocument(User $user, Cheque $cheque, float $fee = 0): ?Document
     {
         if ($cheque->purpose === ChequeType::GUARANTEE) {
             return null;
@@ -362,11 +365,11 @@ class ChequeService
             ? $this->post($user, $cheque, 'register', [
                 [$this->subject(self::DOCUMENTS_RECEIVABLE_CONFIG), -$amount],
                 [$this->accountSideSubject($cheque), $amount],
-            ], $writeDate)
+            ], $writeDate, $fee)
             : $this->post($user, $cheque, 'issue', [
                 [$this->accountSideSubject($cheque), -$amount],
                 [$this->subject(self::DOCUMENTS_PAYABLE_CONFIG), $amount],
-            ], $writeDate);
+            ], $writeDate, $fee);
     }
 
     private function validateRegistrationData(array $data, ChequeType $direction, ?Cheque $except = null): void
@@ -424,6 +427,7 @@ class ChequeService
 
         $decision = $this->paymentService->validateInvoicePayment($invoice, [
             'amount' => (float) $data['amount'],
+            'bank_service_fee' => $data['bank_service_fee'] ?? 0,
             'date' => $data['issue_date'],
         ], $except);
         if ($decision->hasErrors()) {
@@ -445,7 +449,7 @@ class ChequeService
         return (string) $leaf;
     }
 
-    private function post(User $user, Cheque $cheque, string $event, array $entries, ?string $date = null): Document
+    private function post(User $user, Cheque $cheque, string $event, array $entries, ?string $date = null, float $fee = 0): Document
     {
         $title = $cheque->title ?? $this->accountingDescription($event, $cheque);
         $description = $cheque->desc ?? $this->accountingDescription($event, $cheque);
@@ -454,6 +458,9 @@ class ChequeService
             'value' => $entry[1],
             'desc' => $description,
         ], $entries);
+        if ($fee > 0) {
+            $transactions = array_merge($transactions, $this->paymentService->bankServiceFeeTransactions($fee, $this->accountSideSubject($cheque)));
+        }
 
         $document = DocumentService::createDocument($user, [
             'date' => $date ?? now()->toDateString(),
