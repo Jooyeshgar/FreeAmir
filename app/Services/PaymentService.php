@@ -6,7 +6,6 @@ use App\DTO\InvoiceStatusDecision;
 use App\Enums\ChequeType;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\BankAccount;
 use App\Models\Cheque;
 use App\Models\Document;
 use App\Models\Invoice;
@@ -19,28 +18,15 @@ use Illuminate\Validation\ValidationException;
 
 class PaymentService
 {
-    public function settlementSubjectIds(): array
+    public function settlementSubjects(string $search = ''): Collection
     {
-        $bankRootId = (int) config('amir.bank');
-        $cashBookId = (int) config('amir.cash_book');
+        $code = str_replace('/', '', toEnglish($search));
 
-        $bankSubjectIds = BankAccount::query()->whereNotNull('subject_id')->pluck('subject_id')->all();
-        $cashSubtreeIds = $cashBookId ? (Subject::find($cashBookId)?->getAllDescendantIds() ?? []) : [];
-        $ids = array_map('intval', array_merge($bankSubjectIds, $cashSubtreeIds));
-        $ids = array_diff($ids, [$bankRootId, $cashBookId]);
-
-        return array_values(array_unique($ids));
-    }
-
-    public function settlementSubjects(): Collection
-    {
-        $ids = $this->settlementSubjectIds();
-
-        if (empty($ids)) {
-            return new Collection;
-        }
-
-        return Subject::query()->with('parent')->whereIn('id', $ids)->orderBy('code')->get();
+        return Subject::query()->with('parent')->whereNotNull('parent_id')
+            ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
+                ->where('name', 'like', "%{$search}%")
+                ->orWhere('code', 'like', "%{$code}%")))
+            ->orderBy('code')->orderBy('id')->limit(25)->get();
     }
 
     public function paidAmount(Invoice $invoice, ?Payment $except = null): float
@@ -75,8 +61,8 @@ class PaymentService
             $decision->addMessage('error', __('This invoice is fully paid.'));
         }
 
-        if (isset($data['subject_id']) && ! in_array((int) $data['subject_id'], $this->settlementSubjectIds(), true)) {
-            $decision->addMessage('error', __('The selected settlement account is not a valid bank or cash subject.'));
+        if (isset($data['subject_id']) && ! Subject::query()->whereNotNull('parent_id')->whereKey($data['subject_id'])->exists()) {
+            $decision->addMessage('error', __('The selected settlement account is invalid.'));
         }
 
         if (isset($data['amount']) && $data['amount'] > $this->remainingAmount($invoice, $except) + 0.001) {

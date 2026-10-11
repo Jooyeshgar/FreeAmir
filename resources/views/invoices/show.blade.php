@@ -858,7 +858,7 @@
                                 <div>
                                     <label class="label"><span
                                             class="label-text">{{ __('Settlement Account') }}</span></label>
-                                    <div x-data="settlementSelect(@js($settlementGroups))" @click.outside="open = false" class="relative">
+                                    <div x-data="settlementSelect(@js($settlementGroups), @js(route('invoices.payments.search-subjects', $invoice)))" @click.outside="open = false" class="relative">
                                         <input type="hidden" name="subject_id" :value="selectedId">
                                         <button type="button" @click="toggle()"
                                             class="input input-bordered w-full flex items-center justify-between text-left">
@@ -875,10 +875,12 @@
                                             class="absolute left-0 right-0 z-[100] mt-1 bg-base-100 border border-base-300 rounded-box shadow-xl max-h-60 flex flex-col overflow-hidden">
                                             <div class="p-2 border-b border-base-200">
                                                 <input x-ref="settlementSearch" x-model="search" type="text"
+                                                    @input.debounce.300ms="searchRemote()"
                                                     class="input input-sm w-full" placeholder="{{ __('Search') }}"
                                                     @click.stop>
                                             </div>
                                             <ul class="overflow-y-auto p-1">
+                                                <li x-show="loading" class="p-4 text-center text-sm">{{ __('Loading') }}</li>
                                                 <template x-for="group in filteredGroups" :key="group.label">
                                                     <li>
                                                         <div class="px-3 pt-2 pb-1 text-xs font-semibold uppercase text-gray-500"
@@ -895,9 +897,9 @@
                                                         </template>
                                                     </li>
                                                 </template>
-                                                <li x-show="filteredGroups.length === 0"
+                                                <li x-show="!loading && filteredGroups.length === 0"
                                                     class="p-4 text-center text-gray-500 italic text-sm">
-                                                    {{ __('No bank or cash subjects are configured.') }}
+                                                    {{ __('No results found') }}
                                                 </li>
                                             </ul>
                                         </div>
@@ -1341,11 +1343,14 @@
     @endcan
 
     <script>
-        function settlementSelect(groups) {
+        function settlementSelect(groups, url) {
             return {
                 open: false,
                 search: '',
                 groups: groups || [],
+                initialGroups: groups || [],
+                loading: false,
+                requestId: 0,
                 selectedId: '',
                 selectedLabel: '',
                 toggle() {
@@ -1355,22 +1360,39 @@
                     }
                 },
                 get filteredGroups() {
-                    const q = this.search.trim().toLowerCase();
-                    if (!q) return this.groups;
-
-                    return this.groups
-                        .map(group => ({
-                            label: group.label,
-                            options: group.options.filter(opt => (opt.name + ' ' + opt.code).toLowerCase()
-                                .includes(q)),
-                        }))
-                        .filter(group => group.options.length > 0);
+                    return this.groups;
+                },
+                async searchRemote() {
+                    const requestId = ++this.requestId;
+                    const q = this.search.trim();
+                    if (!q) {
+                        this.groups = this.initialGroups;
+                        this.loading = false;
+                        return;
+                    }
+                    this.loading = true;
+                    this.groups = [];
+                    try {
+                        const response = await fetch(`${url}?q=${encodeURIComponent(q)}`, {
+                            headers: { 'Accept': 'application/json' },
+                        });
+                        if (!response.ok) throw new Error('Settlement search failed');
+                        const results = await response.json();
+                        if (requestId === this.requestId) this.groups = results;
+                    } catch {
+                        if (requestId === this.requestId) this.groups = [];
+                    } finally {
+                        if (requestId === this.requestId) this.loading = false;
+                    }
                 },
                 select(opt) {
                     this.selectedId = opt.id;
                     this.selectedLabel = opt.name;
                     this.open = false;
                     this.search = '';
+                    this.requestId++;
+                    this.loading = false;
+                    this.groups = this.initialGroups;
                 },
             };
         }

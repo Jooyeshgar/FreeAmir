@@ -24,6 +24,8 @@ use App\Services\ProductService;
 use Cookie;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\Helpers\InvoiceTestHelper;
 use Tests\Helpers\SeederHelper;
 use Tests\TestCase;
@@ -257,11 +259,77 @@ class InvoicePaymentTest extends TestCase
 
         $decision = $this->paymentService->createPayment($this->user, $sell, [
             'amount' => 1000,
-            'subject_id' => $sell->customer->subject->id,
+            'subject_id' => 99999999,
         ]);
 
         $this->assertTrue($decision->hasErrors());
         $this->assertCount(0, $sell->payments()->get());
+    }
+
+    public function test_payment_can_settle_against_a_non_bank_or_cash_subject(): void
+    {
+        $sell = $this->approvedSell(1000, 2);
+        $subject = Subject::factory()->withParent($sell->customer->subject->parent)->create(['name' => 'حساب تسویه عمومی']);
+        $payment = $this->recordPayment($sell, ['amount' => 1000, 'subject_id' => $subject->id]);
+
+        $this->assertSame($subject->id, $payment->settlement_subject_id);
+        $this->assertEqualsWithDelta(-1000, $payment->document->transactions->firstWhere('subject_id', $subject->id)->value, 0.01);
+        $this->assertEqualsWithDelta(0, $payment->document->transactions->sum('value'), 0.01);
+        $this->assertTrue($sell->fresh()->status->isPartiallyPaid());
+    }
+
+    public function test_payment_rejects_another_company_subject(): void
+    {
+        $sell = $this->approvedSell(1000, 2);
+        $company = Company::factory()->create();
+        $subject = Subject::factory()->create(['company_id' => $company->id]);
+        $decision = $this->paymentService->createPayment($this->user, $sell, ['amount' => 1000, 'subject_id' => $subject->id]);
+
+        $this->assertTrue($decision->hasErrors());
+        $this->assertCount(0, $sell->payments()->get());
+    }
+
+    public function test_payment_rejects_a_root_subject(): void
+    {
+        $sell = $this->approvedSell(1000, 2);
+        $subject = Subject::whereNull('parent_id')->firstOrFail();
+        $decision = $this->paymentService->createPayment($this->user, $sell, ['amount' => 1000, 'subject_id' => $subject->id]);
+
+        $this->assertTrue($decision->hasErrors());
+        $this->assertCount(0, $sell->payments()->get());
+    }
+
+    public function test_settlement_subjects_are_limited_and_search_all_company_subjects(): void
+    {
+        $parent = Subject::whereNull('parent_id')->firstOrFail();
+        for ($i = 0; $i < 30; $i++) {
+            Subject::factory()->withParent($parent)->create();
+        }
+        $subject = Subject::factory()->withParent($parent)->create(['name' => 'Unique settlement subject']);
+        $company = Company::factory()->create();
+        $otherParent = Subject::factory()->create(['company_id' => $company->id, 'is_permanent' => true]);
+        Subject::factory()->withParent($otherParent)->create(['name' => $subject->name, 'company_id' => $company->id]);
+
+        $initial = $this->paymentService->settlementSubjects();
+        $this->assertCount(25, $initial);
+        $this->assertFalse($initial->contains('id', $parent->id));
+        $this->assertFalse($initial->contains('id', $subject->id));
+        $this->assertSame([$subject->id], $this->paymentService->settlementSubjects('Unique settlement')->modelKeys());
+        $this->assertSame([$subject->id], $this->paymentService->settlementSubjects($subject->formattedCode())->modelKeys());
+    }
+
+    public function test_settlement_search_uses_its_own_permission_and_returns_remote_results(): void
+    {
+        $sell = $this->approvedSell(1000, 2);
+        $subject = Subject::factory()->withParent(Subject::whereNull('parent_id')->firstOrFail())->create(['name' => 'Remote settlement subject']);
+        $this->user->givePermissionTo(Permission::findOrCreate('invoices.payments.search-subjects'));
+
+        $this->getJson(route('invoices.payments.search-subjects', [$sell, 'q' => 'Remote settlement']))
+            ->assertOk()->assertJsonPath('0.options.0.id', $subject->id);
+
+        $this->user->revokePermissionTo('invoices.payments.search-subjects');
+        $this->getJson(route('invoices.payments.search-subjects', [$sell, 'q' => 'Remote settlement']))->assertForbidden();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     public function test_deleting_payment_reverses_document_and_restores_status(): void
