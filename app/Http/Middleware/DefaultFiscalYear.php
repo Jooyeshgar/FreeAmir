@@ -48,7 +48,8 @@ class DefaultFiscalYear
     private function setDefaultCompany(): void
     {
         if (Auth::check()) {
-            $fiscalYear = Auth::user()->fiscalYears()->where('year', toEnglish(jdate('Y')))->first();
+            $fiscalYear = Auth::user()->fiscalYears()->where('year', toEnglish(jdate('Y')))->first()
+                ?? Auth::user()->fiscalYears()->orderByDesc('year')->orderByDesc('fiscal_years.id')->first();
             if ($fiscalYear) {
                 Cookie::queue('active-fiscal-year-id', $fiscalYear->id, 362 * 24 * 60);
 

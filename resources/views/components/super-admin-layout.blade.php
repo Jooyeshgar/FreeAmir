@@ -3,11 +3,7 @@
 @php
     $user = auth()->user();
     $isRtl = app()->getLocale() === 'fa';
-    $hasCurrentWorkspace = $user
-        ->fiscalYears()
-        ->whereKey(getActiveFiscalYear())
-        ->where('year', toEnglish(jdate('Y')))
-        ->exists();
+    $hasWorkspace = $user->fiscalYears()->exists();
     $navigation = [
         [
             __('Dashboard'),
@@ -215,7 +211,7 @@
                         <span class="text-slate-400">{{ __('Service health') }}</span>
                         <span class="flex items-center gap-1.5 text-emerald-300"><i class="h-2 w-2 rounded-full bg-emerald-400"></i>{{ __('Stable') }}</span>
                     </div>
-                    <a href="{{ $hasCurrentWorkspace ? route('home') : route('management.dashboard') }}" class="flex items-center gap-3 border-t border-white/10 pt-3 transition">
+                    <a href="{{ $hasWorkspace ? route('home') : route('management.dashboard') }}" class="flex items-center gap-3 border-t border-white/10 pt-3 transition" data-testid="go-to-workspace">
                         <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/10 text-sm font-bold text-white">{{ mb_strtoupper(mb_substr($user->name, 0, 1)) }}</span>
                         <span class="min-w-0 flex-1"><strong class="block truncate text-xs text-white">{{ $user->name }}</strong><span class="mt-1 block text-[10px] text-slate-500">{{ __('Go to workspace') }}</span></span>
                         <svg class="h-4 w-4 text-slate-500 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
