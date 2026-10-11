@@ -22,7 +22,7 @@ class PaymentService
     {
         $code = str_replace('/', '', toEnglish($search));
 
-        return Subject::query()->with('parent')->where('parent_id', '!=', null)
+        return Subject::query()->with('parent')->whereNotNull('parent_id')
             ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
                 ->where('name', 'like', "%{$search}%")
                 ->orWhere('code', 'like', "%{$code}%")))
@@ -61,7 +61,7 @@ class PaymentService
             $decision->addMessage('error', __('This invoice is fully paid.'));
         }
 
-        if (isset($data['subject_id']) && ! Subject::query()->whereKey($data['subject_id'])->exists()) {
+        if (isset($data['subject_id']) && ! Subject::query()->whereNotNull('parent_id')->whereKey($data['subject_id'])->exists()) {
             $decision->addMessage('error', __('The selected settlement account is invalid.'));
         }
 
