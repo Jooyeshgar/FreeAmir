@@ -2770,6 +2770,7 @@
     "The selected product does not exist.": "The selected product does not exist.",
     "The selected product is invalid.": "The selected product is invalid.",
     "The selected service is invalid.": "The selected service is invalid.",
+    "The selected settlement account is invalid.": "The selected settlement account is invalid.",
     "The selected settlement account is not a valid bank or cash subject.": "The selected settlement account is not a valid bank or cash subject.",
     "The selected subject already has a forecast for this month.": "The selected subject already has a forecast for this month.",
     "The selected subject overlaps an existing forecast for this month.": "The selected subject overlaps an existing forecast for this month.",

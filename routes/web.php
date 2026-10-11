@@ -173,6 +173,7 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::post('invoices/{invoice}/void', [Controllers\InvoiceController::class, 'voidInvoice'])->name('invoices.void');
     Route::post('invoices/{invoice}/change-status/{status}', [Controllers\InvoiceController::class, 'changeStatus'])->name('invoices.change-status');
     Route::post('invoices/{invoice}/payments', [Controllers\PaymentController::class, 'store'])->name('invoices.payments.store');
+    Route::get('invoices/{invoice}/payments/subjects', [Controllers\PaymentController::class, 'searchSubjects'])->name('invoices.payments.search-subjects');
     Route::post('invoices/{invoice}/payments/cheque', [Controllers\PaymentController::class, 'storeCheque'])->name('invoices.payments.store-cheque');
     Route::delete('invoices/{invoice}/payments/{payment}', [Controllers\PaymentController::class, 'destroy'])->name('invoices.payments.destroy');
     Route::post('invoices/{invoice}/payments/{payment}/document', [Controllers\PaymentController::class, 'createDocument'])->name('invoices.payments.create-document');

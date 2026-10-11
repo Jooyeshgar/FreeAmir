@@ -113,7 +113,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'invoices.ancillary-costs' => ['create', 'store', 'show', 'edit', 'update', 'destroy'],
 
             // Invoice payments
-            'invoices.payments' => ['store', 'store-cheque', 'destroy', 'create-document', 'destroy-document'],
+            'invoices.payments' => ['store', 'store-cheque', 'destroy', 'create-document', 'destroy-document', 'search-subjects'],
 
             // Users / Roles / Permissions / Configs
             'users' => [...self::CRUD, 'create-employee', 'impersonate'],

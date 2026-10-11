@@ -2755,6 +2755,7 @@
     "The selected product does not exist.": "محصول انتخاب شده وجود ندارد.",
     "The selected product is invalid.": "محصول انتخابی نامعتبر است.",
     "The selected service is invalid.": "سرویس انتخاب شده نامعتبر است.",
+    "The selected settlement account is invalid.": "حساب تسویه انتخاب‌شده معتبر نیست.",
     "The selected settlement account is not a valid bank or cash subject.": "حساب تسویه انتخاب‌شده یک حساب بانکی یا صندوق معتبر نیست.",
     "The selected subject already has a forecast for this month.": "برای سرفصل انتخاب‌شده در این ماه قبلاً پیش‌بینی ثبت شده است.",
     "The selected subject overlaps an existing forecast for this month.": "سرفصل انتخاب‌شده با یکی از پیش‌بینی‌های موجود این ماه هم‌پوشانی دارد.",

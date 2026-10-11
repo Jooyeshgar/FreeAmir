@@ -15,6 +15,24 @@ class PaymentController extends Controller
 {
     public function __construct(private readonly PaymentService $paymentService, private readonly ChequeService $chequeService) {}
 
+    public function searchSubjects(Request $request, Invoice $invoice)
+    {
+        $validated = $request->validate(['q' => ['nullable', 'string', 'max:100']]);
+
+        $groups = $this->paymentService->settlementSubjects(trim($validated['q'] ?? ''))
+            ->groupBy(fn ($subject) => $subject->parent?->name ?? __('Other'))
+            ->map(fn ($subjects, $label) => [
+                'label' => (string) $label,
+                'options' => $subjects->map(fn ($subject) => [
+                    'id' => $subject->id,
+                    'name' => $subject->name,
+                    'code' => $subject->formattedCode(),
+                ])->values(),
+            ])->values();
+
+        return response()->json($groups);
+    }
+
     public function store(Request $request, Invoice $invoice)
     {
         $request->merge([
