@@ -29,8 +29,8 @@ class FiscalYearController extends Controller
     public function index(Request $request): View
     {
         $years = $this->accessibleYears($request)
-            ->with('company:id,name')
-            ->withCount(['users', 'documents'])
+            ->with('company:id,name,address', 'closedBy:id,name')
+            ->withCount(['users', 'documents' => fn ($query) => $query->withoutGlobalScopes()])
             ->when($request->filled('search'), function ($query) use ($request) {
                 $search = trim((string) $request->input('search'));
                 $query->whereHas('company', fn ($company) => $company->where('name', 'like', "%{$search}%"));
@@ -42,7 +42,12 @@ class FiscalYearController extends Controller
             ->paginate(12)
             ->withQueryString();
 
-        return view('fiscal-years.index', ['years' => $years]);
+        $view = $request->session()->get('interface_mode') === 'management'
+            && $request->user()->can('access-super-admin-panel')
+                ? 'fiscal-years.index'
+                : 'fiscal-years.workspace-index';
+
+        return view($view, ['years' => $years]);
     }
 
     public function create(Request $request): View
