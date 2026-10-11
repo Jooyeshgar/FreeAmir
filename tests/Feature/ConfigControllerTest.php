@@ -47,6 +47,7 @@ class ConfigControllerTest extends TestCase
 
             return ! in_array('CASH', $keys, true)
                 && in_array('CASH_BOOK', $keys, true)
+                && in_array('BANK_SERVICE_FEE', $keys, true)
                 && in_array('PAYROLL', $keys, true)
                 && in_array('SALES_RETURNS', $keys, true)
                 && in_array('COST_OF_GOODS_SOLD', $keys, true)
@@ -155,6 +156,34 @@ class ConfigControllerTest extends TestCase
                 'key' => $key,
             ]);
         }
+    }
+
+    public function test_fee_config_migration_uses_each_year_subject_and_preserves_custom_settings(): void
+    {
+        $otherYear = Company::factory()->create();
+        foreach ([$this->company, $otherYear] as $company) {
+            DB::table('subjects')->insert([
+                'company_id' => $company->id, 'code' => '040010',
+                'name' => 'کارمزد بانک', 'type' => SubjectType::DEBTOR->value,
+            ]);
+        }
+        Config::create([
+            'company_id' => $otherYear->id, 'key' => 'bank_service_fee', 'value' => '42',
+            'desc' => 'Custom fee account', 'type' => 3, 'category' => 1,
+        ]);
+
+        $migration = require database_path('migrations/2026_10_11_000002_add_bank_service_fee_subject_config.php');
+        $migration->up();
+        $migration->up();
+
+        $subjectId = DB::table('subjects')->where('company_id', $this->company->id)->where('code', '040010')->value('id');
+        $this->assertDatabaseHas('configs', [
+            'company_id' => $this->company->id, 'key' => 'bank_service_fee', 'value' => (string) $subjectId,
+        ]);
+        $this->assertDatabaseHas('configs', [
+            'company_id' => $otherYear->id, 'key' => 'bank_service_fee', 'value' => '42',
+        ]);
+        $this->assertSame(2, DB::table('configs')->where('key', 'bank_service_fee')->count());
     }
 
     public function test_edit_keeps_moved_subject_search_results_in_the_selector_scope(): void

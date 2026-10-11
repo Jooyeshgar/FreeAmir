@@ -99,6 +99,11 @@ class CompanyScopedSeedersTest extends TestCase
 
         $this->assertSame(0, $foreignParentCount);
         $this->assertSame(0, $foreignConfigCount);
+
+        $feeSubject = Subject::withoutGlobalScopes()->where('company_id', 42)->where('code', '040010')->firstOrFail();
+        $this->assertDatabaseHas('configs', [
+            'company_id' => 42, 'key' => 'bank_service_fee', 'value' => (string) $feeSubject->id,
+        ]);
     }
 
     public function test_payroll_config_uses_payroll_key_and_translation(): void

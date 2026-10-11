@@ -708,6 +708,7 @@
                                     <th class="px-4 py-3">{{ __('Date') }}</th>
                                     <th class="px-4 py-3">{{ __('Settlement Account') }}</th>
                                     <th class="px-4 py-3 text-right">{{ __('Amount') }}</th>
+                                    <th class="px-4 py-3 text-right">{{ __('Bank service fee') }}</th>
                                     <th class="px-4 py-3">{{ __('Doc Number') }}</th>
                                     <th class="px-4 py-3">{{ __('Description') }}</th>
                                     <th class="px-4 py-3">{{ __('Action') }}</th>
@@ -737,6 +738,7 @@
                                         </td>
                                         <td class="px-4 py-3 text-right">{{ formatNumber((float) $payment->amount) }}
                                         </td>
+                                        <td class="px-4 py-3 text-right">{{ formatNumber((float) $payment->bank_service_fee) }}</td>
                                         <td class="px-4 py-3">
                                             @if ($payment->document)
                                                 @can('documents.show')
@@ -912,6 +914,13 @@
                                     <span class="text-xs text-gray-500">{{ __('Remaining Amount') }}:
                                         {{ formatNumber($remainingAmount) }}</span>
                                 </div>
+                                <div x-data="{ feeInput: @js(old('bank_service_fee', '0')) }">
+                                    <label class="label" for="invoice_payment_fee"><span class="label-text">{{ __('Bank service fee') }}</span></label>
+                                    <x-text-input input_name="bank_service_fee" id_input="invoice_payment_fee"
+                                        input_class="input-bordered locale-number" input_value="{{ old('bank_service_fee', '0') }}"
+                                        x-model="feeInput" @input="feeInput = $store.utils.cleanupNumber($event.target.value)"
+                                        x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(feeInput))" />
+                                </div>
                                 <div>
                                     <label class="label"><span class="label-text">{{ __('Date') }}</span></label>
                                     <x-text-input data-jdp input_name="date" id_input="invoice_payment_date"
@@ -963,6 +972,13 @@
                                                     input_value="{{ $remainingAmount }}" required x-model="amountInput"
                                                     @input="amountInput = $store.utils.cleanupNumber($event.target.value)"
                                                     x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(amountInput))" />
+                                            </div>
+                                            <div x-data="{ feeInput: @js(old('bank_service_fee', '0')) }">
+                                                <label class="label" for="cheque_payment_fee"><span class="label-text">{{ __('Bank service fee') }}</span></label>
+                                                <x-text-input input_name="bank_service_fee" id_input="cheque_payment_fee"
+                                                    input_class="input-bordered locale-number" input_value="{{ old('bank_service_fee', '0') }}"
+                                                    x-model="feeInput" @input="feeInput = $store.utils.cleanupNumber($event.target.value)"
+                                                    x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(feeInput))" />
                                             </div>
                                             <div>
                                                 <label class="label"><span class="label-text">{{ __('16-digit Sayad number') }}</span></label>
