@@ -8,7 +8,6 @@ use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
 use App\Models\Bank;
 use App\Models\BankAccount;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
@@ -279,11 +278,11 @@ class InvoicePaymentTest extends TestCase
         $this->assertTrue($sell->fresh()->status->isPartiallyPaid());
     }
 
-    public function test_payment_rejects_another_company_subject(): void
+    public function test_payment_rejects_another_fiscal_year_subject(): void
     {
         $sell = $this->approvedSell(1000, 2);
-        $company = Company::factory()->create();
-        $subject = Subject::factory()->create(['company_id' => $company->id]);
+        $fiscalYear = FiscalYear::factory()->create();
+        $subject = Subject::factory()->create(['fiscal_year_id' => $fiscalYear->id]);
         $decision = $this->paymentService->createPayment($this->user, $sell, ['amount' => 1000, 'subject_id' => $subject->id]);
 
         $this->assertTrue($decision->hasErrors());
@@ -307,9 +306,9 @@ class InvoicePaymentTest extends TestCase
             Subject::factory()->withParent($parent)->create();
         }
         $subject = Subject::factory()->withParent($parent)->create(['name' => 'Unique settlement subject']);
-        $company = Company::factory()->create();
-        $otherParent = Subject::factory()->create(['company_id' => $company->id, 'is_permanent' => true]);
-        Subject::factory()->withParent($otherParent)->create(['name' => $subject->name, 'company_id' => $company->id]);
+        $fiscalYear = FiscalYear::factory()->create();
+        $otherParent = Subject::factory()->create(['fiscal_year_id' => $fiscalYear->id, 'is_permanent' => true]);
+        Subject::factory()->withParent($otherParent)->create(['name' => $subject->name, 'fiscal_year_id' => $fiscalYear->id]);
 
         $initial = $this->paymentService->settlementSubjects();
         $this->assertCount(25, $initial);
