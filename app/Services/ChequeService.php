@@ -524,7 +524,14 @@ class ChequeService
     {
         $fee = $this->validateBankServiceFee($data);
         if ($fee > 0) {
-            $transactions = $this->paymentService->bankServiceFeeTransactions($fee, $this->accountSideSubject($cheque));
+            if (! $cheque->bankAccount) {
+                throw ValidationException::withMessages(['bank_account_id' => __('A bank account is required.')]);
+            }
+            $bankSubjectId = (int) ($cheque->bankAccount->subject_id ?: $cheque->bankAccount->subject?->id);
+            if (! $bankSubjectId || ! Subject::where('fiscal_year_id', $cheque->fiscal_year_id)->whereKey($bankSubjectId)->exists()) {
+                throw ValidationException::withMessages(['bank_account_id' => __('The bank account has no accounting subject.')]);
+            }
+            $transactions = $this->paymentService->bankServiceFeeTransactions($fee, $bankSubjectId);
             $document = $history->document;
             if ($document) {
                 DocumentService::changeDocumentStatus($document, $user, 'unapproved');

@@ -607,8 +607,8 @@ class InvoicePaymentTest extends TestCase
         $this->assertEqualsWithDelta(0, $transactions->sum('value'), 0.001);
         $this->assertEquals(-2, $transactions->where('subject_id', $expenseSubjectId)->sum('value'));
         $customerCredit = in_array($type, [InvoiceType::SELL, InvoiceType::RETURN_BUY]) ? 100 : -100;
-        $this->assertEquals($customerCredit + 2, $transactions->where('subject_id', $invoice->customer->subject_id)->sum('value'));
-        $this->assertEquals(-$customerCredit, $transactions->where('subject_id', $settlementSubjectId)->sum('value'));
+        $this->assertEquals($customerCredit, $transactions->where('subject_id', $invoice->customer->subject_id)->sum('value'));
+        $this->assertEquals(-$customerCredit + 2, $transactions->where('subject_id', $settlementSubjectId)->sum('value'));
     }
 
     public function test_fee_does_not_allow_overpayment_and_does_not_reduce_partial_balance(): void

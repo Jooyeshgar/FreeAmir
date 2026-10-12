@@ -185,7 +185,7 @@ class PaymentService
         return $subjectId && Subject::whereKey($subjectId)->exists() ? $subjectId : null;
     }
 
-    public function bankServiceFeeTransactions(float $fee, int $customerSubjectId): array
+    public function bankServiceFeeTransactions(float $fee, int $settlementSubjectId): array
     {
         if ($fee <= 0) {
             return [];
@@ -200,7 +200,7 @@ class PaymentService
 
         return [
             ['subject_id' => $expenseSubjectId, 'desc' => __('Bank service fee'), 'value' => -$fee],
-            ['subject_id' => $customerSubjectId, 'desc' => __('Bank service fee'), 'value' => $fee],
+            ['subject_id' => $settlementSubjectId, 'desc' => __('Bank service fee'), 'value' => $fee],
         ];
     }
 
@@ -222,7 +222,7 @@ class PaymentService
                 'value' => -$customerSign * $amount,
             ],
         ];
-        $transactions = array_merge($transactions, $this->bankServiceFeeTransactions($fee, $customerSubjectId));
+        $transactions = array_merge($transactions, $this->bankServiceFeeTransactions($fee, $settlementSubjectId));
 
         $documentData = [
             'date' => $date ?? now()->toDateString(),
