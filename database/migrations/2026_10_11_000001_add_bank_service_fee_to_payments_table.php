@@ -14,6 +14,10 @@ return new class extends Migration
 
         DB::table('fiscal_years')->orderBy('id')->pluck('id')->each(function (int $fiscalYearId): void {
             $subjectId = DB::table('subjects')->where('fiscal_year_id', $fiscalYearId)->where('code', '040010')->value('id');
+        Schema::table('cheque_histories', function (Blueprint $table) {
+            $table->decimal('bank_service_fee', 18, 2)->default(0);
+        });
+
 
             if (! $subjectId || DB::table('configs')->where('fiscal_year_id', $fiscalYearId)->where('key', 'bank_service_fee')->exists()) {
                 return;
@@ -33,6 +37,13 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('payments', function (Blueprint $table) {
+            $table->dropColumn('bank_service_fee');
+        });
+        Schema::table('cheque_histories', function (Blueprint $table) {
+            $table->dropColumn('bank_service_fee');
+        });
+
+        Schema::table('cheque_histories', function (Blueprint $table) {
             $table->dropColumn('bank_service_fee');
         });
 

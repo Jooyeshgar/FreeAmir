@@ -60,6 +60,14 @@ class PaymentController extends Controller
 
     public function storeCheque(Request $request, Invoice $invoice)
     {
+        if ($request->has('bank_service_fee')) {
+            $request->merge(['bank_service_fee' => $this->normalizeBankServiceFee($request)]);
+        }
+
+        $request->validate([
+            'bank_service_fee' => ['sometimes', 'required', 'numeric', 'min:0', 'lt:10000000000000000'],
+        ]);
+
         $direction = $this->chequeService->directionForInvoice($invoice);
         abort_unless($direction, 422, __('This invoice type cannot be settled by cheque.'));
 

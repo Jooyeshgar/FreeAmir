@@ -975,12 +975,10 @@
                                                     @input="amountInput = $store.utils.cleanupNumber($event.target.value)"
                                                     x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(amountInput))" />
                                             </div>
-                                            <div x-data="{ feeInput: @js(old('bank_service_fee', '0')) }">
-                                                <label class="label" for="cheque_payment_fee"><span class="label-text">{{ __('Bank service fee') }}</span></label>
-                                                <x-text-input input_name="bank_service_fee" id_input="cheque_payment_fee"
-                                                    input_class="input-bordered locale-number" input_value="{{ old('bank_service_fee', '0') }}"
-                                                    x-model="feeInput" @input="feeInput = $store.utils.cleanupNumber($event.target.value)"
-                                                    x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(feeInput))" />
+                                            <div class="md:col-span-1" x-data="{ chequeFee: @js((string) old('bank_service_fee', 0)) }">
+                                                <x-text-input title="{{ __('Bank service fee') }}" label_text_class="text-sm text-gray-500" input_name="bank_service_fee" id_input="cheque_payment_fee" input_class="locale-number" :input_value="old('bank_service_fee', 0)"
+                                                    inputmode="decimal" x-model="chequeFee" @input="chequeFee = $store.utils.cleanupNumber($event.target.value)"
+                                                    x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(chequeFee))" />
                                             </div>
                                             <div>
                                                 <label class="label"><span class="label-text">{{ __('16-digit Sayad number') }}</span></label>

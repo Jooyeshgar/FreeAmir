@@ -15,12 +15,14 @@ class ChequeHistory extends Model
         'user_id',
         'document_id',
         'payment_id',
+        'bank_service_fee',
         'desc',
     ];
 
     protected $casts = [
         'from_status' => ChequeType::class,
         'to_status' => ChequeType::class,
+        'bank_service_fee' => 'decimal:2',
     ];
 
     public function cheque(): BelongsTo

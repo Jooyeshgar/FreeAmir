@@ -7,6 +7,7 @@
         'return' => __('Return to customer'),
         'cancel' => __('Cancel / take back'),
         'execute' => __('Execute guarantee'),
+        'fee' => __('Record bank service fee'),
     ];
 @endphp
 
@@ -162,7 +163,7 @@
             </div>
         </div>
 
-        @if (count($cheque->availableActions()))
+        @can('cheques.transition')
             {{-- Lifecycle Actions --}}
             <div class="card border border-base-200 bg-base-100 shadow-sm">
                 <div class="card-body p-5 sm:p-6">
@@ -178,11 +179,12 @@
                     </div>
 
                     <div class="grid gap-4 lg:grid-cols-2">
-                        @foreach ($cheque->availableActions() as $action)
+                        @foreach ([...$cheque->availableActions(), 'fee'] as $action)
                             <form method="POST" action="{{ route('cheques.transition', [$cheque, $action]) }}"
                                 class="rounded-xl border border-base-200 bg-base-200/25 p-4 transition hover:border-primary/25 hover:shadow-sm
                                     [&_.input]:h-10 [&_.input]:min-h-10 [&_.input]:max-h-10">
                                 @csrf
+                                <input type="hidden" name="fee_action" value="{{ $action }}">
                                 <h3 class="mb-3 font-bold">{{ $actionLabels[$action] }}</h3>
                                 @if ($action === 'deposit')
                                     <select name="bank_account_id" class="select select-sm w-full border-slate-400"
@@ -209,10 +211,15 @@
                                         <x-input name="customer_id" x-bind:value="accountSideId" hidden />
                                     </div>
                                 @endif
-                                <div class="mt-3 grid gap-2 sm:grid-cols-2">
-                                    <x-date-picker name="date" :id="'date_' . $action" :value="toEnglish(formatDate(now()))"
-                                        :placeholder="__('Action date')" />
-                                    <x-text-input name="description" placeholder="{{ __('Note') }}" />
+                                <div class="mt-3 grid gap-2 sm:grid-cols-2" x-data="{ chequeFee: @js((string) old('bank_service_fee', 0)) }">
+                                    <x-date-picker name="date" :id="'date_' . $action" :value="toEnglish(formatDate(now()))" 
+                                        title="{{ __('date') }}" :placeholder="__('Action date')" />
+                                    <x-text-input title="{{ __('Bank service fee') }}" input_name="bank_service_fee" :id_input="'cheque_' . $action . '_fee'" input_class="locale-number" :input_value="old('bank_service_fee', 0)"
+                                        inputmode="decimal" x-model="chequeFee" @input="chequeFee = $store.utils.cleanupNumber($event.target.value)" label_text_class="text-sm text-gray-500" 
+                                        x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(chequeFee))" />
+                                </div>
+                                <div class="mt-3">
+                                    <x-text-input input_name="description" :input_value="old('description')" placeholder="{{ __('Note') }}" />
                                 </div>
                                 <div class="mt-3 flex justify-end">
                                     <button class="btn btn-primary btn-sm"
@@ -225,7 +232,7 @@
                     </div>
                 </div>
             </div>
-        @endif
+        @endcan
 
         {{-- History --}}
         <div class="card border border-base-200 bg-base-100 shadow-sm">
@@ -285,6 +292,12 @@
                                     </span>
                                 @endif
                             </div>
+
+                            @if ((float) $history->bank_service_fee > 0 || ($history->from_status === null && (float) $history->payment?->bank_service_fee > 0))
+                                <div class="mt-3 text-sm">
+                                    <p>{{ __('Bank service fee') }}: {{ formatNumber(((float) $history->bank_service_fee ?: (float) $history->payment?->bank_service_fee)) }}</p>
+                                </div>
+                            @endif
 
                             @if ($history->desc)
                                 <p class="mt-3 rounded-lg bg-base-200/60 px-3 py-2 text-xs leading-relaxed text-base-content/60">

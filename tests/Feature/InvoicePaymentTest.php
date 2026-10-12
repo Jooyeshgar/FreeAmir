@@ -27,7 +27,6 @@ use App\Services\ProductService;
 use Cookie;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
-use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\Helpers\InvoiceTestHelper;
@@ -546,20 +545,47 @@ class InvoicePaymentTest extends TestCase
         $this->assertTrue($this->findInvoice($sell->id)->status->isPaid());
     }
 
-    public static function feePaymentCases(): array
+    public function test_fee_is_separate_from_settlement_for_sell_invoice_with_cash(): void
     {
-        $cases = [];
-        foreach ([InvoiceType::SELL, InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::RETURN_BUY] as $type) {
-            foreach (['cash', 'bank'] as $method) {
-                $cases[$type->name.' '.$method] = [$type, $method];
-            }
-        }
-
-        return $cases;
+        $this->assertFeeIsSeparateFromSettlement(InvoiceType::SELL, 'cash');
     }
 
-    #[DataProvider('feePaymentCases')]
-    public function test_fee_is_separate_from_settlement_for_each_invoice_type_and_account(InvoiceType $type, string $method): void
+    public function test_fee_is_separate_from_settlement_for_sell_invoice_with_bank(): void
+    {
+        $this->assertFeeIsSeparateFromSettlement(InvoiceType::SELL, 'bank');
+    }
+
+    public function test_fee_is_separate_from_settlement_for_buy_invoice_with_cash(): void
+    {
+        $this->assertFeeIsSeparateFromSettlement(InvoiceType::BUY, 'cash');
+    }
+
+    public function test_fee_is_separate_from_settlement_for_buy_invoice_with_bank(): void
+    {
+        $this->assertFeeIsSeparateFromSettlement(InvoiceType::BUY, 'bank');
+    }
+
+    public function test_fee_is_separate_from_settlement_for_return_sell_invoice_with_cash(): void
+    {
+        $this->assertFeeIsSeparateFromSettlement(InvoiceType::RETURN_SELL, 'cash');
+    }
+
+    public function test_fee_is_separate_from_settlement_for_return_sell_invoice_with_bank(): void
+    {
+        $this->assertFeeIsSeparateFromSettlement(InvoiceType::RETURN_SELL, 'bank');
+    }
+
+    public function test_fee_is_separate_from_settlement_for_return_buy_invoice_with_cash(): void
+    {
+        $this->assertFeeIsSeparateFromSettlement(InvoiceType::RETURN_BUY, 'cash');
+    }
+
+    public function test_fee_is_separate_from_settlement_for_return_buy_invoice_with_bank(): void
+    {
+        $this->assertFeeIsSeparateFromSettlement(InvoiceType::RETURN_BUY, 'bank');
+    }
+
+    private function assertFeeIsSeparateFromSettlement(InvoiceType $type, string $method): void
     {
         $expenseSubjectId = $this->feeSubjectId();
         $settlementSubjectId = $method === 'cash' ? $this->cashSubjectId() : $this->bankAccountSubjectId();
@@ -613,13 +639,27 @@ class InvoicePaymentTest extends TestCase
         $this->assertSame(0, $invoice->payments()->count());
     }
 
-    public static function httpFeeCases(): array
+    public function test_http_normalizes_blank_fee(): void
     {
-        return ['blank' => ['', '0.00'], 'zero' => ['0', '0.00'], 'Persian fee' => ['۲', '2.00'], 'decimal fee' => ['۲٫۵۰', '2.50']];
+        $this->assertHttpNormalizesFee('', '0.00');
     }
 
-    #[DataProvider('httpFeeCases')]
-    public function test_http_normalizes_optional_and_persian_fees(string $fee, string $expected): void
+    public function test_http_normalizes_zero_fee(): void
+    {
+        $this->assertHttpNormalizesFee('0', '0.00');
+    }
+
+    public function test_http_normalizes_persian_fee(): void
+    {
+        $this->assertHttpNormalizesFee('۲', '2.00');
+    }
+
+    public function test_http_normalizes_persian_decimal_fee(): void
+    {
+        $this->assertHttpNormalizesFee('۲٫۵۰', '2.50');
+    }
+
+    private function assertHttpNormalizesFee(string $fee, string $expected): void
     {
         $this->withoutMiddleware(CheckPermission::class);
         $this->feeSubjectId();
@@ -632,13 +672,22 @@ class InvoicePaymentTest extends TestCase
         $this->assertCount($expected === '0.00' ? 2 : 4, $payment->document->transactions);
     }
 
-    public static function invalidFees(): array
+    public function test_http_rejects_negative_fee(): void
     {
-        return ['negative' => ['-۲'], 'text' => ['invalid'], 'array' => [['2']]];
+        $this->assertHttpRejectsInvalidFee('-۲');
     }
 
-    #[DataProvider('invalidFees')]
-    public function test_http_rejects_invalid_fee(mixed $fee): void
+    public function test_http_rejects_text_fee(): void
+    {
+        $this->assertHttpRejectsInvalidFee('invalid');
+    }
+
+    public function test_http_rejects_array_fee(): void
+    {
+        $this->assertHttpRejectsInvalidFee(['2']);
+    }
+
+    private function assertHttpRejectsInvalidFee(mixed $fee): void
     {
         $this->withoutMiddleware(CheckPermission::class);
         $invoice = $this->approvedSell(100, 1);

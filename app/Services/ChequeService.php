@@ -73,12 +73,13 @@ class ChequeService
                 'desc' => $data['description'] ?? null,
             ]);
 
-            $fee = $invoice ? round((float) ($data['bank_service_fee'] ?? 0), 2) : 0;
-            $document = $this->postInitialDocument($user, $cheque, $fee);
+            $fee = $this->validateBankServiceFee($data);
+            $document = $this->postInitialDocument($user, $cheque);
             $paymentSubject = $direction === ChequeType::RECEIVABLE ? self::DOCUMENTS_RECEIVABLE_CONFIG : self::DOCUMENTS_PAYABLE_CONFIG;
             $payment = $invoice ? $this->paymentService->saveChequePayment($user, $invoice, $cheque, $document, $this->subject($paymentSubject), fee: $fee) : null;
 
-            $this->history($cheque, $user, null, $status, $document, $payment, $data['description'] ?? null);
+            $history = $this->history($cheque, $user, null, $status, $document, $payment, $data['description'] ?? null);
+            $this->recordBankServiceFee($cheque, $user, $history, $data, $data['issue_date']);
 
             return $cheque->fresh();
         });
@@ -103,7 +104,8 @@ class ChequeService
             $initialHistory = $lockedCheque->histories()->whereNull('from_status')->oldest('id')->first();
             $initialPayment = $initialHistory?->payment;
             $invoice = $initialPayment?->invoice;
-            $data['bank_service_fee'] ??= $initialPayment?->bank_service_fee ?? 0;
+            $data['bank_service_fee'] ??= (float) $initialHistory?->bank_service_fee ?: ($initialPayment?->bank_service_fee ?? 0);
+            $this->validateBankServiceFee($data);
             if ($invoice) {
                 $this->validateInvoicePaymentData($invoice, $direction, $purpose, $data, $initialPayment);
             }
@@ -131,8 +133,8 @@ class ChequeService
                 'desc' => $data['description'] ?? null,
             ]);
 
-            $fee = $invoice ? round((float) $data['bank_service_fee'], 2) : 0;
-            $document = $this->postInitialDocument($user, $lockedCheque, $fee);
+            $fee = $this->validateBankServiceFee($data);
+            $document = $this->postInitialDocument($user, $lockedCheque);
             if ($initialPayment && $document) {
                 $paymentSubject = $direction === ChequeType::RECEIVABLE ? self::DOCUMENTS_RECEIVABLE_CONFIG : self::DOCUMENTS_PAYABLE_CONFIG;
                 $initialPayment = $this->paymentService->saveChequePayment($user, $invoice, $lockedCheque, $document, $this->subject($paymentSubject), $initialPayment, $fee);
@@ -150,8 +152,10 @@ class ChequeService
             if ($initialHistory) {
                 $initialHistory->update($historyData);
             } else {
-                $this->history($lockedCheque, $user, null, $status, $document, $initialPayment, $data['description'] ?? null);
+                $initialHistory = $this->history($lockedCheque, $user, null, $status, $document, $initialPayment, $data['description'] ?? null);
             }
+
+            $this->recordBankServiceFee($lockedCheque, $user, $initialHistory, $data, $data['issue_date']);
 
             return $lockedCheque->fresh();
         });
@@ -185,11 +189,22 @@ class ChequeService
         return DB::transaction(function () use ($cheque, $user, $action, $data) {
             $lockedCheque = Cheque::query()->lockForUpdate()->findOrFail($cheque->id);
 
+            if ($action === 'fee') {
+                if ($this->validateBankServiceFee($data) <= 0) {
+                    throw ValidationException::withMessages(['bank_service_fee' => __('Enter a bank service fee greater than zero.')]);
+                }
+                $history = $this->history($lockedCheque, $user, $lockedCheque->status, $lockedCheque->status, null, null, $data['description'] ?? null);
+                $this->recordBankServiceFee($lockedCheque, $user, $history, $data, $data['date'] ?? now()->toDateString());
+
+                return $lockedCheque->fresh();
+            }
+
             if (! in_array($action, $lockedCheque->availableActions(), true)) {
                 throw ValidationException::withMessages(['status' => __('This action is not allowed in the current status.')]);
             }
 
-            return match ($action) {
+            $this->validateBankServiceFee($data);
+            $result = match ($action) {
                 'deposit' => $this->deposit($lockedCheque, $user, $data),
                 'clear' => $this->clear($lockedCheque, $user, $data),
                 'endorse' => $this->endorse($lockedCheque, $user, $data),
@@ -199,6 +214,10 @@ class ChequeService
                 'execute' => $this->executeGuarantee($lockedCheque, $user, $data),
                 default => throw ValidationException::withMessages(['action' => __('This action is not allowed in the current status.')]),
             };
+            $history = $result->histories()->latest('id')->firstOrFail();
+            $this->recordBankServiceFee($result, $user, $history, $data, $data['date'] ?? now()->toDateString());
+
+            return $result->fresh();
         });
     }
 
@@ -352,7 +371,7 @@ class ChequeService
         };
     }
 
-    private function postInitialDocument(User $user, Cheque $cheque, float $fee = 0): ?Document
+    private function postInitialDocument(User $user, Cheque $cheque): ?Document
     {
         if ($cheque->purpose === ChequeType::GUARANTEE) {
             return null;
@@ -365,11 +384,11 @@ class ChequeService
             ? $this->post($user, $cheque, 'register', [
                 [$this->subject(self::DOCUMENTS_RECEIVABLE_CONFIG), -$amount],
                 [$this->accountSideSubject($cheque), $amount],
-            ], $writeDate, $fee)
+            ], $writeDate)
             : $this->post($user, $cheque, 'issue', [
                 [$this->accountSideSubject($cheque), -$amount],
                 [$this->subject(self::DOCUMENTS_PAYABLE_CONFIG), $amount],
-            ], $writeDate, $fee);
+            ], $writeDate);
     }
 
     private function validateRegistrationData(array $data, ChequeType $direction, ?Cheque $except = null): void
@@ -449,7 +468,7 @@ class ChequeService
         return (string) $leaf;
     }
 
-    private function post(User $user, Cheque $cheque, string $event, array $entries, ?string $date = null, float $fee = 0): Document
+    private function post(User $user, Cheque $cheque, string $event, array $entries, ?string $date = null): Document
     {
         $title = $cheque->title ?? $this->accountingDescription($event, $cheque);
         $description = $cheque->desc ?? $this->accountingDescription($event, $cheque);
@@ -458,9 +477,6 @@ class ChequeService
             'value' => $entry[1],
             'desc' => $description,
         ], $entries);
-        if ($fee > 0) {
-            $transactions = array_merge($transactions, $this->paymentService->bankServiceFeeTransactions($fee, $this->accountSideSubject($cheque)));
-        }
 
         $document = DocumentService::createDocument($user, [
             'date' => $date ?? now()->toDateString(),
@@ -486,6 +502,48 @@ class ChequeService
             'settlement_subject_id' => $settlementSubjectId,
             'creator_id' => $user->id,
         ]);
+    }
+
+    public function validateBankServiceFee(array $data): float
+    {
+        $fee = $data['bank_service_fee'] ?? 0;
+
+        if (is_string($fee)) {
+            $fee = str_replace([',', '٬', '٫'], ['', '', '.'], trim(toEnglish($fee)));
+            $fee = $fee === '' ? 0 : $fee;
+        }
+
+        if (! is_numeric($fee) || ! is_finite((float) $fee) || (float) $fee < 0 || (float) $fee >= 1e16) {
+            throw ValidationException::withMessages(['bank_service_fee' => __('Bank service fee must be zero or greater.')]);
+        }
+
+        return round((float) $fee, 2);
+    }
+
+    private function recordBankServiceFee(Cheque $cheque, User $user, ChequeHistory $history, array $data, string $date): void
+    {
+        $fee = $this->validateBankServiceFee($data);
+        if ($fee > 0) {
+            $transactions = $this->paymentService->bankServiceFeeTransactions($fee, $this->accountSideSubject($cheque));
+            $document = $history->document;
+            if ($document) {
+                DocumentService::changeDocumentStatus($document, $user, 'unapproved');
+                foreach ($transactions as $transaction) {
+                    DocumentService::createTransaction($document, $transaction);
+                }
+            } else {
+                $document = DocumentService::createDocument($user, [
+                    'date' => $date,
+                    'title' => __('Bank service fee').' - '.$cheque->title,
+                    'number' => null,
+                    'documentable' => $cheque,
+                ], $transactions);
+                $history->document()->associate($document);
+            }
+            DocumentService::changeDocumentStatus($document, $user, 'approved');
+        }
+        $history->bank_service_fee = $fee;
+        $history->save();
     }
 
     private function history(Cheque $cheque, User $user, ?ChequeType $from, ChequeType $to, ?Document $document, ?Payment $payment, ?string $description = null): ChequeHistory

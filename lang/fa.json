@@ -541,7 +541,7 @@
     "Check-out": "چک کردن",
     "Cheque": "چک",
     "Cheque #": "چک #",
-    "Cheque #:number": "#:number را بررسی کنید",
+    "Cheque #:number": "#:number چک",
     "Cheque #:serial": "چک شماره :serial",
     "Cheque Management": "مدیریت چک‌ها",
     "Cheque Report": "گزارش چک‌ها",
@@ -3540,5 +3540,8 @@
     "Create missing customer, products, services, and their accounting subjects in the target fiscal year": "ایجاد مشتری، کالا، خدمت و سرفصل‌های حسابداری آن‌ها در سال مالی مقصد",
     "Bank service fee": "کارمزد بانک",
     "Bank service fee must be zero or greater.": "کارمزد بانک باید صفر یا بیشتر باشد.",
-    "Configure a bank service fee expense account for the active fiscal year.": "حساب هزینه کارمزد بانک را برای سال مالی فعال تنظیم کنید."
+    "Configure a bank service fee expense account for the active fiscal year.": "حساب هزینه کارمزد بانک را برای سال مالی فعال تنظیم کنید.",
+    "Enter only the fee charged at this stage. Leave zero if no fee was charged.": "فقط کارمزد این مرحله را وارد کنید. اگر کارمزدی پرداخت نشده است، مقدار صفر را وارد کنید.",
+    "Record bank service fee": "ثبت کارمزد بانک",
+    "Enter a bank service fee greater than zero.": "کارمزد بانک باید بیشتر از صفر باشد."
 }
