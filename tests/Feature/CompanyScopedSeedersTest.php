@@ -100,9 +100,9 @@ class CompanyScopedSeedersTest extends TestCase
         $this->assertSame(0, $foreignParentCount);
         $this->assertSame(0, $foreignConfigCount);
 
-        $feeSubject = Subject::withoutGlobalScopes()->where('company_id', 42)->where('code', '040010')->firstOrFail();
+        $feeSubject = Subject::withoutGlobalScopes()->where('fiscal_year_id', 42)->where('code', '040010')->firstOrFail();
         $this->assertDatabaseHas('configs', [
-            'company_id' => 42, 'key' => 'bank_service_fee', 'value' => (string) $feeSubject->id,
+            'fiscal_year_id' => 42, 'key' => 'bank_service_fee', 'value' => (string) $feeSubject->id,
         ]);
     }
 

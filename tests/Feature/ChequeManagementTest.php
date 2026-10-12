@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\ChequeType;
+use App\Enums\CustomerType;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Http\Middleware\CheckPermission;
@@ -95,8 +96,8 @@ class ChequeManagementTest extends TestCase
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
 
-        $this->customer = Customer::create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Customer', 'subject_id' => 201]);
-        $this->vendor = Customer::create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Vendor', 'subject_id' => 202]);
+        $this->customer = Customer::create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Customer', 'type' => CustomerType::INDIVIDUAL, 'subject_id' => 201]);
+        $this->vendor = Customer::create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Vendor', 'type' => CustomerType::INDIVIDUAL, 'subject_id' => 202]);
 
         $this->bank = Bank::create(['name' => 'Test Bank', 'fiscal_year_id' => $this->fiscalYearId]);
         $this->account = BankAccount::create(['bank_id' => $this->bank->id, 'name' => 'Main account', 'number' => '123456', 'type' => 1, 'subject_id' => 203]);
@@ -357,8 +358,8 @@ class ChequeManagementTest extends TestCase
 
         $cheque = Cheque::latest('id')->firstOrFail();
         $response->assertRedirect(route('cheques.show', $cheque));
-        $this->assertSame('2026-01-01', $cheque->getRawOriginal('write_date'));
-        $this->assertSame('2026-02-01', $cheque->getRawOriginal('due_date'));
+        $this->assertSame('2026-01-01', $cheque->write_date->toDateString());
+        $this->assertSame('2026-02-01', $cheque->due_date->toDateString());
         $this->get(route('cheques.show', $cheque))->assertOk()->assertSee('۱۴۰۴/۱۰/۱۱')->assertSee('۱۴۰۴/۱۱/۱۲');
         $this->get(route('cheques.edit', $cheque))->assertOk()->assertSee('value="1404/10/11"', false)->assertSee('value="1404/11/12"', false);
     }
@@ -918,10 +919,10 @@ class ChequeManagementTest extends TestCase
     private function feeSubject(): int
     {
         $subjectId = DB::table('subjects')->insertGetId([
-            'company_id' => getActiveCompany(), 'code' => '040010', 'name' => 'کارمزد بانک', 'type' => 1, 'parent_id' => null,
+            'fiscal_year_id' => getActiveFiscalYear(), 'code' => '040010', 'name' => 'کارمزد بانک', 'type' => 1, 'parent_id' => null,
         ]);
         Config::create([
-            'company_id' => getActiveCompany(), 'key' => 'bank_service_fee', 'value' => (string) $subjectId,
+            'fiscal_year_id' => getActiveFiscalYear(), 'key' => 'bank_service_fee', 'value' => (string) $subjectId,
             'desc' => 'کارمزد بانک', 'type' => 3, 'category' => 1,
         ]);
 
@@ -1373,12 +1374,15 @@ class ChequeManagementTest extends TestCase
         $this->get(route('cheques.show', $cheque))->assertOk()->assertSee('id="cheque_fee_fee"', false);
     }
 
-    public function test_fee_rejects_customer_subject_from_another_company(): void
+    public function test_fee_rejects_customer_subject_from_another_fiscal_year_of_the_same_company(): void
     {
         $this->feeSubject();
         $cheque = $this->receivedCheque();
-        $otherCompany = Company::create(['name' => 'Other fee company', 'fiscal_year' => 1405]);
-        DB::table('subjects')->where('id', $this->customer->subject_id)->update(['company_id' => $otherCompany->id]);
+        $otherFiscalYear = FiscalYear::factory()->create([
+            'company_id' => FiscalYear::findOrFail($this->fiscalYearId)->company_id,
+            'year' => 1406,
+        ]);
+        DB::table('subjects')->where('id', $this->customer->subject_id)->update(['fiscal_year_id' => $otherFiscalYear->id]);
         $beforeDocuments = Document::count();
         try {
             $this->service->transition($cheque, $this->user, 'fee', ['bank_service_fee' => 2]);
@@ -1410,7 +1414,7 @@ class ChequeManagementTest extends TestCase
             'bank_service_fee' => 2,
         ]);
         $history = $cheque->histories()->firstOrFail();
-        $export = FiscalYearService::exportData(getActiveCompany(), ['cheques']);
+        $export = FiscalYearService::exportData(getActiveFiscalYear(), ['cheques']);
         $this->assertSame('2.00', $export['cheque_histories'][0]['bank_service_fee']);
         $this->assertArrayNotHasKey('fee_bank_account_id', $export['cheque_histories'][0]);
         $this->assertArrayNotHasKey('fee_document_id', $export['cheque_histories'][0]);
@@ -1418,7 +1422,7 @@ class ChequeManagementTest extends TestCase
         $newDocument = $history->document->replicate();
         $newDocument->save();
         $method = new \ReflectionMethod(FiscalYearService::class, '_importChequeHistories');
-        $method->invoke(null, $export['cheque_histories'], getActiveCompany(),
+        $method->invoke(null, $export['cheque_histories'], getActiveFiscalYear(),
             [$cheque->id => $replacement->id], [$history->document_id => $newDocument->id], []);
         $imported = $replacement->histories()->latest('id')->firstOrFail();
         $this->assertSame('2.00', $imported->bank_service_fee);

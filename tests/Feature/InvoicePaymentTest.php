@@ -106,11 +106,11 @@ class InvoicePaymentTest extends TestCase
     {
         $subject = Subject::factory()->withParent(Subject::findOrFail((int) config('amir.cost')))->create([
             'name' => 'کارمزد بانک',
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
         ]);
         Config::create([
             'key' => 'bank_service_fee', 'value' => (string) $subject->id,
-            'desc' => 'کارمزد بانک', 'type' => 3, 'category' => 1, 'company_id' => $this->companyId,
+            'desc' => 'کارمزد بانک', 'type' => 3, 'category' => 1, 'fiscal_year_id' => $this->fiscalYearId,
         ]);
 
         return (int) $subject->id;
@@ -701,7 +701,14 @@ class InvoicePaymentTest extends TestCase
     {
         $invoice = $this->approvedSell(100, 1);
         $expenseSubjectId = $this->feeSubjectId();
-        $otherYear = FiscalYear::factory()->create();
+        $otherYear = FiscalYear::factory()->create([
+            'company_id' => FiscalYear::findOrFail($this->fiscalYearId)->company_id,
+            'year' => 1406,
+        ]);
+        $otherYear = FiscalYear::factory()->create([
+            'company_id' => FiscalYear::findOrFail($this->fiscalYearId)->company_id,
+            'year' => 1406,
+        ]);
         Subject::withoutGlobalScopes()->whereKey($expenseSubjectId)->update(['fiscal_year_id' => $otherYear->id]);
         // A cached setting from another year must never bypass fiscal-year scoping.
         config(['amir.bank_service_fee' => $expenseSubjectId]);
@@ -721,7 +728,14 @@ class InvoicePaymentTest extends TestCase
     public function test_fee_uses_the_current_year_setting_even_when_cached_setting_is_from_another_year(): void
     {
         $expenseSubjectId = $this->feeSubjectId();
-        $otherYear = FiscalYear::factory()->create();
+        $otherYear = FiscalYear::factory()->create([
+            'company_id' => FiscalYear::findOrFail($this->fiscalYearId)->company_id,
+            'year' => 1406,
+        ]);
+        $otherYear = FiscalYear::factory()->create([
+            'company_id' => FiscalYear::findOrFail($this->fiscalYearId)->company_id,
+            'year' => 1406,
+        ]);
         $otherSubject = Subject::factory()->create(['fiscal_year_id' => $otherYear->id, 'parent_id' => null]);
         Config::create([
             'fiscal_year_id' => $otherYear->id, 'key' => 'bank_service_fee', 'value' => (string) $otherSubject->id,
