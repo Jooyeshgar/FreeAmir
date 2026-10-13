@@ -48,7 +48,7 @@ Route::middleware(['auth', 'permission:access-super-admin-panel', 'ensure-featur
     });
 });
 
-Route::group(['middleware' => ['auth', 'ensure-employee', 'ensure-feature-enabled:email_verification'], 'prefix' => 'employee-portal', 'as' => 'employee-portal.'], function () {
+Route::group(['middleware' => ['auth', 'ensure-employee', 'ensure-feature-enabled:email_verification', 'prevent-closed-fiscal-year-mutations'], 'prefix' => 'employee-portal', 'as' => 'employee-portal.'], function () {
     Route::get('/employee', [Controllers\EmployeePortalController::class, 'employeeShow'])->name('employee.show');
     Route::get('/change-employee-information', [Controllers\EmployeePortalController::class, 'changeEmployeeInformation'])->name('change-employee-information');
     Route::put('/change-employee-information', [Controllers\EmployeePortalController::class, 'updateEmployeeInformation'])->name('update-employee-information');
@@ -66,7 +66,7 @@ Route::group(['middleware' => ['auth', 'ensure-employee', 'ensure-feature-enable
     Route::delete('/personnel-requests/{personnel_request}', [Controllers\EmployeePortalController::class, 'destroyPersonnelRequest'])->name('personnel-requests.destroy');
 });
 
-Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabled:email_verification']], function () {
+Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabled:email_verification', 'prevent-closed-fiscal-year-mutations']], function () {
     Route::get('api-tokens', [Controllers\ApiTokenController::class, 'index'])->name('api-tokens.index');
     Route::get('api-tokens/create', [Controllers\ApiTokenController::class, 'create'])->name('api-tokens.create');
     Route::post('api-tokens', [Controllers\ApiTokenController::class, 'store'])->name('api-tokens.store');

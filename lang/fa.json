@@ -2805,6 +2805,7 @@
     "This document number has already been used for this company.": "این شماره سند قبلاً برای این شرکت استفاده شده است.",
     "This final step performs three actions in a single transaction:": "این مرحله نهایی سه عمل را در یک تراکنش واحد انجام می‌دهد:",
     "This fiscal year is already closed.": "این سال مالی از قبل بسته شده است.",
+    "This fiscal year is closed and cannot be modified.": "این سال مالی بسته شده است و امکان ویرایش آن وجود ندارد.",
     "This invoice does not returned yet.": "برای این فاکتور هنوز برگشتی ثبت نشده است.",
     "This invoice has already been sent successfully to Moadian and cannot be sent again.": "این فاکتور قبلاً با موفقیت به مودیان ارسال شده و نمی‌توان آن را مجدداً ارسال کرد.",
     "This invoice has not any returned invoices.": "این فاکتور هیچ فاکتور برگشتی ندارد.",

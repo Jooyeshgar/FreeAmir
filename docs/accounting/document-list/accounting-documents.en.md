@@ -163,7 +163,7 @@ Transfer is a move, not a copy: export a backup first. Resolve same-year, access
 
 ## Report effects
 
-Document/journal reports use documents and lines with number/date/subject filters. General ledger aggregates root-level subject transactions. Subledger/detail ledger shows and aggregates a selected subject. Trial balance and subject balance calculate debit, credit, and balance from transactions. Current code does not require `approved_at` in these reports, so saving, editing, deleting, or importing even unconfirmed documents can change them.
+Document/journal reports use documents and lines with number/date/subject filters. General ledger aggregates root-level subject transactions. Subledger/detail ledger shows and aggregates a selected subject. Trial balance and subject balance calculate debit, credit, and balance from transactions. Reports remain available after a fiscal year is closed, while records belonging to a closed year cannot be edited or deleted.
 
 ## Accountant's checks
 

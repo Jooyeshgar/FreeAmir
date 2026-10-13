@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Faker\PersianProductProvider;
 use App\Faker\PersianServiceProvider;
 use App\Services\ActivityLogService;
+use App\Support\ClosedFiscalYearGuard;
 use Faker\Generator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\Paginator;
@@ -58,6 +59,14 @@ class AppServiceProvider extends ServiceProvider
             Event::listen("eloquent.{$modelEvent}: *", function (string $eventName, array $payload) use ($modelEvent): void {
                 if (isset($payload[0]) && $payload[0] instanceof Model) {
                     app(ActivityLogService::class)->recordModelEvent($modelEvent, $payload[0]);
+                }
+            });
+        }
+
+        foreach (['updating', 'deleting'] as $modelEvent) {
+            Event::listen("eloquent.{$modelEvent}: *", function (string $eventName, array $payload): void {
+                if (isset($payload[0]) && $payload[0] instanceof Model) {
+                    ClosedFiscalYearGuard::assertMutable($payload[0]);
                 }
             });
         }

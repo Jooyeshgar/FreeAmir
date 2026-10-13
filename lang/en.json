@@ -2820,6 +2820,7 @@
     "This document number has already been used for this company.": "This document number has already been used for this company.",
     "This final step performs three actions in a single transaction:": "This final step performs three actions in a single transaction:",
     "This fiscal year is already closed.": "This fiscal year is already closed.",
+    "This fiscal year is closed and cannot be modified.": "This fiscal year is closed and cannot be modified.",
     "This invoice does not returned yet.": "This invoice does not returned yet.",
     "This invoice has already been sent successfully to Moadian and cannot be sent again.": "This invoice has already been sent successfully to Moadian and cannot be sent again.",
     "This invoice has not any returned invoices.": "This invoice has not any returned invoices.",
