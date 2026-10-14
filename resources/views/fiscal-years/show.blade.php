@@ -24,7 +24,11 @@
             </div>
             <div class="relative mt-6 flex flex-wrap gap-2 border-t border-white/10 pt-5">
                 @can('fiscal-years.edit')
-                    <a href="{{ route('fiscal-years.edit', $fiscalYear) }}" class="btn btn-primary btn-sm rounded-xl">{{ __('Edit') }}</a>
+                    @if ($fiscalYear->closed_at)
+                        <button type="button" disabled title="{{ __('This fiscal year is already closed.') }}" class="btn btn-primary btn-sm rounded-xl opacity-60">{{ __('Edit') }}</button>
+                    @else
+                        <a href="{{ route('fiscal-years.edit', $fiscalYear) }}" class="btn btn-primary btn-sm rounded-xl">{{ __('Edit') }}</a>
+                    @endif
                 @endcan
                 @if ($users->contains('id', auth()->id()))
                     @can('companies.closing-wizard')
@@ -141,7 +145,7 @@
                 <form action="{{ route('fiscal-years.destroy', $fiscalYear) }}" method="POST" onsubmit="return confirm(@js(__('Are you sure you want to delete this fiscal year?')))">
                     @csrf
                     @method('DELETE')
-                    <button type="submit" class="btn btn-error btn-outline btn-sm rounded-xl">{{ __('Delete') }}</button>
+                    <button type="submit" @disabled($fiscalYear->closed_at) title="{{ $fiscalYear->closed_at ? __('This fiscal year is already closed.') : __('Delete') }}" class="btn btn-error btn-outline btn-sm rounded-xl">{{ __('Delete') }}</button>
                 </form>
             </div>
         @endcan
