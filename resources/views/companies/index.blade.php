@@ -136,7 +136,7 @@
                                             onsubmit="return confirm('{{ __('Are you sure you want to delete this company?') }}');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit"
+                                            <button type="submit" @disabled($fiscalYear->closed_at) title="{{ $fiscalYear->closed_at ? __('This fiscal year is already closed.') : __('Delete') }}"
                                                 class="btn btn-ghost btn-sm rounded-lg text-error">{{ __('Delete') }}</button>
                                         </form>
                                     @endcan

@@ -10,6 +10,7 @@ use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Services\FiscalYearMutationGuard;
 use App\Services\FiscalYearService;
 use App\Services\MoadianService;
 use Cookie;
@@ -51,7 +52,7 @@ class CompanyController extends Controller
         'tax_id' => 'nullable|string|max:20',
     ];
 
-    public function __construct() {}
+    public function __construct(private readonly FiscalYearMutationGuard $fiscalYearMutationGuard) {}
 
     /**
      * Display a listing of the resource.
@@ -327,6 +328,7 @@ class CompanyController extends Controller
     public function destroy(FiscalYear $company): RedirectResponse
     {
         $this->ensureFiscalYearAccess($company);
+        $this->fiscalYearMutationGuard->ensureOpen($company);
 
         $documentFilePaths = DocumentFile::withoutGlobalScopes()
             ->whereIn('document_id', Document::withoutGlobalScopes()->where('fiscal_year_id', $company->id)->select('id'))

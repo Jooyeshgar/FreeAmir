@@ -168,6 +168,14 @@ class ApiTest extends TestCase
             ->assertJsonCount(2, 'data');
     }
 
+    public function test_closed_fiscal_year_rejects_api_mutations_but_keeps_reads_available(): void
+    {
+        $this->fiscalYear->update(['closed_at' => now()]);
+
+        $this->postJson($this->companyApiUrl('/employees'), [], $this->apiHeaders())->assertUnprocessable()->assertJsonValidationErrors(['fiscal_year']);
+        $this->getJson($this->companyApiUrl('/employees'), $this->apiHeaders())->assertOk();
+    }
+
     public function test_company_scoped_api_requires_company_path_parameter(): void
     {
         $this->getJson('/api/employees', $this->apiHeaders())

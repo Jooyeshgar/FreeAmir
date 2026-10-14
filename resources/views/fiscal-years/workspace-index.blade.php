@@ -43,7 +43,11 @@
                                             <a href="{{ route('fiscal-years.show', $year) }}" class="btn btn-sm">{{ __('View') }}</a>
                                         @endcan
                                         @can('fiscal-years.edit')
-                                            <a href="{{ route('fiscal-years.edit', $year) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                            @if ($year->closed_at)
+                                                <button type="button" disabled title="{{ __('This fiscal year is already closed.') }}" class="btn btn-sm btn-info opacity-60">{{ __('Edit') }}</button>
+                                            @else
+                                                <a href="{{ route('fiscal-years.edit', $year) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                            @endif
                                         @endcan
                                         @can('companies.close-fiscal-year')
                                             <a href="{{ route('companies.closing-wizard', $year) }}" @class(['btn btn-sm', 'btn-warning' => !$year->closed_at, 'btn-info btn-outline' => $year->closed_at])>
@@ -54,7 +58,7 @@
                                             <form action="{{ route('fiscal-years.destroy', $year) }}" method="POST" class="inline-block" onsubmit="return confirm('{{ __('Are you sure you want to delete this fiscal year?') }}');">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                                <button type="submit" @disabled($year->closed_at) title="{{ $year->closed_at ? __('This fiscal year is already closed.') : __('Delete') }}" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
                                             </form>
                                         @endcan
                                     </div>

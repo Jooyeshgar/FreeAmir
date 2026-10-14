@@ -9,6 +9,7 @@ use App\Models\DocumentFile;
 use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Warehouse;
+use App\Services\FiscalYearMutationGuard;
 use App\Services\FiscalYearService;
 use Database\Seeders\BankSeeder;
 use Database\Seeders\ConfigSeeder;
@@ -27,6 +28,8 @@ use Illuminate\Validation\Rule;
 
 class FiscalYearController extends Controller
 {
+    public function __construct(private readonly FiscalYearMutationGuard $fiscalYearMutationGuard) {}
+
     public function index(Request $request): View
     {
         $years = $this->accessibleYears($request)
@@ -118,6 +121,7 @@ class FiscalYearController extends Controller
     public function edit(Request $request, FiscalYear $fiscalYear): View
     {
         $this->authorizeYear($request, $fiscalYear);
+        $this->fiscalYearMutationGuard->ensureOpen($fiscalYear);
 
         return view('fiscal-years.edit', ['fiscalYear' => $fiscalYear->load('company:id,name')]);
     }
@@ -125,6 +129,7 @@ class FiscalYearController extends Controller
     public function update(Request $request, FiscalYear $fiscalYear): RedirectResponse
     {
         $this->authorizeYear($request, $fiscalYear);
+        $this->fiscalYearMutationGuard->ensureOpen($fiscalYear);
         $data = $request->validate([
             'year' => ['required', 'integer', 'digits:4', Rule::unique('fiscal_years')->where('company_id', $fiscalYear->company_id)->ignore($fiscalYear->id)],
         ]);
@@ -137,6 +142,7 @@ class FiscalYearController extends Controller
     public function destroy(Request $request, FiscalYear $fiscalYear): RedirectResponse
     {
         $this->authorizeYear($request, $fiscalYear);
+        $this->fiscalYearMutationGuard->ensureOpen($fiscalYear);
         $paths = DocumentFile::withoutGlobalScopes()
             ->whereIn('document_id', Document::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYear->id)->select('id'))
             ->pluck('path')

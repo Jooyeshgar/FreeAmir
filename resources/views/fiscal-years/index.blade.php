@@ -86,13 +86,17 @@
                             <td class="text-end">
                                 <div class="flex justify-end gap-1">
                                     @can('fiscal-years.edit')
-                                        <a href="{{ route('fiscal-years.edit', $year) }}" class="btn btn-ghost btn-sm rounded-lg">{{ __('Edit') }}</a>
+                                        @if ($year->closed_at)
+                                            <button type="button" disabled title="{{ __('This fiscal year is already closed.') }}" class="btn btn-ghost btn-sm rounded-lg opacity-60">{{ __('Edit') }}</button>
+                                        @else
+                                            <a href="{{ route('fiscal-years.edit', $year) }}" class="btn btn-ghost btn-sm rounded-lg">{{ __('Edit') }}</a>
+                                        @endif
                                     @endcan
                                     @can('fiscal-years.destroy')
                                         <form action="{{ route('fiscal-years.destroy', $year) }}" method="POST" onsubmit="return confirm('{{ __('Are you sure you want to delete this fiscal year?') }}')">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-ghost btn-sm rounded-lg text-error">{{ __('Delete') }}</button>
+                                            <button type="submit" @disabled($year->closed_at) title="{{ $year->closed_at ? __('This fiscal year is already closed.') : __('Delete') }}" class="btn btn-ghost btn-sm rounded-lg text-error">{{ __('Delete') }}</button>
                                         </form>
                                     @endcan
                                 </div>
