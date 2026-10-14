@@ -6,6 +6,7 @@ use App\Http\Middleware\DefaultFiscalYear;
 use App\Http\Middleware\EncryptCookies;
 use App\Http\Middleware\EnsureEmployee;
 use App\Http\Middleware\EnsureFeatureEnabled;
+use App\Http\Middleware\EnsureFiscalYearOpen;
 use App\Http\Middleware\LogUserActivity;
 use App\Http\Middleware\PreventRequestsDuringMaintenance;
 use App\Http\Middleware\SetApiFiscalYear;
@@ -64,6 +65,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'ensure-employee' => EnsureEmployee::class,
             'api-fiscal-year' => SetApiFiscalYear::class,
             'ensure-feature-enabled' => EnsureFeatureEnabled::class,
+            'fiscal-year-open' => EnsureFiscalYearOpen::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

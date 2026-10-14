@@ -42,6 +42,11 @@ class FiscalYear extends Model
         return $this->belongsTo(Company::class);
     }
 
+    public function isClosed(): bool
+    {
+        return $this->closed_at !== null;
+    }
+
     public function closedBy()
     {
         return $this->belongsTo(User::class, 'closed_by');

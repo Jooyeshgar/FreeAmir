@@ -119,6 +119,18 @@ class CompanyControllerFiscalYearTest extends TestCase
         $this->assertSame(1403, (int) $otherFiscalYear->fresh()->year);
     }
 
+    public function test_closed_fiscal_year_does_not_lock_shared_company_details(): void
+    {
+        $user = User::factory()->create();
+        $company = Company::factory()->create(['name' => 'Original']);
+        $fiscalYear = FiscalYear::create(['company_id' => $company->id, 'year' => 1402, 'closed_at' => now()]);
+        $fiscalYear->users()->attach($user);
+
+        $this->withoutMiddleware(CheckPermission::class)->actingAs($user)->put(route('companies.update', $company), ['name' => 'Updated'])->assertRedirect(route('companies.index'));
+        $this->assertSame('Updated', $company->fresh()->name);
+        $this->assertNotNull($fiscalYear->fresh()->closed_at);
+    }
+
     public function test_company_edit_requires_access_to_one_of_its_fiscal_years(): void
     {
         $user = User::factory()->create();
