@@ -87,6 +87,7 @@ class PayrollService
 
     public function createFromAttendance(MonthlyAttendance $attendance, SalaryDecree $decree, int $fiscalYearId): Payroll
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
         $attendance->loadMissing(['employee.workShift']);
         $decree->loadMissing('benefits.element');
 
@@ -714,6 +715,7 @@ class PayrollService
      */
     public function recalculateTotals(Payroll $payroll): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($payroll);
         $payroll->loadMissing('items');
 
         $totalEarnings = 0.0;

@@ -27,6 +27,8 @@ class AttendanceLogImportService
      */
     public function import(UploadedFile|string $file, AttendanceImportType $type, int $companyId, ?string $dateFrom = null, ?string $dateTo = null, string $duplicateMode = 'ignore'): array
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         return match ($type) {
             AttendanceImportType::DeviceTsv => $this->importDeviceTsv($file, $companyId, $dateFrom, $dateTo, $duplicateMode),
         };
