@@ -37,7 +37,7 @@ class DocumentService
         }
 
         $data['fiscal_year_id'] = isset($data['fiscal_year_id']) ? $data['fiscal_year_id'] : getActiveFiscalYear();
-        app(FiscalYearMutationGuard::class)->ensureOpen($data['fiscal_year_id']);
+        app(FiscalYearMutationGuard::class)->ensureOpen();
 
         $document = null;
         DB::transaction(function () use ($data, $transactions, $user, &$document) {
@@ -123,7 +123,7 @@ class DocumentService
      */
     public static function createTransaction(Document $document, array $data)
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen($document);
+        app(FiscalYearMutationGuard::class)->ensureOpen();
 
         $validator = Validator::make($data, [
             'subject_id' => 'required|integer',
