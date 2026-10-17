@@ -67,6 +67,8 @@ class AttendanceService
      */
     public function recalculateLog(AttendanceLog $log): AttendanceLog
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $logDate = $log->log_date instanceof Carbon
             ? $log->log_date
             : Carbon::parse($log->log_date);
@@ -377,6 +379,7 @@ class AttendanceService
      */
     public function calculateAndStore(int $employeeId, Carbon $startDate, int $durationDays, int $jalaliYear, int $jalaliMonth): MonthlyAttendance
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
         $fiscalYearId = getActiveFiscalYear();
         $endDate = $startDate->copy()->addDays($durationDays - 1);
 
@@ -556,6 +559,7 @@ class AttendanceService
      */
     public function syncPersonnelRequestLogs(PersonnelRequest $personnelRequest, bool $subtract = false): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
 
         $field = match ($personnelRequest->request_type) {
             PersonnelRequestType::LEAVE_HOURLY,

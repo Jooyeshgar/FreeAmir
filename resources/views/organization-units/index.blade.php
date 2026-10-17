@@ -1,5 +1,8 @@
 <x-app-layout :title="__('Organization Units')">
     <x-show-message-bags />
+    @php
+        $fiscalYearClosed = activeFiscalYearIsClosed();
+    @endphp
 
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
@@ -17,9 +20,7 @@
                 </form>
 
                 @can('hr.organization-units.create')
-                    <a href="{{ route('hr.organization-units.create') }}" class="btn btn-primary">
-                        {{ __('Create Organization Unit') }}
-                    </a>
+                    <a href="{{ route('hr.organization-units.create') }}" @class(['btn btn-primary', 'pointer-events-none opacity-60' => $fiscalYearClosed]) aria-disabled="{{ $fiscalYearClosed ? 'true' : 'false' }}">{{ __('Create Organization Unit') }}</a>
                 @endcan
             </div>
 
@@ -60,7 +61,7 @@
                                 <td>
                                     <div class="inline-flex gap-2">
                                         @can('hr.organization-units.edit')
-                                            <a href="{{ route('hr.organization-units.edit', $organizationUnit) }}" class="btn btn-sm btn-info">
+                                            <a href="{{ route('hr.organization-units.edit', $organizationUnit) }}" @class(['btn btn-sm btn-info', 'pointer-events-none opacity-60' => $fiscalYearClosed]) aria-disabled="{{ $fiscalYearClosed ? 'true' : 'false' }}">
                                                 {{ __('Edit') }}
                                             </a>
                                         @endcan
@@ -69,7 +70,7 @@
                                                 onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-error">
+                                                <button type="submit" @disabled($fiscalYearClosed) class="btn btn-sm btn-error {{ $fiscalYearClosed ? 'opacity-60' : '' }}" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Delete') }}">
                                                     {{ __('Delete') }}
                                                 </button>
                                             </form>

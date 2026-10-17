@@ -1,4 +1,7 @@
 <x-app-layout :title="__('Personnel Requests')">
+    @php
+        $fiscalYearClosed = activeFiscalYearIsClosed();
+    @endphp
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body p-4 sm:p-6">
             <div class="flex items-center gap-2">
@@ -74,7 +77,7 @@
                 </form>
 
                 @can('hr.personnel-requests.create')
-                    <a href="{{ route('hr.personnel-requests.create', ['tab' => $tab]) }}" class="btn btn-primary btn-circle self-end" title="{{ __('Create Personnel Request') }}">
+                    <a href="{{ route('hr.personnel-requests.create', ['tab' => $tab]) }}" @class(['btn btn-primary btn-circle self-end', 'pointer-events-none opacity-60' => $fiscalYearClosed]) aria-disabled="{{ $fiscalYearClosed ? 'true' : 'false' }}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                         </svg>
@@ -135,7 +138,7 @@
                                             <form action="{{ route('hr.personnel-requests.approve', $personnelRequest) }}" method="POST" class="inline-block mb-0">
                                                 @csrf
                                                 @method('PATCH')
-                                                <button type="submit" class= "text-lg h-8 p-1" title="{{ __('Approve') }}">
+                                                <button type="submit" @disabled($fiscalYearClosed) class="text-lg h-8 p-1 {{ $fiscalYearClosed ? 'opacity-60' : '' }}" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Approve') }}">
                                                     👍
                                                 </button>
                                             </form>
@@ -144,7 +147,7 @@
                                             <form action="{{ route('hr.personnel-requests.reject', $personnelRequest) }}" method="POST" class="inline-block mb-0">
                                                 @csrf
                                                 @method('PATCH')
-                                                <button type="submit" class= "text-lg h-8 p-1" title="{{ __('Reject') }}">
+                                                <button type="submit" @disabled($fiscalYearClosed) class="text-lg h-8 p-1 {{ $fiscalYearClosed ? 'opacity-60' : '' }}" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Reject') }}">
                                                     👎
                                                 </button>
                                             </form>
@@ -152,7 +155,7 @@
                                     @endcan
                                     @if($personnelRequest->status?->isPending())
                                         @can('hr.personnel-requests.edit')
-                                            <a href="{{ route('hr.personnel-requests.edit', ['tab' => $tab, 'personnel_request' => $personnelRequest->id]) }}" class="btn btn-sm btn-info">
+                                            <a href="{{ route('hr.personnel-requests.edit', ['tab' => $tab, 'personnel_request' => $personnelRequest->id]) }}" @class(['btn btn-sm btn-info', 'pointer-events-none opacity-60' => $fiscalYearClosed]) aria-disabled="{{ $fiscalYearClosed ? 'true' : 'false' }}">
                                                 {{ __('Edit') }}
                                             </a>
                                         @endcan
@@ -165,7 +168,7 @@
                                                 onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-error">
+                                                <button type="submit" @disabled($fiscalYearClosed) class="btn btn-sm btn-error {{ $fiscalYearClosed ? 'opacity-60' : '' }}" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Delete') }}">
                                                     {{ __('Delete') }}
                                                 </button>
                                             </form>

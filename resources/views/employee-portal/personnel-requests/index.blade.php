@@ -1,4 +1,7 @@
 <x-app-layout :title="__('My Requests')">
+    @php
+        $fiscalYearClosed = activeFiscalYearIsClosed();
+    @endphp
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body p-4 sm:p-6">
             <x-show-message-bags />
@@ -42,7 +45,7 @@
 
             {{-- New request button --}}
             <div class="flex justify-end mb-2">
-                <a href="{{ route('employee-portal.personnel-requests.create', ['tab' => $tab]) }}" class="btn btn-primary btn-circle" title="{{ __('New Request') }}">
+                <a href="{{ route('employee-portal.personnel-requests.create', ['tab' => $tab]) }}" @class(['btn btn-primary btn-circle', 'pointer-events-none opacity-60' => $fiscalYearClosed]) aria-disabled="{{ $fiscalYearClosed ? 'true' : 'false' }}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                     </svg>
@@ -95,14 +98,14 @@
                                 <td class="whitespace-nowrap">
                                     <div class="flex flex-nowrap items-center gap-2">
                                         @if ($req->status?->isPending())
-                                            <a href="{{ route('employee-portal.personnel-requests.edit', ['tab' => $tab, 'personnel_request' => $req->id]) }}" class="btn btn-sm btn-info">
+                                            <a href="{{ route('employee-portal.personnel-requests.edit', ['tab' => $tab, 'personnel_request' => $req->id]) }}" @class(['btn btn-sm btn-info', 'pointer-events-none opacity-60' => $fiscalYearClosed]) aria-disabled="{{ $fiscalYearClosed ? 'true' : 'false' }}">
                                                 {{ __('Edit') }}
                                             </a>
                                             <form action="{{ route('employee-portal.personnel-requests.destroy', ['tab' => $tab, 'personnel_request' => $req->id]) }}" method="POST" class="inline-block"
                                                 onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                                <button type="submit" @disabled($fiscalYearClosed) class="btn btn-sm btn-error {{ $fiscalYearClosed ? 'opacity-60' : '' }}" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Delete') }}">{{ __('Delete') }}</button>
                                             </form>
                                         @else
                                             <button class="btn btn-sm btn-disabled">{{ __('Edit') }}</button>

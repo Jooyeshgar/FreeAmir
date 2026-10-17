@@ -12,6 +12,7 @@ use App\Models\Payroll;
 use App\Models\PersonnelRequest;
 use App\Models\PublicHoliday;
 use App\Services\AttendanceService;
+use App\Services\FiscalYearMutationGuard;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -90,6 +91,8 @@ class EmployeePortalController extends Controller
 
     public function updateEmployeeInformation(Request $request): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $employee = $this->currentEmployee();
 
         if ($request->integer('employee_id') != auth()->user()->employee->id) {
@@ -365,6 +368,8 @@ class EmployeePortalController extends Controller
      */
     public function storePersonnelRequest(Request $request): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $employee = $this->currentEmployee();
 
         $this->applyDailyRequestShiftTimes($request, $employee);
@@ -462,6 +467,8 @@ class EmployeePortalController extends Controller
      */
     public function updatePersonnelRequest(Request $request, PersonnelRequest $personnelRequest): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         if (! $personnelRequest->status?->isPending()) {
             throw ValidationException::withMessages([
                 'status' => __('Only pending requests can be edited.'),
@@ -515,6 +522,8 @@ class EmployeePortalController extends Controller
 
     public function destroyPersonnelRequest(Request $request, PersonnelRequest $personnelRequest): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         if (! $personnelRequest->status?->isPending()) {
             throw ValidationException::withMessages([
                 'status' => __('Only pending requests can be deleted.'),
