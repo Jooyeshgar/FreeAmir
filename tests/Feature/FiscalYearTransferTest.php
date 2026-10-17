@@ -643,4 +643,25 @@ class FiscalYearTransferTest extends TestCase
         $response->assertForbidden();
         $this->assertCount(0, Invoice::withoutGlobalScopes()->where('fiscal_year_id', $foreign->id)->get());
     }
+
+    public function test_transfer_rejects_a_closed_source_or_target_year_without_writing(): void
+    {
+        $cash = $this->makeSubject($this->source, '101', 'Cash');
+        $document = $this->makeDocument($this->source, [[$cash, 100]]);
+
+        $this->source->update(['closed_at' => now()]);
+        $result = FiscalYearTransferService::transferDocument($document, $this->target->id, $this->user);
+
+        $this->assertFalse($result['success']);
+        $this->assertContains(__('This fiscal year is already closed.'), $result['errors']);
+        $this->assertSame(0, Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->count());
+
+        $this->source->update(['closed_at' => null]);
+        $this->target->update(['closed_at' => now()]);
+        $result = FiscalYearTransferService::transferDocument($document, $this->target->id, $this->user);
+
+        $this->assertFalse($result['success']);
+        $this->assertContains(__('This fiscal year is already closed.'), $result['errors']);
+        $this->assertSame(0, Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->count());
+    }
 }
