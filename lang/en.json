@@ -3516,7 +3516,6 @@
     "Configure the Moadian username, certificate and private key before checking the connection or invoice status.": "Configure the Moadian username, certificate and private key before checking the connection or invoice status.",
     "The connection test uses the entered settings and selected key files without saving. Select both key files for each test.": "The connection test uses the entered settings and selected key files without saving. Select both key files for each test.",
     "Connection to Moadian failed. Please check the entered settings and try again.": "Connection to Moadian failed. Please check the entered settings and try again.",
-    "Create missing customer, products, services, and their accounting subjects in the target fiscal year": "Create missing customer, products, services, and their accounting subjects in the target fiscal year",
     "The next fiscal year and its Opening Document will not be changed. Recreate the Opening Document after recalculating the Closing Document.": "The next fiscal year and its Opening Document will not be changed. Recreate the Opening Document after recalculating the Closing Document.",
     "Opening Document": "Opening Document",
     "Closing Document": "Closing Document",
@@ -3535,6 +3534,7 @@
     "Not created": "Not created",
     "Company details": "Company details",
     "People with access to this fiscal year.": "People with access to this fiscal year.",
-    "No users are assigned to this fiscal year.": "No users are assigned to this fiscal year.",
-    "Create missing customer, products, services, and their accounting subjects in the target fiscal year": "Create missing customer, products, services, and their accounting subjects in the target fiscal year"
+    "No users are assigned to this fiscal year.": "No users are assigned to this fiscal year." ,
+    "Create missing customer, products, services, and their accounting subjects in the target fiscal year": "Create missing customer, products, services, and their accounting subjects in the target fiscal year" ,
+    "Invoice and settlement operations are read-only.": "Invoice and settlement operations are read-only."
 }

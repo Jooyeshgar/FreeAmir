@@ -3517,7 +3517,6 @@
     "Configure the Moadian username, certificate and private key before checking the connection or invoice status.": "پیش از تست اتصال یا بررسی وضعیت فاکتور، نام کاربری، گواهی و کلید خصوصی سامانه مودیان را تنظیم کنید.",
     "The connection test uses the entered settings and selected key files without saving. Select both key files for each test.": "تست اتصال با اطلاعات واردشده و فایل‌های کلید انتخاب‌شده، بدون ذخیره انجام می‌شود. برای هر تست، هر دو فایل کلید را وارد کنید.",
     "Connection to Moadian failed. Please check the entered settings and try again.": "اتصال به سامانه مودیان ناموفق بود. اطلاعات واردشده را بررسی و دوباره تلاش کنید.",
-    "Create missing customer, products, services, and their accounting subjects in the target fiscal year": "ایجاد مشتری، کالا، خدمت و سرفصل‌های حسابداری آن‌ها در سال مالی مقصد",
     "The next fiscal year and its Opening Document will not be changed. Recreate the Opening Document after recalculating the Closing Document.": "سال مالی بعد و سند افتتاحیه آن تغییر نمی‌کنند. پس از محاسبه مجدد سند اختتامیه، سند افتتاحیه را دوباره ایجاد کنید.",
     "Opening Document": "سند افتتاحیه",
     "Closing Document": "سند اختتامیه",
@@ -3530,12 +3529,13 @@
     "The Closing Document is unbalanced or its accounts are missing from the next fiscal year.": "سند اختتامیه تراز نیست یا حساب‌های آن در سال مالی بعد پیدا نشدند.",
     "You do not have access to the next fiscal year.": "به سال مالی بعد دسترسی ندارید.",
     "Fiscal year overview": "نمای کلی سال مالی",
-    "Fiscal year details": "جزئیات سال مالی",
+    "Fiscal year details": "اطلاعات سال مالی",
     "Closed by": "بسته‌شده توسط",
-    "Income Summary Document": "سند خلاصه درآمد",
+    "Income Summary Document": "سند خلاصه سود و زیان",
     "Not created": "ایجاد نشده",
-    "Company details": "جزئیات شرکت",
-    "People with access to this fiscal year.": "افراد دارای دسترسی به این سال مالی.",
-    "No users are assigned to this fiscal year.": "هیچ کاربری به این سال مالی اختصاص داده نشده است.",
-    "Create missing customer, products, services, and their accounting subjects in the target fiscal year": "ایجاد مشتری، کالا، خدمت و سرفصل‌های حسابداری آن‌ها در سال مالی مقصد"
+    "Company details": "اطلاعات شرکت",
+    "People with access to this fiscal year.": "افرادی که به این سال مالی دسترسی دارند.",
+    "No users are assigned to this fiscal year.": "هیچ کاربری به این سال مالی اختصاص داده نشده است." ,
+    "Create missing customer, products, services, and their accounting subjects in the target fiscal year": "ایجاد مشتری، کالا، خدمت و سرفصل‌های حسابداری آن‌ها در سال مالی مقصد" ,
+    "Invoice and settlement operations are read-only.": "عملیات فاکتور و تسویه فقط به‌صورت خواندنی در دسترس است."
 }
