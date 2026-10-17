@@ -26,8 +26,6 @@ class DocumentImportExportTest extends TestCase
 
     private FiscalYear $fiscalYear;
 
-    private DocumentImportExportService $service;
-
     private ImportSubjectResolver $resolver;
 
     private function buildCsv(array $rows): UploadedFile
@@ -54,7 +52,7 @@ class DocumentImportExportTest extends TestCase
 
     private function exportCsvViaService(array $filters): string
     {
-        $response = $this->service->export($filters);
+        $response = app(DocumentImportExportService::class)->export($filters);
 
         ob_start();
         $response->sendContent();
@@ -67,7 +65,7 @@ class DocumentImportExportTest extends TestCase
         $targetFiscalYear = $fiscalYear ?? $this->fiscalYear;
         config(['active-fiscal-year-id' => $targetFiscalYear->id]);
 
-        return $this->service->importCsv($file, $this->user, $format);
+        return app(DocumentImportExportService::class)->importCsv($file, $this->user, $format);
     }
 
     protected function setUp(): void
@@ -86,7 +84,6 @@ class DocumentImportExportTest extends TestCase
         $this->withCookies(['active-fiscal-year-id' => (string) $this->fiscalYear->id]);
         config(['active-fiscal-year-id' => $this->fiscalYear->id]);
 
-        $this->service = new DocumentImportExportService;
         $this->resolver = new ImportSubjectResolver;
     }
 
@@ -136,6 +133,19 @@ class DocumentImportExportTest extends TestCase
         $response = $this->get(route('documents.import'));
         $response->assertOk();
         $response->assertSee(__('Import Documents'));
+    }
+
+    public function test_closed_year_rejects_document_import_before_writing_anything(): void
+    {
+        $this->fiscalYear->update(['closed_at' => now()]);
+
+        $csv = $this->buildCsv([
+            ['1', '2026-01-15', 'Closed Doc', 'manual', 'unapproved', '001', '002', '', 'Bank', 'Payment', '5000', '0'],
+            ['1', '2026-01-15', 'Closed Doc', 'manual', 'unapproved', '001', '002', '', 'Bank', 'Offset', '0', '5000'],
+        ]);
+
+        $this->post(route('documents.import.store'), ['format' => 'free_amir', 'file' => $csv])->assertSessionHasErrors('fiscal_year');
+        $this->assertDatabaseCount('documents', 0);
     }
 
     public function test_export_csv_contains_transaction_rows_for_used_accounts(): void
@@ -339,7 +349,7 @@ class DocumentImportExportTest extends TestCase
     public function test_build_query_returns_all_documents_with_no_filters(): void
     {
         Document::factory()->count(3)->create(['fiscal_year_id' => $this->fiscalYear->id]);
-        $query = $this->service->buildQuery([]);
+        $query = app(DocumentImportExportService::class)->buildQuery([]);
         $this->assertSame(3, $query->count());
     }
 
@@ -348,7 +358,7 @@ class DocumentImportExportTest extends TestCase
         Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'approved_at' => now()]);
         Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'approved_at' => null]);
 
-        $query = $this->service->buildQuery(['status' => 'approved']);
+        $query = app(DocumentImportExportService::class)->buildQuery(['status' => 'approved']);
         $this->assertSame(1, $query->count());
     }
 
@@ -357,7 +367,7 @@ class DocumentImportExportTest extends TestCase
         Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'approved_at' => now()]);
         Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'approved_at' => null]);
 
-        $query = $this->service->buildQuery(['status' => 'unapproved']);
+        $query = app(DocumentImportExportService::class)->buildQuery(['status' => 'unapproved']);
 
         $this->assertSame(1, $query->count());
     }
@@ -368,7 +378,7 @@ class DocumentImportExportTest extends TestCase
         Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'number' => 5]);
         Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'number' => 10]);
 
-        $query = $this->service->buildQuery(['start_document_number' => 2, 'end_document_number' => 7]);
+        $query = app(DocumentImportExportService::class)->buildQuery(['start_document_number' => 2, 'end_document_number' => 7]);
 
         $this->assertSame(1, $query->count());
         $this->assertSame(5.0, (float) $query->first()->number);
@@ -379,7 +389,7 @@ class DocumentImportExportTest extends TestCase
         Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'title' => 'Salary payment']);
         Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'title' => 'Office expenses']);
 
-        $query = $this->service->buildQuery(['text' => 'Salary']);
+        $query = app(DocumentImportExportService::class)->buildQuery(['text' => 'Salary']);
 
         $this->assertSame(1, $query->count());
         $this->assertStringContainsString('Salary', $query->first()->title);
@@ -388,7 +398,7 @@ class DocumentImportExportTest extends TestCase
     public function test_export_returns_streamed_response(): void
     {
         Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
-        $response = $this->service->export([]);
+        $response = app(DocumentImportExportService::class)->export([]);
 
         $this->assertInstanceOf(StreamedResponse::class, $response);
         $this->assertStringContainsString('text/csv', $response->headers->get('Content-Type'));

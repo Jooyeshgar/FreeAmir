@@ -9,7 +9,7 @@
         processUrl: @js(route('documents.sort-numbers.process')),
         csrfToken: @js(csrf_token()),
         initialProgress: @js($progress),
-        canStart: @js((int) ($statistics['unused_document_numbers_count'] ?? 0) > -1),
+        canStart: @js(! $fiscalYearClosed && (int) ($statistics['unused_document_numbers_count'] ?? 0) > -1),
         confirmMessage: @js(__('Are you sure you want to start sorting document numbers?')),
         requestFailedMessage: @js(__('Request failed.')),
         statusLabels: {
@@ -73,7 +73,7 @@
                     <div class="flex justify-end mt-2 relative">
                         <div class="relative group" x-show="isStartDisabled">
                             <div class="absolute bottom-full mb-2 hidden group-hover:block bg-gray-500 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
-                                {{ __('No need to sort because document numbers are already sorted.') }}
+                                {{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('No need to sort because document numbers are already sorted.') }}
                             </div>
                         </div>
                         <button type="button"

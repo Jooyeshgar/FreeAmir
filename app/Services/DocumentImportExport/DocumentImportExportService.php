@@ -5,6 +5,7 @@ namespace App\Services\DocumentImportExport;
 use App\Models\Document;
 use App\Models\Subject;
 use App\Models\User;
+use App\Services\FiscalYearMutationGuard;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -19,7 +20,7 @@ class DocumentImportExportService
 
     public const MANDATORY_COLUMNS = FreeAmirImportFormat::MANDATORY_COLUMNS;
 
-    public function __construct(private readonly DocumentImportFormatRegistry $formats = new DocumentImportFormatRegistry) {}
+    public function __construct(private readonly DocumentImportFormatRegistry $formats, private readonly FiscalYearMutationGuard $fiscalYearMutationGuard) {}
 
     public function buildQuery(array $filters): Builder
     {
@@ -195,6 +196,8 @@ class DocumentImportExportService
      */
     public function importCsv(UploadedFile $file, User $user, string $formatKey): array
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         $format = $this->formats->get($formatKey);
 
         [$headers, $rows, $skipped] = $this->parseCsv($file);
