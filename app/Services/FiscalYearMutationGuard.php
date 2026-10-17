@@ -76,7 +76,7 @@ class FiscalYearMutationGuard
             return FiscalYear::withoutGlobalScopes()->find((int) $subject->getAttribute('fiscal_year_id'));
         }
 
-        foreach (['fiscalYear', 'invoice', 'document', 'ancillaryCost', 'customer', 'payroll', 'employee', 'monthlyAttendance', 'organizationUnit', 'workSite', 'workSites', 'bankAccount', 'chequebook', 'cheque', 'payment', 'decree', 'element', 'warehouse', 'product', 'comment'] as $relation) {
+        foreach (['fiscalYear', 'invoice', 'document', 'ancillaryCost', 'customer', 'payroll', 'payrollItem', 'employee', 'monthlyAttendance', 'organizationUnit', 'workSite', 'workSites', 'workSiteContract', 'bankAccount', 'chequebook', 'cheque', 'payment', 'decree', 'salaryDecree', 'element', 'warehouse', 'product', 'comment', 'personnelRequest', 'attendanceLog'] as $relation) {
             if (! method_exists($subject, $relation)) {
                 continue;
             }

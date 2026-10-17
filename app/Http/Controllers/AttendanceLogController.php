@@ -11,6 +11,7 @@ use App\Models\PersonnelRequest;
 use App\Models\PublicHoliday;
 use App\Services\AttendanceLogImportService;
 use App\Services\AttendanceService;
+use App\Services\FiscalYearMutationGuard;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -60,6 +61,8 @@ class AttendanceLogController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $gregorianLogDate = $request->has('log_date') ? jalaliInputToGregorian($request->input('log_date'), 'log_date') : null;
 
         $validated = $request->validate([
@@ -102,6 +105,8 @@ class AttendanceLogController extends Controller
 
     public function update(Request $request, AttendanceLog $attendanceLog): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $gregorianLogDate = $request->has('log_date') ? jalaliInputToGregorian($request->input('log_date'), 'log_date') : null;
 
         $validated = $request->validate([
@@ -137,6 +142,8 @@ class AttendanceLogController extends Controller
 
     public function destroy(Request $request, AttendanceLog $attendanceLog): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $attendanceLog->delete();
 
         return redirect()->route('attendance.attendance-logs.index', $request->query())
@@ -258,6 +265,8 @@ class AttendanceLogController extends Controller
 
     public function recalculate(AttendanceLog $attendanceLog): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $this->attendanceService->recalculateLog($attendanceLog);
 
         return redirect()->back()->with('success', __('Attendance log recalculated successfully.'));
@@ -265,6 +274,8 @@ class AttendanceLogController extends Controller
 
     public function recalculateAll(MonthlyAttendance $monthlyAttendance): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         foreach ($monthlyAttendance->logs as $log) {
             $this->attendanceService->recalculateLog($log);
         }
@@ -323,6 +334,8 @@ class AttendanceLogController extends Controller
 
     public function bulkStore(Request $request): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $validated = $request->validate([
             'employee_ids' => ['required', 'array', 'min:1'],
             'employee_ids.*' => ['required', 'integer', 'distinct', Rule::exists('employees', 'id')->where('is_active', true)],
@@ -464,6 +477,8 @@ class AttendanceLogController extends Controller
 
     public function importStore(Request $request, AttendanceLogImportService $importService): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $request->validate([
             'import_type' => ['required', 'string', new Enum(AttendanceImportType::class)],
             'tmp_path' => ['required', 'string'],

@@ -28,6 +28,17 @@ function getActiveFiscalYear(): int
     }
 }
 
+function activeFiscalYearIsClosed(): bool
+{
+    $fiscalYearId = getActiveFiscalYear();
+
+    try {
+        return FiscalYear::withoutGlobalScopes()->whereKey($fiscalYearId)->whereNotNull('closed_at')->exists();
+    } catch (Throwable) {
+        return false;
+    }
+}
+
 /**
  * Format a number with separators, parentheses for negatives,
  * and optionally convert to Farsi if the locale is Persian.

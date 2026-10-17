@@ -1,4 +1,7 @@
 <x-app-layout :title="__('Edit Payroll Item')">
+    @php
+        $fiscalYearClosed = activeFiscalYearIsClosed();
+    @endphp
     <div class="card bg-base-100 shadow-xl mb-6 max-w-xl mx-auto">
         <div class="card-header bg-gradient-to-r from-green-50 to-teal-50 dark:from-gray-800 dark:to-gray-700 px-6 py-4 rounded-t-2xl border-b-2 border-primary/20">
             <h2 class="card-title text-lg">
@@ -41,7 +44,7 @@
 
                 <div class="flex gap-2 justify-end">
                     <a href="{{ route('salary.payrolls.show', $payrollItem->payroll_id) }}" class="btn btn-ghost btn-sm">{{ __('Cancel') }}</a>
-                    <button type="submit" class="btn btn-primary btn-sm">{{ __('Save') }}</button>
+                    <button type="submit" @disabled($fiscalYearClosed) class="btn btn-primary btn-sm {{ $fiscalYearClosed ? 'opacity-60' : '' }}" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Save') }}">{{ __('Save') }}</button>
                 </div>
             </form>
         </div>
