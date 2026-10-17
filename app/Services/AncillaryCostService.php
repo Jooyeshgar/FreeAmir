@@ -36,6 +36,8 @@ class AncillaryCostService
         self::validateAncillaryCostData($data);
 
         $invoice = Invoice::findOrFail($data['invoice_id']);
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
+        app(FiscalYearMutationGuard::class)->ensureOpen($data['fiscal_year_id'] ?? null);
 
         $document = null;
         $ancillaryCost = self::createAncillaryCostWithoutApproval($data);
@@ -97,7 +99,7 @@ class AncillaryCostService
                 'number' => $nextNumber,
                 'invoice_id' => $data['invoice_id'],
                 'customer_id' => $data['customer_id'],
-                'company_id' => $data['company_id'],
+                'fiscal_year_id' => $data['fiscal_year_id'],
                 'date' => $data['date'] ?? now()->toDateString(),
                 'type' => AncillaryCostType::fromName($data['type']),
                 'amount' => $data['amount'],
@@ -138,6 +140,8 @@ class AncillaryCostService
 
     public static function updateAncillaryCost(User $user, AncillaryCost $ancillaryCost, array $data, bool $approve = false)
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($ancillaryCost);
+
         self::validateAncillaryCostData($data);
 
         $createdDocument = null;
@@ -203,6 +207,8 @@ class AncillaryCostService
      */
     public static function deleteAncillaryCost(AncillaryCost $ancillaryCost): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($ancillaryCost);
+
         DB::transaction(function () use ($ancillaryCost) {
             $invoice = $ancillaryCost->invoice;
             $wasApproved = $ancillaryCost->status->isApproved();
@@ -298,6 +304,8 @@ class AncillaryCostService
 
     public function changeAncillaryCostStatus(AncillaryCost $ancillaryCost, string $status): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($ancillaryCost);
+
         DB::transaction(function () use ($ancillaryCost, $status) {
             match ($status) {
                 'approve' => $this->toggleInvoiceApproval($ancillaryCost, true),

@@ -6,6 +6,7 @@ use App\DTO\InvoiceStatusDecision;
 use App\Enums\CustomerType;
 use App\Enums\InvoiceType;
 use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
@@ -50,7 +51,10 @@ class MoadianService
 
     public function sendInvoice(Invoice $invoice): bool
     {
-        $company = Company::find(getActiveCompany());
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
+
+        $fiscalyear = FiscalYear::find(getActiveFiscalYear());
+        $company = $fiscalyear->company;
 
         $this->moadian_username = $company->moadian_username;
         $this->taxID = $company->tax_id;
@@ -90,7 +94,8 @@ class MoadianService
             $decision->addMessage('error', __('Cannot send a buy or return buy invoice to moadian.'));
         }
 
-        $company = Company::find(getActiveCompany());
+        $fiscalyear = FiscalYear::find(getActiveFiscalYear());
+        $company = $fiscalyear->company;
 
         if (! $company || ! $company->moadian_username || ! $company->tax_id || ! $company->decryptedPrivateKey() || ! $company->decryptedCertificate()) {
             $decision->addMessage('error', __('Moadian credentials are not fully configured. Please set the username, tax ID, certificate and private key in company settings.'));
@@ -130,7 +135,10 @@ class MoadianService
 
     public function moadianStatus(string $referenceNumber, Invoice $invoice): array
     {
-        $company = Company::findOrFail($invoice->company_id);
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
+
+        $fiscalYear = FiscalYear::with('company')->findOrFail($invoice->fiscal_year_id);
+        $company = $fiscalYear->company;
         $client = $this->clientFor($company);
 
         try {

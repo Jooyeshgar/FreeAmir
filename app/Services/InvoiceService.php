@@ -32,6 +32,8 @@ class InvoiceService
      */
     public static function createInvoice(User $user, array $invoiceData, array $items = [], bool $approved = false): array
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoiceData['fiscal_year_id'] ?? null);
+
         $date = $invoiceData['date'] ?? now()->toDateString();
         $items = self::assignWarehouseToItems($items, $invoiceData['warehouse_id'] ?? null);
 
@@ -162,6 +164,7 @@ class InvoiceService
     public static function updateInvoice(int $invoiceId, array $invoiceData, array $items = [], bool $approved = false): array
     {
         $invoice = Invoice::findOrFail($invoiceId);
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
         $requestedInvoiceType = InvoiceType::tryFromName($invoiceData['invoice_type'] ?? null);
 
         if ($requestedInvoiceType !== $invoice->invoice_type) {
@@ -393,6 +396,7 @@ class InvoiceService
     {
         DB::transaction(function () use ($invoiceId) {
             $invoice = Invoice::findOrFail($invoiceId);
+            app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
 
             $chequeIds = $invoice->payments()->whereNotNull('cheque_id')->pluck('cheque_id')->unique();
             Cheque::whereIn('id', $chequeIds)->each(fn (Cheque $cheque) => app(ChequeService::class)->delete($cheque));
@@ -536,6 +540,8 @@ class InvoiceService
 
     public function changeInvoiceStatus(Invoice $invoice, string $status): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
+
         DB::transaction(function () use ($invoice, $status) {
             match ($status) {
                 'ready_to_approve' => $invoice->update(['status' => InvoiceStatus::READY_TO_APPROVE]),
@@ -1285,6 +1291,8 @@ class InvoiceService
 
     public function voidInvoice(Invoice $invoice, User $user, string $date, float $number): array
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
+
         $voidInvoice = null;
 
         DB::transaction(function () use ($invoice, $user, $date, $number, &$voidInvoice) {
