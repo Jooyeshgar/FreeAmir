@@ -18,11 +18,17 @@ use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class FiscalYearTransferService
 {
     public static function transferDocument(Document $document, int $targetFiscalYearId, User $user): array
     {
+        $guardResult = self::_ensureTransferYearsOpen($document, $targetFiscalYearId);
+        if ($guardResult !== null) {
+            return $guardResult;
+        }
+
         $document->load(['documentable', 'transactions.subject']);
 
         if ($document->documentable) {
@@ -43,6 +49,11 @@ class FiscalYearTransferService
 
     public static function transferInvoice(Invoice $invoice, int $targetFiscalYearId, User $user, bool $transferDependencies = false): array
     {
+        $guardResult = self::_ensureTransferYearsOpen($invoice, $targetFiscalYearId);
+        if ($guardResult !== null) {
+            return $guardResult;
+        }
+
         $invoice->load([
             'customer', 'items.itemable', 'document.transactions.subject',
             'payments.payer', 'payments.settlementSubjectRelation', 'payments.document.transactions.subject',
@@ -51,6 +62,20 @@ class FiscalYearTransferService
         ]);
 
         return self::_executeInvoiceChainTransfer($invoice, $targetFiscalYearId, $user, $transferDependencies);
+    }
+
+    private static function _ensureTransferYearsOpen(Document|Invoice $source, int $targetFiscalYearId): ?array
+    {
+        try {
+            app(FiscalYearMutationGuard::class)->ensureOpen($source, $targetFiscalYearId);
+        } catch (ValidationException $exception) {
+            return [
+                'success' => false,
+                'errors' => collect($exception->errors())->flatten()->all(),
+            ];
+        }
+
+        return null;
     }
 
     private static function _executeInvoiceChainTransfer(Invoice $invoice, int $targetFiscalYearId, User $user, bool $transferDependencies): array
