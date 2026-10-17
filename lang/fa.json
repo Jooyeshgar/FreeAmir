@@ -3535,5 +3535,6 @@
     "Not created": "ایجاد نشده",
     "Company details": "اطلاعات شرکت",
     "People with access to this fiscal year.": "افرادی که به این سال مالی دسترسی دارند.",
-    "No users are assigned to this fiscal year.": "هیچ کاربری به این سال مالی اختصاص داده نشده است."
+    "No users are assigned to this fiscal year.": "هیچ کاربری به این سال مالی اختصاص داده نشده است.",
+    "Invoice and settlement operations are read-only.": "عملیات فاکتور و تسویه فقط به‌صورت خواندنی در دسترس است."
 }
