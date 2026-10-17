@@ -7,6 +7,7 @@ use App\Enums\PersonnelRequestType;
 use App\Models\Employee;
 use App\Models\PersonnelRequest;
 use App\Services\AttendanceService;
+use App\Services\FiscalYearMutationGuard;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -103,6 +104,8 @@ class PersonnelRequestController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         if (isset($request['request_type'], $request['employee_id'])) {
             $employee = Employee::find($request['employee_id']);
             $this->applyDailyRequestShiftTimes($request, $employee);
@@ -197,6 +200,8 @@ class PersonnelRequestController extends Controller
 
     public function update(Request $request, PersonnelRequest $personnelRequest): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         if (! $personnelRequest->status?->isPending()) {
             throw ValidationException::withMessages([
                 __('Only pending requests can be edited.'),
@@ -245,6 +250,8 @@ class PersonnelRequestController extends Controller
 
     public function destroy(Request $request, PersonnelRequest $personnelRequest): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $personnelRequest->delete();
 
         $tab = $request->get('tab', 'leaves');
@@ -255,6 +262,8 @@ class PersonnelRequestController extends Controller
 
     public function approve(PersonnelRequest $personnelRequest): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         if ($personnelRequest->status?->isApproved()) {
             return redirect()->back()
                 ->with('info', __('Personnel request is already approved.'));
@@ -273,6 +282,8 @@ class PersonnelRequestController extends Controller
 
     public function reject(PersonnelRequest $personnelRequest): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $wasApproved = $personnelRequest->status?->isApproved();
 
         $personnelRequest->update([

@@ -1,5 +1,8 @@
 <x-app-layout :title="__('Payroll Detail')">
     <x-show-message-bags />
+    @php
+        $fiscalYearClosed = activeFiscalYearIsClosed();
+    @endphp
 
     <div class="card bg-base-100 shadow-xl mb-6">
         <div class="card-header bg-gradient-to-r from-green-50 to-teal-50 dark:from-gray-800 dark:to-gray-700 px-6 py-4 rounded-t-2xl border-b-2 border-primary/20">
@@ -42,7 +45,7 @@
                                 onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-error">
+                                <button type="submit" @disabled($fiscalYearClosed) class="btn btn-sm btn-error {{ $fiscalYearClosed ? 'opacity-60' : '' }}" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Delete') }}">
                                     {{ __('Delete') }}
                                 </button>
                             </form>
@@ -148,7 +151,7 @@
                                 </label>
                                 <x-text-input name="note" id="note" value="{{ old('note') }}" input_class="input-sm" placeholder="{{ __('Example: Approved after reviewing attendance and deductions.') }}" />
                             </div>
-                            <button type="submit" class="btn btn-sm {{ $transitionAction['class'] }}">
+                            <button type="submit" @disabled($fiscalYearClosed) class="btn btn-sm {{ $transitionAction['class'] }} {{ $fiscalYearClosed ? 'opacity-60' : '' }}" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : $transitionAction['label'] }}">
                                 {{ $transitionAction['label'] }}
                             </button>
                         </div>
@@ -201,7 +204,7 @@
                                 @can('salary.payroll-items.edit')
                                     <td class="text-end">
                                         @if (!($isEmployeeView ?? false))
-                                            <a href="{{ route('salary.payroll-items.edit', $item) }}" class="btn btn-xs btn-ghost" title="{{ __('Edit') }}">
+                                            <a href="{{ route('salary.payroll-items.edit', $item) }}" @class(['btn btn-xs btn-ghost', 'pointer-events-none opacity-60' => $fiscalYearClosed]) aria-disabled="{{ $fiscalYearClosed ? 'true' : 'false' }}">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5
                                                                                          m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />

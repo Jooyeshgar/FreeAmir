@@ -34,16 +34,66 @@ class EnsureFiscalYearOpen
 
     private function isExempt(Request $request): bool
     {
-        if ($request->isMethod('GET') && ! $request->routeIs([
+        if ($request->isMethod('GET') && $request->routeIs([
             'fiscal-years.edit',
-            'documents.duplicate',
-            'invoices.create',
+            'subjects.edit',
+            'documents.edit',
+            'products.edit',
+            'warehouses.edit',
+            'services.edit',
+            'customers.edit',
+            'customer-groups.edit',
+            'bank-accounts.edit',
+            'banks.edit',
+            'chequebooks.edit',
+            'cheques.edit',
             'invoices.edit',
-            'invoices.void-form',
-            'invoices.ancillary-costs.create',
             'invoices.ancillary-costs.edit',
+            'hr.employees.edit',
+            'hr.organization-units.edit',
+            'hr.org-charts.edit',
+            'hr.personnel-requests.edit',
+            'attendance.attendance-logs.edit',
+            'attendance.monthly-attendances.edit',
+            'attendance.work-shifts.edit',
+            'salary.payroll-elements.edit',
+            'salary.salary-decrees.edit',
+            'salary.public-holidays.edit',
+            'salary.tax-slabs.edit',
+            'salary.work-sites.edit',
+            'salary.work-site-contracts.edit',
+            'salary.payroll-items.edit',
+            'employee-portal.personnel-requests.edit',
         ])) {
-            return true;
+            return false;
+        }
+
+        if ($request->isMethod('GET')) {
+            return ! $request->routeIs([
+                'documents.create',
+                'documents.duplicate',
+                'invoices.create',
+                'invoices.void-form',
+                'invoices.ancillary-costs.create',
+                'hr.employees.create',
+                'hr.organization-units.create',
+                'hr.org-charts.create',
+                'hr.personnel-requests.create',
+                'attendance.attendance-logs.create',
+                'attendance.attendance-logs.bulk-create',
+                'attendance.attendance-logs.import',
+                'attendance.monthly-attendances.create',
+                'attendance.monthly-attendances.bulk-create',
+                'attendance.work-shifts.create',
+                'salary.payroll-elements.create',
+                'salary.salary-decrees.create',
+                'salary.public-holidays.create',
+                'salary.tax-slabs.create',
+                'salary.work-sites.create',
+                'salary.work-site-contracts.create',
+                'employee-portal.change-employee-information',
+                'employee-portal.personnel-requests.create',
+            ]);
         }
 
         return $request->routeIs([
