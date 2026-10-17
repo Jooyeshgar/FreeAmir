@@ -54,6 +54,7 @@ class ClosedFiscalYearMutationGuardTest extends TestCase
             'date' => now()->toDateString(),
             'number' => 1,
             'amount' => 100,
+            'vat' => 10,
         ]));
 
         $this->fiscalYear = FiscalYear::factory()->create(['closed_at' => now()]);
