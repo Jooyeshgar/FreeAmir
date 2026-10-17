@@ -363,4 +363,33 @@ class ApiTest extends TestCase
         ]);
         $this->assertSame(0.0, (float) Document::find($documentId)->transactions()->sum('value'));
     }
+
+    public function test_closed_year_rejects_document_and_attachment_writes_but_keeps_document_reads(): void
+    {
+        Storage::fake('public');
+        $this->fiscalYear->update(['closed_at' => now()]);
+
+        $subject = Subject::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
+        $document = Document::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
+
+        $this->postJson($this->companyApiUrl('/documents'), [
+            'date' => '2026-05-16',
+            'transactions' => [
+                ['subject_id' => $subject->id, 'value' => '-100', 'desc' => 'debit'],
+                ['subject_id' => $subject->id, 'value' => '100', 'desc' => 'credit'],
+            ],
+        ], $this->apiHeaders())
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['fiscal_year']);
+
+        $this->post($this->companyApiUrl('/documents/'.$document->id.'/files'), [
+            'title' => 'receipt',
+            'file' => UploadedFile::fake()->create('receipt.pdf', 100, 'application/pdf'),
+        ], $this->apiHeaders())
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['fiscal_year']);
+
+        $this->getJson($this->companyApiUrl('/documents/'.$document->id), $this->apiHeaders())->assertOk();
+        $this->assertDatabaseCount('document_files', 0);
+    }
 }

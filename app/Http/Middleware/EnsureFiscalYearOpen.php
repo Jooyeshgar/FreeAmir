@@ -34,7 +34,7 @@ class EnsureFiscalYearOpen
 
     private function isExempt(Request $request): bool
     {
-        if ($request->isMethod('GET') && ! $request->routeIs('fiscal-years.edit')) {
+        if ($request->isMethod('GET') && ! $request->routeIs('fiscal-years.edit') && ! $request->routeIs('documents.duplicate')) {
             return true;
         }
 
@@ -79,7 +79,7 @@ class EnsureFiscalYearOpen
             return getActiveFiscalYear();
         }
 
-        foreach ($request->route()?->parameters() ?? [] as $parameter) {
+        foreach ($request->route()?->parameters() ?? [] as $key => $parameter) {
             if ($parameter instanceof EloquentModel) {
                 if ($parameter instanceof Company && $request->routeIs('companies.update')) {
                     continue;
@@ -88,7 +88,7 @@ class EnsureFiscalYearOpen
                 return $parameter;
             }
 
-            if (is_int($parameter) || (is_string($parameter) && ctype_digit($parameter))) {
+            if (in_array($key, ['fiscal_year', 'fiscalYear'], true) && (is_int($parameter) || (is_string($parameter) && ctype_digit($parameter)))) {
                 return $parameter;
             }
         }
