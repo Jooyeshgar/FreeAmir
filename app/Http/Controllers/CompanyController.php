@@ -6,9 +6,11 @@ use App\Enums\FiscalYearSection;
 use App\Models\Company;
 use App\Models\Document;
 use App\Models\DocumentFile;
+use App\Models\FiscalYear;
+use App\Models\Invoice;
 use App\Models\User;
 use App\Models\Warehouse;
-use App\Services\CompanyOverviewService;
+use App\Services\FiscalYearMutationGuard;
 use App\Services\FiscalYearService;
 use App\Services\MoadianService;
 use Cookie;
@@ -50,7 +52,7 @@ class CompanyController extends Controller
         'tax_id' => 'nullable|string|max:20',
     ];
 
-    public function __construct() {}
+    public function __construct(private readonly FiscalYearMutationGuard $fiscalYearMutationGuard) {}
 
     /**
      * Display a listing of the resource.
@@ -58,7 +60,9 @@ class CompanyController extends Controller
     public function index(Request $request): View
     {
         $user = auth()->user();
-        $companies = ($user->can('access-super-admin-panel') ? Company::query() : $user->companies())
+        $fiscalYears = ($user->can('access-super-admin-panel') ? FiscalYear::query() : $user->fiscalYears())
+            ->join('companies', 'companies.id', '=', 'fiscal_years.company_id')
+            ->select('fiscal_years.*', 'companies.name', 'companies.address', 'companies.economical_code', 'companies.national_code', 'companies.currency', 'fiscal_years.year as fiscal_year')
             ->with('closedBy:id,name')->withCount('users')->when($request->filled('search'), function ($query) use ($request) {
                 $search = trim((string) $request->input('search'));
 
@@ -68,9 +72,9 @@ class CompanyController extends Controller
                         ->orWhere('companies.national_code', 'like', "%{$search}%");
                 });
             })
-            ->when($request->input('status') === 'open', fn ($query) => $query->whereNull('companies.closed_at'))
-            ->when($request->input('status') === 'closed', fn ($query) => $query->whereNotNull('companies.closed_at'))
-            ->orderByDesc('companies.fiscal_year')
+            ->when($request->input('status') === 'open', fn ($query) => $query->whereNull('fiscal_years.closed_at'))
+            ->when($request->input('status') === 'closed', fn ($query) => $query->whereNotNull('fiscal_years.closed_at'))
+            ->orderByDesc('fiscal_years.year')
             ->orderBy('companies.name')
             ->paginate(12)
             ->withQueryString();
@@ -81,8 +85,8 @@ class CompanyController extends Controller
                 : 'companies.workspace-index';
 
         return view($view, [
-            'companies' => $companies,
-            'canCreateFirstCompany' => $user->can('access-super-admin-panel') && $user->companies()->doesntExist(),
+            'fiscalYears' => $fiscalYears,
+            'canCreateFirstCompany' => $user->can('access-super-admin-panel') && $user->fiscalYears()->doesntExist(),
         ]);
     }
 
@@ -92,7 +96,10 @@ class CompanyController extends Controller
     public function create(Request $request): View
     {
         // Get previous fiscal years for the current company
-        $previousYears = $request->user()->companies()->orderByDesc('fiscal_year')->get();
+        $previousYears = $request->user()->fiscalYears()
+            ->join('companies', 'companies.id', '=', 'fiscal_years.company_id')
+            ->select('fiscal_years.*', 'companies.name', 'fiscal_years.year as fiscal_year')
+            ->orderByDesc('fiscal_years.year')->get();
 
         return view('companies.create', [
             'company' => null,
@@ -104,7 +111,7 @@ class CompanyController extends Controller
     {
         abort_if($request->user()->can('access-super-admin-panel'), 404);
 
-        if (auth()->user()->companies()->exists()) {
+        if ($request->user()->fiscalYears()->exists()) {
             return redirect()->route('home');
         }
 
@@ -114,20 +121,59 @@ class CompanyController extends Controller
     /**
      * Display the grouped management overview for a business.
      */
-    public function show(Request $request, Company $company, CompanyOverviewService $overviewService): View
+    public function show(Request $request, Company $company): View
     {
         abort_unless($request->user()->can('access-super-admin-panel'), 403);
 
         $request->session()->put('interface_mode', 'management');
 
-        return view('companies.show', $overviewService->build($company));
+        $fiscalYears = $company->fiscalYears()
+            ->withCount('users')
+            ->selectSub(
+                Document::withoutGlobalScopes()
+                    ->selectRaw('COUNT(*)')
+                    ->whereColumn('documents.fiscal_year_id', 'fiscal_years.id'),
+                'documents_count'
+            )
+            ->selectSub(
+                Invoice::withoutGlobalScopes()
+                    ->selectRaw('COUNT(*)')
+                    ->whereColumn('invoices.fiscal_year_id', 'fiscal_years.id'),
+                'invoices_count'
+            )
+            ->orderByDesc('year')
+            ->get();
+
+        $users = User::query()
+            ->whereHas('fiscalYears', fn ($query) => $query->where('fiscal_years.company_id', $company->id))
+            ->with('roles:id,name')
+            ->orderBy('name')
+            ->orderBy('id')
+            ->get();
+
+        foreach ($fiscalYears as $fiscalYear) {
+            $fiscalYear->setAttribute('fiscal_year', $fiscalYear->year);
+        }
+
+        return view('companies.show', [
+            'business' => $company,
+            'fiscalYears' => $fiscalYears,
+            'users' => $users,
+            'metrics' => [
+                'fiscalYears' => $fiscalYears->count(),
+                'openFiscalYears' => $fiscalYears->whereNull('closed_at')->count(),
+                'users' => $users->count(),
+                'documents' => (int) $fiscalYears->sum('documents_count'),
+                'invoices' => (int) $fiscalYears->sum('invoices_count'),
+            ],
+        ]);
     }
 
     public function storeCompanyForRegisteredUser(Request $request): RedirectResponse
     {
         abort_if($request->user()->can('access-super-admin-panel'), 404);
 
-        if ($request->user()->companies()->exists()) {
+        if ($request->user()->fiscalYears()->exists()) {
             return redirect()->route('home');
         }
 
@@ -141,8 +187,8 @@ class CompanyController extends Controller
         $data['currency'] ??= 'Rial';
 
         try {
-            $company = $this->createCompany($request->user(), $data);
-            Cookie::queue('active-company-id', $company->id, 362 * 24 * 60);
+            $fiscalYear = $this->createCompany($request->user(), $data);
+            Cookie::queue('active-fiscal-year-id', $fiscalYear->id, 362 * 24 * 60);
 
             return redirect()->route('home')->with('success', __('Company created successfully.'));
         } catch (\Throwable $e) {
@@ -165,7 +211,7 @@ class CompanyController extends Controller
         $fiscalYearRules = [
             'source_year_id' => [
                 'nullable',
-                Rule::exists('company_user', 'company_id')->where('user_id', auth()->user()->id),
+                Rule::exists('fiscal_year_user', 'fiscal_year_id')->where('user_id', auth()->user()->id),
             ],
             'tables_to_copy' => 'array',
             'tables_to_copy.*' => 'string|in:'.implode(',', array_map(fn ($case) => $case->value, FiscalYearSection::cases())),
@@ -197,14 +243,14 @@ class CompanyController extends Controller
         $data['currency'] ??= 'Rial'; // default
 
         try {
-            $company = $this->createCompany($request->user(), $data, isset($validated['source_year_id']) ? (int) $validated['source_year_id'] : null, $validated['tables_to_copy'] ?? []);
-            Cookie::queue('active-company-id', $company->id, 362 * 24 * 60);
+            $fiscalYear = $this->createCompany($request->user(), $data, isset($validated['source_year_id']) ? (int) $validated['source_year_id'] : null, $validated['tables_to_copy'] ?? []);
+            Cookie::queue('active-fiscal-year-id', $fiscalYear->id, 362 * 24 * 60);
         } catch (\Throwable $e) {
             Log::error('Company initialization failed.', [
                 'creator_id' => $request->user()->id,
                 'company_name' => $data['name'] ?? null,
                 'fiscal_year' => $data['fiscal_year'] ?? null,
-                'source_company_id' => $validated['source_year_id'] ?? null,
+                'source_fiscal_year_id' => $validated['source_year_id'] ?? null,
                 'exception' => $e,
             ]);
 
@@ -249,7 +295,9 @@ class CompanyController extends Controller
             'private_key' => $this->privateKeyRules(),
         ];
 
-        $validated = $request->validate([...$this->rules, ...$certRules]);
+        $companyRules = $this->rules;
+        unset($companyRules['fiscal_year']);
+        $validated = $request->validate([...$companyRules, ...$certRules]);
 
         if ($logo = $request->file('logo')) {
             $logo = $this->storeLogo($logo, $company);
@@ -268,35 +316,40 @@ class CompanyController extends Controller
 
         $validated['currency'] ??= 'Rial'; // default
 
-        if ($company->update($validated)) {
-            return redirect(route('companies.index'))
-                ->with('success', __('Company updated successfully.'));
-        }
+        $company->update($validated);
 
         return redirect(route('companies.index'))
-            ->with('error', 'An error occurred, Try again.');
+            ->with('success', __('Company updated successfully.'));
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Company $company): RedirectResponse
+    public function destroy(FiscalYear $company): RedirectResponse
     {
-        $this->ensureCompanyAccess($company);
+        $this->ensureFiscalYearAccess($company);
+        $this->fiscalYearMutationGuard->ensureOpen($company);
 
         $documentFilePaths = DocumentFile::withoutGlobalScopes()
-            ->whereIn('document_id', Document::withoutGlobalScopes()->where('company_id', $company->id)->select('id'))
+            ->whereIn('document_id', Document::withoutGlobalScopes()->where('fiscal_year_id', $company->id)->select('id'))
             ->pluck('path')
             ->map(fn (string $path): string => Str::startsWith($path, 'storage/') ? Str::after($path, 'storage/') : $path)
             ->filter()
             ->values();
-        $keyPaths = collect([$company->certificate_path, $company->private_key_path])->filter()->values();
+        $business = $company->company;
+        $deleteBusiness = $business->fiscalYears()->count() === 1;
+        $keyPaths = $deleteBusiness ? collect([$business->certificate_path, $business->private_key_path])->filter()->values() : collect();
 
         try {
-            DB::transaction(fn () => $company->delete());
+            DB::transaction(function () use ($company, $business, $deleteBusiness) {
+                $company->delete();
+                if ($deleteBusiness) {
+                    $business->delete();
+                }
+            });
         } catch (\Throwable $e) {
             Log::error('Company deletion failed.', [
-                'company_id' => $company->id,
+                'fiscal_year_id' => $company->id,
                 'exception' => $e,
             ]);
 
@@ -326,7 +379,7 @@ class CompanyController extends Controller
             }
         } catch (\Throwable $e) {
             Log::warning('Company document file cleanup failed after deletion.', [
-                'company_id' => $companyId,
+                'fiscal_year_id' => $companyId,
                 'exception' => $e,
             ]);
         }
@@ -339,7 +392,7 @@ class CompanyController extends Controller
             }
         } catch (\Throwable $e) {
             Log::warning('Company key file cleanup failed after deletion.', [
-                'company_id' => $companyId,
+                'fiscal_year_id' => $companyId,
                 'exception' => $e,
             ]);
         }
@@ -372,9 +425,9 @@ class CompanyController extends Controller
         }];
     }
 
-    public function testMoadianConnection(Request $request, Company $company, MoadianService $moadianService): JsonResponse
+    public function testMoadianConnection(Request $request, FiscalYear $fiscalYear, MoadianService $moadianService): JsonResponse
     {
-        $this->ensureCompanyAccess($company);
+        $this->ensureFiscalYearAccess($fiscalYear);
 
         $validated = $request->validate([
             'moadian_username' => ['required', 'string', 'max:20'],
@@ -400,11 +453,18 @@ class CompanyController extends Controller
         ]);
     }
 
+    private function ensureFiscalYearAccess(FiscalYear $fiscalYear): void
+    {
+        $user = auth()->user();
+
+        abort_unless($user->can('access-super-admin-panel') || $user->fiscalYears()->whereKey($fiscalYear->id)->exists(), 403);
+    }
+
     private function ensureCompanyAccess(Company $company): void
     {
         $user = auth()->user();
 
-        abort_unless($user->can('access-super-admin-panel') || $user->companies()->whereKey($company->id)->exists(), 403);
+        abort_unless($user->can('access-super-admin-panel') || $user->fiscalYears()->where('company_id', $company->id)->exists(), 403);
     }
 
     private function privateKeyRules(): array
@@ -455,13 +515,19 @@ class CompanyController extends Controller
         return $path;
     }
 
-    private function createCompany(User $creator, array $companyData, ?int $sourceCompanyId = null, array $sectionsToCopy = []): Company
+    private function createCompany(User $creator, array $companyData, ?int $sourceFiscalYearId = null, array $sectionsToCopy = []): FiscalYear
     {
-        return DB::transaction(function () use ($creator, $companyData, $sourceCompanyId, $sectionsToCopy) {
-            $company = $sourceCompanyId === null ? Company::create($companyData) : FiscalYearService::createWithCopiedData($companyData, $sourceCompanyId, $sectionsToCopy);
-            $company->users()->syncWithoutDetaching([$creator->id]);
+        return DB::transaction(function () use ($creator, $companyData, $sourceFiscalYearId, $sectionsToCopy) {
+            $year = (int) $companyData['fiscal_year'];
+            unset($companyData['fiscal_year']);
+            $business = Company::create($companyData);
+            $fiscalYearData = ['company_id' => $business->id, 'year' => $year];
+            $fiscalYear = $sourceFiscalYearId === null
+                ? FiscalYear::create($fiscalYearData)
+                : FiscalYearService::createWithCopiedData($fiscalYearData, $sourceFiscalYearId, $sectionsToCopy);
+            $fiscalYear->users()->syncWithoutDetaching([$creator->id]);
 
-            if ($sourceCompanyId === null) {
+            if ($sourceFiscalYearId === null) {
                 foreach ([
                     SubjectSeeder::class,
                     ConfigSeeder::class,
@@ -470,9 +536,9 @@ class CompanyController extends Controller
                     ProductGroupSeeder::class,
                     ServiceGroupSeeder::class,
                 ] as $seeder) {
-                    app($seeder)->run($company->id);
+                    app($seeder)->run($fiscalYear->id);
                 }
-                Warehouse::create(['company_id' => $company->id, 'name' => 'انبار اصلی', 'code' => 'MAIN']);
+                Warehouse::create(['fiscal_year_id' => $fiscalYear->id, 'name' => 'انبار اصلی', 'code' => 'MAIN']);
             }
 
             $adminRole = Role::where('name', __('Admin'))->first();
@@ -490,41 +556,49 @@ class CompanyController extends Controller
             // The authorization check before company creation caches this user's wildcard permissions.
             $creator->forgetWildcardPermissionIndex();
 
-            return $company;
+            return $fiscalYear;
         });
     }
 
-    public function setActiveCompany(Company $company): RedirectResponse
+    public function setActiveCompany(FiscalYear $company, Request $request): RedirectResponse
     {
         if (! $company->users->contains(auth()->id())) {
             abort(403);
         }
 
-        Cookie::queue('active-company-id', $company->id, 365 * 24 * 60);
+        Cookie::queue('active-fiscal-year-id', $company->id, 365 * 24 * 60);
 
         config([
-            'active-company-name' => $company->name,
-            'active-company-fiscal-year' => $company->fiscal_year,
+            'active-company-name' => $company->company->name,
+            'active-company-fiscal-year' => $company->year,
         ]);
+
+        if ($request->filled('document')) {
+            $document = Document::withoutGlobalScopes()
+                ->where('fiscal_year_id', $company->id)
+                ->findOrFail($request->integer('document'));
+
+            return redirect()->route('documents.show', $document);
+        }
 
         return redirect()->route('home');
     }
 
-    public function closeFiscalYear(Company $company, Request $request): RedirectResponse
+    public function closeFiscalYear(FiscalYear $fiscalYear, Request $request): RedirectResponse
     {
-        if (! $company->users->contains($request->user()->id)) {
+        if (! $fiscalYear->users->contains($request->user()->id)) {
             abort(403);
         }
 
-        $this->validateActiveCompanyForClosing($company);
+        $this->validateActiveFiscalYearForClosing($fiscalYear);
 
-        [$newFiscalYear, $validationErrors] = FiscalYearService::closeFiscalYear($company, $request->user());
+        [$newFiscalYear, $validationErrors] = FiscalYearService::closeFiscalYear($fiscalYear, $request->user());
 
         if (! $newFiscalYear && ! empty($validationErrors)) {
             return redirect()->back()->withErrors(implode(' ', $validationErrors));
         }
 
-        $this->setActiveCompany($newFiscalYear);
+        $this->setActiveCompany($newFiscalYear, $request);
 
         return redirect()->route('companies.index')->with('success', __('Fiscal year closed successfully.'));
     }
@@ -532,131 +606,161 @@ class CompanyController extends Controller
     /**
      * Show the multi-step year-end closing wizard.
      */
-    public function closingWizard(Company $company, Request $request): View
+    public function closingWizard(FiscalYear $fiscalYear, Request $request): View
     {
-        if (! $company->users->contains($request->user()->id)) {
+        if (! $fiscalYear->users->contains($request->user()->id)) {
             abort(403);
         }
 
-        $validations = FiscalYearService::getWizardValidations($company);
+        $validations = FiscalYearService::getWizardValidations($fiscalYear);
         $allPass = collect($validations)->every(fn ($v) => $v['pass']);
 
-        $plDocument = $company->pl_document_id && $company->closing_recalculation_step !== 1 ? $company->plDocument : null;
-        $incomeSummaryBalance = $plDocument ? FiscalYearService::getIncomeSummaryBalance($company) : null;
+        $plDocument = $fiscalYear->pl_document_id && $fiscalYear->closing_recalculation_step !== 1 ? $fiscalYear->plDocument : null;
+        $incomeSummaryBalance = $plDocument ? FiscalYearService::getIncomeSummaryBalance($fiscalYear) : null;
         $step3Enabled = $plDocument && $incomeSummaryBalance === 0.0;
+        $nextFiscalYear = FiscalYear::query()->where('company_id', $fiscalYear->company_id)
+            ->where('year', $fiscalYear->year + 1)->first();
+        $openingDocument = $nextFiscalYear
+            ? Document::withoutGlobalScopes()->where('fiscal_year_id', $nextFiscalYear->id)->where('number', 1)->first()
+            : null;
+        if ($openingDocument && ! in_array($openingDocument->title, [__('Fiscal year opening Document', [], 'en'), __('Fiscal year opening Document', [], 'fa')], true)) {
+            $openingDocument = null;
+        }
 
         return view('companies.closing-wizard', compact(
-            'company',
+            'fiscalYear',
             'validations',
             'allPass',
             'plDocument',
             'incomeSummaryBalance',
-            'step3Enabled'
+            'step3Enabled',
+            'nextFiscalYear',
+            'openingDocument'
         ));
     }
 
     /**
      * Execute Step 1: close temporary accounts (generate Income Summary document).
      */
-    public function closingWizardStep1(Company $company, Request $request): RedirectResponse
+    public function closingWizardStep1(FiscalYear $fiscalYear, Request $request): RedirectResponse
     {
-        if (! $company->users->contains($request->user()->id)) {
+        if (! $fiscalYear->users->contains($request->user()->id)) {
             abort(403);
         }
 
-        $this->validateActiveCompanyForClosing($company);
+        $this->validateActiveFiscalYearForClosing($fiscalYear);
 
-        if ($company->closed_at) {
-            return redirect()->route('companies.closing-wizard', $company)
+        if ($fiscalYear->closed_at) {
+            return redirect()->route('companies.closing-wizard', $fiscalYear)
                 ->with('error', __('This fiscal year is already closed.'));
         }
 
-        if ($company->pl_document_id && $company->closing_recalculation_step !== 1) {
-            return redirect()->route('companies.closing-wizard', $company)
+        if ($fiscalYear->pl_document_id && $fiscalYear->closing_recalculation_step !== 1) {
+            return redirect()->route('companies.closing-wizard', $fiscalYear)
                 ->with('error', __('Step 1 has already been completed.'));
         }
 
         try {
-            FiscalYearService::closeTemporaryAccounts($company, $request->user());
+            FiscalYearService::closeTemporaryAccounts($fiscalYear, $request->user());
         } catch (\Exception $e) {
-            return redirect()->route('companies.closing-wizard', $company)
+            return redirect()->route('companies.closing-wizard', $fiscalYear)
                 ->with('error', $e->getMessage());
         }
 
-        return redirect()->route('companies.closing-wizard', $company)
+        return redirect()->route('companies.closing-wizard', $fiscalYear)
             ->with('success', __('Temporary accounts closed successfully. Please review and create a manual adjustment document if needed.'));
     }
 
     /**
      * Execute Step 3: close permanent accounts and open the new fiscal year.
      */
-    public function closingWizardStep3(Company $company, Request $request): RedirectResponse
+    public function closingWizardStep3(FiscalYear $fiscalYear, Request $request): RedirectResponse
     {
-        if (! $company->users->contains($request->user()->id)) {
+        if (! $fiscalYear->users->contains($request->user()->id)) {
             abort(403);
         }
 
-        $this->validateActiveCompanyForClosing($company);
+        $this->validateActiveFiscalYearForClosing($fiscalYear);
 
-        if ($company->closed_at) {
-            return redirect()->route('companies.closing-wizard', $company)
+        if ($fiscalYear->closed_at) {
+            return redirect()->route('companies.closing-wizard', $fiscalYear)
                 ->with('error', __('This fiscal year is already closed.'));
         }
 
-        if (! $company->pl_document_id || $company->closing_recalculation_step === 1) {
-            return redirect()->route('companies.closing-wizard', $company)
+        if (! $fiscalYear->pl_document_id || $fiscalYear->closing_recalculation_step === 1) {
+            return redirect()->route('companies.closing-wizard', $fiscalYear)
                 ->with('error', __('You must complete Step 1 before closing permanent accounts.'));
         }
 
-        $balance = FiscalYearService::getIncomeSummaryBalance($company);
+        $balance = FiscalYearService::getIncomeSummaryBalance($fiscalYear);
         if ($balance !== 0.0) {
-            return redirect()->route('companies.closing-wizard', $company)
+            return redirect()->route('companies.closing-wizard', $fiscalYear)
                 ->with('error', __('The Income Summary account balance must be zero before closing. Current balance: :balance', ['balance' => formatNumber($balance)]));
         }
 
         try {
-            $isRecalculation = $company->closing_recalculation_step === 2;
-            $newFiscalYear = FiscalYearService::stepThreeCloseAndOpenNewYear($company, $request->user());
+            $isRecalculation = $fiscalYear->closing_recalculation_step === 2;
+            $newFiscalYear = FiscalYearService::stepThreeCloseAndOpenNewYear($fiscalYear, $request->user());
         } catch (\Exception $e) {
-            return redirect()->route('companies.closing-wizard', $company)
+            return redirect()->route('companies.closing-wizard', $fiscalYear)
                 ->with('error', $e->getMessage());
         }
 
         if (! $isRecalculation) {
-            $this->setActiveCompany($newFiscalYear);
+            $this->setActiveCompany($newFiscalYear, $request);
         }
 
         return redirect()->route('companies.index')
             ->with('success', __($isRecalculation ? 'Fiscal year closing document recalculated successfully.' : 'Fiscal year closed successfully.'));
     }
 
-    public function recalculateClosingDocument(Company $company, Request $request): RedirectResponse
+    public function recalculateClosingDocument(FiscalYear $fiscalYear, Request $request): RedirectResponse
     {
-        if (! $company->users->contains($request->user()->id)) {
+        if (! $fiscalYear->users->contains($request->user()->id)) {
             abort(403);
         }
 
-        $this->validateActiveCompanyForClosing($company);
+        $this->validateActiveFiscalYearForClosing($fiscalYear);
 
         try {
-            FiscalYearService::recalculateClosingDocument($company, $request->user());
+            FiscalYearService::recalculateClosingDocument($fiscalYear, $request->user());
         } catch (ValidationException $e) {
-            return redirect()->route('companies.closing-wizard', $company)
+            return redirect()->route('companies.closing-wizard', $fiscalYear)
                 ->withErrors($e->errors());
         } catch (\Exception $e) {
-            return redirect()->route('companies.closing-wizard', $company)
+            return redirect()->route('companies.closing-wizard', $fiscalYear)
                 ->with('error', $e->getMessage());
         }
 
-        return redirect()->route('companies.closing-wizard', $company)
+        return redirect()->route('companies.closing-wizard', $fiscalYear)
             ->with('success', __('Closing recalculation started. Complete all three closing steps again.'));
     }
 
-    private function validateActiveCompanyForClosing(Company $company): void
+    public function recreateOpeningDocument(FiscalYear $fiscalYear, Request $request): RedirectResponse
     {
-        if ((int) config('active-company-id') !== $company->id) {
+        if (! $fiscalYear->users->contains($request->user()->id)) {
+            abort(403);
+        }
+
+        $this->validateActiveFiscalYearForClosing($fiscalYear);
+
+        try {
+            FiscalYearService::recreateOpeningDocument($fiscalYear, $request->user());
+        } catch (ValidationException $e) {
+            return redirect()->route('companies.closing-wizard', $fiscalYear)->withErrors($e->errors());
+        } catch (\Exception $e) {
+            return redirect()->route('companies.closing-wizard', $fiscalYear)->with('error', $e->getMessage());
+        }
+
+        return redirect()->route('companies.closing-wizard', $fiscalYear)
+            ->with('success', __('Opening Document recreated successfully.'));
+    }
+
+    private function validateActiveFiscalYearForClosing(FiscalYear $fiscalYear): void
+    {
+        if ((int) config('active-fiscal-year-id') !== $fiscalYear->id) {
             throw ValidationException::withMessages([
-                'company' => __('Select this company as the active company before closing its fiscal year.'),
+                'fiscal_year' => __('Select this fiscal year as the active fiscal year before closing it.'),
             ]);
         }
     }

@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Http\Requests\StoreInvoiceRequest;
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\User;
@@ -26,17 +26,17 @@ class WarehouseTest extends TestCase
 
     protected User $user;
 
-    protected int $companyId;
+    protected int $fiscalYearId;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create();
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
         $this->user->givePermissionTo([
             Permission::firstOrCreate(['name' => 'warehouses.index']),
             Permission::firstOrCreate(['name' => 'warehouses.destroy']),
@@ -46,14 +46,14 @@ class WarehouseTest extends TestCase
         ]);
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
-        config(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
+        config(['active-fiscal-year-id' => $this->fiscalYearId]);
     }
 
     private function makeWarehouse(array $overrides = []): Warehouse
     {
         return Warehouse::create(array_merge([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Warehouse '.fake()->unique()->numberBetween(1, 99999),
             'code' => 'WH-'.fake()->unique()->numberBetween(1, 99999),
         ], $overrides));
@@ -64,7 +64,7 @@ class WarehouseTest extends TestCase
         $warehouse = $this->makeWarehouse(['name' => 'Central Warehouse', 'code' => 'CENTRAL']);
         $this->makeWarehouse(['name' => 'Branch Warehouse', 'code' => 'BRANCH']);
 
-        $product = Product::factory()->create(['company_id' => $this->companyId]);
+        $product = Product::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
         WarehouseProductStock::create([
             'warehouse_id' => $warehouse->id,
             'product_id' => $product->id,
@@ -82,7 +82,7 @@ class WarehouseTest extends TestCase
         $warehouse = $this->makeWarehouse(['name' => 'Stock Warehouse']);
         $this->makeWarehouse(['name' => 'Empty Warehouse']);
 
-        $product = Product::factory()->create(['company_id' => $this->companyId]);
+        $product = Product::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
         WarehouseProductStock::create([
             'warehouse_id' => $warehouse->id,
             'product_id' => $product->id,
@@ -97,10 +97,10 @@ class WarehouseTest extends TestCase
     {
         $source = $this->makeWarehouse(['name' => 'Source Warehouse']);
         $destination = $this->makeWarehouse(['name' => 'Destination Warehouse']);
-        $product = Product::factory()->create(['company_id' => $this->companyId]);
+        $product = Product::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
 
         WarehouseTransfer::create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'product_id' => $product->id,
             'from_warehouse_id' => $source->id,
             'to_warehouse_id' => $destination->id,
@@ -117,10 +117,10 @@ class WarehouseTest extends TestCase
     {
         $source = $this->makeWarehouse();
         $destination = $this->makeWarehouse();
-        $product = Product::factory()->create(['company_id' => $this->companyId]);
+        $product = Product::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
 
         WarehouseTransfer::create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'product_id' => $product->id,
             'from_warehouse_id' => $source->id,
             'to_warehouse_id' => $destination->id,
@@ -140,11 +140,11 @@ class WarehouseTest extends TestCase
         $destination = $this->makeWarehouse(['name' => 'History Destination']);
         $otherSource = $this->makeWarehouse(['name' => 'Other Source']);
         $otherDestination = $this->makeWarehouse(['name' => 'Other Destination']);
-        $product = Product::factory()->create(['company_id' => $this->companyId, 'name' => 'History Product']);
-        $otherProduct = Product::factory()->create(['company_id' => $this->companyId, 'name' => 'Other Product']);
+        $product = Product::factory()->create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'History Product']);
+        $otherProduct = Product::factory()->create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Other Product']);
 
         WarehouseTransfer::create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'product_id' => $product->id,
             'from_warehouse_id' => $source->id,
             'to_warehouse_id' => $destination->id,
@@ -154,7 +154,7 @@ class WarehouseTest extends TestCase
             'transferred_at' => Carbon::yesterday()->toDateString(),
         ]);
         WarehouseTransfer::create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'product_id' => $otherProduct->id,
             'from_warehouse_id' => $otherSource->id,
             'to_warehouse_id' => $otherDestination->id,
@@ -179,7 +179,7 @@ class WarehouseTest extends TestCase
         $source = $this->makeWarehouse();
         $destination = $this->makeWarehouse();
         $product = Product::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Transferred Product',
             'average_cost' => 125,
         ]);
@@ -213,7 +213,7 @@ class WarehouseTest extends TestCase
         $source = $this->makeWarehouse();
         $destination = $this->makeWarehouse();
         $product = Product::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'average_cost' => 125,
         ]);
 
@@ -252,10 +252,10 @@ class WarehouseTest extends TestCase
             Permission::firstOrCreate(['name' => 'products.update']),
         ]);
 
-        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId]);
-        $otherCompany = Company::factory()->create();
+        $group = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $otherFiscalYear = FiscalYear::factory()->create();
         $foreignWarehouse = Warehouse::withoutGlobalScopes()->create([
-            'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherFiscalYear->id,
             'name' => 'Foreign Warehouse',
         ]);
 
@@ -270,7 +270,7 @@ class WarehouseTest extends TestCase
         $this->post(route('products.store'), $payload)->assertSessionHasNoErrors();
 
         $product = Product::factory()->withGroup($group)->withSubjects()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
         ]);
         $payload['code'] = 'WH-SCOPE-UPDATED';
 
@@ -280,9 +280,9 @@ class WarehouseTest extends TestCase
 
     public function test_invoice_requires_company_warehouse(): void
     {
-        $otherCompany = Company::factory()->create();
+        $otherFiscalYear = FiscalYear::factory()->create();
         $foreignWarehouse = Warehouse::withoutGlobalScopes()->create([
-            'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherFiscalYear->id,
             'name' => 'Foreign Invoice Warehouse',
         ]);
 
@@ -311,9 +311,9 @@ class WarehouseTest extends TestCase
     {
         $source = $this->makeWarehouse();
         $newDefault = $this->makeWarehouse();
-        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId]);
+        $group = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $product = Product::factory()->withGroup($group)->withSubjects()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'quantity' => 12,
             'average_cost' => 100,
         ]);
@@ -351,7 +351,7 @@ class WarehouseTest extends TestCase
     {
         $source = $this->makeWarehouse();
         $destination = $this->makeWarehouse();
-        $product = Product::factory()->create(['company_id' => $this->companyId]);
+        $product = Product::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
 
         WarehouseProductStock::create([
             'warehouse_id' => $source->id,
@@ -394,7 +394,7 @@ class WarehouseTest extends TestCase
     {
         $warehouse = $this->makeWarehouse();
         $destination = $this->makeWarehouse();
-        $product = Product::factory()->create(['company_id' => $this->companyId]);
+        $product = Product::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
 
         WarehouseProductStock::create([
             'warehouse_id' => $warehouse->id,
@@ -403,7 +403,7 @@ class WarehouseTest extends TestCase
             'average_cost' => 100,
         ]);
         WarehouseTransfer::create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'product_id' => $product->id,
             'from_warehouse_id' => $warehouse->id,
             'to_warehouse_id' => $destination->id,
@@ -412,7 +412,7 @@ class WarehouseTest extends TestCase
             'transferred_at' => now()->toDateString(),
         ]);
 
-        $export = FiscalYearService::exportData($this->companyId, ['warehouses']);
+        $export = FiscalYearService::exportData($this->fiscalYearId, ['warehouses']);
 
         $this->assertArrayHasKey('warehouses', $export);
         $this->assertArrayNotHasKey('warehouse_product_stocks', $export);

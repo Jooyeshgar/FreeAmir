@@ -12,7 +12,7 @@ class Bank extends Model
 
     protected $fillable = [
         'name',
-        'company_id',
+        'fiscal_year_id',
     ];
 
     public static function booted(): void

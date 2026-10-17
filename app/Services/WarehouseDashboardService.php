@@ -4,7 +4,7 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\ProductGroup;
@@ -63,8 +63,8 @@ class WarehouseDashboardService
     public function dashboard(array $rawFilters = []): array
     {
         $filters = $this->normalizeFilters($rawFilters);
-        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
-        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
         [$from, $to] = $this->periodRange($filters['period'], $fiscalStart, $fiscalEnd);
 
         $productGroups = ProductGroup::orderBy('name')->get(['id', 'name']);
@@ -176,7 +176,8 @@ class WarehouseDashboardService
             ->whereHas('invoice', function (Builder $q) use ($from, $to) {
                 $q->whereIn('status', InvoiceStatus::approvedOrSettled())
                     ->whereIn('invoice_type', array_merge(self::STOCK_IN_TYPES, self::STOCK_OUT_TYPES))
-                    ->whereBetween('date', [$from->toDateString(), $to->toDateString()]);
+                    ->whereDate('date', '>=', $from->toDateString())
+                    ->whereDate('date', '<=', $to->toDateString());
             })
             ->when($categoryId, function (Builder $q, int $id) {
                 $q->whereHasMorph('itemable', Product::class, fn (Builder $p) => $p->where('group', $id));
@@ -233,8 +234,9 @@ class WarehouseDashboardService
                 fn (InvoiceType $type) => $type->value,
                 [InvoiceType::BEGINNING_INVENTORY, ...self::STOCK_IN_TYPES, ...self::STOCK_OUT_TYPES]
             ))
-            ->where('invoices.company_id', getActiveCompany())
-            ->whereBetween('invoices.date', [$fiscalStart->toDateString(), $to->toDateString()])
+            ->where('invoices.fiscal_year_id', getActiveFiscalYear())
+            ->whereDate('invoices.date', '>=', $fiscalStart->toDateString())
+            ->whereDate('invoices.date', '<=', $to->toDateString())
             ->when($categoryId, function ($q, int $id) {
                 $q->join('products', 'products.id', '=', 'invoice_items.itemable_id')
                     ->where('products.group', $id);
@@ -572,7 +574,9 @@ class WarehouseDashboardService
         return Transaction::query()
             ->whereIn('subject_id', $subjectIds)
             ->join('documents', 'documents.id', '=', 'transactions.document_id')
-            ->whereBetween('documents.date', [$fiscalStart->toDateString(), $to->toDateString()])
+            ->where('documents.fiscal_year_id', getActiveFiscalYear())
+            ->whereDate('documents.date', '>=', $fiscalStart->toDateString())
+            ->whereDate('documents.date', '<=', $to->toDateString())
             ->selectRaw('subject_id, SUM(value) as total')
             ->groupBy('subject_id')
             ->pluck('total', 'subject_id')
@@ -600,7 +604,7 @@ class WarehouseDashboardService
             ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
             ->where('invoice_items.itemable_type', Product::class)
             ->whereIn('invoice_items.itemable_id', $productIds)
-            ->where('invoices.company_id', getActiveCompany())
+            ->where('invoices.fiscal_year_id', getActiveFiscalYear())
             ->whereIn('invoices.status', array_map(fn (InvoiceStatus $status) => $status->value, InvoiceStatus::approvedOrSettled()))
             ->whereIn('invoices.invoice_type', array_map(fn (InvoiceType $type) => $type->value, $movementTypes))
             ->where('invoices.date', '>=', $fiscalStart->toDateString())
@@ -754,7 +758,7 @@ class WarehouseDashboardService
             ],
             'rows' => $rows,
             'filterSummary' => $this->reportFilterSummary($name, $groupName, $minQuantity, $needOrder, $fyStart, $now),
-            'company' => Company::find(getActiveCompany()),
+            'fiscalYear' => FiscalYear::find(getActiveFiscalYear()),
             'logo' => $this->reportLogo(),
             'generatedAtDate' => toEnglish(jdate('Y/m/d', $now->timestamp)),
             'generatedAtTime' => toEnglish(jdate('H:i', $now->timestamp)),
@@ -895,8 +899,8 @@ class WarehouseDashboardService
 
     private function fiscalYearToDate(): array
     {
-        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
-        [$from, $fiscalEnd] = $company->fiscalYearRange();
+        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        [$from, $fiscalEnd] = $fiscalYear->range();
         $to = Carbon::now()->endOfDay();
 
         if ($to->greaterThan($fiscalEnd)) {
@@ -916,7 +920,8 @@ class WarehouseDashboardService
             ->whereHas('invoice', function (Builder $q) use ($from, $to) {
                 $q->where('status', InvoiceStatus::APPROVED)
                     ->whereIn('invoice_type', array_merge(self::STOCK_IN_TYPES, self::STOCK_OUT_TYPES))
-                    ->whereBetween('date', [$from->toDateString(), $to->toDateString()]);
+                    ->whereDate('date', '>=', $from->toDateString())
+                    ->whereDate('date', '<=', $to->toDateString());
             })->with('invoice:id,invoice_type')->get(['id', 'invoice_id', 'itemable_id', 'quantity']);
 
         $map = [];
@@ -954,7 +959,7 @@ class WarehouseDashboardService
         return Transaction::query()
             ->whereIn('subject_id', $subjectIds)
             ->join('documents', 'documents.id', '=', 'transactions.document_id')
-            ->where('documents.company_id', getActiveCompany())
+            ->where('documents.fiscal_year_id', getActiveFiscalYear())
             ->whereBetween('documents.date', [$from->toDateString(), $to->toDateString()])
             ->selectRaw('subject_id, SUM(value) as total')
             ->groupBy('subject_id')->pluck('total', 'subject_id')->map(fn ($value) => (float) $value)->all();
@@ -985,7 +990,7 @@ class WarehouseDashboardService
 
     private function reportLogo(): ?string
     {
-        $company = Company::find(getActiveCompany());
+        $company = FiscalYear::find(getActiveFiscalYear())?->company;
 
         $candidates = [];
         if ($company?->logo) {

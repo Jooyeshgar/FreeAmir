@@ -84,9 +84,11 @@ class RolesAndPermissionsSeeder extends Seeder
             // Companies + fiscal-year wizard
             'companies' => [
                 ...self::CRUD,
-                'close-fiscal-year', 'test-moadian-connection',
-                'closing-wizard', 'closing-wizard.step1', 'closing-wizard.step3', 'closing-wizard.recalculate',
+                'close-fiscal-year',
+                'test-moadian-connection',
+                'closing-wizard', 'closing-wizard.step1', 'closing-wizard.step3', 'closing-wizard.recalculate', 'closing-wizard.recreate-opening',
             ],
+            'fiscal-years' => self::CRUD,
 
             // Backups
             'backups' => ['create', 'export', 'import', 'upload', 'document-files-size'],
@@ -300,7 +302,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
     private function seedDemoUsersAndEmployees(): void
     {
-        $companyId = (int) getActiveCompany();
+        $fiscalYearId = (int) getActiveFiscalYear();
         $users = [
             'super-admin' => [
                 'roles' => ['Super-Admin', __('Admin'), __('Employee')],
@@ -340,7 +342,7 @@ class RolesAndPermissionsSeeder extends Seeder
         ];
 
         $workSite = WorkSite::firstOrCreate(
-            ['company_id' => $companyId, 'code' => 'DEMO-WS-1'],
+            ['fiscal_year_id' => $fiscalYearId, 'code' => 'DEMO-WS-1'],
             [
                 'name' => 'کارگاه ۱',
                 'is_active' => true,
@@ -349,7 +351,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         $workShift = WorkShift::firstOrCreate(
             [
-                'company_id' => $companyId,
+                'fiscal_year_id' => $fiscalYearId,
                 'name' => 'شیفت کاری',
             ],
             [
@@ -362,8 +364,8 @@ class RolesAndPermissionsSeeder extends Seeder
             ]
         );
 
-        $orgCharts = OrgChart::withoutGlobalScopes()->where('company_id', $companyId)->get()->keyBy('title');
-        $orgUnits = OrganizationUnit::withoutGlobalScopes()->where('company_id', $companyId)->get()->keyBy('name');
+        $orgCharts = OrgChart::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->get()->keyBy('title');
+        $orgUnits = OrganizationUnit::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->get()->keyBy('name');
 
         foreach ($users as $name => $config) {
             $email = $name === 'super-admin' ? 'admin@example.com' : $name.'@example.com';
@@ -380,7 +382,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 $user->markEmailAsVerified();
             }
 
-            $user->companies()->syncWithoutDetaching([$companyId]);
+            $user->fiscalYears()->syncWithoutDetaching([$fiscalYearId]);
             $user->assignRole($config['roles']);
 
             $baseCode = 'EMP-'.$user->id;
@@ -396,12 +398,12 @@ class RolesAndPermissionsSeeder extends Seeder
             }
 
             Employee::withoutGlobalScopes()->updateOrCreate(
-                ['user_id' => $user->id, 'company_id' => $companyId],
+                ['user_id' => $user->id, 'fiscal_year_id' => $fiscalYearId],
                 [
                     'first_name' => __($name),
                     'last_name' => __('Demo'),
                     'user_id' => $user->id,
-                    'company_id' => $companyId,
+                    'fiscal_year_id' => $fiscalYearId,
                     'code' => $employeeCode,
                     'work_site_id' => $workSite->id,
                     'work_shift_id' => $workShift->id,

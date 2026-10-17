@@ -85,26 +85,26 @@ class PayrollService
 
     private float $taxExemptions = 0.0;
 
-    public function createFromAttendance(MonthlyAttendance $attendance, SalaryDecree $decree, int $companyId): Payroll
+    public function createFromAttendance(MonthlyAttendance $attendance, SalaryDecree $decree, int $fiscalYearId): Payroll
     {
         $attendance->loadMissing(['employee.workShift']);
         $decree->loadMissing('benefits.element');
 
-        return DB::transaction(function () use ($attendance, $decree, $companyId) {
+        return DB::transaction(function () use ($attendance, $decree, $fiscalYearId) {
             Payroll::withoutGlobalScopes()
-                ->where('company_id', $companyId)
+                ->where('fiscal_year_id', $fiscalYearId)
                 ->where('employee_id', $attendance->employee_id)
                 ->where('year', $attendance->year)
                 ->where('month', $attendance->month)
                 ->delete();
 
-            $breakdown = $this->calculate($attendance, $decree, $companyId);
+            $breakdown = $this->calculate($attendance, $decree, $fiscalYearId);
 
-            return $this->persist($breakdown, $attendance, $decree, $companyId);
+            return $this->persist($breakdown, $attendance, $decree, $fiscalYearId);
         });
     }
 
-    public function calculate(MonthlyAttendance $attendance, SalaryDecree $decree, int $companyId): array
+    public function calculate(MonthlyAttendance $attendance, SalaryDecree $decree, int $fiscalYearId): array
     {
         $attendance->loadMissing(['employee.workShift']);
         $decree->loadMissing('benefits.element');
@@ -114,7 +114,7 @@ class PayrollService
         $this->computeDecreeBenefits($decree);
         $this->computeDynamicEarnings($attendance);
         $this->computeDynamicDeductions($attendance);
-        $this->computeStatutoryDeductions($attendance, $decree, $companyId);
+        $this->computeStatutoryDeductions($attendance, $decree, $fiscalYearId);
         $this->computeCustomDeductions($decree);
 
         return $this->buildResult();
@@ -252,7 +252,7 @@ class PayrollService
         }
     }
 
-    private function computeStatutoryDeductions(MonthlyAttendance $attendance, SalaryDecree $decree, int $companyId): void
+    private function computeStatutoryDeductions(MonthlyAttendance $attendance, SalaryDecree $decree, int $fiscalYearId): void
     {
         $insuranceElement = $this->elements->get('INSURANCE_EMP');
         $this->insuranceRate = isset($this->benefitValues['INSURANCE_EMP']) ? (float) $this->benefitValues['INSURANCE_EMP'] / 100 : self::EMPLOYEE_INSURANCE_RATE;
@@ -274,7 +274,7 @@ class PayrollService
         $thisMonthTaxBase = max(0.0, $totalEarnings - $this->taxExemptions);
 
         $previousPayrolls = Payroll::withoutGlobalScopes()
-            ->where('company_id', $companyId)
+            ->where('fiscal_year_id', $fiscalYearId)
             ->where('employee_id', $attendance->employee_id)
             ->where('year', $attendance->year)
             ->where('month', '<', $attendance->month)
@@ -484,7 +484,7 @@ class PayrollService
         $periodStart = $attendance->start_date->copy()->startOfDay();
         $periodEnd = $periodStart->copy()->addDays((int) $attendance->duration - 1)->endOfDay();
 
-        $requests = PersonnelRequest::withoutGlobalScopes()->where('company_id', $attendance->company_id)
+        $requests = PersonnelRequest::withoutGlobalScopes()->where('fiscal_year_id', $attendance->fiscal_year_id)
             ->where('employee_id', $attendance->employee_id)->where('request_type', PersonnelRequestType::MISSION_DAILY->value)
             ->where('status', PersonnelRequestStatus::APPROVED->value)->where('start_date', '<=', $periodEnd)->where('end_date', '>=', $periodStart)
             ->get(['start_date', 'end_date']);
@@ -512,7 +512,7 @@ class PayrollService
         }
 
         $holidayDates = PublicHoliday::withoutGlobalScopes()
-            ->where('company_id', $attendance->company_id)->whereBetween('date', [$periodStart->toDateString(), $periodEnd->toDateString()])
+            ->where('fiscal_year_id', $attendance->fiscal_year_id)->whereBetween('date', [$periodStart->toDateString(), $periodEnd->toDateString()])
             ->pluck('date')->map(fn ($date) => $date instanceof Carbon ? $date->toDateString() : (string) $date)->flip();
 
         $workingDays = 0;
@@ -672,10 +672,10 @@ class PayrollService
         return $rows;
     }
 
-    private function persist(array $breakdown, MonthlyAttendance $attendance, SalaryDecree $decree, int $companyId): Payroll
+    private function persist(array $breakdown, MonthlyAttendance $attendance, SalaryDecree $decree, int $fiscalYearId): Payroll
     {
         $payroll = Payroll::create([
-            'company_id' => $companyId,
+            'fiscal_year_id' => $fiscalYearId,
             'employee_id' => $attendance->employee_id,
             'decree_id' => $decree->id,
             'monthly_attendance_id' => $attendance->id,

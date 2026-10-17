@@ -28,7 +28,7 @@ class Product extends Model
         'selling_price',
         'discount_formula',
         'description',
-        'company_id',
+        'fiscal_year_id',
         'sales_returns_subject_id',
         'income_subject_id',
         'cogs_subject_id',
@@ -48,7 +48,7 @@ class Product extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function ($product) {
-            $product->company_id ??= getActiveCompany();
+            $product->fiscal_year_id ??= getActiveFiscalYear();
         });
 
     }

@@ -1,156 +1,596 @@
 # FreeAmir Project Structure
 
-This guide describes the overall organization of the FreeAmir codebase. FreeAmir is built on **Laravel** and follows the **MVC** architecture.
+This guide explains FreeAmir's overall project structure and how its code is organized.
 
-## 🏗️ Overall structure
+## 🏗️ Overall project structure
 
-```text
-FreeAmir/
-├── app/          # Application logic
-│   ├── Console/  # Custom Artisan commands
-│   ├── Enums/    # Fixed-value types
-│   ├── Helpers/  # Helper functions
-│   ├── Http/     # Controllers, middleware, and requests
-│   ├── Models/   # Eloquent models
-│   ├── Providers/# Service providers
-│   ├── Services/ # Complex business logic
-│   └── View/     # View components
-├── config/       # Configuration
-├── database/     # Migrations and seeders
-├── docs/         # Documentation
-├── public/       # Public files
-├── resources/    # Views, CSS, and JavaScript
-├── routes/       # Route definitions
-├── storage/      # Temporary files and logs
-├── tests/        # Automated tests
-└── vendor/       # Composer dependencies
+FreeAmir is built on the **Laravel Framework** and follows the **MVC** architecture.
+
 ```
+FreeAmir/
+├── app/                   # Core application logic
+│   ├── Console/           # Custom Artisan commands
+│   ├── Enums/             # Fixed-value types
+│   ├── Helpers/           # Helper functions
+│   ├── Http/              # Controllers, middleware, and requests
+│   ├── Models/            # Eloquent models
+│   ├── Providers/         # Service providers
+│   ├── Services/          # Complex business logic
+│   └── View/              # View components
+├── config/                # Configuration files
+├── database/              # Migrations and seeders
+├── docs/                  # Project documentation
+├── public/                # Public files
+├── resources/             # Views, CSS, and JavaScript
+├── routes/                # Route definitions
+├── storage/               # Temporary files and logs
+├── tests/                 # Automated tests
+└── vendor/                # Composer packages
+```
+
 
 ## 📂 Main paths
 
 ### `app/` — the application core
 
 #### `Console/Commands/`
+Custom Artisan commands for specific operations:
 
-Custom Artisan commands perform tasks such as fiscal-year export and import. The Persian guide illustrates `php artisan fiscal-year:export --year=1403` and `php artisan fiscal-year:import --file=data.json --year=1404`; check the current command signatures before running an operation.
+```bash
+# Example: fiscal-year management commands
+php artisan fiscal-year:export 1
+php artisan fiscal-year:import data.json 1404 --name="Example Company"
+```
+
+The export example uses fiscal year ID `1`; the import example creates a new company and fiscal year. Assign user access to the new fiscal year afterward through user management.
 
 #### `Enums/`
+Fixed-value types used in the project:
 
-Enums hold fixed values. For example, `FiscalYearSection` identifies exportable sections such as `subjects`, `customers`, and `products`.
+```php
+// app/Enums/FiscalYearSection.php
+enum FiscalYearSection: string
+{
+    case SUBJECTS = 'subjects';
+    case CUSTOMERS = 'customers';
+    case PRODUCTS = 'products';
+    // ...
+}
+```
 
 #### `Helpers/`
+General helper functions:
 
-`helpers.php` contains common functions, `jdf.php` handles Persian date conversion, and `NumberToWordHelper.php` converts numbers to words.
+- `helpers.php` — common functions
+- `jdf.php` — Persian date conversion functions
+- `NumberToWordHelper.php` — converting numbers to words
 
 #### `Http/`
+The application's HTTP layer:
 
-The HTTP layer contains `Controllers/` (including `Auth/`, `Management/`, document and invoice controllers), `Middleware/`, and `Requests/` for request validation. The older source guide also names `Kernel.php`; verify its location against the current Laravel version.
+```
+Http/
+├── Controllers/          # Controllers
+│   ├── Auth/             # Authentication
+│   ├── Management/       # User and role management
+│   ├── DocumentController.php
+│   ├── InvoiceController.php
+│   └── ...
+├── Middleware/           # Middleware
+├── Requests/             # Request validation
+└── Kernel.php            # HTTP configuration
+```
 
 #### `Models/`
+Eloquent models in this directory manage data logic. The main files include:
 
-Eloquent models manage stored data and relationships:
+- `Document.php` — accounting documents and their relationships with transactions.
+- `Transaction.php` — transactions associated with documents and sales scenarios.
+- `Subject.php` — the account tree and its parent/child relationships.
+- `Company.php` — business identity and relationships with fiscal years.
+- `FiscalYear.php` — a company's fiscal year, closing state, and closing/opening documents.
+- `User.php` — system users and fiscal-year access relationships.
+- `Customer.php` and `CustomerGroup.php` — customers and their grouping.
+- `Product.php` and `ProductGroup.php` — products and product groups.
+- `Invoice.php` and `InvoiceItem.php` — sales invoices and their items.
+- `Bank.php`, `BankAccount.php`, `Cheque.php`, and `ChequeHistory.php` — banking information and checks.
+- `Config.php` and `Payment.php` — system configuration and payments.
 
-- `Document` and `Transaction` represent accounting documents and their entries.
-- `Subject` models the parent/child account hierarchy.
-- `Company` and `User` hold company and user information and their relationships.
-- `Customer`/`CustomerGroup`, `Product`/`ProductGroup`, and `Invoice`/`InvoiceItem` represent their respective business records.
-- `Bank`, `BankAccount`, `Cheque`, and `ChequeHistory` represent banking and check records.
-- `Config` and `Payment` hold system configuration and payments.
-
-`Models/Scopes/FiscalYearScope.php` restricts relevant records to the active company or fiscal year. The older Persian guide says there is no `FiscalYear` model and that the active year is managed through `Company`; this is historical guidance, so verify it against the current repository before relying on it.
+The `Scopes/` subdirectory contains `FiscalYearScope.php`, which restricts related models to the active fiscal-year ID. The ID is read through `getActiveFiscalYear()`, which uses request configuration or the `active-fiscal-year-id` cookie. The `fiscal_year_user` many-to-many relationship assigns user access to fiscal years. Companies and fiscal years are separate entities: each `FiscalYear` belongs to a `Company`, and a company can have multiple fiscal years.
 
 #### `Services/`
+Complex business logic:
 
-Services contain complex business logic. `DocumentService` creates documents and enforces posting rules; `FiscalYearService` handles fiscal-year data export and import. Controllers should call services for these operations.
+```php
+// app/Services/DocumentService.php
+class DocumentService
+{
+    public static function createDocument(User $user, array $data, array $transactions)
+    {
+        // Create a document and check that it is balanced
+    }
+}
+
+// app/Services/FiscalYearService.php
+class FiscalYearService
+{
+    public static function exportData($fiscalYearId, array $sections)
+    {
+        // Export fiscal-year data
+    }
+}
+```
 
 ## 🎛️ Configuration (`config/`)
 
-Important examples are `config/app.php` for application defaults such as the Persian locale, `config/database.php` for the database connection (for example, `DB_CONNECTION=mysql`), and `config/permission.php` for roles and permissions.
+Important configuration files:
+
+```php
+// config/app.php — general settings
+'locale' => 'fa',  // Persian is the default language
+
+// config/database.php — database settings
+'default' => env('DB_CONNECTION', 'mysql'),
+
+// config/permission.php — role and permission settings
+```
 
 ## 📊 Database (`database/`)
 
 ### `migrations/`
+Table structure definitions:
 
-Migrations define table structure. A document migration may declare an ID, a nullable numeric document number, title and dates, creator and approver foreign keys, a company foreign key, and timestamps. Refer to the actual migrations for the current schema.
+```php
+// Example: documents table migration
+Schema::create('documents', function (Blueprint $table) {
+    $table->id();
+    $table->decimal('number', 16, 2)->nullable();
+    $table->string('title')->nullable();
+    $table->date('date')->nullable();
+    $table->date('approved_at')->nullable();
+    $table->foreignId('creator_id')->nullable()->constrained('users')->nullOnDelete();
+    $table->foreignId('approver_id')->nullable()->constrained('users')->nullOnDelete();
+    $table->foreignId('fiscal_year_id')->nullable()->constrained('fiscal_years')->nullOnDelete();
+    $table->timestamps();
+});
+```
 
 ### `seeders/`
+Initial data:
 
-`DatabaseSeeder.php` inserts essential data; `DemoSeeder.php` supplies demonstration data.
+- `DatabaseSeeder.php` — essential system data
+- `DemoSeeder.php` — demonstration data
 
 ## 🎨 Resources (`resources/`)
 
 ### `views/`
+Blade templates:
 
-Blade templates are organized into layouts, document pages, reports, authentication pages, and reusable components.
+```
+views/
+├── layouts/              # Main layouts
+├── documents/            # Document pages
+├── reports/              # Report pages
+├── auth/                 # Authentication pages
+└── components/           # Reusable components
+```
 
 ### `js/` and `css/`
-
-Vite manages JavaScript and CSS assets.
+Vite manages JavaScript and CSS files.
 
 ## 🛣️ Routing (`routes/`)
 
 ### `web.php`
+Application web routes:
 
-`routes/web.php` defines web routes. The original guide includes a long route snapshot: login, logout and locale switching; password recovery; feature-gated registration and verification; about and company creation; management dashboard, activity logs, settings, users, roles, and permissions; and the remaining application modules. Those routes attach authentication, feature, and permission middleware as appropriate. Because routes change, consult the current [`routes/web.php`](../../routes/web.php) for exact URLs, names, controllers, and middleware. The menu guide hierarchy is derived from the application menu, while route names identify individual destinations.
+```php
+<?php
+
+use App\Http\Controllers;
+use Illuminate\Support\Facades\Route;
+
+Route::get('/login', [Controllers\Auth\LoginController::class, 'showLoginForm'])->name('login');
+Route::post('/login', [Controllers\Auth\LoginController::class, 'login']);
+Route::get('/logout', [Controllers\Auth\LoginController::class, 'logout'])->name('logout');
+Route::post('/locale', [Controllers\Auth\LoginController::class, 'locale'])->name('locale');
+Route::post('/impersonation/leave', [Controllers\Management\UserController::class, 'leaveImpersonation'])->middleware('auth')->name('impersonation.leave');
+
+Route::get('/forgot-password', [Controllers\Auth\PasswordResetController::class, 'showForgotPasswordForm'])->name('password.request');
+Route::post('/forgot-password', [Controllers\Auth\PasswordResetController::class, 'sendResetLink'])->middleware('throttle:6,1')->name('password.email');
+Route::get('/reset-password/{token}', [Controllers\Auth\PasswordResetController::class, 'showResetPasswordForm'])->name('password.reset');
+Route::post('/reset-password', [Controllers\Auth\PasswordResetController::class, 'resetPassword'])->name('password.update');
+
+Route::middleware('ensure-feature-enabled:registration')->group(function () {
+    Route::get('/register', [Controllers\Auth\RegisterController::class, 'showRegisterForm'])->name('register');
+    Route::post('/register/email', [Controllers\Auth\RegisterController::class, 'registerWithEmail'])->name('register.email');
+});
+Route::get('/verify', [Controllers\Auth\RegisterController::class, 'showVerificationNotice'])->middleware('auth')->name('verification.notice');
+Route::post('/verify-otp', [Controllers\Auth\RegisterController::class, 'verifyOtp'])->middleware(['auth', 'throttle:6,1'])->name('verification.otp');
+Route::post('/verification-notification', [Controllers\Auth\RegisterController::class, 'resendVerificationNotification'])->middleware(['auth', 'throttle:6,1'])->name('verification.send');
+Route::get('/verify/{id}/{hash}', [Controllers\Auth\RegisterController::class, 'verify'])->middleware(['auth', 'signed', 'throttle:6,1'])->name('verification.verify');
+
+Route::middleware(['auth', 'ensure-feature-enabled:email_verification'])->group(function () {
+    Route::get('/about', [Controllers\AboutController::class, 'index'])->name('about');
+    Route::get('/registered-user/company', [Controllers\CompanyController::class, 'createCompanyForRegisteredUser'])->name('registered-user.company.create');
+    Route::post('/registered-user/company', [Controllers\CompanyController::class, 'storeCompanyForRegisteredUser'])->name('registered-user.company.store');
+});
+
+Route::middleware(['auth', 'permission:access-super-admin-panel', 'ensure-feature-enabled:email_verification'])->prefix('management')->group(function () {
+    Route::get('/', [Controllers\HomeController::class, 'managementDashboard'])->name('management.dashboard');
+    Route::get('/activity-logs', [Controllers\Management\ActivityLogController::class, 'index'])->name('management.activity-logs.index');
+    Route::get('/settings', [Controllers\AboutController::class, 'index'])->name('management.settings');
+    Route::get('/users/{user}', [Controllers\Management\UserController::class, 'show'])->whereNumber('user')->name('users.show');
+    Route::post('/users/{user}/verify', [Controllers\Management\UserController::class, 'verify'])->name('users.verify');
+
+    Route::middleware('check-permission')->group(function () {
+        Route::put('/settings', [Controllers\AboutController::class, 'updateGlobalConfigs'])->name('update-global-configs');
+        Route::resource('permissions', Controllers\Management\PermissionController::class)->except(['show']);
+        Route::resource('roles', Controllers\Management\RoleController::class)->except(['show']);
+    });
+});
+
+Route::group(['middleware' => ['auth', 'ensure-employee', 'ensure-feature-enabled:email_verification'], 'prefix' => 'employee-portal', 'as' => 'employee-portal.'], function () {
+    Route::get('/employee', [Controllers\EmployeePortalController::class, 'employeeShow'])->name('employee.show');
+    Route::get('/change-employee-information', [Controllers\EmployeePortalController::class, 'changeEmployeeInformation'])->name('change-employee-information');
+    Route::put('/change-employee-information', [Controllers\EmployeePortalController::class, 'updateEmployeeInformation'])->name('update-employee-information');
+    Route::get('/', [Controllers\EmployeePortalController::class, 'dashboard'])->name('dashboard');
+    Route::get('/attendance-logs', [Controllers\EmployeePortalController::class, 'attendanceLogs'])->name('attendance-logs');
+    Route::get('/monthly-attendances', [Controllers\EmployeePortalController::class, 'monthlyAttendances'])->name('monthly-attendances');
+    Route::get('/monthly-attendances/{monthly_attendance}', [Controllers\EmployeePortalController::class, 'monthlyAttendanceShow'])->name('monthly-attendances.show');
+    Route::get('/payrolls', [Controllers\EmployeePortalController::class, 'payrolls'])->name('payrolls');
+    Route::get('/payrolls/{payroll}', [Controllers\EmployeePortalController::class, 'payrollShow'])->name('payrolls.show');
+    Route::get('/personnel-requests', [Controllers\EmployeePortalController::class, 'personnelRequests'])->name('personnel-requests.index');
+    Route::get('/personnel-requests/create', [Controllers\EmployeePortalController::class, 'createPersonnelRequest'])->name('personnel-requests.create');
+    Route::post('/personnel-requests', [Controllers\EmployeePortalController::class, 'storePersonnelRequest'])->name('personnel-requests.store');
+    Route::get('/personnel-requests/{personnel_request}/edit', [Controllers\EmployeePortalController::class, 'editPersonnelRequest'])->name('personnel-requests.edit');
+    Route::put('/personnel-requests/{personnel_request}', [Controllers\EmployeePortalController::class, 'updatePersonnelRequest'])->name('personnel-requests.update');
+    Route::delete('/personnel-requests/{personnel_request}', [Controllers\EmployeePortalController::class, 'destroyPersonnelRequest'])->name('personnel-requests.destroy');
+});
+
+Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabled:email_verification']], function () {
+    Route::get('api-tokens', [Controllers\ApiTokenController::class, 'index'])->name('api-tokens.index');
+    Route::get('api-tokens/create', [Controllers\ApiTokenController::class, 'create'])->name('api-tokens.create');
+    Route::post('api-tokens', [Controllers\ApiTokenController::class, 'store'])->name('api-tokens.store');
+    Route::delete('api-tokens/{tokenId}', [Controllers\ApiTokenController::class, 'destroy'])->name('api-tokens.destroy');
+
+    Route::get('change-company/{company}', [Controllers\CompanyController::class, 'setActiveCompany'])->name('change-company');
+
+    Route::group(['prefix' => 'backups', 'as' => 'backups.'], function () {
+        Route::get('/create', [Controllers\BackupController::class, 'create'])->name('create');
+        Route::get('/upload', [Controllers\BackupController::class, 'upload'])->name('upload');
+        Route::get('/document-files-size', [Controllers\BackupController::class, 'documentFilesSize'])->name('document-files-size');
+        Route::post('/export', [Controllers\BackupController::class, 'export'])->name('export');
+        Route::post('/import', [Controllers\BackupController::class, 'import'])->name('import');
+    });
+    Route::get('/', [Controllers\HomeController::class, 'index'])->name('home');
+    Route::get('/home/summary/{metric}', [Controllers\HomeController::class, 'summaryMetric'])->name('home.summary');
+    Route::post('/report', [Controllers\ReportEmailController::class, 'store'])->name('report');
+    Route::get('subjects/search', [Controllers\SubjectController::class, 'search'])->name('subjects.search');
+    Route::get('subjects/search-code', [Controllers\SubjectController::class, 'searchCode'])->name('subjects.search-code');
+    Route::post('subjects/transfer', [Controllers\SubjectController::class, 'transferSubject'])->name('subjects.transfer');
+    Route::resource('subjects', Controllers\SubjectController::class);
+    Route::post('documents/{document}/change-status', [Controllers\DocumentController::class, 'changeStatus'])->name('documents.change-status');
+    Route::post('documents/approve-all', [Controllers\DocumentController::class, 'approveAll'])->name('documents.approve-all');
+    Route::get('documents/search-account-balance', [Controllers\DocumentController::class, 'searchAccountBalance'])->name('documents.search-account-balance');
+    Route::get('documents/sort-numbers', [Controllers\DocumentController::class, 'sortNumbers'])->name('documents.sort-numbers');
+    Route::post('documents/sort-numbers/start', [Controllers\DocumentController::class, 'startSorting'])->name('documents.sort-numbers.start');
+    Route::post('documents/sort-numbers/process', [Controllers\DocumentController::class, 'processSorting'])->name('documents.sort-numbers.process');
+    Route::get('documents/export', [Controllers\DocumentController::class, 'exportForm'])->name('documents.export');
+    Route::post('documents/export', [Controllers\DocumentController::class, 'export'])->name('documents.export.download');
+    Route::get('documents/import', [Controllers\DocumentController::class, 'importForm'])->name('documents.import');
+    Route::post('documents/import', [Controllers\DocumentController::class, 'import'])->name('documents.import.store');
+    Route::resource('documents', Controllers\DocumentController::class);
+    Route::get('documents/{document}/print', [Controllers\DocumentController::class, 'print'])->name('documents.print');
+    Route::get('documents/{document}/duplicate', [Controllers\DocumentController::class, 'duplicate'])->name('documents.duplicate');
+    Route::post('documents/{document}/transfer', [Controllers\DocumentController::class, 'transfer'])->name('documents.transfer');
+
+    Route::resource('transactions', Controllers\TransactionController::class)->only(['index', 'show']);
+    Route::get('products/search-product-group', [Controllers\ProductController::class, 'searchProductGroup'])->name('products.search-product-group');
+    Route::get('products/report', [Controllers\ProductController::class, 'report'])->name('products.report');
+    Route::get('products/export', [Controllers\ProductController::class, 'export'])->name('products.export');
+    Route::get('products/import', [Controllers\ProductController::class, 'importForm'])->name('products.import');
+    Route::post('products/import', [Controllers\ProductController::class, 'import'])->name('products.import.store');
+    Route::resource('products', Controllers\ProductController::class);
+    Route::resource('product-groups', Controllers\ProductGroupController::class);
+    Route::get('services/search-service-group', [Controllers\ServiceController::class, 'searchServiceGroup'])->name('services.search-service-group');
+    Route::get('services/export', [Controllers\ServiceController::class, 'export'])->name('services.export');
+    Route::get('services/import', [Controllers\ServiceController::class, 'importForm'])->name('services.import');
+    Route::post('services/import', [Controllers\ServiceController::class, 'import'])->name('services.import.store');
+    Route::resource('services', Controllers\ServiceController::class);
+    Route::resource('service-groups', Controllers\ServiceGroupController::class);
+    Route::get('crm/dashboard', [Controllers\CrmDashboardController::class, 'index'])->name('crm.dashboard');
+    Route::get('customers/export', [Controllers\CustomerController::class, 'export'])->name('customers.export');
+    Route::get('customers/import', [Controllers\CustomerController::class, 'importForm'])->name('customers.import');
+    Route::post('customers/import', [Controllers\CustomerController::class, 'import'])->name('customers.import.store');
+    Route::resource('customers', Controllers\CustomerController::class);
+    Route::resource('customer-groups', Controllers\CustomerGroupController::class);
+    Route::get('bank-accounts/search-bank', [Controllers\BankAccountController::class, 'searchBank'])->name('bank-accounts.search-bank');
+    Route::resource('bank-accounts', Controllers\BankAccountController::class);
+    Route::resource('banks', Controllers\BankController::class);
+
+    Route::resource('chequebooks', Controllers\ChequebookController::class)->names('chequebooks');
+    Route::get('cheques/report', [Controllers\ChequeController::class, 'report'])->name('cheques.report');
+    Route::post('cheques/{cheque}/transition/{action}', [Controllers\ChequeController::class, 'transition'])->name('cheques.transition');
+    Route::resource('cheques', Controllers\ChequeController::class);
+
+    Route::get('invoices/search/{invoice_type}', [Controllers\InvoiceController::class, 'search'])->name('invoices.search');
+    Route::get('invoices/get-items/{invoice}', [Controllers\InvoiceController::class, 'getItems'])->name('invoices.get-items');
+    Route::get('invoices/search-customer', [Controllers\InvoiceController::class, 'searchCustomer'])->name('invoices.search-customer');
+    Route::get('invoices/search-product-service', [Controllers\InvoiceController::class, 'searchProductService'])->name('invoices.search-product-service');
+
+    Route::get('invoices/inactive', [Controllers\InvoiceController::class, 'inactiveInvoices'])->name('invoices.inactive');
+    Route::post('invoices/inactive/approve', [Controllers\InvoiceController::class, 'approveInactiveInvoices'])->name('invoices.inactive.approve');
+    Route::get('invoices/export', [Controllers\InvoiceController::class, 'export'])->name('invoices.export');
+    Route::prefix('invoices')->group(function () {
+        Route::get('ancillary-costs/search-customer', [Controllers\AncillaryCostController::class, 'searchCustomer'])->name('ancillary-costs.search-customer');
+        Route::get('ancillary-costs/search-invoice', [Controllers\AncillaryCostController::class, 'searchInvoice'])->name('ancillary-costs.search-invoice');
+        Route::get('ancillary-costs/get-products/{invoice_id}', [Controllers\AncillaryCostController::class, 'getBuyInvoiceProducts'])->name('ancillary-costs.get-products');
+        Route::post('ancillary-costs/{ancillary_cost}/change-status/{status}', [Controllers\AncillaryCostController::class, 'changeStatus'])->name('ancillary-costs.change-status');
+        Route::get('ancillary-costs/', [Controllers\AncillaryCostController::class, 'index'])->name('ancillary-costs.index');
+        Route::get('{invoice}/ancillary-costs/create', [Controllers\AncillaryCostController::class, 'create'])->name('invoices.ancillary-costs.create');
+        Route::post('{invoice}/ancillary-costs', [Controllers\AncillaryCostController::class, 'store'])->name('invoices.ancillary-costs.store');
+        Route::get('{invoice}/ancillary-costs/{ancillary_cost}', [Controllers\AncillaryCostController::class, 'show'])->name('invoices.ancillary-costs.show');
+        Route::get('{invoice}/ancillary-costs/{ancillary_cost}/edit', [Controllers\AncillaryCostController::class, 'edit'])->name('invoices.ancillary-costs.edit');
+        Route::put('{invoice}/ancillary-costs/{ancillary_cost}', [Controllers\AncillaryCostController::class, 'update'])->name('invoices.ancillary-costs.update');
+        Route::delete('{invoice}/ancillary-costs/{ancillary_cost}', [Controllers\AncillaryCostController::class, 'destroy'])->name('invoices.ancillary-costs.destroy');
+    });
+    Route::get('invoices/moadian-histories', [Controllers\MoadianHistoryController::class, 'index'])->name('invoices.moadian-histories.index');
+    Route::resource('invoices', Controllers\InvoiceController::class);
+    Route::get('invoices/{invoice}/moadian-histories', [Controllers\MoadianHistoryController::class, 'show'])->name('invoices.moadian-histories.show');
+    Route::post('invoices/{invoice}/send-moadian', [Controllers\InvoiceController::class, 'sendMoadian'])->name('invoices.send-moadian');
+    Route::post('invoices/{invoice}/moadian-check-status', [Controllers\MoadianHistoryController::class, 'checkStatus'])->name('invoices.moadian-check-status');
+    Route::get('invoices/{invoice}/conflicts', [Controllers\InvoiceController::class, 'conflicts'])->name('invoices.conflicts');
+    Route::get('invoices/{invoice}/conflicts/{type}', [Controllers\InvoiceController::class, 'showMoreConflictsByType'])->name('invoices.conflicts.more');
+    Route::post('invoices/{invoice}/group-action', [Controllers\InvoiceController::class, 'groupAction'])->name('invoices.group-action');
+    Route::get('invoices/{invoice}/print', [Controllers\InvoiceController::class, 'print'])->name('invoices.print');
+    Route::get('invoices/{invoice}/void', [Controllers\InvoiceController::class, 'showVoidForm'])->name('invoices.void-form');
+    Route::post('invoices/{invoice}/void', [Controllers\InvoiceController::class, 'voidInvoice'])->name('invoices.void');
+    Route::post('invoices/{invoice}/change-status/{status}', [Controllers\InvoiceController::class, 'changeStatus'])->name('invoices.change-status');
+    Route::post('invoices/{invoice}/payments', [Controllers\PaymentController::class, 'store'])->name('invoices.payments.store');
+    Route::post('invoices/{invoice}/payments/cheque', [Controllers\PaymentController::class, 'storeCheque'])->name('invoices.payments.store-cheque');
+    Route::delete('invoices/{invoice}/payments/{payment}', [Controllers\PaymentController::class, 'destroy'])->name('invoices.payments.destroy');
+    Route::post('invoices/{invoice}/payments/{payment}/document', [Controllers\PaymentController::class, 'createDocument'])->name('invoices.payments.create-document');
+    Route::delete('invoices/{invoice}/payments/{payment}/document', [Controllers\PaymentController::class, 'destroyDocument'])->name('invoices.payments.destroy-document');
+    Route::post('invoices/{invoice}/transfer', [Controllers\InvoiceController::class, 'transfer'])->name('invoices.transfer');
+    Route::group(['prefix' => 'management'], function () {
+        Route::resource('companies', Controllers\CompanyController::class);
+        Route::post('companies/close-fiscal-year/{company}', [Controllers\CompanyController::class, 'closeFiscalYear'])->name('companies.close-fiscal-year');
+        Route::get('companies/{company}/closing-wizard', [Controllers\CompanyController::class, 'closingWizard'])->name('companies.closing-wizard');
+        Route::post('companies/{company}/closing-wizard/step1', [Controllers\CompanyController::class, 'closingWizardStep1'])->name('companies.closing-wizard.step1');
+        Route::post('companies/{company}/closing-wizard/step3', [Controllers\CompanyController::class, 'closingWizardStep3'])->name('companies.closing-wizard.step3');
+        Route::post('users/{user}/create-employee', [Controllers\Management\UserController::class, 'createEmployee'])
+            ->name('users.create-employee');
+        Route::post('users/{user}/impersonate', [Controllers\Management\UserController::class, 'impersonate'])
+            ->name('users.impersonate');
+        Route::resource('users', Controllers\Management\UserController::class)->except(['show']);
+        Route::resource('configs', Controllers\ConfigController::class);
+    });
+
+    Route::group(['prefix' => 'hr', 'as' => 'hr.'], function () {
+        Route::get('employees/export', [Controllers\EmployeeController::class, 'export'])->name('employees.export');
+        Route::resource('employees', Controllers\EmployeeController::class);
+        Route::resource('organization-units', Controllers\OrganizationUnitController::class);
+        Route::resource('org-charts', Controllers\OrgChartController::class);
+        Route::resource('personnel-requests', Controllers\PersonnelRequestController::class);
+        Route::patch('personnel-requests/{personnel_request}/approve', [Controllers\PersonnelRequestController::class, 'approve'])->name('personnel-requests.approve');
+        Route::patch('personnel-requests/{personnel_request}/reject', [Controllers\PersonnelRequestController::class, 'reject'])->name('personnel-requests.reject');
+    });
+
+    Route::group(['prefix' => 'attendance', 'as' => 'attendance.'], function () {
+        Route::resource('attendance-logs', Controllers\AttendanceLogController::class)->except(['show']);
+        Route::get('attendance-logs/{attendance_log}', [Controllers\AttendanceLogController::class, 'show'])->name('attendance-logs.show');
+        Route::post('attendance-logs/{attendance_log}/recalculate', [Controllers\AttendanceLogController::class, 'recalculate'])->name('attendance-logs.recalculate');
+        Route::get('attendance-logs-bulk/create', [Controllers\AttendanceLogController::class, 'bulkCreate'])->name('attendance-logs.bulk-create');
+        Route::get('attendance-logs-bulk/search-employee', [Controllers\AttendanceLogController::class, 'searchEmployee'])->name('attendance-logs.search-employee');
+        Route::post('attendance-logs-bulk', [Controllers\AttendanceLogController::class, 'bulkStore'])->name('attendance-logs.bulk-store');
+        Route::get('attendance-logs-import', [Controllers\AttendanceLogController::class, 'importForm'])->name('attendance-logs.import');
+        Route::post('attendance-logs-import/preview', [Controllers\AttendanceLogController::class, 'importPreview'])->name('attendance-logs.import.preview');
+        Route::post('attendance-logs-import', [Controllers\AttendanceLogController::class, 'importStore'])->name('attendance-logs.import.store');
+        Route::post('monthly-attendances/{monthly_attendance}/attendance-logs/recalculate', [Controllers\AttendanceLogController::class, 'recalculateAll'])->name('attendance-logs.recalculate-all');
+        Route::post('monthly-attendances/{monthly_attendance}/recalculate', [Controllers\MonthlyAttendanceController::class, 'recalculate'])->name('monthly-attendances.recalculate');
+        Route::post('monthly-attendances/{monthly_attendance}/payroll', [Controllers\PayrollController::class, 'store'])->name('monthly-attendances.payroll.store');
+        Route::get('monthly-attendances-bulk/create', [Controllers\MonthlyAttendanceController::class, 'bulkCreate'])->name('monthly-attendances.bulk-create');
+        Route::post('monthly-attendances-bulk', [Controllers\MonthlyAttendanceController::class, 'bulkStore'])->name('monthly-attendances.bulk-store');
+        Route::resource('monthly-attendances', Controllers\MonthlyAttendanceController::class);
+        Route::resource('work-shifts', Controllers\WorkShiftController::class)->except(['show']);
+    });
+
+    Route::group(['prefix' => 'salary', 'as' => 'salary.'], function () {
+        Route::get('payrolls/dashboard', [Controllers\PayrollController::class, 'dashboard'])->name('payrolls.dashboard');
+        Route::resource('tax-slabs', Controllers\TaxSlabController::class);
+        Route::resource('work-sites', Controllers\WorkSiteController::class)->except(['show']);
+        Route::resource('work-site-contracts', Controllers\WorkSiteContractController::class)->except(['show']);
+        Route::resource('public-holidays', Controllers\PublicHolidayController::class)->except(['show']);
+        Route::resource('payroll-elements', Controllers\PayrollElementController::class)->except(['show']);
+        Route::resource('salary-decrees', Controllers\SalaryDecreeController::class)->except(['show']);
+        Route::patch('payrolls/{payroll}/submit-for-approval', [Controllers\PayrollController::class, 'submitForApproval'])->name('payrolls.transition.draft-to-pending-manager-approval');
+        Route::patch('payrolls/{payroll}/approve', [Controllers\PayrollController::class, 'approve'])->name('payrolls.transition.pending-manager-approval-to-approved');
+        Route::patch('payrolls/{payroll}/mark-paid', [Controllers\PayrollController::class, 'markPaid'])->name('payrolls.transition.approved-to-paid');
+        Route::get('payrolls/{payroll}', [Controllers\PayrollController::class, 'show'])->name('payrolls.show');
+        Route::get('payrolls', [Controllers\PayrollController::class, 'index'])->name('payrolls.index');
+        Route::delete('payrolls/{payroll}', [Controllers\PayrollController::class, 'destroy'])->name('payrolls.destroy');
+        Route::get('payroll-items/{payroll_item}/edit', [Controllers\PayrollController::class, 'editItem'])->name('payroll-items.edit');
+        Route::put('payroll-items/{payroll_item}', [Controllers\PayrollController::class, 'updateItem'])->name('payroll-items.update');
+    });
+    Route::get('warehouse/dashboard', [Controllers\WarehouseDashboardController::class, 'index'])->name('warehouse.dashboard');
+
+    Route::group(['prefix' => 'reports', 'as' => 'reports.'], function () {
+        Route::get('ledger', [Controllers\ReportsController::class, 'ledger'])->name('ledger');
+        Route::get('journal', [Controllers\ReportsController::class, 'journal'])->name('journal');
+        Route::get('sub-ledger', [Controllers\ReportsController::class, 'subLedger'])->name('sub-ledger');
+        Route::get('trial-balance', [Controllers\ReportsController::class, 'trialBalance'])->name('trial-balance');
+        Route::get('trial-balance.print', [Controllers\ReportsController::class, 'printTrialBalance'])->name('trial-balance.print');
+        Route::get('trial-balance/export-csv', [Controllers\ReportsController::class, 'exportTrialBalanceCsv'])->name('trial-balance.export-csv');
+        Route::get('documents', [Controllers\ReportsController::class, 'documents'])->name('documents');
+        Route::get('result', [Controllers\ReportsController::class, 'result'])->name('result');
+        Route::post('documents/export', [Controllers\DocumentController::class, 'export'])->name('documents.export');
+        Route::get('cost-income', [Controllers\CostIncomeController::class, 'index'])->name('cost-income');
+        Route::get('/company-overview', [Controllers\ReportsController::class, 'companyOverview'])->name('company-overview');
+        Route::group(['prefix' => 'company-overview', 'as' => 'company-overview.'], function () {
+            Route::get('/cash-banks', [Controllers\ReportsController::class, 'cashAndBanksBalances'])->name('cash-banks');
+            Route::get('/bank-account', [Controllers\ReportsController::class, 'bankAccount'])->name('bank-account');
+            Route::post('/seed-demo-data', [Controllers\ReportsController::class, 'seedDemoData'])->name('seed-demo-data');
+            Route::post('/refresh-database', [Controllers\ReportsController::class, 'refreshDatabase'])->name('refresh-database');
+        });
+    });
+
+    Route::group(['prefix' => 'invoices', 'as' => 'invoices.index'], function () {
+        Route::get('', [Controllers\InvoiceController::class, 'index']);
+    });
+
+    Route::prefix('customers/{customer}/comments')->as('comments.')->controller(Controllers\CommentController::class)->group(function () {
+        Route::get('', 'index')->name('index');
+        Route::get('create', 'create')->name('create');
+        Route::post('', 'store')->name('store');
+        Route::get('{comment}/edit', 'edit')->name('edit');
+        Route::put('{comment}', 'update')->name('update');
+        Route::delete('{comment}', 'destroy')->name('destroy');
+    });
+
+    Route::prefix('documents/{document}/files')->as('documents.files.')->controller(Controllers\DocumentFileController::class)->group(function () {
+        Route::get('create', 'create')->name('create');
+        Route::post('store', 'store')->name('store');
+        Route::get('{documentFile}/edit', 'edit')->name('edit');
+        Route::put('{documentFile}', 'update')->name('update');
+        Route::delete('{documentFile}', 'destroy')->name('destroy');
+        Route::get('{documentFile}/view', 'view')->name('view');
+        Route::get('{documentFile}/download', 'download')->name('download');
+    });
+});
+```
 
 ### `api.php`
+API routes:
 
-The original guide illustrates Sanctum-protected company and company-scoped API routes for attendance logs, employees, documents, and document attachments. They use `auth:sanctum`, `api-company`, and specific `check-permission` rules. Consult the current [`routes/api.php`](../../routes/api.php) before adding routes to a group. The older note saying this file contains only Laravel's default sample conflicts with its own example and should not be used as a current inventory.
+```php
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('companies', [CompanyController::class, 'index'])
+        ->middleware('check-permission:companies.index')
+        ->name('api.companies.index');
+});
+
+Route::prefix('companies/{fiscal_year}')->middleware(['auth:sanctum', 'api-fiscal-year'])->group(function () {
+    Route::post('attendance/logs', [AttendanceLogController::class, 'store'])
+        ->middleware('check-permission:attendance.attendance-logs.store')
+        ->name('api.attendance-logs.store');
+    Route::get('attendance/logs', [AttendanceLogController::class, 'index'])
+        ->middleware('check-permission:attendance.attendance-logs.index')
+        ->name('api.attendance-logs.index');
+
+    Route::get('employees', [EmployeeController::class, 'index'])
+        ->middleware('check-permission:hr.employees.index')
+        ->name('api.employees.index');
+    Route::post('employees', [EmployeeController::class, 'store'])
+        ->middleware('check-permission:hr.employees.store')
+        ->name('api.employees.store');
+
+    Route::post('documents', [DocumentController::class, 'store'])
+        ->middleware('check-permission:documents.store')
+        ->name('api.documents.store');
+    Route::get('documents/{documentId}', [DocumentController::class, 'show'])
+        ->middleware('check-permission:documents.show')
+        ->name('api.documents.show');
+    Route::post('documents/{documentId}/files', [DocumentController::class, 'attachFile'])
+        ->middleware('check-permission:documents.files.store')
+        ->name('api.documents.files.store');
+});
+```
+
+Fiscal-year-scoped API routes are defined under `companies/{fiscal_year}` with the `auth:sanctum` and `api-fiscal-year` middleware. `SetApiFiscalYear` validates the fiscal-year ID, checks user access through the `fiscalYears()` relationship, and activates that fiscal-year ID for the request.
 
 ## 🧪 Tests (`tests/`)
 
-The standard Laravel layout separates feature and unit tests. The source guide uses `Feature/ExampleTest.php` (home page response) and `Unit/ExampleTest.php` (`true` assertion) as examples. Add new tests with `php artisan make:test` or extend an appropriate existing test. See the [Testing Guide](testing-guide.en.md).
+The test structure follows Laravel conventions, with two sample tests included by default:
+
+```
+tests/
+├── Feature/ExampleTest.php   # Check a successful home-page response
+└── Unit/ExampleTest.php      # Simple assertion that true is true
+```
+
+To extend test coverage, create files with `php artisan make:test` or edit these examples. The [Testing Guide](testing-guide.en.md) provides more details.
 
 ## 🔧 Development tools
 
 ### Composer
+PHP dependency management:
 
-`composer install` installs PHP dependencies, `composer dump-autoload` rebuilds autoload metadata, and `composer update` updates packages.
+```bash
+composer install        # Install packages
+composer dump-autoload  # Rebuild the autoloader
+composer update         # Update packages
+```
 
 ### NPM
+JavaScript dependency management:
 
-`npm install` installs JavaScript dependencies, `npm run dev` starts development assets, and `npm run build` produces a build.
+```bash
+npm install            # Install packages
+npm run dev            # Run development assets
+npm run build          # Create the final build
+```
 
 ### Artisan
+Laravel commands:
 
-Examples are `php artisan migrate` (migrations), `db:seed` (seeders), `make:model` (new model), and `serve` (development server).
+```bash
+php artisan migrate     # Run migrations
+php artisan db:seed     # Run seeders
+php artisan make:model  # Create a model
+php artisan serve       # Start the development server
+```
 
 ## 📝 Naming conventions
 
 ### Classes
-
-Controllers use PascalCase plus `Controller` (`DocumentController`), models use singular PascalCase (`Document`), and services use PascalCase plus `Service` (`DocumentService`).
+- **Controllers**: `PascalCase` + `Controller` (for example, `DocumentController`)
+- **Models**: singular `PascalCase` (for example, `Document`)
+- **Services**: `PascalCase` + `Service` (for example, `DocumentService`)
 
 ### Files
-
-Views use kebab-case (`document-create.blade.php`); migration filenames begin with a date and use snake_case (`2024_01_01_create_documents_table`).
+- **Views**: `kebab-case` (for example, `document-create.blade.php`)
+- **Migrations**: date + `snake_case` (for example, `2024_01_01_create_documents_table`)
 
 ### Variables
-
-PHP variables use camelCase (`$fiscalYear`), whereas database columns use snake_case (`fiscal_year_id`).
+- **PHP** variables: `camelCase` (for example, `$fiscalYear`)
+- **Database** columns: `snake_case` (for example, `fiscal_year_id`)
 
 ### Routes
-
-URLs use kebab-case (`/customer-groups`); route names use dot notation (`documents.create`).
+- **URLs**: `kebab-case` (for example, `/customer-groups`)
+- **Route names**: `dot.notation` (for example, `documents.create`)
 
 ## 🔒 Security
 
 ### Middleware
-
-`auth` authenticates users and `check-permission` checks authorization, alongside other Laravel middleware.
+- `auth` middleware — user authentication
+- `check-permission` middleware — permission checks
+- Other Laravel middleware
 
 ### Permissions
+Using Spatie Permission:
 
-The application uses Spatie Permission. The source illustrates a controller authorization call (`$this->authorize('documents.create')`, marked as not used there) and Blade's `@can('documents.edit')` directive for conditional controls.
+```php
+// permission in Controller (Not Used):
+$this->authorize('documents.create');
+
+// Check permissions in Blade
+@can('documents.edit')
+    <button>Edit</button>
+@endcan
+```
 
 ## 🚀 Optimization
 
 ### Caching
-
-Laravel can cache configuration (`php artisan config:cache`), routes (`route:cache`), and views (`view:cache`).
+- **Config** cache: `php artisan config:cache`
+- **Routes** cache: `php artisan route:cache`
+- **Views** cache: `php artisan view:cache`
 
 ### Database
+- **Indexes**: index frequently queried columns.
+- **Relations**: use eager loading.
+- **Pagination**: paginate large lists.
 
-Index frequently queried columns, use eager loading for relationships, and paginate large lists.
+---
 
-Read the current project structure before making changes, and follow patterns already used in the codebase.
+**Important:** Read the existing project structure before making changes and follow the patterns already in use.

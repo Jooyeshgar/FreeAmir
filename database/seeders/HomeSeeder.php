@@ -15,41 +15,41 @@ class HomeSeeder extends Seeder
 {
     public function run(): void
     {
-        $companyId = (int) getActiveCompany();
+        $fiscalYearId = (int) getActiveFiscalYear();
         $this->hydrateAmirConfig();
-        $subjects = $this->existingCashAndBankSubjects($companyId);
+        $subjects = $this->existingCashAndBankSubjects($fiscalYearId);
 
-        $this->seedCashAndBankTransactions($subjects, $companyId);
+        $this->seedCashAndBankTransactions($subjects, $fiscalYearId);
     }
 
     private function hydrateAmirConfig(): void
     {
         Config::withoutGlobalScopes()->where('category', 1)->where(function ($query) {
-            $query->whereNull('company_id')->orWhere('company_id', getActiveCompany());
+            $query->whereNull('fiscal_year_id')->orWhere('fiscal_year_id', getActiveFiscalYear());
         })->get()->each(function (Config $config) {
             config(['amir.'.$config->key => $config->value]);
         });
     }
 
-    private function existingCashAndBankSubjects(int $companyId): Collection
+    private function existingCashAndBankSubjects(int $fiscalYearId): Collection
     {
         $bankParentId = (int) config('amir.bank');
         $cashParentId = (int) config('amir.cash_book');
 
-        $banks = Subject::withoutGlobalScopes()->where('company_id', $companyId)->where('parent_id', $bankParentId)->get();
-        $cashBooks = Subject::withoutGlobalScopes()->where('company_id', $companyId)->where('parent_id', $cashParentId)->get();
+        $banks = Subject::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->where('parent_id', $bankParentId)->get();
+        $cashBooks = Subject::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->where('parent_id', $cashParentId)->get();
 
         return $banks->merge($cashBooks);
     }
 
-    private function seedCashAndBankTransactions(Collection $subjects, int $companyId): void
+    private function seedCashAndBankTransactions(Collection $subjects, int $fiscalYearId): void
     {
         $userId = User::withoutGlobalScopes()->first()?->id;
         if ($userId === null || $subjects->isEmpty()) {
             return;
         }
 
-        $documentNumber = (int) (Document::withoutGlobalScopes()->where('company_id', $companyId)->max('number') ?? 0);
+        $documentNumber = (int) (Document::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->max('number') ?? 0);
         $startDate = Carbon::now()->startOfMonth()->subMonths(11);
 
         foreach ($subjects as $subject) {
@@ -64,7 +64,7 @@ class HomeSeeder extends Seeder
                     'creator_id' => $userId,
                     'approved_at' => $date->addDays(random_int(0, 5)),
                     'approver_id' => $userId,
-                    'company_id' => $companyId,
+                    'fiscal_year_id' => $fiscalYearId,
                 ]);
 
                 $value = random_int(0, 35000000);
@@ -78,7 +78,7 @@ class HomeSeeder extends Seeder
                 ]);
 
                 $randomSubject = Subject::withoutGlobalScopes()
-                    ->where('company_id', $companyId)
+                    ->where('fiscal_year_id', $fiscalYearId)
                     ->whereNot('id', $subject->id)
                     ->whereNot('parent_id', $subject->id)
                     ->inRandomOrder()

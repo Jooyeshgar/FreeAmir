@@ -263,18 +263,26 @@
                                             {{ __('Download') }}
                                         </a>
                                         <div class="flex gap-1">
-                                            <a href="{{ route('documents.files.edit', [$document, $documentFile]) }}" class="btn btn-sm btn-warning btn-square"
-                                                title="{{ __('Edit') }}">
+                                            @if ($fiscalYearClosed)
+                                                <button type="button" class="btn btn-sm btn-warning btn-square btn-disabled" disabled title="{{ __('This fiscal year is already closed.') }}">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                    </svg>
+                                                </button>
+                                            @else
+                                                <a href="{{ route('documents.files.edit', [$document, $documentFile]) }}" class="btn btn-sm btn-warning btn-square"
+                                                    title="{{ __('Edit') }}">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                                 </svg>
-                                            </a>
+                                                </a>
+                                            @endif
                                             <form action="{{ route('documents.files.destroy', [$document, $documentFile]) }}" method="POST" class="inline-block"
                                                 onsubmit="return confirm('{{ __('Are you sure you want to delete this file?') }}')">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-error btn-square" title="{{ __('Delete') }}">
+                                                <button type="submit" class="btn btn-sm btn-error btn-square" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Delete') }}">
                                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                             d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -289,12 +297,20 @@
                     </div>
                 @endif
                 <div class="mt-4 flex justify-end">
-                    <a href="{{ route('documents.files.create', $document->id) }}" class="btn btn-primary gap-2">
+                    @if ($fiscalYearClosed)
+                        <button type="button" class="btn btn-primary gap-2 btn-disabled" disabled title="{{ __('This fiscal year is already closed.') }}">
+                    @else
+                        <a href="{{ route('documents.files.create', $document->id) }}" class="btn btn-primary gap-2">
+                    @endif
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                         </svg>
                         {{ __('Add new file') }}
-                    </a>
+                    @if ($fiscalYearClosed)
+                        </button>
+                    @else
+                        </a>
+                    @endif
                 </div>
             </div>
 
@@ -309,12 +325,16 @@
                 <div class="flex flex-wrap gap-2">
                     @can('documents.transfer')
                         @if ($fiscalYears->isNotEmpty() && ! $document->documentable)
+                            @if ($fiscalYearClosed)
+                                <button type="button" class="btn gap-2 btn-disabled" disabled title="{{ __('This fiscal year is already closed.') }}">{{ __('Transfer to another Fiscal Year') }}</button>
+                            @else
                             <button type="button" onclick="document.getElementById('doc-transfer-modal').showModal()" class="btn gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                                 </svg>
                                 {{ __('Transfer to another Fiscal Year') }}
                             </button>
+                            @endif
                         @endif
                     @endcan
 
@@ -326,9 +346,9 @@
                         {{ __('Print PDF') }}
                     </a>
 
-                    @if ($document->documentable)
+                    @if ($fiscalYearClosed || $document->documentable)
                         <span class="tooltip"
-                            data-tip="{{ __('Cannot edit this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
+                            data-tip="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Cannot edit this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
                             <button class="btn btn-primary gap-2 btn-disabled cursor-not-allowed" disabled>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -338,7 +358,7 @@
                             </button>
                         </span>
                         <span class="tooltip"
-                            data-tip="{{ __('Cannot change status of this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
+                            data-tip="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Cannot change status of this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
                             <button class="btn btn-primary gap-2 btn-disabled cursor-not-allowed" disabled>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -366,9 +386,9 @@
                         </form>
                     @endif
 
-                    @if ($document->documentable)
+                    @if ($fiscalYearClosed || $document->documentable)
                         <span class="tooltip"
-                            data-tip="{{ __('Cannot delete this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
+                            data-tip="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Cannot delete this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
                             <button class="btn btn-error gap-2 btn-disabled cursor-not-allowed" disabled>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -397,7 +417,7 @@
     </div>
 
     @can('documents.transfer')
-        @if ($fiscalYears->isNotEmpty() && ! $document->documentable)
+        @if ($fiscalYears->isNotEmpty() && ! $document->documentable && ! $fiscalYearClosed)
             <dialog id="doc-transfer-modal" class="modal">
                 <div class="modal-box">
                     <h3 class="font-bold text-lg">{{ __('Transfer to another Fiscal Year') }}</h3>
@@ -407,7 +427,7 @@
                             <label class="label">
                                 <span class="label-text font-semibold">{{ __('Target Fiscal Year') }}</span>
                             </label>
-                            <select name="target_company_id" class="select select-bordered w-full" required>
+                            <select name="target_fiscal_year_id" class="select select-bordered w-full" required>
                                 <option value="">{{ __('-- Select fiscal year --') }}</option>
                                 @foreach ($fiscalYears as $year)
                                     <option value="{{ $year->id }}">{{ $year->name }}</option>

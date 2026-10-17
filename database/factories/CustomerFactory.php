@@ -4,9 +4,9 @@ namespace Database\Factories;
 
 use App\Enums\CustomerType;
 use App\Models\Bank;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -16,19 +16,19 @@ class CustomerFactory extends Factory
 
     public function definition()
     {
-        $companyId = (int) getActiveCompany();
-        if (! Company::withoutGlobalScopes()->whereKey($companyId)->exists()) {
-            throw new \LogicException('An active company is required to create a customer.');
+        $fiscalYearId = (int) getActiveFiscalYear();
+        if (! FiscalYear::withoutGlobalScopes()->whereKey($fiscalYearId)->exists()) {
+            throw new \LogicException('An active fiscal year is required to create a customer.');
         }
 
-        $bankIds = Bank::withoutGlobalScopes()->where('company_id', $companyId)->pluck('id')->toArray();
+        $bankIds = Bank::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->pluck('id')->toArray();
 
-        $group = CustomerGroup::withoutGlobalScopes()->where('company_id', $companyId)->whereNotNull('subject_id')->inRandomOrder()->first();
+        $group = CustomerGroup::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->whereNotNull('subject_id')->inRandomOrder()->first();
 
-        $customerIds = Customer::withoutGlobalScopes()->where('company_id', $companyId)->pluck('id')->toArray();
+        $customerIds = Customer::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->pluck('id')->toArray();
 
         return [
-            'company_id' => $companyId,
+            'fiscal_year_id' => $fiscalYearId,
             'name' => $this->faker->name,
             'phone' => substr($this->faker->phoneNumber, 0, 15),
             'mobile' => substr($this->faker->phoneNumber, 0, 15),
@@ -80,7 +80,7 @@ class CustomerFactory extends Factory
                 ->for($customer, 'subjectable')
                 ->create([
                     'name' => $customer->name,
-                    'company_id' => $customer->company_id,
+                    'fiscal_year_id' => $customer->fiscal_year_id,
                 ]);
 
             $customer->subject_id = $subject->id;

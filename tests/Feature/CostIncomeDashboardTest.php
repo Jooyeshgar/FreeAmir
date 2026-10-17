@@ -3,10 +3,10 @@
 namespace Tests\Feature;
 
 use App\Enums\SubjectType;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\MonthlyBudget;
 use App\Models\Subject;
 use App\Models\Transaction;
@@ -28,7 +28,7 @@ class CostIncomeDashboardTest extends TestCase
 
     private User $user;
 
-    private int $companyId;
+    private int $fiscalYearId;
 
     private CustomerGroup $customerGroup;
 
@@ -39,20 +39,20 @@ class CostIncomeDashboardTest extends TestCase
         config(['app.locale' => 'fa']);
         app()->setLocale('fa');
 
-        $company = Company::factory()->create(['fiscal_year' => 1405]);
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create(['year' => 1405]);
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
 
-        $this->withCookies(['active-company-id' => (string) $this->companyId]);
-        $_COOKIE['active-company-id'] = (string) $this->companyId;
-        config(['active-company-id' => $this->companyId, 'active-company-fiscal-year' => 1405]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->fiscalYearId]);
+        $_COOKIE['active-fiscal-year-id'] = (string) $this->fiscalYearId;
+        config(['active-fiscal-year-id' => $this->fiscalYearId, 'active-company-fiscal-year' => 1405]);
 
-        $this->importSubjects($this->companyId);
-        $this->importConfigs($this->companyId);
+        $this->importSubjects($this->fiscalYearId);
+        $this->importConfigs($this->fiscalYearId);
 
-        $this->customerGroup = CustomerGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
+        $this->customerGroup = CustomerGroup::factory()->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
     }
 
     public function test_user_with_permission_can_view_dashboard(): void
@@ -122,8 +122,8 @@ class CostIncomeDashboardTest extends TestCase
         $income = $this->nonPermanentSubject('Forecast income', SubjectType::CREDITOR);
         $expense = $this->nonPermanentSubject('Forecast expense', SubjectType::DEBTOR);
         foreach (range(1, 12) as $month) {
-            MonthlyBudget::create(['company_id' => $this->companyId, 'subject_id' => $income->id, 'month' => $month, 'budget_type' => 'income', 'forecast_amount' => 1000]);
-            MonthlyBudget::create(['company_id' => $this->companyId, 'subject_id' => $expense->id, 'month' => $month, 'budget_type' => 'expense', 'forecast_amount' => 400]);
+            MonthlyBudget::create(['fiscal_year_id' => $this->fiscalYearId, 'subject_id' => $income->id, 'month' => $month, 'budget_type' => 'income', 'forecast_amount' => 1000]);
+            MonthlyBudget::create(['fiscal_year_id' => $this->fiscalYearId, 'subject_id' => $expense->id, 'month' => $month, 'budget_type' => 'expense', 'forecast_amount' => 400]);
         }
         $this->transaction($income->id, 900, jalali_to_gregorian(1405, 4, 10, '-'));
         $this->transaction($expense->id, -300, jalali_to_gregorian(1405, 4, 10, '-'));
@@ -380,7 +380,7 @@ class CostIncomeDashboardTest extends TestCase
     private function subject(string $name, SubjectType $type = SubjectType::BOTH, ?Subject $parent = null, bool $permanent = false): Subject
     {
         return Subject::factory()->when($parent, fn ($factory) => $factory->withParent($parent))->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => $name,
             'type' => $type,
             'is_permanent' => $permanent,
@@ -416,7 +416,7 @@ class CostIncomeDashboardTest extends TestCase
 
     private function setFiscalYear(int $year): void
     {
-        Company::withoutGlobalScopes()->findOrFail($this->companyId)->update(['fiscal_year' => $year]);
+        FiscalYear::withoutGlobalScopes()->findOrFail($this->fiscalYearId)->update(['year' => $year]);
         config(['active-company-fiscal-year' => $year]);
     }
 
@@ -425,7 +425,7 @@ class CostIncomeDashboardTest extends TestCase
         $customer = Customer::factory()
             ->withGroup($this->customerGroup)
             ->withSubject()
-            ->create(['company_id' => $this->companyId, 'name' => $name]);
+            ->create(['fiscal_year_id' => $this->fiscalYearId, 'name' => $name]);
 
         $this->transaction($customer->subject_id, $balance);
 
@@ -454,7 +454,7 @@ class CostIncomeDashboardTest extends TestCase
             'approved_at' => $approved ? now() : null,
             'approver_id' => $approved ? $this->user->id : null,
             'title' => 'test',
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
         ]);
     }
 

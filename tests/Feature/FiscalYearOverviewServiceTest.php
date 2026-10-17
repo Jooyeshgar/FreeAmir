@@ -5,10 +5,10 @@ namespace Tests\Feature;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Enums\SubjectType;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -16,13 +16,13 @@ use App\Models\ProductGroup;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
-use App\Services\CompanyOverviewService;
+use App\Services\FiscalYearOverviewService;
 use App\Services\SubjectService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Helpers\SeederHelper;
 use Tests\TestCase;
 
-class CompanyOverviewServiceTest extends TestCase
+class FiscalYearOverviewServiceTest extends TestCase
 {
     use RefreshDatabase, SeederHelper;
 
@@ -30,26 +30,26 @@ class CompanyOverviewServiceTest extends TestCase
 
     private Customer $customer;
 
-    private int $companyId;
+    private int $fiscalYearId;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $company = Company::factory()->create(['fiscal_year' => 1405]);
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create(['year' => 1405]);
+        $this->fiscalYearId = $fiscalYear->id;
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
 
-        $this->withCookies(['active-company-id' => (string) $this->companyId]);
-        $_COOKIE['active-company-id'] = (string) $this->companyId;
-        config(['active-company-id' => $this->companyId, 'active-company-fiscal-year' => 1405]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->fiscalYearId]);
+        $_COOKIE['active-fiscal-year-id'] = (string) $this->fiscalYearId;
+        config(['active-fiscal-year-id' => $this->fiscalYearId, 'active-company-fiscal-year' => 1405]);
 
-        $this->importSubjects($this->companyId);
-        $this->importConfigs($this->companyId);
+        $this->importSubjects($this->fiscalYearId);
+        $this->importConfigs($this->fiscalYearId);
 
-        $customerGroup = CustomerGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
-        $this->customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create(['company_id' => $this->companyId]);
+        $customerGroup = CustomerGroup::factory()->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $this->customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
     }
 
     public function test_warehouse_chart_excludes_items_outside_the_fiscal_year(): void
@@ -240,7 +240,7 @@ class CompanyOverviewServiceTest extends TestCase
             'code' => '900',
             'name' => 'Interval income',
             'parent_id' => null,
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'type' => SubjectType::CREDITOR,
             'is_permanent' => false,
         ]);
@@ -248,7 +248,7 @@ class CompanyOverviewServiceTest extends TestCase
             'code' => '901',
             'name' => 'Interval cost',
             'parent_id' => null,
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'type' => SubjectType::DEBTOR,
             'is_permanent' => false,
         ]);
@@ -270,9 +270,9 @@ class CompanyOverviewServiceTest extends TestCase
         $this->assertSame(350.0, $result['costData']['Interval cost']);
     }
 
-    private function service(): CompanyOverviewService
+    private function service(): FiscalYearOverviewService
     {
-        return new CompanyOverviewService(new SubjectService);
+        return new FiscalYearOverviewService(new SubjectService);
     }
 
     private function balanceData(array $subjectIds, int $duration, bool $inverse): array
@@ -282,9 +282,9 @@ class CompanyOverviewServiceTest extends TestCase
 
     private function makeProduct(): Product
     {
-        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId]);
+        $group = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId]);
 
-        return Product::factory()->withGroup($group)->withSubjects()->create(['company_id' => $this->companyId]);
+        return Product::factory()->withGroup($group)->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId]);
     }
 
     private function makeInvoice(string $date, InvoiceType $type = InvoiceType::BUY, InvoiceStatus $status = InvoiceStatus::APPROVED, float $amount = 100): Invoice
@@ -326,7 +326,7 @@ class CompanyOverviewServiceTest extends TestCase
             'date' => $date,
             'creator_id' => $this->user->id,
             'title' => 'test',
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
         ]);
     }
 }
