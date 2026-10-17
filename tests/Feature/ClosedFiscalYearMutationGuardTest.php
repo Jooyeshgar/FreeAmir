@@ -81,7 +81,7 @@ class ClosedFiscalYearMutationGuardTest extends TestCase
     public function test_guard_rejects_a_closed_invoice_year(): void
     {
         $this->expectException(ValidationException::class);
-        app(FiscalYearMutationGuard::class)->ensureOpen($this->invoice);
+        app(FiscalYearMutationGuard::class)->ensureOpen();
     }
 
     public function test_nested_invoice_mutations_are_guarded_before_writing(): void
