@@ -59,6 +59,7 @@ class ApiTest extends TestCase
     {
         return [
             'Authorization' => 'Bearer '.$this->token,
+            'Accept' => 'application/json',
         ];
     }
 
