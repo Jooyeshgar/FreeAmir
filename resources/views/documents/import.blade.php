@@ -38,7 +38,7 @@
 
                 <div class="card-actions justify-end mt-4">
                     <a href="{{ route('documents.index') }}" class="btn btn-ghost">{{ __('Cancel') }}</a>
-                    <button type="submit" class="btn btn-primary">{{ __('Import CSV') }}</button>
+                    <button type="submit" class="btn btn-primary" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Import CSV') }}">{{ __('Import CSV') }}</button>
                 </div>
             </div>
         </form>

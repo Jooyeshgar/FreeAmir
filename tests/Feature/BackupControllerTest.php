@@ -1245,7 +1245,7 @@ class BackupControllerTest extends TestCase
 
         Storage::disk('public')->assertExists($path);
 
-        (new DocumentFileService)->delete($docFile);
+        app(DocumentFileService::class)->delete($docFile);
 
         Storage::disk('public')->assertMissing($path);
         $this->assertDatabaseMissing('document_files', ['id' => $docFile->id]);
