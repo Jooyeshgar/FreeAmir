@@ -82,6 +82,8 @@ class PaymentService
 
     public function createPayment(User $user, Invoice $invoice, array $data): InvoiceStatusDecision
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         return DB::transaction(function () use ($user, $invoice, $data) {
             $decision = $this->validateInvoicePayment($invoice, $data);
             if ($decision->hasErrors()) {
@@ -116,6 +118,8 @@ class PaymentService
 
     public function saveChequePayment(User $user, ?Invoice $invoice, Cheque $cheque, Document $document, int $settlementSubjectId, ?Payment $payment = null, float $fee = 0): Payment
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         if ($invoice) {
             $decision = $this->validateInvoicePayment($invoice, [
                 'amount' => (float) $cheque->amount,
@@ -237,6 +241,8 @@ class PaymentService
 
     public function deletePayment(Payment $payment): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         DB::transaction(function () use ($payment) {
             $lockedPayment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
 
@@ -280,6 +286,8 @@ class PaymentService
 
     public function removePaymentDocument(Payment $payment): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         DB::transaction(function () use ($payment) {
             if ($payment->cheque_id) {
                 throw ValidationException::withMessages([
@@ -302,6 +310,8 @@ class PaymentService
 
     public function createPaymentDocument(User $user, Payment $payment): InvoiceStatusDecision
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         return DB::transaction(function () use ($user, $payment) {
             $decision = new InvoiceStatusDecision;
 

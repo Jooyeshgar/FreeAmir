@@ -53,7 +53,7 @@ class InvoiceController extends Controller
         $invoiceType = InvoiceType::tryFromName($request->invoice_type);
         $status = InvoiceStatus::tryFromName($request->status);
 
-        $builder = Invoice::with(['customer', 'document', 'voidInvoice', 'payments'])
+        $builder = Invoice::with(['customer', 'document', 'voidInvoice', 'payments', 'fiscalYear'])
             ->orderByDesc('date')
             ->orderByDesc('number');
 
@@ -317,6 +317,7 @@ class InvoiceController extends Controller
             'document',
             'document.transactions',
             'items',
+            'fiscalYear',
             'voidInvoice',
             'voidedInvoice.moadianHistories',
             'ancillaryCosts',
