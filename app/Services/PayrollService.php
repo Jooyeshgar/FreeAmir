@@ -715,7 +715,7 @@ class PayrollService
      */
     public function recalculateTotals(Payroll $payroll): void
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen($payroll);
+        app(FiscalYearMutationGuard::class)->ensureOpen();
         $payroll->loadMissing('items');
 
         $totalEarnings = 0.0;
