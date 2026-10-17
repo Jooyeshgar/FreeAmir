@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit;
+namespace Tests\Feature;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
@@ -44,7 +44,6 @@ class ClosedFiscalYearMutationGuardTest extends TestCase
             'date' => now()->toDateString(),
             'number' => 1,
             'amount' => 100,
-            'vat' => 10,
         ]));
     }
 
