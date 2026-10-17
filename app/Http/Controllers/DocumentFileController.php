@@ -6,16 +6,17 @@ use App\Http\Requests\StoreDocumentFileRequest;
 use App\Models\Document;
 use App\Models\DocumentFile;
 use App\Services\DocumentFileService;
+use App\Services\FiscalYearMutationGuard;
 use Illuminate\Support\Facades\Storage;
 
 class DocumentFileController extends Controller
 {
-    public function __construct(
-        private readonly DocumentFileService $service
-    ) {}
+    public function __construct(private readonly DocumentFileService $service, private readonly FiscalYearMutationGuard $fiscalYearMutationGuard) {}
 
     public function create(Document $document)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         $documentFile = new DocumentFile;
 
         return view('documents.documentFiles.create', compact('documentFile', 'document'));
@@ -23,6 +24,7 @@ class DocumentFileController extends Controller
 
     public function store(StoreDocumentFileRequest $request)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
         $validated = $request->validated();
         $validated['user_id'] ??= $request->user()->id;
 
@@ -33,6 +35,8 @@ class DocumentFileController extends Controller
 
     public function edit(Document $document, DocumentFile $documentFile)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         $document = $documentFile->document;
 
         return view('documents.documentFiles.edit', compact('documentFile', 'document'));
@@ -40,6 +44,8 @@ class DocumentFileController extends Controller
 
     public function update(StoreDocumentFileRequest $request, Document $document, DocumentFile $documentFile)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         $validated = $request->validated();
         $validated['user_id'] ??= $request->user()->id;
 
@@ -50,6 +56,8 @@ class DocumentFileController extends Controller
 
     public function destroy(Document $document, DocumentFile $documentFile)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         $documentId = $documentFile->document_id;
 
         $this->service->delete($documentFile);

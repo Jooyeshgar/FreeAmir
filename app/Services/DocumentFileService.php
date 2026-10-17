@@ -14,8 +14,12 @@ class DocumentFileService
 
     protected string $disk = 'public';
 
+    public function __construct(private readonly FiscalYearMutationGuard $fiscalYearMutationGuard) {}
+
     public function create(array $data): DocumentFile
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         return DB::transaction(function () use ($data): DocumentFile {
             if (isset($data['file'])) {
                 $fileInfo = $this->storeFile($data['document_id'], $data['file']);
@@ -29,6 +33,8 @@ class DocumentFileService
 
     public function update(DocumentFile $documentFile, array $data): void
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         DB::transaction(function () use ($documentFile, $data) {
             if (isset($data['file'])) {
                 $this->deleteFile($documentFile->path);
@@ -44,6 +50,8 @@ class DocumentFileService
 
     public function delete(DocumentFile $documentFile): void
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         DB::transaction(function () use ($documentFile) {
             $this->deleteFile($documentFile->path);
 
