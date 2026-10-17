@@ -18,18 +18,20 @@
             @foreach ($invoices as $invoice)
                 @php
                     $isVoided = $isSellWorkflow && (bool) $invoice->voidInvoice;
+                    $fiscalYearClosed = $invoice->fiscalYear?->isClosed() ?? false;
+                    $fiscalYearClosedMessage = __('This fiscal year is already closed.');
                     $canApprove = ($isSellWorkflow ? false : $invoice->status->isPending())
                         || $invoice->status->isReadyToApprove()
                         || $invoice->status->isUnapproved()
                         || $invoice->status->isApprovedInactive();
                     $canUnapprove = $invoice->status->isApproved();
                     $isSettled = $invoice->status->isPartiallyPaid() || $invoice->status->isPaid();
-                    $canChangeStatus = $canApprove || $canUnapprove;
-                    $editDisabled = $isVoidWorkflow || $invoice->status->isApprovedOrSettled() || $isVoided;
-                    $deleteDisabled = $invoice->status->isApprovedOrSettled() || $isVoided;
+                    $canChangeStatus = ($canApprove || $canUnapprove) && !$fiscalYearClosed;
+                    $editDisabled = $fiscalYearClosed || $isVoidWorkflow || $invoice->status->isApprovedOrSettled() || $isVoided;
+                    $deleteDisabled = $fiscalYearClosed || $invoice->status->isApprovedOrSettled() || $isVoided;
                     $settledTooltip = __('A paid or partially paid invoice cannot change its status until its payments (or their payment documents) are removed.');
-                    $editTooltip = $isVoidWorkflow ? __('Editing is not allowed for void invoices.') : ($isVoided ? __('Voided invoices cannot be edited') : ($isSettled ? $settledTooltip : __('Unapprove the invoice first to edit')));
-                    $deleteTooltip = $isVoided ? __('Voided invoices cannot be deleted') : ($isSettled ? $settledTooltip : __('Unapprove the invoice first to delete'));
+                    $editTooltip = $fiscalYearClosed ? $fiscalYearClosedMessage : ($isVoidWorkflow ? __('Editing is not allowed for void invoices.') : ($isVoided ? __('Voided invoices cannot be edited') : ($isSettled ? $settledTooltip : __('Unapprove the invoice first to edit'))));
+                    $deleteTooltip = $fiscalYearClosed ? $fiscalYearClosedMessage : ($isVoided ? __('Voided invoices cannot be deleted') : ($isSettled ? $settledTooltip : __('Unapprove the invoice first to delete')));
                     $moadianStatus = $showMoadianColumn ? \App\Enums\MoadianStatus::fromData($invoice->latestMoadianHistory?->data['status'] ?? null) : null;
                 @endphp
                 <tr class="{{ $isVoided ? 'text-gray-500' : '' }}">
@@ -75,16 +77,24 @@
 
                         @can('invoices.approve')
                             @if ($isSellWorkflow && ($invoice->status->isPreInvoice() || $invoice->status->isRejected()))
+                                @if ($fiscalYearClosed)
+                                    <button class="btn btn-sm btn-success btn-disabled cursor-not-allowed" disabled title="{{ $fiscalYearClosedMessage }}">{{ __('Issue') }}</button>
+                                @else
                                 <form action="{{ route('invoices.change-status', [$invoice, 'ready_to_approve']) }}" method="POST">
                                     @csrf
                                     <button type="submit" class="btn btn-sm btn-success">{{ __('Issue') }}</button>
                                 </form>
+                                @endif
                             @endif
                             @if ($isSellWorkflow && $invoice->status->isPreInvoice())
+                                @if ($fiscalYearClosed)
+                                    <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled title="{{ $fiscalYearClosedMessage }}">{{ __('Reject') }}</button>
+                                @else
                                 <form action="{{ route('invoices.change-status', [$invoice, 'rejected']) }}" method="POST">
                                     @csrf
                                     <button type="submit" class="btn btn-sm btn-error">{{ __('Reject') }}</button>
                                 </form>
+                                @endif
                             @endif
                             @if ($canChangeStatus)
                                 @if ($invoice->changeStatusValidation->hasErrors())
@@ -104,6 +114,10 @@
                                         </button>
                                     </form>
                                 @endif
+                            @elseif ($fiscalYearClosed)
+                                <span class="lg:tooltip" data-tip="{{ $fiscalYearClosedMessage }}">
+                                    <button class="btn btn-sm btn-warning btn-disabled cursor-not-allowed" disabled>{{ __('Change status') }}</button>
+                                </span>
                             @elseif ($isSettled)
                                 <span class="lg:tooltip" data-tip="{{ $settledTooltip }}">
                                     <button class="btn btn-sm btn-warning btn-disabled cursor-not-allowed">{{ __('Unapprove') }}</button>

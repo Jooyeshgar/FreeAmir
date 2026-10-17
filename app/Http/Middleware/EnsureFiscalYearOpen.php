@@ -34,7 +34,15 @@ class EnsureFiscalYearOpen
 
     private function isExempt(Request $request): bool
     {
-        if ($request->isMethod('GET') && ! $request->routeIs('fiscal-years.edit') && ! $request->routeIs('documents.duplicate')) {
+        if ($request->isMethod('GET') && ! $request->routeIs([
+            'fiscal-years.edit',
+            'documents.duplicate',
+            'invoices.create',
+            'invoices.edit',
+            'invoices.void-form',
+            'invoices.ancillary-costs.create',
+            'invoices.ancillary-costs.edit',
+        ])) {
             return true;
         }
 
