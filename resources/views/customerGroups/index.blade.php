@@ -9,7 +9,7 @@
         </div>
 
         <div class="flex flex-wrap items-center justify-start gap-2">
-            <a href="{{ route('customer-groups.create') }}" class="btn btn-primary btn-sm gap-1.5">{{ __('Create Customer Group') }}</a>
+            <a href="{{ route('customer-groups.create') }}" @class(['btn btn-primary btn-sm gap-1.5', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : '' }}">{{ __('Create Customer Group') }}</a>
         </div>
     </div>
 
@@ -73,11 +73,11 @@
                                     <a href="{{ route('customer-groups.show', $customerGroup) }}"
                                         class="btn btn-sm btn-info">{{ __('View') }}</a>
                                     <a href="{{ route('customer-groups.edit', $customerGroup) }}"
-                                        class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                        @class(['btn btn-sm btn-info', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : '' }}">{{ __('Edit') }}</a>
                                     <form action="{{ route('customer-groups.destroy', $customerGroup) }}" method="POST">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                        <button type="submit" @disabled(activeFiscalYearIsClosed()) class="btn btn-sm btn-error {{ activeFiscalYearIsClosed() ? 'opacity-60' : '' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : '' }}">{{ __('Delete') }}</button>
                                     </form>
                                 </div>
                             </td>

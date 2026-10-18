@@ -3,11 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models;
+use App\Services\FiscalYearMutationGuard;
 use Illuminate\Http\Request;
 
 class BankController extends Controller
 {
-    public function __construct() {}
+    public function __construct(private readonly FiscalYearMutationGuard $fiscalYearMutationGuard) {}
 
     public function index()
     {
@@ -23,6 +24,8 @@ class BankController extends Controller
 
     public function store(Request $request)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         $validatedData = $request->validate([
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
         ]);
@@ -40,6 +43,8 @@ class BankController extends Controller
 
     public function update(Request $request, Models\Bank $bank)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         $validatedData = $request->validate([
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
         ]);
@@ -51,6 +56,7 @@ class BankController extends Controller
 
     public function destroy(Models\Bank $bank)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
         $bank->delete();
 
         return redirect()->route('banks.index')->with('success', __('Bank deleted successfully.'));

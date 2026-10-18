@@ -12,7 +12,7 @@
         </div>
 
         <div class="flex flex-wrap items-center justify-start gap-2">
-            <a href="{{ route('service-groups.create') }}" class="btn btn-primary btn-sm">{{ __('Create service group') }}</a>
+            <a href="{{ route('service-groups.create') }}" @class(['btn btn-primary btn-sm', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : '' }}">{{ __('Create service group') }}</a>
         </div>
     </div>
 
@@ -58,9 +58,9 @@
                                 </td>
                                 <td class="px-4 py-2 inline-flex gap-2 whitespace-nowrap">
                                     <a href="{{ route('service-groups.show', $serviceGroup) }}" class="btn btn-sm btn-info">{{ __('View') }}</a>
-                                    <a href="{{ route('service-groups.edit', $serviceGroup) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                    @if ($serviceGroup->delete_blocking_reason)
-                                        <button class="btn btn-sm btn-error btn-disabled pointer-events-none">{{ __('Delete') }}</button>
+                                    <a href="{{ route('service-groups.edit', $serviceGroup) }}" @class(['btn btn-sm btn-info', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : '' }}">{{ __('Edit') }}</a>
+                                    @if (activeFiscalYearIsClosed() || $serviceGroup->delete_blocking_reason)
+                                        <button class="btn btn-sm btn-error btn-disabled pointer-events-none" disabled title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : $serviceGroup->delete_blocking_reason }}">{{ __('Delete') }}</button>
                                     @else
                                         <form action="{{ route('service-groups.destroy', $serviceGroup) }}" method="POST">
                                             @csrf

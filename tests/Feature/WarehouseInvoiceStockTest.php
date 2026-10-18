@@ -48,6 +48,8 @@ class WarehouseInvoiceStockTest extends TestCase
 
     private Warehouse $emptyWarehouse;
 
+    private ProductService $productService;
+
     private int $nextInvoiceNumber = 9000;
 
     protected function setUp(): void
@@ -79,6 +81,8 @@ class WarehouseInvoiceStockTest extends TestCase
 
         $this->setStock($this->mainWarehouse, 0);
         $this->setStock($this->emptyWarehouse, 0);
+
+        $this->productService = app(ProductService::class);
     }
 
     public function test_buy_and_sell_use_selected_warehouse_and_unapproval_reverses_each_change(): void
@@ -141,7 +145,7 @@ class WarehouseInvoiceStockTest extends TestCase
         WarehouseProductStock::query()->update(['quantity' => 0]);
         $this->product->update(['quantity' => 0]);
 
-        $quantity = ProductService::recalculateQuantity($this->product->fresh());
+        $quantity = $this->productService->recalculateQuantity($this->product->fresh());
 
         $this->assertEqualsWithDelta(11, $quantity, 0.001);
         $this->assertStock($this->mainWarehouse, 7);
@@ -184,7 +188,7 @@ class WarehouseInvoiceStockTest extends TestCase
         WarehouseProductStock::query()->where('product_id', $this->product->id)->update(['quantity' => 999]);
         InvoiceItem::query()->whereIn('invoice_id', [$buy->id, $sell->id, $beginningInventory->id])->update(['quantity_at' => 999]);
 
-        $quantity = ProductService::recalculateQuantity($this->product->fresh());
+        $quantity = $this->productService->recalculateQuantity($this->product->fresh());
 
         $this->assertEqualsWithDelta(7, $quantity, 0.001);
         $this->assertStock($this->mainWarehouse, 7);
@@ -262,7 +266,7 @@ class WarehouseInvoiceStockTest extends TestCase
         WarehouseProductStock::query()->update(['quantity' => 0]);
         $this->product->update(['quantity' => 0]);
 
-        $this->assertEqualsWithDelta(6, ProductService::recalculateQuantity($this->product->fresh()), 0.001);
+        $this->assertEqualsWithDelta(6, $this->productService->recalculateQuantity($this->product->fresh()), 0.001);
         $this->assertStock($this->mainWarehouse, 6);
 
         (new InvoiceService)->changeInvoiceStatus($invoice->fresh(), 'unapproved');

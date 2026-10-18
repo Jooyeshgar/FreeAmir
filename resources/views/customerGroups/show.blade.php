@@ -97,7 +97,7 @@
                 </svg>
                 {{ __('Customers') }}
             </a>
-            <a href="{{ route('customer-groups.edit', $customerGroup) }}" class="btn btn-sm btn-primary gap-1.5" dir="rtl">
+            <a href="{{ route('customer-groups.edit', $customerGroup) }}" @class(['btn btn-sm btn-primary gap-1.5', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Edit') }}" dir="rtl">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L8.582 18.07a4.5 4.5 0 0 1-1.897 1.13L3 20.25l1.05-3.685a4.5 4.5 0 0 1 1.13-1.897l11.682-11.681Z" />

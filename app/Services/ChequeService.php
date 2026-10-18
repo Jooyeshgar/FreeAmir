@@ -27,7 +27,7 @@ class ChequeService
 
     private const DOCUMENTS_PAYABLE_CONFIG = 'cheque_documents_payable';
 
-    public function __construct(private readonly PaymentService $paymentService) {}
+    public function __construct(private readonly PaymentService $paymentService, private readonly FiscalYearMutationGuard $fiscalYearMutationGuard) {}
 
     public function directionForInvoice(Invoice $invoice): ?ChequeType
     {
@@ -40,6 +40,8 @@ class ChequeService
 
     public function register(User $user, array $data): Cheque
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         return DB::transaction(function () use ($user, $data) {
             $direction = ChequeType::from((int) $data['direction']);
             $purpose = ChequeType::from((int) $data['purpose']);
@@ -85,6 +87,8 @@ class ChequeService
 
     public function update(Cheque $cheque, User $user, array $data): Cheque
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         return DB::transaction(function () use ($cheque, $user, $data) {
             $lockedCheque = Cheque::query()->lockForUpdate()->findOrFail($cheque->id);
             if ($lockedCheque->histories()->whereNotNull('from_status')->exists()) {
@@ -156,6 +160,7 @@ class ChequeService
 
     public function delete(Cheque $cheque): void
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
         DB::transaction(function () use ($cheque) {
             $lockedCheque = Cheque::query()->lockForUpdate()->findOrFail($cheque->id);
 
@@ -179,6 +184,8 @@ class ChequeService
 
     public function transition(Cheque $cheque, User $user, string $action, array $data = []): Cheque
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         return DB::transaction(function () use ($cheque, $user, $action, $data) {
             $lockedCheque = Cheque::query()->lockForUpdate()->findOrFail($cheque->id);
 

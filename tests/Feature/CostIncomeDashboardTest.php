@@ -182,7 +182,7 @@ class CostIncomeDashboardTest extends TestCase
         $this->transaction($child->id, 300);
         $this->transaction($root->id, 500, approved: false);
 
-        $subjectService = new SubjectService;
+        $subjectService = app(SubjectService::class);
 
         $this->assertSame(1000.0, SubjectService::sumSubject($root, approvedOnly: true));
         $this->assertSame(1500, $subjectService->sumSubjectWithDateRange($root)[1]);
@@ -364,7 +364,7 @@ class CostIncomeDashboardTest extends TestCase
 
     private function service(): CostIncomeService
     {
-        return new CostIncomeService(new SubjectService);
+        return app(CostIncomeService::class);
     }
 
     private function nonPermanentSubject(string $name, SubjectType $type = SubjectType::BOTH): Subject

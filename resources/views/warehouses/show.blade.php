@@ -8,7 +8,7 @@
             </div>
         </div>
         <div class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
-            <a class="btn btn-sm btn-primary w-full sm:w-auto" href="{{ route('warehouses.edit', $warehouse) }}">{{ __('Edit') }}</a>
+            <a class="btn btn-sm btn-primary w-full sm:w-auto {{ activeFiscalYearIsClosed() ? 'pointer-events-none opacity-60' : '' }}" aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Edit') }}" href="{{ route('warehouses.edit', $warehouse) }}">{{ __('Edit') }}</a>
             @php
                 $deleteDisabledReason = match (true) {
                     $warehouseCount <= 1 => __('At least one warehouse must remain.'),
@@ -19,13 +19,13 @@
             @endphp
             @if ($deleteDisabledReason)
                 <span class="lg:tooltip" data-tip="{{ $deleteDisabledReason }}">
-                    <button type="button" class="btn btn-sm btn-error btn-disabled w-full cursor-not-allowed sm:w-auto" title="{{ $deleteDisabledReason }}">{{ __('Delete') }}</button>
+                    <button type="button" class="btn btn-sm btn-error btn-disabled w-full cursor-not-allowed sm:w-auto" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : $deleteDisabledReason }}">{{ __('Delete') }}</button>
                 </span>
             @else
                 <form method="POST" action="{{ route('warehouses.destroy', $warehouse) }}">
                     @csrf
                     @method('DELETE')
-                    <button type="submit" class="btn btn-sm btn-error w-full sm:w-auto">{{ __('Delete') }}</button>
+                    <button type="submit" @disabled(activeFiscalYearIsClosed()) class="btn btn-sm btn-error w-full sm:w-auto {{ activeFiscalYearIsClosed() ? 'opacity-60' : '' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Delete') }}">{{ __('Delete') }}</button>
                 </form>
             @endif
             <a href="{{ route('warehouses.index') }}" class="btn btn-sm col-span-2 w-full sm:w-auto">
@@ -63,7 +63,7 @@
                             <td>{{ formatNumber($stock->quantity) }}</td>
                             <td>{{ formatNumber($stock->average_cost) }}</td>
                             <td>
-                                <a class="btn btn-sm btn-outline" href="{{ route('warehouses.transfer', ['from_warehouse_id' => $warehouse->id, 'product_id' => $stock->product_id]) }}">{{ __('Transfer') }}</a>
+                                <a class="btn btn-sm btn-outline {{ activeFiscalYearIsClosed() ? 'pointer-events-none opacity-60' : '' }}" aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Transfer') }}" href="{{ route('warehouses.transfer', ['from_warehouse_id' => $warehouse->id, 'product_id' => $stock->product_id]) }}">{{ __('Transfer') }}</a>
                                 <a class="btn btn-sm btn-ghost" href="{{ route('products.show', $stock->product) }}">{{ __('View') }}</a>
                             </td>
                         </tr>

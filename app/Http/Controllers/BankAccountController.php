@@ -5,12 +5,13 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreBankAccountRequest;
 use App\Models;
 use App\Models\Bank;
+use App\Services\FiscalYearMutationGuard;
 use App\Services\SubjectService;
 use Illuminate\Http\Request;
 
 class BankAccountController extends Controller
 {
-    public function __construct(private readonly SubjectService $subjectService) {}
+    public function __construct(private readonly SubjectService $subjectService, private readonly FiscalYearMutationGuard $fiscalYearMutationGuard) {}
 
     public function index()
     {
@@ -28,6 +29,7 @@ class BankAccountController extends Controller
 
     public function store(StoreBankAccountRequest $request)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
         $validatedData = $request->validated();
 
         $bankAccount = Models\BankAccount::create($validatedData);
@@ -61,6 +63,7 @@ class BankAccountController extends Controller
 
     public function update(StoreBankAccountRequest $request, Models\BankAccount $bankAccount)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
         $validatedData = $request->validated();
 
         $bankAccount->update($validatedData);
@@ -72,6 +75,7 @@ class BankAccountController extends Controller
 
     public function destroy(Models\BankAccount $bankAccount)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
         $bankAccount->delete();
         $bankAccount->subject->delete();
 

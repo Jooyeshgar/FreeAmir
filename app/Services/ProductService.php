@@ -16,10 +16,12 @@ use Illuminate\Validation\ValidationException;
 
 class ProductService
 {
-    public function __construct(private readonly SubjectService $subjectService) {}
+    public function __construct(private readonly SubjectService $subjectService, private readonly FiscalYearMutationGuard $fiscalYearMutationGuard) {}
 
     public function create(array $data): Product
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         $websites = $data['websites'] ?? [];
         unset($data['websites']);
 
@@ -35,6 +37,7 @@ class ProductService
 
     public function update(Product $product, array $data): Product
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
         $websites = $data['websites'] ?? null;
         unset($data['websites']);
 
@@ -52,6 +55,7 @@ class ProductService
 
     public function delete(Product $product): void
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
         $product->productWebsites()->delete();
         $product->delete();
         $this->deleteSubjects($product);
@@ -284,8 +288,10 @@ class ProductService
             : 0;
     }
 
-    public static function recalculateQuantity(Product $product): float
+    public function recalculateQuantity(Product $product): float
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         return DB::transaction(function () use ($product): float {
             $stocks = WarehouseProductStock::query()
                 ->where('product_id', $product->id)

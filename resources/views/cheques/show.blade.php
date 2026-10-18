@@ -74,7 +74,7 @@
                         </div>
 
                         @if ($cheque->histories->whereNotNull('from_status')->isEmpty())
-                            <a class="btn btn-primary btn-sm gap-1.5" href="{{ route('cheques.edit', $cheque) }}">
+                            <a class="btn btn-primary btn-sm gap-1.5 {{ activeFiscalYearIsClosed() ? 'pointer-events-none opacity-60' : '' }}" aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Edit') }}" href="{{ route('cheques.edit', $cheque) }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -86,7 +86,8 @@
                         <form method="POST" action="{{ route('cheques.destroy', $cheque) }}">
                             @csrf
                             @method('DELETE')
-                            <button class="btn btn-error btn-outline btn-sm gap-1.5"
+                            <button @disabled(activeFiscalYearIsClosed()) class="btn btn-error btn-outline btn-sm gap-1.5 {{ activeFiscalYearIsClosed() ? 'opacity-60' : '' }}"
+                                title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Delete') }}"
                                 onclick="return confirm('{{ __('Delete this cheque and all of its accounting entries and payments?') }}')">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor">
@@ -215,7 +216,8 @@
                                     <x-text-input name="description" placeholder="{{ __('Note') }}" />
                                 </div>
                                 <div class="mt-3 flex justify-end">
-                                    <button class="btn btn-primary btn-sm"
+                                    <button @disabled(activeFiscalYearIsClosed()) class="btn btn-primary btn-sm {{ activeFiscalYearIsClosed() ? 'opacity-60' : '' }}"
+                                        title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : '' }}"
                                         onclick="return confirm('{{ __('Continue with this action?') }}')">
                                         {{ $actionLabels[$action] }}
                                     </button>

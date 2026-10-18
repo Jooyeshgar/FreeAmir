@@ -6,10 +6,12 @@ use App\Models\Service;
 
 class ServiceService
 {
-    public function __construct(private readonly SubjectService $subjectService) {}
+    public function __construct(private readonly SubjectService $subjectService, private readonly FiscalYearMutationGuard $fiscalYearMutationGuard) {}
 
     public function create(array $data): Service
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         $data['fiscal_year_id'] ??= getActiveFiscalYear();
 
         $service = Service::create($data);
@@ -21,6 +23,7 @@ class ServiceService
 
     public function update(Service $service, array $data): Service
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
         $service->fill($data);
         $service->save();
 
@@ -31,6 +34,7 @@ class ServiceService
 
     public function delete(Service $service): void
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
         $service->delete();
         $this->deleteSubjects($service);
     }

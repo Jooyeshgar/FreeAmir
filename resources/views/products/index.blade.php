@@ -12,7 +12,7 @@
         </div>
 
         <div class="flex flex-wrap items-center justify-start gap-2">
-            <a href="{{ route('products.create') }}" class="btn btn-primary btn-sm gap-1.5">
+            <a href="{{ route('products.create') }}" @class(['btn btn-primary btn-sm gap-1.5', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : '' }}">
                 {{ __('Create product') }}
             </a>
             @can('products.report')
@@ -21,7 +21,7 @@
                 </button>
             @endcan
             <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('product-csv-modal').showModal()">{{ __('Receive Report') }}</button>
-            <a href="{{ route('products.import') }}" class="btn btn-outline btn-sm">{{ __('Import CSV') }}</a>
+            <a href="{{ route('products.import') }}" @class(['btn btn-outline btn-sm', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : '' }}">{{ __('Import CSV') }}</a>
         </div>
     </div>
 
@@ -229,9 +229,9 @@
                                 </td>
                                 <td class="px-4 py-2">
                                     <div class="inline-flex gap-2">
-                                        <a href="{{ route('products.edit', $product) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                        @if ($product->invoiceItems()->exists())
-                                                <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" title="{{ __('Cannot delete product that is used in invoice items') }}">{{ __('Delete') }}</button>
+                                        <a href="{{ route('products.edit', $product) }}" @class(['btn btn-sm btn-info', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : '' }}">{{ __('Edit') }}</a>
+                                        @if (activeFiscalYearIsClosed() || $product->invoiceItems()->exists())
+                                                <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" disabled title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Cannot delete product that is used in invoice items') }}">{{ __('Delete') }}</button>
                                         @else
                                             <form action="{{ route('products.destroy', $product) }}" method="POST" class="inline-block">
                                                 @csrf

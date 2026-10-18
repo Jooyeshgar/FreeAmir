@@ -2772,8 +2772,7 @@ class FiscalYearService
                 ->where('name', __('Current Profit and Loss Summary'))->first();
 
             if (! $subject) {
-                $subjectService = new SubjectService;
-                $subject = $subjectService->createSubject([
+                $subject = app(SubjectService::class)->createSubject([
                     'name' => __('Current Profit and Loss Summary'),
                     'fiscal_year_id' => $fiscalYear->id,
                 ]);

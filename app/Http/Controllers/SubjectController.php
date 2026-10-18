@@ -4,13 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSubjectRequest;
 use App\Models\Subject;
+use App\Services\FiscalYearMutationGuard;
 use App\Services\SubjectService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
 class SubjectController extends Controller
 {
-    public function __construct(private readonly SubjectService $subjectService) {}
+    public function __construct(private readonly SubjectService $subjectService, private readonly FiscalYearMutationGuard $fiscalYearMutationGuard) {}
 
     public function index(Request $request)
     {
@@ -85,6 +86,7 @@ class SubjectController extends Controller
 
     public function destroy(Subject $subject)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
 
         try {
             $subject->delete();

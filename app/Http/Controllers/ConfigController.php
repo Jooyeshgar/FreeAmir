@@ -5,13 +5,14 @@ namespace App\Http\Controllers;
 use App\Enums\ConfigTitle;
 use App\Models\Config;
 use App\Models\Subject;
+use App\Services\FiscalYearMutationGuard;
 use App\Services\SubjectService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class ConfigController extends Controller
 {
-    public function __construct(private readonly SubjectService $subjectService) {}
+    public function __construct(private readonly SubjectService $subjectService, private readonly FiscalYearMutationGuard $fiscalYearMutationGuard) {}
 
     public function index()
     {
@@ -27,6 +28,7 @@ class ConfigController extends Controller
 
     public function edit($key)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
         $configTitle = ConfigTitle::tryFrom(strtoupper($key));
         abort_unless($configTitle, 404);
         $key = strtolower($configTitle->value);
@@ -54,6 +56,7 @@ class ConfigController extends Controller
 
     public function update(Request $request)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
         $validatedData = $request->validate([
             'code' => 'required|exists:subjects,code|numeric',
             'key' => ['required', 'string', Rule::in($this->supportedKeys())],

@@ -18,7 +18,6 @@ use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\HomeService;
-use App\Services\SubjectService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Tests\Helpers\SeederHelper;
@@ -658,7 +657,7 @@ class HomeServiceChartTest extends TestCase
 
     private function service(): HomeService
     {
-        return new HomeService(new SubjectService);
+        return app(HomeService::class);
     }
 
     private function makeProduct(): Product

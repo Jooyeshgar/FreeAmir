@@ -8,7 +8,7 @@
         </div>
 
         <div class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
-            <a href="{{ route('warehouses.transfer') }}" class="btn btn-sm btn-primary w-full sm:w-auto">{{ __('Transfer Product') }}</a>
+            <a href="{{ route('warehouses.transfer') }}" @class(['btn btn-sm btn-primary w-full sm:w-auto', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Transfer Product') }}">{{ __('Transfer Product') }}</a>
             <a href="{{ route('warehouses.index') }}" class="btn btn-sm btn-outline w-full sm:w-auto">{{ __('Warehouses') }}</a>
         </div>
     </div>

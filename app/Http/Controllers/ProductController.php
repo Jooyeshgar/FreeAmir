@@ -134,7 +134,7 @@ class ProductController extends Controller
 
     public function recalculateQuantity(Product $product): RedirectResponse
     {
-        $quantity = ProductService::recalculateQuantity($product);
+        $quantity = $this->productService->recalculateQuantity($product);
 
         return redirect()->route('products.show', $product)->with('success', __('Product stock recalculated successfully: :quantity.', [
             'quantity' => formatNumber($quantity),

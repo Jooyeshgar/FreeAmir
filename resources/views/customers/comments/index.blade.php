@@ -4,7 +4,7 @@
         <div class="card-body">
             <div class="card-actions flex justify-between gap-4 ">
                 <a href="{{ route('comments.create', $customer->id) }}"
-                    class="btn btn-primary ">{{ __('Add Comment') }}</a>
+                    @class(['btn btn-primary', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : '' }}">{{ __('Add Comment') }}</a>
             </div>
 
             <div class="mt-4 overflow-x-auto">
@@ -43,11 +43,11 @@
                                 </td>
                                 <td class="px-4 py-2">
                                     <div class="inline-flex gap-2">
-                                        <a href="{{ route('comments.edit', [$comment->customer_id, $comment]) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                        <a href="{{ route('comments.edit', [$comment->customer_id, $comment]) }}" @class(['btn btn-sm btn-info', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Edit') }}">{{ __('Edit') }}</a>
                                         <form action="{{ route('comments.destroy', [$comment->customer_id, $comment]) }}" method="POST">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                            <button type="submit" @disabled(activeFiscalYearIsClosed()) class="btn btn-sm btn-error {{ activeFiscalYearIsClosed() ? 'opacity-60' : '' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Delete') }}">{{ __('Delete') }}</button>
                                         </form>
                                     </div>
                                 </td>

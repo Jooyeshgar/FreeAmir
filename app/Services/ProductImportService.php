@@ -114,6 +114,8 @@ class ProductImportService
      */
     public function import(UploadedFile|string $file, int $fiscalYearId): array
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $warehouses = Warehouse::where('fiscal_year_id', $fiscalYearId)->orderBy('name')->get(['id', 'name']);
         $rows = $this->parse($file, $warehouses);
 
