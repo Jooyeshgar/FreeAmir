@@ -9,7 +9,6 @@ use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\Bank;
 use App\Models\BankAccount;
 use App\Models\Chequebook;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
@@ -343,9 +342,7 @@ class InvoiceController extends Controller
         $ancillaryCostProductIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->unique()->values()->all();
         $canCreateAncillaryCost = $invoice->invoice_type === InvoiceType::BUY && ! $isServiceBuy && empty(InvoiceService::notAllowedInvoiceForAncillaryCosts($invoice, $ancillaryCostProductIds));
 
-        $fiscalYears = Company::whereHas('users', function ($q) {
-            $q->where('users.id', auth()->id());
-        })->where('id', '!=', getActiveCompany())->get();
+        $fiscalYears = auth()->user()->fiscalYears()->with('company')->where('fiscal_years.id', '!=', getActiveFiscalYear())->orderByDesc('year')->get();
 
         return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects', 'paidAmount', 'remainingAmount', 'chequeDirection', 'chequeBanks', 'chequeBankAccounts', 'chequebooks', 'fiscalYears', 'canCreateAncillaryCost'));
     }
@@ -835,7 +832,7 @@ class InvoiceController extends Controller
             abort(403);
         }
 
-        if ((int) $request->target_fiscal_year_id === getActiveCompany()) {
+        if ((int) $request->target_fiscal_year_id === getActiveFiscalYear()) {
             return redirect()->route('invoices.show', $invoice)->with('error', __('Cannot transfer to the same fiscal year.'));
         }
 

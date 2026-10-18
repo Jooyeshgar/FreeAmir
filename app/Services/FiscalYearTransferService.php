@@ -116,10 +116,10 @@ class FiscalYearTransferService
         });
     }
 
-    private static function _withActiveFiscalYear(int $companyId, callable $callback): mixed
+    private static function _withActiveFiscalYear(int $fiscalYearId, callable $callback): mixed
     {
         $previous = config('active-fiscal-year-id');
-        config(['active-fiscal-year-id' => $companyId]);
+        config(['active-fiscal-year-id' => $fiscalYearId]);
 
         try {
             return $callback();
