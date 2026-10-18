@@ -118,7 +118,7 @@
 
                     <div class="col-span-2 md:col-span-1" x-data="{ chequeFee: @js((string) old('bank_service_fee', 0)) }">
                         <x-text-input title="{{ __('Bank service fee') }}" input_name="bank_service_fee" id_input="cheque_registration_fee" input_class="locale-number" :input_value="old('bank_service_fee', 0)"
-                            inputmode="decimal" x-model="chequeFee" @input="chequeFee = $store.utils.cleanupNumber($event.target.value)" label_text_class="text-sm text-gray-500" 
+                            inputmode="decimal" x-model="chequeFee" @input="chequeFee = $store.utils.cleanupNumber($event.target.value)" label_text_class="text-sm text-gray-500"
                             x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(chequeFee))" />
                     </div>
 
