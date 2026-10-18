@@ -36,13 +36,15 @@ FreeAmir/
 #### `Console/Commands/`
 دستورات سفارشی Artisan برای عملیات خاص:
 
-```php
-// Example: دستور مدیریت سال مالی
-php artisan fiscal-year:export --year=1403
-php artisan fiscal-year:import --file=data.json --year=1404
+```bash
+# نمونه: دستورهای مدیریت سال مالی
+php artisan fiscal-year:export 1
+php artisan fiscal-year:import data.json 1404 --name="شرکت نمونه"
 ```
 
-#### `/Enums`
+در نمونهٔ خروجی‌گیری، `1` شناسهٔ سال مالی است؛ نمونهٔ واردسازی شرکت و سال مالی جدید می‌سازد. پس از واردسازی، دسترسی کاربران به سال مالی جدید را از بخش مدیریت کاربران تخصیص دهید.
+
+#### `Enums/`
 انواع داده‌های ثابت پروژه:
 
 ```php
@@ -85,17 +87,16 @@ Http/
 - مدل `Document.php` – مدیریت اسناد حسابداری و ارتباط آن‌ها با تراکنش‌ها.
 - مدل `Transaction.php` – ثبت تراکنش‌های مرتبط با اسناد و سناریوهای فروش.
 - مدل `Subject.php` – ساختار درختی سرفصل‌ها و روابط والد/فرزند آن‌ها.
-- مدل `Company.php` – اطلاعات شرکت و نگه‌داشتن شناسه شرکت فعال.
-- مدل `User.php` – کاربران سیستم و ارتباط آن‌ها با شرکت‌ها.
+- مدل `Company.php` – اطلاعات هویت کسب‌وکار و رابطه با سال‌های مالی.
+- مدل `FiscalYear.php` – سال مالی یک شرکت، وضعیت بستن دوره و سندهای اختتامیه/افتتاحیه.
+- مدل `User.php` – کاربران سیستم و رابطه دسترسی به سال‌های مالی.
 - مدل‌های `Customer.php` و `CustomerGroup.php` – مدیریت مشتریان و گروه‌بندی آن‌ها.
 - مدل‌های `Product.php` و `ProductGroup.php` – کالاها و گروه‌های کالایی.
 - مدل‌های `Invoice.php` و `InvoiceItem.php` – فاکتورهای فروش و اقلامشان.
 - مدل‌های `Bank.php`، `BankAccount.php`، `Cheque.php` و `ChequeHistory.php` – مدیریت اطلاعات بانکی و چک‌ها.
 - مدل‌های `Config.php` و `Payment.php` – پیکربندی سیستم و پرداخت‌ها.
 
-زیرپوشه `Scopes/` شامل `FiscalYearScope.php` است که بر روی مدل‌های مرتبط اعمال می‌شود تا داده‌ها به شرکت/سال فعال محدود شوند.
-
-> نکته: مدلی با نام `FiscalYear.php` در پروژه وجود ندارد؛ مدیریت سال/شرکت فعال از طریق مدل `Company` و همین اسکوپ انجام می‌شود.
+زیرپوشه `Scopes/` شامل `FiscalYearScope.php` است که مدل‌های وابسته را به شناسه سال مالی فعال محدود می‌کند. شناسه فعال از `getActiveFiscalYear()` خوانده می‌شود؛ این helper از پیکربندی درخواست یا کوکی `active-fiscal-year-id` استفاده می‌کند. تخصیص دسترسی کاربران به سال‌های مالی از رابطه چندبه‌چند `fiscal_year_user` انجام می‌شود. شرکت و سال مالی موجودیت‌های جدا هستند: هر `FiscalYear` به یک `Company` تعلق دارد و شرکت می‌تواند چند سال مالی داشته باشد.
 
 #### `Services/`
 منطق کسب‌وکار پیچیده:
@@ -149,7 +150,7 @@ Schema::create('documents', function (Blueprint $table) {
     $table->date('approved_at')->nullable();
     $table->foreignId('creator_id')->nullable()->constrained('users')->nullOnDelete();
     $table->foreignId('approver_id')->nullable()->constrained('users')->nullOnDelete();
-    $table->foreignId('company_id')->nullable()->constrained()->nullOnDelete();
+    $table->foreignId('fiscal_year_id')->nullable()->constrained('fiscal_years')->nullOnDelete();
     $table->timestamps();
 });
 ```
@@ -468,7 +469,7 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('api.companies.index');
 });
 
-Route::prefix('companies/{company}')->middleware(['auth:sanctum', 'api-company'])->group(function () {
+Route::prefix('companies/{fiscal_year}')->middleware(['auth:sanctum', 'api-fiscal-year'])->group(function () {
     Route::post('attendance/logs', [AttendanceLogController::class, 'store'])
         ->middleware('check-permission:attendance.attendance-logs.store')
         ->name('api.attendance-logs.store');
@@ -495,7 +496,7 @@ Route::prefix('companies/{company}')->middleware(['auth:sanctum', 'api-company']
 });
 ```
 
-در حال حاضر فایل تنها شامل نمونه‌ی پیش‌فرض لاراول است و می‌توانید مسیرهای API جدید را در همین گروه اضافه کنید.
+مسیرهای API وابسته به سال مالی زیر پیشوند `companies/{fiscal_year}` و میان‌افزارهای `auth:sanctum` و `api-fiscal-year` تعریف می‌شوند. میان‌افزار `SetApiFiscalYear` شناسه سال مالی را اعتبارسنجی می‌کند، دسترسی کاربر را از رابطه `fiscalYears()` بررسی می‌کند و شناسه همان سال را برای درخواست فعال می‌سازد.
 
 ## 🧪 تست‌ها (`tests/`)
 
@@ -507,7 +508,7 @@ tests/
 └── Unit/ExampleTest.php      # تست ساده صحت true
 ```
 
-برای گسترش پوشش تست‌ها می‌توانید فایل‌های جدید با دستور `php artisan make:test` بسازید یا همین نمونه‌ها را ویرایش کنید. راهنمای تست در `docs/developer/testing-guide.md` توضیحات بیشتری ارائه می‌دهد.
+برای گسترش پوشش تست‌ها می‌توانید فایل‌های جدید با دستور `php artisan make:test` بسازید یا همین نمونه‌ها را ویرایش کنید. [راهنمای تست](testing-guide.md) توضیحات بیشتری ارائه می‌دهد.
 
 ## 🔧 ابزارهای توسعه
 

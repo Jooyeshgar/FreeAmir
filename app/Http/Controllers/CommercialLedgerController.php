@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Enums\CommercialLedgerType;
 use App\Models\CommercialLedgerExport;
-use App\Models\Company;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Services\CommercialLedgerService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,8 +22,8 @@ class CommercialLedgerController extends Controller
 
     public function index(): View
     {
-        $company = Company::query()->findOrFail(getActiveCompany());
-        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+        $fiscalYear = FiscalYear::query()->findOrFail(getActiveFiscalYear());
+        [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
 
         $unapprovedDocumentsCount = Document::query()
             ->whereNull('approved_at')
@@ -65,8 +65,8 @@ class CommercialLedgerController extends Controller
             }
         };
 
-        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
-        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
         $fiscalStartDate = $fiscalStart->toDateString();
         $fiscalEndDate = $fiscalEnd->toDateString();
 

@@ -6,8 +6,8 @@ use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\MonthlyAttendance;
 use App\Models\PersonnelRequest;
 use App\Models\User;
@@ -26,7 +26,7 @@ class MonthlyAttendanceTest extends TestCase
 
     protected User $user;
 
-    protected int $companyId;
+    protected int $fiscalYearId;
 
     protected Employee $employee;
 
@@ -34,25 +34,25 @@ class MonthlyAttendanceTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create(['fiscal_year' => 1402]);
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create(['year' => 1402]);
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'attendance.monthly-attendances.*'])
         );
 
         $this->actingAs($this->user);
-        request()->cookies->set('active-company-id', $this->companyId);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        request()->cookies->set('active-fiscal-year-id', $this->fiscalYearId);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
 
-        $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
-        $workShift = WorkShift::factory()->create(['company_id' => $this->companyId]);
+        $workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $workShift = WorkShift::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
 
         $this->employee = Employee::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'work_site_id' => $workSite->id,
             'work_shift_id' => $workShift->id,
         ]);
@@ -61,7 +61,7 @@ class MonthlyAttendanceTest extends TestCase
     private function makeMonthlyAttendance(array $overrides = []): MonthlyAttendance
     {
         return MonthlyAttendance::factory()->create(array_merge([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
         ], $overrides));
     }
@@ -115,9 +115,9 @@ class MonthlyAttendanceTest extends TestCase
 
     public function test_index_filters_by_employee(): void
     {
-        $workSite2 = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $workSite2 = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $other = Employee::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'work_site_id' => $workSite2->id,
         ]);
 
@@ -132,14 +132,14 @@ class MonthlyAttendanceTest extends TestCase
 
     public function test_index_does_not_show_other_company_records(): void
     {
-        $otherCompany = Company::factory()->create();
-        $otherWorkSite = WorkSite::factory()->create(['company_id' => $otherCompany->id]);
+        $otherFiscalYear = FiscalYear::factory()->create(['year' => 1403]);
+        $otherWorkSite = WorkSite::factory()->create(['fiscal_year_id' => $otherFiscalYear->id]);
         $otherEmployee = Employee::factory()->create([
-            'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherFiscalYear->id,
             'work_site_id' => $otherWorkSite->id,
         ]);
         MonthlyAttendance::factory()->create([
-            'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherFiscalYear->id,
             'employee_id' => $otherEmployee->id,
             'year' => 1403,
             'month' => 7,
@@ -173,10 +173,10 @@ class MonthlyAttendanceTest extends TestCase
 
     public function test_bulk_store_creates_attendance_for_each_selected_employee(): void
     {
-        $workSite2 = WorkSite::factory()->create(['company_id' => $this->companyId]);
-        $workShift2 = WorkShift::factory()->create(['company_id' => $this->companyId]);
+        $workSite2 = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $workShift2 = WorkShift::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $employee2 = Employee::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'work_site_id' => $workSite2->id,
             'work_shift_id' => $workShift2->id,
         ]);
@@ -190,21 +190,21 @@ class MonthlyAttendanceTest extends TestCase
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('monthly_attendances', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
         ]);
         $this->assertDatabaseHas('monthly_attendances', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $employee2->id,
         ]);
     }
 
     public function test_bulk_store_only_creates_for_selected_employees(): void
     {
-        $workSite2 = WorkSite::factory()->create(['company_id' => $this->companyId]);
-        $workShift2 = WorkShift::factory()->create(['company_id' => $this->companyId]);
+        $workSite2 = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $workShift2 = WorkShift::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $unselectedEmployee = Employee::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'work_site_id' => $workSite2->id,
             'work_shift_id' => $workShift2->id,
         ]);
@@ -215,11 +215,11 @@ class MonthlyAttendanceTest extends TestCase
         );
 
         $this->assertDatabaseHas('monthly_attendances', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
         ]);
         $this->assertDatabaseMissing('monthly_attendances', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $unselectedEmployee->id,
         ]);
     }
@@ -285,7 +285,7 @@ class MonthlyAttendanceTest extends TestCase
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('monthly_attendances', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
         ]);
     }
@@ -318,7 +318,7 @@ class MonthlyAttendanceTest extends TestCase
                 continue;
             }
             AttendanceLog::factory()->create([
-                'company_id' => $this->companyId,
+                'fiscal_year_id' => $this->fiscalYearId,
                 'employee_id' => $this->employee->id,
                 'log_date' => $day->toDateString(),
                 'entry_time' => '08:00:00',
@@ -329,7 +329,7 @@ class MonthlyAttendanceTest extends TestCase
 
         $this->post(route('attendance.monthly-attendances.store'), $this->validCreatePayload());
 
-        $record = MonthlyAttendance::where('company_id', $this->companyId)
+        $record = MonthlyAttendance::where('fiscal_year_id', $this->fiscalYearId)
             ->where('employee_id', $this->employee->id)
             ->first();
 
@@ -361,7 +361,7 @@ class MonthlyAttendanceTest extends TestCase
         ]);
 
         AttendanceLog::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'monthly_attendance_id' => $attendance->id,
             'log_date' => '2025-01-06',
@@ -460,7 +460,7 @@ class MonthlyAttendanceTest extends TestCase
 
         // Add a log for the first day of the period
         AttendanceLog::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'log_date' => '2024-10-22', // 1403/08/01
             'entry_time' => '08:00:00',
@@ -489,7 +489,7 @@ class MonthlyAttendanceTest extends TestCase
         );
 
         $workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'start_time' => '08:00:00',
             'end_time' => '17:00:00',
             'break' => 60,
@@ -507,7 +507,7 @@ class MonthlyAttendanceTest extends TestCase
         ]);
 
         $firstLog = AttendanceLog::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'monthly_attendance_id' => $attendance->id,
             'log_date' => '2024-10-22',
@@ -521,7 +521,7 @@ class MonthlyAttendanceTest extends TestCase
         ]);
 
         $secondLog = AttendanceLog::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'monthly_attendance_id' => $attendance->id,
             'log_date' => '2024-10-23',
@@ -724,7 +724,7 @@ class MonthlyAttendanceTest extends TestCase
         $workShift->update(['start_time' => '08:00:00', 'end_time' => '16:00:00', 'float' => 0]);
 
         $request = PersonnelRequest::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'request_type' => PersonnelRequestType::LEAVE_WITHOUT_PAY,
             'start_date' => '2025-01-06 08:00:00',
@@ -753,7 +753,7 @@ class MonthlyAttendanceTest extends TestCase
         $workShift->update(['start_time' => '08:00:00', 'end_time' => '16:00:00', 'float' => 0]);
 
         AttendanceLog::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'log_date' => '2025-01-06',
             'entry_time' => '10:00:00',
@@ -761,7 +761,7 @@ class MonthlyAttendanceTest extends TestCase
         ]);
 
         $request = PersonnelRequest::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'request_type' => PersonnelRequestType::LEAVE_WITHOUT_PAY_HOURLY,
             'start_date' => '2025-01-06 08:00:00',

@@ -3,11 +3,7 @@
 @php
     $user = auth()->user();
     $isRtl = app()->getLocale() === 'fa';
-    $hasCurrentWorkspace = $user
-        ->companies()
-        ->whereKey(getActiveCompany())
-        ->where('fiscal_year', toEnglish(jdate('Y')))
-        ->exists();
+    $hasWorkspace = $user->fiscalYears()->exists();
     $navigation = [
         [
             __('Dashboard'),
@@ -20,6 +16,12 @@
             route('companies.index'),
             request()->routeIs('companies.*'),
             'M3 21h18M6 21V7l6-4 6 4v14M9 10h1m4 0h1M9 14h1m4 0h1',
+        ],
+        [
+            __('Fiscal years'),
+            route('fiscal-years.index'),
+            request()->routeIs('fiscal-years.*'),
+            'M3 5h18v16H3V5Zm4-3v6m10-6v6M3 11h18',
         ],
         [
             __('Users'),
@@ -170,7 +172,8 @@
         </div>
         <div class="drawer-side z-50">
             <label for="management-drawer" aria-label="{{ __('Close') }}" class="drawer-overlay"></label>
-            <aside id="management-sidebar" class="relative flex min-h-full w-[min(18rem,calc(100vw-1rem))] flex-col overflow-y-auto bg-[#15263b] text-slate-300 shadow-2xl md:w-56 lg:w-72" aria-label="{{ __('Super-Admin navigation') }}">
+            <aside id="management-sidebar" class="relative flex min-h-full w-[min(18rem,calc(100vw-1rem))] flex-col overflow-y-auto bg-[#15263b] text-slate-300 shadow-2xl md:w-56 lg:w-72"
+                aria-label="{{ __('Super-Admin navigation') }}">
                 <div class="grid-paper pointer-events-none absolute inset-0 opacity-70"></div>
                 <div class="relative flex h-20 items-center gap-3 border-b border-white/10 mr-1">
                     <a href="{{ route('management.dashboard') }}" class="flex min-w-0 flex-1 items-center gap-3 mt-2">
@@ -208,7 +211,7 @@
                         <span class="text-slate-400">{{ __('Service health') }}</span>
                         <span class="flex items-center gap-1.5 text-emerald-300"><i class="h-2 w-2 rounded-full bg-emerald-400"></i>{{ __('Stable') }}</span>
                     </div>
-                    <a href="{{ $hasCurrentWorkspace ? route('home') : route('management.dashboard') }}" class="flex items-center gap-3 border-t border-white/10 pt-3 transition">
+                    <a href="{{ $hasWorkspace ? route('home') : route('management.dashboard') }}" class="flex items-center gap-3 border-t border-white/10 pt-3 transition" data-testid="go-to-workspace">
                         <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/10 text-sm font-bold text-white">{{ mb_strtoupper(mb_substr($user->name, 0, 1)) }}</span>
                         <span class="min-w-0 flex-1"><strong class="block truncate text-xs text-white">{{ $user->name }}</strong><span class="mt-1 block text-[10px] text-slate-500">{{ __('Go to workspace') }}</span></span>
                         <svg class="h-4 w-4 text-slate-500 rtl:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">

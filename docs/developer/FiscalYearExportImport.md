@@ -2,7 +2,7 @@
 
 # دستور خروجی گرفتن سال مالی (`fiscal-year:export`)
 
-این دستور Artisan داده‌های مرتبط با یک سال مالی (که به‌صورت یک رکورد `Company` نمایش داده می‌شود) را به یک فایل JSON منتقل می‌کند. این فایل می‌تواند برای پشتیبان‌گیری، مهاجرت داده‌ها یا به‌عنوان ورودی برای دستور `fiscal-year:import` استفاده شود.
+این دستور Artisan داده‌های یک رکورد `FiscalYear` را به فایل JSON صادر می‌کند. هر سال مالی به یک `Company` تعلق دارد و داده‌های عملیاتی با شناسه سال مالی جدا می‌شوند. این فایل می‌تواند برای پشتیبان‌گیری یا ورودی دستور `fiscal-year:import` استفاده شود.
 
 ## هدف
 
@@ -18,7 +18,7 @@ php artisan fiscal-year:export <source_id> [options]
 
 | آرگومان     | توضیحات                                   | الزامی |
 | ----------- | ----------------------------------------- | ------ |
-| `source_id` | شناسه عددی رکورد Company که باید منتقل شود | بله    |
+| `source_id` | شناسه عددی رکورد `FiscalYear` که باید صادر شود | بله    |
 
 
 ## گزینه‌ها
@@ -74,9 +74,9 @@ sail artisan fiscal-year:export 2 --output=archive/fiscal_year_2_full.json
 * JSON شامل کلیدهایی برای هر بخش صادر شده است (مثل `"banks"`، `"customers"`).
 * همچنین یک کلید `"meta"` شامل اطلاعات زیر وجود دارد:
 
-  * `source_id`
-  * `company_name`
-  * `timestamp`
+  * `source_fiscal_year_id`
+  * `source_fiscal_year_name`
+  * `exported_at`
   * `sections_exported`
 
 
@@ -89,7 +89,7 @@ sail artisan fiscal-year:export 2 --output=archive/fiscal_year_2_full.json
 
 # دستور وارد کردن سال مالی (`fiscal-year:import`)
 
-این دستور Artisan داده‌ها را از یک فایل JSON (که معمولاً توسط `fiscal-year:export` ساخته شده است) به یک سال مالی جدید (رکورد Company جدید) وارد می‌کند.
+این دستور Artisan داده‌ها را از یک فایل JSON به یک سال مالی جدید وارد می‌کند. مقصد باید به یک شرکت متصل باشد؛ شرکت و سال مالی موجودیت‌های جداگانه‌اند.
 
 ## هدف
 
@@ -98,7 +98,7 @@ sail artisan fiscal-year:export 2 --output=archive/fiscal_year_2_full.json
 ## نحوه استفاده
 
 ```bash
-php artisan fiscal-year:import <file> <fiscal_year> --name=<new_name> [options]
+php artisan fiscal-year:import <file> <fiscal_year> --name=<new_company_name> [options]
 ```
 
 ## آرگومان‌ها
@@ -106,34 +106,35 @@ php artisan fiscal-year:import <file> <fiscal_year> --name=<new_name> [options]
 | آرگومان       | توضیحات                                    | الزامی |
 | ------------- | ------------------------------------------ | ------ |
 | `file`        | مسیر فایل JSON ورودی نسبت به `storage/app` | بله    |
-| `fiscal_year` | شناسه سال مالی (عدد مثبت)                  | بله    |
+| `fiscal_year` | شماره سال مالی مقصد (عدد مثبت)              | بله    |
 
 
 ## گزینه‌ها
 
 | گزینه     | توضیحات                                                       | الزامی | مقدار پیش‌فرض |
 | --------- | ------------------------------------------------------------- | ------ | ------------- |
-| `--name`  | نام سال مالی جدید که ایجاد خواهد شد                           | بله    | —             |
+| `--name`  | نام شرکت جدیدی که برای داده‌های واردشده ساخته می‌شود | بله | — |
 | `--force` | رد کردن پیام تأیید قبل از شروع عملیات (با احتیاط استفاده شود) | خیر    | `false`       |
 
-> *توجه:* بسته به ساختار مدل `Company` ممکن است فیلدهای دیگری نیز در `FiscalYearService::importData` لازم باشد.
 
+پس از اجرا، دسترسی کاربران به سال مالی را از بخش مدیریت کاربران تخصیص دهید. واردسازی از رابط وب به کاربر واردشده دسترسی می‌دهد.
 
 ## مثال‌ها
 
-1. **وارد کردن داده از فایل backup به سال مالی جدید 2024:**
+1. **وارد کردن داده از فایل backup به سال مالی جدید ۱۴۰۳:**
 
 ```bash
-sail artisan fiscal-year:import exports/fy1_backup.json 2024 --name="سال مالی ۱۴۰۳"
+sail artisan fiscal-year:import exports/fy1_backup.json 1403 --name="شرکت نمونه"
 ```
 
 > قبل از اجرا تأیید گرفته می‌شود.
+> پس از واردسازی با فرمان CLI، دسترسی کاربران به سال مالی جدید را از بخش مدیریت کاربران تخصیص دهید.
 
 
 2. **وارد کردن داده بدون تأیید (اجباری):**
 
 ```bash
-sail artisan fiscal-year:import archive/old_data.json 2023 --name="بازیابی شده" --force
+sail artisan fiscal-year:import archive/old_data.json 1403 --name="شرکت بازیابی‌شده" --force
 ```
 
 
@@ -150,11 +151,10 @@ sail artisan fiscal-year:import archive/old_data.json 2023 --name="بازیاب�
 
 3. **اجرای عملیات واردسازی**
    * خواندن و decode کردن JSON
-   * آماده‌سازی داده‌ها برای ایجاد رکورد جدید `Company`
-   * فراخوانی `FiscalYearService::importData` برای ایجاد داده‌ها
+   * شرکت جدید و رکورد سال مالی جداگانه ساخته می‌شوند و داده‌های انتخاب‌شده به سال مالی وارد می‌شوند.
 
 4. **خروجی**
-   * نمایش پیام موفقیت همراه با ID و نام سال مالی جدید
+   * نمایش پیام موفقیت همراه با شناسه سال مالی جدید
    * در صورت خطا، نمایش پیام مناسب
 
 ## مدیریت خطا

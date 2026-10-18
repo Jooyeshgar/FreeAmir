@@ -4,10 +4,10 @@ namespace Tests\Feature;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -32,7 +32,7 @@ class WarehouseDashboardTest extends TestCase
 
     private Customer $customer;
 
-    private int $companyId;
+    private int $fiscalYearId;
 
     protected function setUp(): void
     {
@@ -40,26 +40,26 @@ class WarehouseDashboardTest extends TestCase
 
         Carbon::setTestNow(Carbon::parse('2026-09-03 12:00:00', config('app.timezone')));
 
-        $company = Company::factory()->create(['fiscal_year' => 1405]);
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create(['year' => 1405]);
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
 
-        $this->withCookies(['active-company-id' => (string) $this->companyId]);
-        $_COOKIE['active-company-id'] = (string) $this->companyId;
-        config(['active-company-id' => $this->companyId]);
-        $this->importSubjects($this->companyId);
-        $this->importConfigs($this->companyId);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->fiscalYearId]);
+        $_COOKIE['active-fiscal-year-id'] = (string) $this->fiscalYearId;
+        config(['active-fiscal-year-id' => $this->fiscalYearId]);
+        $this->importSubjects($this->fiscalYearId);
+        $this->importConfigs($this->fiscalYearId);
 
-        $customerGroup = CustomerGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
-        $this->customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create(['company_id' => $this->companyId]);
+        $customerGroup = CustomerGroup::factory()->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $this->customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
     }
 
     protected function tearDown(): void
     {
         Carbon::setTestNow();
-        unset($_COOKIE['active-company-id']);
+        unset($_COOKIE['active-fiscal-year-id']);
 
         parent::tearDown();
     }
@@ -88,10 +88,10 @@ class WarehouseDashboardTest extends TestCase
 
     public function test_service_computes_inventory_kpis_and_top_sellers(): void
     {
-        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId, 'name' => 'Widgets']);
+        $group = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Widgets']);
 
         $bestSeller = Product::factory()->withGroup($group)->withSubjects()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'code' => 'P-001',
             'name' => 'Best Seller',
             'quantity' => 5,
@@ -101,7 +101,7 @@ class WarehouseDashboardTest extends TestCase
         ]);
 
         $stagnant = Product::factory()->withGroup($group)->withSubjects()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'code' => 'P-002',
             'name' => 'Stagnant Item',
             'quantity' => 20,
@@ -140,18 +140,18 @@ class WarehouseDashboardTest extends TestCase
 
     public function test_category_filter_restricts_dashboard_scope(): void
     {
-        $widgets = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId, 'name' => 'Widgets']);
-        $gadgets = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId, 'name' => 'Gadgets']);
+        $widgets = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Widgets']);
+        $gadgets = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Gadgets']);
 
         $widgetsProduct = Product::factory()->withGroup($widgets)->withSubjects()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'code' => 'W-1',
             'quantity' => 5,
             'quantity_warning' => 10,
             'average_cost' => 100,
         ]);
         Product::factory()->withGroup($gadgets)->withSubjects()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'code' => 'G-1',
             'quantity' => 20,
             'quantity_warning' => 5,
@@ -195,9 +195,9 @@ class WarehouseDashboardTest extends TestCase
 
     public function test_inventory_value_uses_inventory_account_balance(): void
     {
-        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId]);
+        $group = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $product = Product::factory()->withGroup($group)->withSubjects()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'quantity' => 20,
             'average_cost' => 50,
         ]);
@@ -212,14 +212,14 @@ class WarehouseDashboardTest extends TestCase
 
     public function test_dashboard_uses_directly_imported_stock_when_invoice_history_is_absent(): void
     {
-        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId]);
+        $group = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId]);
         Warehouse::create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Imported stock warehouse',
         ]);
         $csv = "code,name,group_name,quantity,quantity_warning,Imported stock warehouse\n"."IMP-1,Imported product,{$group->name},7,10,7\n";
 
-        app(ProductImportService::class)->import(UploadedFile::fake()->createWithContent('products.csv', $csv), $this->companyId);
+        app(ProductImportService::class)->import(UploadedFile::fake()->createWithContent('products.csv', $csv), $this->fiscalYearId);
 
         $data = app(WarehouseDashboardService::class)->dashboard();
 
@@ -271,13 +271,51 @@ class WarehouseDashboardTest extends TestCase
         $this->assertSame(7.0, $data['belowReorderItems']->first()['quantity']);
     }
 
+    public function test_dashboard_excludes_other_years_and_companies_even_with_shared_product_references(): void
+    {
+        $year = FiscalYear::findOrFail($this->fiscalYearId);
+        $otherYear = FiscalYear::create(['company_id' => $year->company_id, 'year' => 1404]);
+        $otherCompanyYear = FiscalYear::factory()->create(['year' => 1405]);
+        $group = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $year->id]);
+        $product = Product::factory()->withGroup($group)->withSubjects()->create(['fiscal_year_id' => $year->id]);
+        $date = Carbon::now()->subDays(5)->toDateString();
+        $this->stockMovement($product, InvoiceType::BEGINNING_INVENTORY, 10, 1, $date);
+        $this->inventoryBalance($product, -1000, $date);
+
+        foreach ([$otherYear, $otherCompanyYear] as $foreignYear) {
+            $invoice = $this->invoice(InvoiceType::SELL, InvoiceStatus::APPROVED, 2, $date, 900);
+            $invoice->update(['fiscal_year_id' => $foreignYear->id]);
+            InvoiceItem::factory()->create([
+                'invoice_id' => $invoice->id,
+                'itemable_type' => Product::class,
+                'itemable_id' => $product->id,
+                'quantity' => 9,
+                'cog_after' => 100,
+            ]);
+            $document = Document::factory()->create(['fiscal_year_id' => $foreignYear->id, 'date' => $date]);
+            Transaction::create([
+                'document_id' => $document->id,
+                'subject_id' => $product->inventory_subject_id,
+                'user_id' => $this->user->id,
+                'value' => -9000,
+            ]);
+        }
+
+        $data = app(WarehouseDashboardService::class)->dashboard(['period' => 'month']);
+
+        $this->assertSame(10.0, $data['summary']['total_stock_quantity']);
+        $this->assertSame(1000.0, $data['summary']['total_inventory_value']);
+        $this->assertTrue($data['topSellers']->isEmpty());
+        $this->assertSame(0.0, $data['categoryBreakdown']->first()['units_out']);
+    }
+
     public function test_holding_days_include_both_period_endpoints_for_every_preset(): void
     {
-        $company = Company::withoutGlobalScopes()->findOrFail($this->companyId);
-        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
-        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId]);
+        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail($this->fiscalYearId);
+        [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
+        $group = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $product = Product::factory()->withGroup($group)->withSubjects()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'quantity' => 1,
             'average_cost' => 100,
         ]);
@@ -301,16 +339,16 @@ class WarehouseDashboardTest extends TestCase
 
     public function test_status_filter_returns_below_reorder_items(): void
     {
-        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId, 'name' => 'Widgets']);
+        $group = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Widgets']);
         $lowStock = Product::factory()->withGroup($group)->withSubjects()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'code' => 'P-LOW',
             'quantity' => 3,
             'quantity_warning' => 10,
             'average_cost' => 100,
         ]);
         Product::factory()->withGroup($group)->withSubjects()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'code' => 'P-OK',
             'quantity' => 100,
             'quantity_warning' => 10,
@@ -328,15 +366,15 @@ class WarehouseDashboardTest extends TestCase
 
     public function test_snapshot_metrics_use_the_selected_period_end(): void
     {
-        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId, 'name' => 'Widgets']);
+        $group = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Widgets']);
         $active = Product::factory()->withGroup($group)->withSubjects()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'code' => 'ACTIVE',
             'quantity' => 999,
             'quantity_warning' => 7,
         ]);
         $stagnant = Product::factory()->withGroup($group)->withSubjects()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'code' => 'STAGNANT',
             'quantity' => 999,
             'quantity_warning' => 2,
@@ -372,10 +410,10 @@ class WarehouseDashboardTest extends TestCase
 
     public function test_report_min_quantity_filter_is_inclusive(): void
     {
-        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId, 'name' => 'Widgets']);
+        $group = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Widgets']);
 
         $atThreshold = Product::factory()->withGroup($group)->withSubjects()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'code' => 'R-EQ',
             'name' => 'At Threshold',
             'quantity' => 10,
@@ -383,7 +421,7 @@ class WarehouseDashboardTest extends TestCase
             'selling_price' => 150,
         ]);
         Product::factory()->withGroup($group)->withSubjects()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'code' => 'R-LT',
             'name' => 'Below Threshold',
             'quantity' => 9,
@@ -399,10 +437,10 @@ class WarehouseDashboardTest extends TestCase
 
     public function test_report_need_order_filter_returns_reorder_products(): void
     {
-        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId, 'name' => 'Widgets']);
+        $group = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Widgets']);
 
         $needsOrder = Product::factory()->withGroup($group)->withSubjects()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'code' => 'R-LOW',
             'name' => 'Needs Order',
             'quantity' => 3,
@@ -412,7 +450,7 @@ class WarehouseDashboardTest extends TestCase
         ]);
 
         Product::factory()->withGroup($group)->withSubjects()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'code' => 'R-OK',
             'name' => 'Healthy Stock',
             'quantity' => 20,
@@ -422,7 +460,7 @@ class WarehouseDashboardTest extends TestCase
         ]);
 
         Product::factory()->withGroup($group)->withSubjects()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'code' => 'R-NO-WARNING',
             'name' => 'No Warning',
             'quantity' => 0,
@@ -441,13 +479,13 @@ class WarehouseDashboardTest extends TestCase
 
     public function test_report_clamps_movements_to_the_end_of_a_closed_fiscal_year(): void
     {
-        $company = Company::withoutGlobalScopes()->findOrFail($this->companyId);
-        $company->update(['fiscal_year' => 1404]);
-        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail($this->fiscalYearId);
+        $fiscalYear->update(['year' => 1404]);
+        [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
 
-        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId]);
+        $group = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $product = Product::factory()->withGroup($group)->withSubjects()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'code' => 'CLOSED-YEAR',
         ]);
 
@@ -511,7 +549,7 @@ class WarehouseDashboardTest extends TestCase
     private function inventoryBalance(Product $product, float $value, ?string $date = null): void
     {
         $document = Document::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'date' => $date ?? jalali_to_gregorian(1405, 2, 1, '-'),
         ]);
 
@@ -551,9 +589,9 @@ class WarehouseDashboardTest extends TestCase
 
     private function importProductWithStock(float $quantity): Product
     {
-        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->companyId]);
+        $group = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId]);
         Warehouse::create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Imported stock warehouse',
         ]);
         $csv = "code,name,group_name,quantity,quantity_warning,Imported stock warehouse\n"
@@ -561,7 +599,7 @@ class WarehouseDashboardTest extends TestCase
 
         app(ProductImportService::class)->import(
             UploadedFile::fake()->createWithContent('products.csv', $csv),
-            $this->companyId,
+            $this->fiscalYearId,
         );
 
         return Product::query()->where('code', "IMP-{$quantity}")->firstOrFail();
@@ -570,7 +608,7 @@ class WarehouseDashboardTest extends TestCase
     private function accountTotals(Product $product, string $date, array $values): void
     {
         $document = Document::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'date' => $date,
         ]);
 

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Blade;
@@ -111,32 +111,29 @@ class ContextualUserGuideTest extends TestCase
     {
         config([
             'app.user_guide_url' => 'https://guides.example.test/base',
-            'active-company-id' => null,
+            'active-fiscal-year-id' => null,
         ]);
         app()->setLocale('fa');
 
         $user = User::factory()->create();
-        $company = Company::factory()->create();
-        $company->users()->syncWithoutDetaching([$user->id]);
+        $fiscalYear = FiscalYear::factory()->create();
+        $fiscalYear->users()->syncWithoutDetaching([$user->id]);
         $user->givePermissionTo(...collect([
             'home',
             'documents.show',
-            'companies.index',
-            'companies.create',
-            'companies.edit',
+            'fiscal-years.index',
+            'fiscal-years.create',
+            'fiscal-years.edit',
             'companies.closing-wizard',
         ])->map(fn (string $name) => Permission::firstOrCreate(['name' => $name]))->all());
 
-        config(['active-company-id' => $company->id]);
+        config(['active-fiscal-year-id' => $fiscalYear->id]);
 
-        $this->actingAs($user)->withCookie('active-company-id', (string) $company->id);
+        $this->actingAs($user)->withCookie('active-fiscal-year-id', (string) $fiscalYear->id);
 
         foreach ([
             route('home'),
-            route('companies.index'),
-            route('companies.create'),
-            route('companies.edit', $company),
-            route('companies.closing-wizard', $company),
+            route('companies.closing-wizard', $fiscalYear),
         ] as $url) {
             $this->get($url)->assertOk()->assertSee($this->guideLink(), false);
         }

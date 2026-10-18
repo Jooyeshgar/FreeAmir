@@ -14,7 +14,7 @@ class Warehouse extends Model
     use HasFactory;
 
     protected $fillable = [
-        'company_id',
+        'fiscal_year_id',
         'name',
         'code',
         'description',
@@ -25,13 +25,13 @@ class Warehouse extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function (Warehouse $warehouse) {
-            $warehouse->company_id ??= getActiveCompany();
+            $warehouse->fiscal_year_id ??= getActiveFiscalYear();
         });
     }
 
-    public function company(): BelongsTo
+    public function fiscalYear(): BelongsTo
     {
-        return $this->belongsTo(Company::class);
+        return $this->belongsTo(FiscalYear::class);
     }
 
     public function products(): BelongsToMany

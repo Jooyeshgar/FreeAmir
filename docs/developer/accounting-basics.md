@@ -113,12 +113,12 @@ if ($totalValue != 0) {
 ### ارتباط گروه‌ها با سرفصل‌ها
 ```php
 $customerGroupConfig = Config::where('key', 'customer_default_subject')
-                            ->where('company_id', session('active-company-id'))
+                            ->where('fiscal_year_id', getActiveFiscalYear())
                             ->value('value');
 
 // گروه کالاها به کدام سرفصل‌ها متصل شود
 $productInventoryConfig = Config::where('key', 'product_inventory_subject')
-                               ->where('company_id', session('active-company-id'))
+                               ->where('fiscal_year_id', getActiveFiscalYear())
                                ->value('value');
 ```
 
@@ -215,7 +215,7 @@ class Document extends Model {
         'approved_at',  // تاریخ تأیید سند
         'creator_id',   // شناسه کاربر ایجادکننده
         'approver_id',  // شناسه کاربر تأییدکننده
-        'company_id',   // شناسه شرکت/سال مالی
+        'fiscal_year_id',   // شناسه سال مالی
     ];
 
     protected $casts = [
@@ -372,26 +372,18 @@ $availableSections = FiscalYearService::getAvailableSections();
 
 ## سال مالی و چندشرکته بودن
 
-### مفهوم سال مالی در امیر
-سال مالی در امیر به عنوان "شرکت" (Company) شناخته می‌شود. هر شرکت نمایانگر یک سال مالی مستقل است و مقدار عددی سال (مثلاً 1403) در ستون `fiscal_year` همان رکورد نگهداری می‌شود.
+یک `Company` هویت کسب‌وکار را نگه می‌دارد و می‌تواند چند `FiscalYear` داشته باشد. مدل `FiscalYear` سال و وضعیت بستن دوره را نگه می‌دارد. اسناد، فاکتورها و رکوردهای وابسته با `fiscal_year_id` به دوره مربوط وصل می‌شوند.
 
 ```php
-class Company extends Model {    // هر ردیف نمایانگر یک سال مالی است
-    protected $fillable = [
-        'name',            // عنوان سال/شرکت (مانند "سال مالی 1403")
-        'logo',            // مسیر لوگو (اختیاری)
-        'address',         // آدرس شرکت
-        'economical_code', // کد اقتصادی
-        'national_code',   // شناسه ملی
-        'postal_code',     // کد پستی
-        'phone_number',    // تلفن تماس
-        'fiscal_year',     // سال مالی به صورت عدد صحیح (مثلاً 1403)
-    ];
-}
+$company = Company::with('fiscalYears')->findOrFail($companyId);
+$fiscalYear = $company->fiscalYears()->where('year', 1405)->firstOrFail();
+
+// دسترسی کاربر به هر سال مالی جداگانه تخصیص داده می‌شود.
+$user->fiscalYears()->syncWithoutDetaching([$fiscalYear->id]);
 ```
 
 ### جداسازی داده‌ها با FiscalYearScope
-همه مدل‌ها از `FiscalYearScope` استفاده می‌کنند:
+مدل‌های دارای scope سال مالی از `FiscalYearScope` استفاده می‌کنند:
 
 ```php
 protected static function booted()
@@ -407,8 +399,10 @@ $allData = SomeModel::withoutGlobalScope(FiscalYearScope::class)->get();
 برای اطلاعات بیشتر [FiscalYearExportImport.md](FiscalYearExportImport.md)
 ```php
 php artisan fiscal-year:export 1 --sections=subjects,customers
-php artisan fiscal-year:import exported_data.json --name="سال 1404" --year=1404
+php artisan fiscal-year:import exported_data.json 1404 --name="شرکت نمونه"
 ```
+
+پس از واردسازی با فرمان CLI، دسترسی کاربران به سال مالی جدید را از بخش مدیریت کاربران تخصیص دهید.
 
 ### تنظیمات شرکت‌ها
 
@@ -568,7 +562,7 @@ $bankSubjectId = config('amir.bank', null);
 
 **برای تنظیمات خاص شرکت**:
 ```php
-$config = Config::where('company_id', session('active-company-id'))
+$config = Config::where('fiscal_year_id', getActiveFiscalYear())
                ->where('key', 'cash_book')
                ->value('value');
 ```
@@ -623,7 +617,7 @@ echo $subject->formattedCode();  // "001/002/003"
 ```
 
 
-### 7. همیشه scope های مربوط به شرکت را در نظر بگیرید
+### 7. همیشه scope سال مالی را در نظر بگیرید
 ```php
 $subjects = Subject::all(); // درست ✅ - با scope خودکار
 

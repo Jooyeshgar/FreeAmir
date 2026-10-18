@@ -83,9 +83,9 @@ class User extends Authenticatable implements MustVerifyEmail
         $this->notify(new ResetPasswordNotification($token));
     }
 
-    public function companies()
+    public function fiscalYears()
     {
-        return $this->belongsToMany(Company::class);
+        return $this->belongsToMany(FiscalYear::class);
     }
 
     public function employee(): HasOne
@@ -100,7 +100,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function canBeImpersonated(): bool
     {
-        return $this->companies()->exists() && ! $this->can('access-super-admin-panel');
+        return $this->fiscalYears()->exists() && ! $this->can('access-super-admin-panel');
     }
 
     public function canImpersonateUser(User $user): bool

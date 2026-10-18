@@ -5,12 +5,12 @@ description: "Future development roadmap for Amir"
 
 # Amir Roadmap
 
-Amir is an actively developing project. Below are some future ideas and priorities.
+Amir is an actively developing project. User access is assigned by fiscal year; the items below list additional capabilities and future priorities.
 
 
 ## In Development
 
-- Company-specific roles and permissions
+- Company-specific role definitions and permission sets
 
 ## Completed
 
@@ -20,7 +20,7 @@ Amir is an actively developing project. Below are some future ideas and prioriti
 
 ## Future Ideas
 
-- **Company-Specific Roles:** Dedicated roles and permissions per company
+- **Company-Specific Roles:** Dedicated role definitions and permission sets per company
 - **Workflow Approvals:** Approval system for various financial operations
 - **API Expansion:** Full API for third-party system integration
 

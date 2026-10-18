@@ -4,10 +4,11 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Warehouse;
+use Carbon\Carbon;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -89,15 +90,15 @@ class InventoryTurnoverService
             ],
             'warehouses' => Warehouse::query()->orderBy('name')->get(['id', 'name']),
             'productGroups' => ProductGroup::query()->orderBy('name')->get(['id', 'name']),
-            'company' => Company::find(getActiveCompany()),
+            'company' => FiscalYear::findOrFail(getActiveFiscalYear())->company,
             'generatedAt' => formatDateTime(now()),
         ];
     }
 
     private function validateFilters(array $rawFilters): array
     {
-        $company = Company::withoutGlobalScopes()->findOrFail(getActiveCompany());
-        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
         $fiscalStartDate = $fiscalStart->toDateString();
         $fiscalEndDate = $fiscalEnd->toDateString();
 
@@ -112,8 +113,8 @@ class InventoryTurnoverService
         Validator::make($rawFilters, [
             'start_date' => ['bail', 'nullable', 'string', $dateRule],
             'end_date' => ['bail', 'nullable', 'string', $dateRule],
-            'warehouse_id' => ['nullable', 'integer', Rule::exists('warehouses', 'id')->where('company_id', getActiveCompany())],
-            'product_group' => ['nullable', 'integer', Rule::exists('product_groups', 'id')->where('company_id', getActiveCompany())],
+            'warehouse_id' => ['nullable', 'integer', Rule::exists('warehouses', 'id')->where('fiscal_year_id', getActiveFiscalYear())],
+            'product_group' => ['nullable', 'integer', Rule::exists('product_groups', 'id')->where('fiscal_year_id', getActiveFiscalYear())],
         ])->after(function ($validator) use ($rawFilters, $fiscalStartDate, $fiscalEndDate): void {
             if ($validator->errors()->hasAny(['start_date', 'end_date'])) {
                 return;
@@ -170,7 +171,7 @@ class InventoryTurnoverService
             ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
             ->where('invoice_items.itemable_type', Product::class)
             ->whereIn('invoice_items.itemable_id', $productIds)
-            ->where('invoices.company_id', getActiveCompany())
+            ->where('invoices.fiscal_year_id', getActiveFiscalYear())
             ->whereIn('invoices.status', $this->enumValues(InvoiceStatus::approvedOrSettled()))
             ->whereBetween('invoices.date', [$filters['start_date'], $filters['end_date']])
             ->when($filters['warehouse_id'], fn (Builder $query, int $warehouseId) => $query->where('invoices.warehouse_id', $warehouseId))
@@ -192,10 +193,10 @@ class InventoryTurnoverService
             ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
             ->where('invoice_items.itemable_type', Product::class)
             ->whereIn('invoice_items.itemable_id', $productIds)
-            ->where('invoices.company_id', getActiveCompany())
+            ->where('invoices.fiscal_year_id', getActiveFiscalYear())
             ->whereIn('invoices.status', $this->enumValues(InvoiceStatus::approvedOrSettled()))
             ->when($filters['warehouse_id'], fn (Builder $query, int $warehouseId) => $query->where('invoices.warehouse_id', $warehouseId))
-            ->when($filters['end_date'], fn (Builder $query, string $date) => $query->where('invoices.date', '<=', $date))
+            ->when($filters['end_date'], fn (Builder $query, string $date) => $query->whereDate('invoices.date', '<=', $date))
             ->get(['invoice_items.itemable_id as product_id', 'invoice_items.quantity', 'invoices.invoice_type', 'invoices.date']);
 
         $imports = $this->enumValues(self::IMPORT_TYPES);
@@ -210,15 +211,17 @@ class InventoryTurnoverService
                 $type = (int) $item->invoice_type;
                 $quantity = (float) $item->quantity;
 
+                $date = Carbon::parse($item->date)->toDateString();
+
                 if ($type === InvoiceType::BEGINNING_INVENTORY->value) {
-                    if ($item->date <= $filters['start_date']) {
+                    if ($date <= $filters['start_date']) {
                         $opening += $quantity;
                     }
 
                     continue;
                 }
 
-                if ($item->date < $filters['start_date']) {
+                if ($date < $filters['start_date']) {
                     continue;
                 }
 
@@ -242,13 +245,13 @@ class InventoryTurnoverService
         return DB::table('transactions')
             ->join('documents', 'documents.id', '=', 'transactions.document_id')
             ->join('invoices', 'invoices.document_id', '=', 'documents.id')
-            ->where('invoices.company_id', getActiveCompany())
+            ->where('invoices.fiscal_year_id', getActiveFiscalYear())
             ->whereIn('invoices.status', $this->enumValues(InvoiceStatus::approvedOrSettled()))
             ->whereIn('invoices.invoice_type', $this->enumValues($types))
             ->whereIn('transactions.subject_id', $subjectIds)
             ->when($warehouseId, fn (Builder $query, int $id) => $query->where('invoices.warehouse_id', $id))
-            ->when($from, fn (Builder $query, string $date) => $query->where('invoices.date', '>=', $date))
-            ->when($through, fn (Builder $query, string $date) => $query->where('invoices.date', '<=', $date))
+            ->when($from, fn (Builder $query, string $date) => $query->whereDate('invoices.date', '>=', $date))
+            ->when($through, fn (Builder $query, string $date) => $query->whereDate('invoices.date', '<=', $date))
             ->groupBy('transactions.subject_id')
             ->selectRaw('transactions.subject_id, SUM(transactions.value) as balance')
             ->pluck('balance', 'transactions.subject_id');
