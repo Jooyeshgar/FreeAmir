@@ -826,7 +826,10 @@ class InvoiceController extends Controller
 
     public function transfer(Request $request, Invoice $invoice): RedirectResponse
     {
-        $request->validate(['target_company_id' => 'required|integer|exists:companies,id']);
+        $request->validate([
+            'target_company_id' => 'required|integer|exists:companies,id',
+            'transfer_dependencies' => ['nullable', 'boolean'],
+        ]);
 
         if (! Auth::user()->companies->contains((int) $request->target_company_id)) {
             abort(403);
@@ -836,7 +839,7 @@ class InvoiceController extends Controller
             return redirect()->route('invoices.show', $invoice)->with('error', __('Cannot transfer to the same fiscal year.'));
         }
 
-        $result = FiscalYearTransferService::transferInvoice($invoice, $request->target_company_id, $request->user());
+        $result = FiscalYearTransferService::transferInvoice($invoice, $request->target_company_id, $request->user(), $request->boolean('transfer_dependencies'));
 
         if (! $result['success']) {
             return redirect()->route('invoices.show', $invoice)->withErrors($result['errors']);

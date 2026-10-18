@@ -371,6 +371,55 @@ class FiscalYearTransferTest extends TestCase
         $this->assertSame($targetService->id, $newItem->itemable_id);
     }
 
+    public function test_invoice_transfer_can_create_missing_dependencies_and_recreate_their_subject_trees(): void
+    {
+        $root = $this->makeSubject($this->source, '700', 'Source root');
+        $customerSubject = $this->makeSubject($this->source, '700001', 'ACME', $root);
+        $customer = $this->makeCustomer($this->source, 'ACME');
+        $customer->subject_id = $customerSubject->id;
+        $customer->saveQuietly();
+        $customerSubject->subjectable()->associate($customer);
+        $customerSubject->save();
+
+        $product = $this->makeProduct($this->source, 'Widget', 'P1');
+        $productSubject = $this->makeSubject($this->source, '800001', 'Widget');
+        $product->inventory_subject_id = $productSubject->id;
+        $product->save();
+        $productSubject->subjectable()->associate($product);
+        $productSubject->save();
+
+        $service = $this->makeService($this->source, 'Consulting', 'S1');
+        $serviceSubject = $this->makeSubject($this->source, '900001', 'Consulting');
+        $service->subject_id = $serviceSubject->id;
+        $service->save();
+        $serviceSubject->subjectable()->associate($service);
+        $serviceSubject->save();
+
+        $invoice = $this->makeInvoice($this->source, ['customer_id' => $customer->id, 'amount' => 100]);
+        $this->addProductItem($invoice, $product);
+        $this->addServiceItem($invoice, $service);
+
+        $result = FiscalYearTransferService::transferInvoice($invoice, $this->target->id, $this->user, true);
+
+        $this->assertTrue($result['success'], json_encode($result));
+        $targetCustomer = Customer::withoutGlobalScopes()->where('company_id', $this->target->id)->where('name', 'ACME')->first();
+        $targetProduct = Product::withoutGlobalScopes()->where('company_id', $this->target->id)->where('name', 'Widget')->first();
+        $targetService = Service::withoutGlobalScopes()->where('company_id', $this->target->id)->where('name', 'Consulting')->first();
+        $this->assertNotNull($targetCustomer);
+        $this->assertNotNull($targetProduct);
+        $this->assertNotNull($targetService);
+        $this->assertNotNull($targetCustomer->subject_id);
+        $this->assertNotNull($targetProduct->inventory_subject_id);
+        $this->assertNotNull($targetService->subject_id);
+
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->target->id, 'code' => '700', 'name' => 'Source root']);
+        $targetCustomerSubject = Subject::withoutGlobalScopes()->find($targetCustomer->subject_id);
+        $this->assertSame('700001', $targetCustomerSubject->code);
+        $this->assertSame($targetCustomer->id, (int) $targetCustomerSubject->subjectable_id);
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->target->id, 'code' => '800001', 'name' => 'Widget']);
+        $this->assertDatabaseHas('subjects', ['company_id' => $this->target->id, 'code' => '900001', 'name' => 'Consulting']);
+    }
+
     public function test_invoice_transfer_fails_when_customer_missing_in_target_and_rolls_back(): void
     {
         $customer = $this->makeCustomer($this->source, 'ACME');

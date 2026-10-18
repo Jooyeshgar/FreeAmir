@@ -1328,6 +1328,10 @@
                                 @endforeach
                             </select>
                         </div>
+                        <div class="form-control mt-4 [&_.fieldset]:m-0 [&_.label]:p-0 [&_.label]:text-sm [&_.checkbox]:checkbox-sm [&_.checkbox]:checkbox-primary">
+                            <x-checkbox name="transfer_dependencies" id="transfer_dependencies" value="1"
+                                :title="__('Create missing customer, products, services, and their accounting subjects in the target fiscal year')" />
+                        </div>
                         <div class="modal-action">
                             <button type="button" onclick="document.getElementById('inv-transfer-modal').close()"
                                 class="btn btn-sm md:btn-sm lg:btn-md">{{ __('Cancel') }}</button>
