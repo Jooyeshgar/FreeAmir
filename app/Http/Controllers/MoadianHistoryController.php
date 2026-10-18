@@ -64,7 +64,7 @@ class MoadianHistoryController extends Controller
 
     public function checkStatus(Invoice $invoice): RedirectResponse
     {
-        abort_unless($invoice->company_id === getActiveCompany() && auth()->user()->companies()->whereKey($invoice->company_id)->exists(), 403);
+        abort_unless($invoice->fiscal_year_id === getActiveFiscalYear() && auth()->user()->fiscalYears()->whereKey($invoice->fiscal_year_id)->exists(), 403);
         $referenceNumber = $invoice->moadianReferenceNumber();
 
         if (! $referenceNumber) {
