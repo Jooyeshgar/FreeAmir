@@ -59,7 +59,7 @@ class UpdateProductRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'oversell' => $this->has('oversell') ? 1 : 0,
+            'oversell' => $this->boolean('oversell') ? 1 : 0,
         ]);
     }
 
