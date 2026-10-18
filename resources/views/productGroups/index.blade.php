@@ -12,7 +12,7 @@
         </div>
 
         <div class="flex flex-wrap items-center justify-start gap-2">
-            <a href="{{ route('product-groups.create') }}" class="btn btn-sm btn-primary">{{ __('Create product group') }}</a>
+            <a href="{{ route('product-groups.create') }}" @class(['btn btn-sm btn-primary', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : '' }}">{{ __('Create product group') }}</a>
         </div>
     </div>
 
@@ -72,9 +72,9 @@
                                 <td class="px-4 py-2">
                                     <div class="inline-flex gap-2 whitespace-nowrap">
                                         <a href="{{ route('product-groups.show', $productGroup) }}" class="btn btn-sm btn-info">{{ __('View') }}</a>
-                                        <a href="{{ route('product-groups.edit', $productGroup) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
-                                        @if ($productGroup->delete_blocking_reason)
-                                            <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed">{{ __('Delete') }}</button>
+                                        <a href="{{ route('product-groups.edit', $productGroup) }}" @class(['btn btn-sm btn-info', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : '' }}">{{ __('Edit') }}</a>
+                                        @if (activeFiscalYearIsClosed() || $productGroup->delete_blocking_reason)
+                                            <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : $productGroup->delete_blocking_reason }}">{{ __('Delete') }}</button>
                                         @else
                                             <form action="{{ route('product-groups.destroy', $productGroup) }}" method="POST">
                                                 @csrf

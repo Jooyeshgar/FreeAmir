@@ -53,8 +53,8 @@
                         onsubmit="return confirm('{{ __('Copy the previous month forecast into :month. Existing values for this month will be replaced.', ['month' => $selectedMonthLabel]) }}')">
                         @csrf
                         <x-input name="month" value="{{ $selectedMonth }}" hidden />
-                        <button type="submit" class="btn btn-ghost btn-sm w-full sm:w-auto" @disabled(! $hasPreviousForecast)
-                            title="{{ ! $hasPreviousForecast ? __('No forecast exists for the previous month.') : '' }}">
+                        <button type="submit" class="btn btn-ghost btn-sm w-full sm:w-auto" @disabled(activeFiscalYearIsClosed() || ! $hasPreviousForecast)
+                            title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : (! $hasPreviousForecast ? __('No forecast exists for the previous month.') : '') }}">
                             {{ __('Copy Previous Month') }}
                         </button>
                     </form>
@@ -125,7 +125,7 @@
                             </fieldset>
 
                             <div class="w-full justify-self-start sm:w-auto">
-                                <button type="submit" class="btn btn-primary btn-sm h-10 w-full gap-1.5 whitespace-nowrap px-3 sm:w-auto" title="{{ __('Save Forecast Line') }}">
+                        <button type="submit" @disabled(activeFiscalYearIsClosed()) class="btn btn-primary btn-sm h-10 w-full gap-1.5 whitespace-nowrap px-3 sm:w-auto {{ activeFiscalYearIsClosed() ? 'opacity-60' : '' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Save Forecast Line') }}">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-7-7h14" />
                                     </svg>
@@ -252,7 +252,7 @@
                                                 <form method="POST" action="{{ route('budgets.destroy', $line['budget']) }}" onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                                     @csrf
                                                     @method('DELETE')
-                                                    <button type="submit" class="btn btn-square btn-ghost btn-xs text-base-content/35 hover:text-error" title="{{ __('Delete') }}">
+                                                    <button type="submit" @disabled(activeFiscalYearIsClosed()) class="btn btn-square btn-ghost btn-xs text-base-content/35 hover:text-error {{ activeFiscalYearIsClosed() ? 'opacity-60' : '' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Delete') }}">
                                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                                                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16m-10 4v6m4-6v6M9 7l1-3h4l1 3m-9 0 1 14h10l1-14" />
                                                         </svg>

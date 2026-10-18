@@ -9,10 +9,11 @@ use Illuminate\Validation\ValidationException;
 
 class ProductGroupService
 {
-    public function __construct(private readonly SubjectService $subjectService) {}
+    public function __construct(private readonly SubjectService $subjectService, private readonly FiscalYearMutationGuard $fiscalYearMutationGuard) {}
 
     public function create(array $data): ProductGroup
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
         $productGroup = ProductGroup::create($data);
 
         $this->syncSubjects($productGroup);
@@ -22,6 +23,7 @@ class ProductGroupService
 
     public function update(ProductGroup $productGroup, array $data): ProductGroup
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
         $productGroup->fill($data);
         $productGroup->save();
 
@@ -33,6 +35,7 @@ class ProductGroupService
     public function delete(ProductGroup $productGroup): void
     {
         DB::transaction(function () use ($productGroup): void {
+            $this->fiscalYearMutationGuard->ensureOpen();
             $this->ensureCanDelete($productGroup);
 
             $productGroup->delete();

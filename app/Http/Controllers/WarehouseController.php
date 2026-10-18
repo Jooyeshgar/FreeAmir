@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Warehouse;
 use App\Models\WarehouseTransfer;
+use App\Services\FiscalYearMutationGuard;
 use App\Services\WarehouseService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,7 +14,7 @@ use Illuminate\View\View;
 
 class WarehouseController extends Controller
 {
-    public function __construct(private readonly WarehouseService $warehouseService) {}
+    public function __construct(private readonly WarehouseService $warehouseService, private readonly FiscalYearMutationGuard $fiscalYearMutationGuard) {}
 
     public function index(Request $request): View
     {
@@ -73,6 +74,7 @@ class WarehouseController extends Controller
 
     public function destroy(Warehouse $warehouse): RedirectResponse
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
         if (Warehouse::count() <= 1) {
             return back()->with('error', __('At least one warehouse must remain.'));
         }

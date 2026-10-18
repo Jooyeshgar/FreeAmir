@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\CustomerType;
 use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
 use App\Models\AncillaryCostItem;
@@ -479,7 +480,13 @@ class FiscalYearTransferService
         }
 
         $customer = new Customer;
-        $customer->fill(collect($source->getAttributes())->except(['id', 'fiscal_year_id', 'group_id', 'introducer_id', 'subject_id', 'created_at', 'updated_at'])->toArray());
+        $attributes = collect($source->getAttributes())
+            ->except(['id', 'fiscal_year_id', 'group_id', 'introducer_id', 'subject_id', 'created_at', 'updated_at'])
+            ->toArray();
+        if (array_key_exists('type', $attributes) && $attributes['type'] !== null) {
+            $attributes['type'] = CustomerType::fromName($attributes['type'])->value;
+        }
+        $customer->fill($attributes);
         $customer->fiscal_year_id = $targetFiscalYearId;
         $customer->group_id = null;
         $customer->introducer_id = null;

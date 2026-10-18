@@ -16,7 +16,7 @@
             </div>
             <div class="card-actions">
                 <div>
-                    <a href="{{ route('subjects.create', ['parent_id' => request('parent_id', null)]) }}" class="btn btn-sm btn-primary ">{{ __('Create Subject') }}</a>
+                    <a href="{{ route('subjects.create', ['parent_id' => request('parent_id', null)]) }}" @class(['btn btn-sm btn-primary', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : '' }}">{{ __('Create Subject') }}</a>
                 </div>
                 @if($currentParent)
                     @php
@@ -77,7 +77,7 @@
                                         @if ($subject->subjectable)
                                             <a href="{{ route(model_route($subject->subjectable, 'edit'), $subject->subjectable) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                                         @else
-                                            <a href="{{ route('subjects.edit', $subject) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                <a href="{{ route('subjects.edit', $subject) }}" @class(['btn btn-sm btn-info', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Edit') }}">{{ __('Edit') }}</a>
                                         @endif
 
                                         @if ($subject->subjectable || $subject->children_count > 0 || $subject->transactions_count > 0)
@@ -92,7 +92,7 @@
                                             <form action="{{ route('subjects.destroy', $subject) }}" method="POST">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                                <button type="submit" @disabled(activeFiscalYearIsClosed()) class="btn btn-sm btn-error {{ activeFiscalYearIsClosed() ? 'opacity-60' : '' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Delete') }}">{{ __('Delete') }}</button>
                                             </form>
                                         @endif
                                     </div>

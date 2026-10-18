@@ -35,6 +35,8 @@ class BeginningInventoryTest extends TestCase
 
     private Warehouse $otherWarehouse;
 
+    private ProductService $productService;
+
     private Product $product;
 
     private int $inventorySubjectId;
@@ -63,6 +65,8 @@ class BeginningInventoryTest extends TestCase
         $this->product = $this->product('P-1', 125);
         $this->setStock($this->product, $this->mainWarehouse, 2, 175);
         $this->product->update(['quantity' => 2]);
+
+        $this->productService = app(ProductService::class);
     }
 
     public function test_pending_beginning_inventory_does_not_change_stock_or_cost(): void
@@ -249,8 +253,8 @@ class BeginningInventoryTest extends TestCase
         $pendingProduct->update(['quantity' => 0]);
         WarehouseProductStock::query()->update(['quantity' => 0]);
 
-        $this->assertEqualsWithDelta(6, ProductService::recalculateQuantity($this->product->fresh()), 0.001);
-        $this->assertEqualsWithDelta(0, ProductService::recalculateQuantity($pendingProduct->fresh()), 0.001);
+        $this->assertEqualsWithDelta(6, $this->productService->recalculateQuantity($this->product->fresh()), 0.001);
+        $this->assertEqualsWithDelta(0, $this->productService->recalculateQuantity($pendingProduct->fresh()), 0.001);
     }
 
     public function test_only_one_beginning_inventory_record_is_allowed_per_warehouse(): void

@@ -9,10 +9,12 @@ use Illuminate\Validation\ValidationException;
 
 class CustomerService
 {
-    public function __construct(private readonly SubjectService $subjectService) {}
+    public function __construct(private readonly SubjectService $subjectService, private readonly FiscalYearMutationGuard $fiscalYearMutationGuard) {}
 
     public function create(array $data): Customer
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         return DB::transaction(function () use ($data) {
             $data['fiscal_year_id'] ??= getActiveFiscalYear();
             $subjectCode = $data['subject_code'] ?? null;
@@ -27,6 +29,8 @@ class CustomerService
 
     public function update(Customer $customer, array $data): Customer
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         return DB::transaction(function () use ($customer, $data) {
             $subjectCode = $data['subject_code'] ?? null;
             unset($data['subject_code']);
@@ -42,6 +46,8 @@ class CustomerService
 
     public function delete(Customer $customer): void
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         DB::transaction(function () use ($customer) {
             app(ActivityLogService::class)->deleteModels($customer->comments()->getQuery());
             $customer->delete();

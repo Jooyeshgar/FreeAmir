@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Models\BankAccount;
 use App\Models\Chequebook;
+use App\Services\FiscalYearMutationGuard;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class ChequebookController extends Controller
 {
+    public function __construct(private readonly FiscalYearMutationGuard $fiscalYearMutationGuard) {}
+
     public function index(Request $request)
     {
         $filters = $request->validate([
@@ -40,6 +43,7 @@ class ChequebookController extends Controller
 
     public function store(Request $request)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
         $chequebook = Chequebook::create([
             ...$this->validatedData($request),
             'fiscal_year_id' => getActiveFiscalYear(),
@@ -67,6 +71,7 @@ class ChequebookController extends Controller
 
     public function update(Request $request, Chequebook $chequebook)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
         $chequebook->update($this->validatedData($request, $chequebook));
 
         return redirect()->route('chequebooks.show', $chequebook)->with('success', __('Chequebook updated successfully.'));
@@ -74,6 +79,7 @@ class ChequebookController extends Controller
 
     public function destroy(Chequebook $chequebook)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
         $chequebook->delete();
 
         return redirect()->route('chequebooks.index')->with('success', __('Chequebook deleted successfully. Associated cheques were preserved.'));

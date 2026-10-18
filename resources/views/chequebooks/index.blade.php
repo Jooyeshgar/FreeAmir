@@ -11,7 +11,7 @@
             <p class="mt-0.5 text-sm text-base-content/50">{{ __('Manage chequebooks for payable cheques') }}</p>
         </div>
 
-        <a href="{{ route('chequebooks.create') }}" class="btn btn-primary btn-sm">
+        <a href="{{ route('chequebooks.create') }}" @class(['btn btn-primary btn-sm', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : '' }}">
             {{ __('Create chequebook') }}
         </a>
     </div>
@@ -123,7 +123,7 @@
                                                     'direction' => \App\Enums\ChequeType::PAYABLE->value,
                                                     'bank_account_id' => $chequebook->bank_account_id,
                                                     'chequebook_id' => $chequebook->id,
-                                                ]) }}" class="btn btn-primary btn-xs gap-1">
+                                                ]) }}" @class(['btn btn-primary btn-xs gap-1', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : '' }}">
                                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6" />
                                                     </svg>
@@ -153,7 +153,7 @@
                                                 </a>
                                             @endcan
                                             @can('chequebooks.edit')
-                                                <a href="{{ route('chequebooks.edit', $chequebook) }}" class="btn btn-xs btn-ghost gap-1">
+                                                <a href="{{ route('chequebooks.edit', $chequebook) }}" @class(['btn btn-xs btn-ghost gap-1', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Edit') }}">
                                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                             d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L8.582 18.07a4.5 4.5 0 0 1-1.897 1.13L3 20.25l1.05-3.685a4.5 4.5 0 0 1 1.13-1.897l11.682-11.681Z" />

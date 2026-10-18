@@ -17,7 +17,6 @@ use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\FiscalYearOverviewService;
-use App\Services\SubjectService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Helpers\SeederHelper;
 use Tests\TestCase;
@@ -272,7 +271,7 @@ class FiscalYearOverviewServiceTest extends TestCase
 
     private function service(): FiscalYearOverviewService
     {
-        return new FiscalYearOverviewService(new SubjectService);
+        return app(FiscalYearOverviewService::class);
     }
 
     private function balanceData(array $subjectIds, int $duration, bool $inverse): array

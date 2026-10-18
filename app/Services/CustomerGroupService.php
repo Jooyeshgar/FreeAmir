@@ -11,7 +11,7 @@ use DB;
 
 class CustomerGroupService
 {
-    public function __construct(private readonly SubjectService $subjectService) {}
+    public function __construct(private readonly SubjectService $subjectService, private readonly FiscalYearMutationGuard $fiscalYearMutationGuard) {}
 
     /**
      * Gather aggregate statistics for a customer group's overview page.
@@ -74,6 +74,7 @@ class CustomerGroupService
 
     public function create(array $data): CustomerGroup
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
         $data['fiscal_year_id'] ??= getActiveFiscalYear();
 
         $customerGroup = CustomerGroup::create($data);
@@ -85,6 +86,7 @@ class CustomerGroupService
 
     public function update(CustomerGroup $customerGroup, array $data): CustomerGroup
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
         $customerGroup->fill($data);
         $customerGroup->save();
 
@@ -95,6 +97,8 @@ class CustomerGroupService
 
     public function delete(CustomerGroup $customerGroup): void
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         DB::transaction(function () use ($customerGroup) {
             foreach ($customerGroup->customers as $customer) {
                 app(ActivityLogService::class)->deleteModels($customer->comments()->getQuery());

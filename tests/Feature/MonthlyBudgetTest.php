@@ -42,7 +42,7 @@ class MonthlyBudgetTest extends TestCase
         $this->user = User::factory()->create();
         $this->fiscalYear->users()->syncWithoutDetaching([$this->user->id]);
 
-        $this->service = new MonthlyBudgetService;
+        $this->service = app(MonthlyBudgetService::class);
 
         $this->withCookies(['active-fiscal-year-id' => (string) $this->fiscalYear->id]);
         $_COOKIE['active-fiscal-year-id'] = (string) $this->fiscalYear->id;
@@ -1075,7 +1075,7 @@ class MonthlyBudgetTest extends TestCase
             ->assertDontSee(__('No accounting document exists for calculating actual income and expense.'));
 
         $this->setFiscalYear($currentYear + 1);
-        $this->service = new MonthlyBudgetService;
+        $this->service = app(MonthlyBudgetService::class);
         $futureAnalysis = $this->service->analysis(1);
         $futureYearChart = $this->service->fullYearAnalysis()['chart'];
 

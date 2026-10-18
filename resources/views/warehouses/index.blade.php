@@ -11,8 +11,8 @@
         </div>
 
         <div class="grid w-full grid-cols-2 gap-2 md:flex md:w-auto md:justify-end">
-            <a class="btn btn-sm btn-primary shadow-sm" href="{{ route('warehouses.create') }}">{{ __('Create warehouse') }}</a>
-            <a class="btn btn-sm btn-outline" href="{{ route('warehouses.transfer') }}">{{ __('Transfer Product') }}</a>
+            <a class="btn btn-sm btn-primary shadow-sm {{ activeFiscalYearIsClosed() ? 'pointer-events-none opacity-60' : '' }}" aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : '' }}" href="{{ route('warehouses.create') }}">{{ __('Create warehouse') }}</a>
+            <a class="btn btn-sm btn-outline {{ activeFiscalYearIsClosed() ? 'pointer-events-none opacity-60' : '' }}" aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : '' }}" href="{{ route('warehouses.transfer') }}">{{ __('Transfer Product') }}</a>
             @can('warehouses.transfer-history')
                 <a class="btn btn-sm btn-info" href="{{ route('warehouses.transfer-history') }}">{{ __('Transfer History') }}</a>
             @endcan
@@ -67,7 +67,7 @@
                                 <td>{{ formatNumber($warehouse->stocks_sum_average_cost ?? 0) }}</td>
                                 <td class="flex flex-wrap gap-2">
                                     <a class="btn btn-sm btn-ghost" href="{{ route('warehouses.show', $warehouse) }}">{{ __('View') }}</a>
-                                    <a class="btn btn-sm btn-info" href="{{ route('warehouses.edit', $warehouse) }}">{{ __('Edit') }}</a>
+                                    <a class="btn btn-sm btn-info {{ activeFiscalYearIsClosed() ? 'pointer-events-none opacity-60' : '' }}" aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Edit') }}" href="{{ route('warehouses.edit', $warehouse) }}">{{ __('Edit') }}</a>
                                     @php
                                         $deleteDisabledReason = match (true) {
                                             $warehouseCount <= 1 => __('At least one warehouse must remain.'),
@@ -76,9 +76,9 @@
                                             default => null,
                                         };
                                     @endphp
-                                    @if ($deleteDisabledReason)
+                                    @if (activeFiscalYearIsClosed() || $deleteDisabledReason)
                                         <span class="lg:tooltip" data-tip="{{ $deleteDisabledReason }}">
-                                            <button type="button" class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled title="{{ $deleteDisabledReason }}">{{ __('Delete') }}</button>
+                                            <button type="button" class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : $deleteDisabledReason }}">{{ __('Delete') }}</button>
                                         </span>
                                     @else
                                         <form class="inline" method="POST" action="{{ route('warehouses.destroy', $warehouse) }}">

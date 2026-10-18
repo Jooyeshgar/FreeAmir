@@ -33,7 +33,7 @@
                 </div>
 
                 <div class="flex flex-wrap gap-2">
-                    <a href="{{ route('customers.edit', $customer) }}" class="btn btn-sm btn-primary gap-2">
+                    <a href="{{ route('customers.edit', $customer) }}" @class(['btn btn-sm btn-primary gap-2', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Edit') }}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -231,7 +231,7 @@
             {{-- Comments — the add action sits right next to the table so it's obvious --}}
             <div class="flex flex-wrap items-center justify-between gap-2 mt-2">
                 <h3 class="text-lg font-semibold">{{ __('Comments') }}</h3>
-                <a href="{{ route('comments.create', $customer->id) }}" class="btn btn-sm btn-primary gap-2">
+                <a href="{{ route('comments.create', $customer->id) }}" @class(['btn btn-sm btn-primary gap-2', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Add Comment') }}">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
@@ -455,12 +455,12 @@
 
                 <div class="flex gap-2">
                     <a href="{{ route('comments.index', $customer) }}" class="btn btn-primary">{{ __('Comments') }}</a>
-                    <a href="{{ route('customers.edit', $customer) }}" class="btn btn-primary">{{ __('Edit') }}</a>
+                    <a href="{{ route('customers.edit', $customer) }}" @class(['btn btn-primary', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Edit') }}">{{ __('Edit') }}</a>
                     <form action="{{ route('customers.destroy', $customer) }}" method="POST"
                         onsubmit="return confirm('{{ __('Are you sure you want to delete this customer?') }}')">
                         @csrf
                         @method('DELETE')
-                        <button type="submit" class="btn btn-error">{{ __('Delete') }}</button>
+                        <button type="submit" @disabled(activeFiscalYearIsClosed()) class="btn btn-error {{ activeFiscalYearIsClosed() ? 'opacity-60' : '' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Delete') }}">{{ __('Delete') }}</button>
                     </form>
                 </div>
             </div>

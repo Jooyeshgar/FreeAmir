@@ -48,7 +48,7 @@
                                 </td>
                                 <td class="px-4 py-2">
                                     @can('configs.edit')
-                                        <a href="{{ route('configs.edit', strtolower($configTitle['value'])) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                        <a href="{{ route('configs.edit', strtolower($configTitle['value'])) }}" @class(['btn btn-sm btn-info', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Edit') }}">{{ __('Edit') }}</a>
                                     @endcan
                                 </td>
                             </tr>

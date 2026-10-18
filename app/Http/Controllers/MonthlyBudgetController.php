@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\MonthlyBudget;
 use App\Models\Subject;
+use App\Services\FiscalYearMutationGuard;
 use App\Services\MonthlyBudgetService;
 use App\Services\SubjectService;
 use Illuminate\Http\Request;
@@ -13,7 +14,11 @@ use Illuminate\Validation\ValidationException;
 
 class MonthlyBudgetController extends Controller
 {
-    public function __construct(private readonly MonthlyBudgetService $service, private readonly SubjectService $subjectService) {}
+    public function __construct(
+        private readonly MonthlyBudgetService $service,
+        private readonly SubjectService $subjectService,
+        private readonly FiscalYearMutationGuard $fiscalYearMutationGuard,
+    ) {}
 
     public function index(Request $request)
     {
@@ -153,6 +158,7 @@ class MonthlyBudgetController extends Controller
 
     public function destroy(MonthlyBudget $monthlyBudget)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
         $month = $monthlyBudget->month;
         $monthlyBudget->delete();
 

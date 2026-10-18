@@ -11,13 +11,18 @@ use Illuminate\Validation\ValidationException;
 
 class WarehouseService
 {
+    public function __construct(private readonly FiscalYearMutationGuard $fiscalYearMutationGuard) {}
+
     public function create(array $data): Warehouse
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         return Warehouse::create($data);
     }
 
     public function update(Warehouse $warehouse, array $data): Warehouse
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
         $warehouse->update($data);
 
         return $warehouse;
@@ -25,6 +30,7 @@ class WarehouseService
 
     public function transfer(Product $product, Warehouse $from, Warehouse $to, float $quantity, ?string $description = null): WarehouseTransfer
     {
+        $this->fiscalYearMutationGuard->ensureOpen($product, $to->fiscal_year_id);
         if ((int) $product->fiscal_year_id !== (int) $from->fiscal_year_id || (int) $from->fiscal_year_id !== (int) $to->fiscal_year_id) {
             throw ValidationException::withMessages(['from_warehouse_id' => __('The product and warehouses must belong to the same company.')]);
         }

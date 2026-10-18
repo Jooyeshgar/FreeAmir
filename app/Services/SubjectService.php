@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\DB;
 
 class SubjectService
 {
+    public function __construct(private readonly FiscalYearMutationGuard $fiscalYearMutationGuard) {}
+
     public function buildSubjectTreeFromCollection(Collection $subjects): array
     {
         $rootKey = 'root';
@@ -224,6 +226,8 @@ class SubjectService
      */
     public function createSubject(array $data): Subject
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         $name = $data['name'] ?? null;
         if (! $name) {
             throw new \InvalidArgumentException('The name field is required.');
@@ -285,6 +289,8 @@ class SubjectService
      */
     public function editSubject(Subject $subject, array $data): Subject
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         if (! $subject->exists) {
             throw new \InvalidArgumentException(__('Subject does not exist.'));
         }
@@ -525,6 +531,7 @@ class SubjectService
 
     public function transferSubject(Subject $source, Subject $destination, bool $transferSubjectable = false, bool $removeSource = false): array
     {
+        $this->fiscalYearMutationGuard->ensureOpen($source, $destination->fiscal_year_id);
         if ($source->id === $destination->id) {
             throw new \InvalidArgumentException(__('Source and destination subjects must be different.'));
         }
@@ -581,6 +588,7 @@ class SubjectService
 
     public function transferSubjectToNewUnderParent(Subject $source, Subject $parentDestination, bool $transferSubjectable = false, bool $removeSource = false): array
     {
+        $this->fiscalYearMutationGuard->ensureOpen($source, $parentDestination->fiscal_year_id);
         if ($source->id === $parentDestination->id) {
             throw new \InvalidArgumentException(__('Source and parent destination subjects must be different.'));
         }
