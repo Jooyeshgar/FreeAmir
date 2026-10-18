@@ -3535,5 +3535,6 @@
     "Not created": "Not created",
     "Company details": "Company details",
     "People with access to this fiscal year.": "People with access to this fiscal year.",
-    "No users are assigned to this fiscal year.": "No users are assigned to this fiscal year."
+    "No users are assigned to this fiscal year.": "No users are assigned to this fiscal year.",
+    "Create missing customer, products, services, and their accounting subjects in the target fiscal year": "Create missing customer, products, services, and their accounting subjects in the target fiscal year"
 }

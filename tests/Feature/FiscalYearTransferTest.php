@@ -402,9 +402,9 @@ class FiscalYearTransferTest extends TestCase
         $result = FiscalYearTransferService::transferInvoice($invoice, $this->target->id, $this->user, true);
 
         $this->assertTrue($result['success'], json_encode($result));
-        $targetCustomer = Customer::withoutGlobalScopes()->where('company_id', $this->target->id)->where('name', 'ACME')->first();
-        $targetProduct = Product::withoutGlobalScopes()->where('company_id', $this->target->id)->where('name', 'Widget')->first();
-        $targetService = Service::withoutGlobalScopes()->where('company_id', $this->target->id)->where('name', 'Consulting')->first();
+        $targetCustomer = Customer::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->where('name', 'ACME')->first();
+        $targetProduct = Product::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->where('name', 'Widget')->first();
+        $targetService = Service::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->where('name', 'Consulting')->first();
         $this->assertNotNull($targetCustomer);
         $this->assertNotNull($targetProduct);
         $this->assertNotNull($targetService);
@@ -412,12 +412,12 @@ class FiscalYearTransferTest extends TestCase
         $this->assertNotNull($targetProduct->inventory_subject_id);
         $this->assertNotNull($targetService->subject_id);
 
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->target->id, 'code' => '700', 'name' => 'Source root']);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->target->id, 'code' => '700', 'name' => 'Source root']);
         $targetCustomerSubject = Subject::withoutGlobalScopes()->find($targetCustomer->subject_id);
         $this->assertSame('700001', $targetCustomerSubject->code);
         $this->assertSame($targetCustomer->id, (int) $targetCustomerSubject->subjectable_id);
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->target->id, 'code' => '800001', 'name' => 'Widget']);
-        $this->assertDatabaseHas('subjects', ['company_id' => $this->target->id, 'code' => '900001', 'name' => 'Consulting']);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->target->id, 'code' => '800001', 'name' => 'Widget']);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->target->id, 'code' => '900001', 'name' => 'Consulting']);
     }
 
     public function test_invoice_transfer_fails_when_customer_missing_in_target_and_rolls_back(): void

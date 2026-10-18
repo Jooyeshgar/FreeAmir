@@ -3536,5 +3536,6 @@
     "Not created": "ایجاد نشده",
     "Company details": "جزئیات شرکت",
     "People with access to this fiscal year.": "افراد دارای دسترسی به این سال مالی.",
-    "No users are assigned to this fiscal year.": "هیچ کاربری به این سال مالی اختصاص داده نشده است."
+    "No users are assigned to this fiscal year.": "هیچ کاربری به این سال مالی اختصاص داده نشده است.",
+    "Create missing customer, products, services, and their accounting subjects in the target fiscal year": "ایجاد مشتری، کالا، خدمت و سرفصل‌های حسابداری آن‌ها در سال مالی مقصد"
 }

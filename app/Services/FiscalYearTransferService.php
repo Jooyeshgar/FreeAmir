@@ -39,7 +39,7 @@ class FiscalYearTransferService
         });
     }
 
-    public static function transferInvoice(Invoice $invoice, int $targetFiscalYearId, User $user): array
+    public static function transferInvoice(Invoice $invoice, int $targetFiscalYearId, User $user, bool $transferDependencies = false): array
     {
         $invoice->load([
             'customer', 'items.itemable', 'document.transactions.subject',
@@ -47,20 +47,20 @@ class FiscalYearTransferService
             'ancillaryCosts.document.transactions.subject',
         ]);
 
-        return self::_executeInvoiceChainTransfer($invoice, $targetFiscalYearId, $user);
+        return self::_executeInvoiceChainTransfer($invoice, $targetFiscalYearId, $user, $transferDependencies);
     }
 
-    private static function _executeInvoiceChainTransfer(Invoice $invoice, int $targetFiscalYearId, User $user): array
+    private static function _executeInvoiceChainTransfer(Invoice $invoice, int $targetFiscalYearId, User $user, bool $transferDependencies): array
     {
-        $invValidation = self::_validateInvoiceDependencies($invoice, $targetFiscalYearId);
+        $invValidation = self::_validateInvoiceDependencies($invoice, $targetFiscalYearId, $transferDependencies);
         $errors = $invValidation['errors'];
 
-        $returnedCheck = self::_checkReturnedInvoiceDeps($invoice, $targetFiscalYearId);
+        $returnedCheck = self::_checkReturnedInvoiceDeps($invoice, $targetFiscalYearId, $transferDependencies);
         $errors = array_merge($errors, $returnedCheck['errors']);
 
         $acValidations = [];
         foreach ($invoice->ancillaryCosts as $ac) {
-            $acVal = self::_validateAncillaryCostItemsDependencies($ac, $targetFiscalYearId);
+            $acVal = self::_validateAncillaryCostItemsDependencies($ac, $targetFiscalYearId, $transferDependencies);
             $acValidations[$ac->id] = $acVal;
             $errors = array_merge($errors, $acVal['errors']);
         }
@@ -70,14 +70,25 @@ class FiscalYearTransferService
             return ['success' => false, 'errors' => $errors];
         }
 
-        return DB::transaction(function () use ($invoice, $targetFiscalYearId, $user, $invValidation, $acValidations, $returnedCheck) {
+        return DB::transaction(function () use ($invoice, $targetFiscalYearId, $user, $invValidation, $acValidations, $returnedCheck, $transferDependencies) {
             $warnings = [];
             $returnedInvoiceId = null;
+
+            if ($transferDependencies) {
+                $invValidation = self::_materializeInvoiceDependencies($invValidation, $targetFiscalYearId);
+                foreach ($acValidations as $acId => $acValidation) {
+                    $acValidations[$acId] = self::_materializeAncillaryCostDependencies($acValidation, $targetFiscalYearId);
+                }
+            }
 
             if ($returnedCheck['exists']) {
                 $returnedInvoiceId = $returnedCheck['target_id'];
             } elseif ($returnedCheck['needed']) {
-                $newSource = self::_createInvoiceInTarget($returnedCheck['source'], $targetFiscalYearId, $user, $returnedCheck['validation']);
+                $returnedValidation = $returnedCheck['validation'];
+                if ($transferDependencies) {
+                    $returnedValidation = self::_materializeInvoiceDependencies($returnedValidation, $targetFiscalYearId);
+                }
+                $newSource = self::_createInvoiceInTarget($returnedCheck['source'], $targetFiscalYearId, $user, $returnedValidation);
                 $returnedInvoiceId = $newSource->id;
                 $warnings[] = __('Source invoice #:number was created in the target fiscal year.', ['number' => $returnedCheck['source']->number]);
             }
@@ -105,10 +116,10 @@ class FiscalYearTransferService
         });
     }
 
-    private static function _withActiveFiscalYear(int $fiscalYearId, callable $callback): mixed
+    private static function _withActiveFiscalYear(int $companyId, callable $callback): mixed
     {
         $previous = config('active-fiscal-year-id');
-        config(['active-fiscal-year-id' => $fiscalYearId]);
+        config(['active-fiscal-year-id' => $companyId]);
 
         try {
             return $callback();
@@ -262,7 +273,7 @@ class FiscalYearTransferService
         return InvoiceType::fromName($invoiceType)->value;
     }
 
-    private static function _checkReturnedInvoiceDeps(Invoice $invoice, int $targetFiscalYearId): array
+    private static function _checkReturnedInvoiceDeps(Invoice $invoice, int $targetFiscalYearId, bool $transferDependencies): array
     {
         if (! $invoice->returned_invoice_id) {
             return ['needed' => false, 'errors' => [], 'exists' => false, 'target_id' => null, 'source' => null, 'validation' => null];
@@ -280,7 +291,7 @@ class FiscalYearTransferService
             return ['needed' => false, 'errors' => [], 'exists' => true, 'target_id' => $existing->id, 'source' => $source, 'validation' => null];
         }
 
-        $validation = self::_validateInvoiceDependencies($source, $targetFiscalYearId);
+        $validation = self::_validateInvoiceDependencies($source, $targetFiscalYearId, $transferDependencies);
 
         return [
             'needed' => true,
@@ -292,18 +303,23 @@ class FiscalYearTransferService
         ];
     }
 
-    private static function _validateInvoiceDependencies(Invoice $invoice, int $targetFiscalYearId): array
+    private static function _validateInvoiceDependencies(Invoice $invoice, int $targetFiscalYearId, bool $transferDependencies = false): array
     {
         $errors = [];
         $customerId = null;
         $productMapping = [];
         $serviceMapping = [];
+        $missingCustomer = null;
+        $missingProducts = [];
+        $missingServices = [];
 
         if ($invoice->customer) {
             $targetCustomer = Customer::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $targetFiscalYearId)->where('name', $invoice->customer->name)->first();
 
             if ($targetCustomer) {
                 $customerId = $targetCustomer->id;
+            } elseif ($transferDependencies) {
+                $missingCustomer = $invoice->customer;
             } else {
                 $errors[] = __('Customer ":name" does not exist in the target fiscal year.', ['name' => $invoice->customer->name]);
             }
@@ -316,6 +332,8 @@ class FiscalYearTransferService
 
                     if ($target) {
                         $productMapping[$item->itemable_id] = $target->id;
+                    } elseif ($transferDependencies) {
+                        $missingProducts[$item->itemable_id] = $item->itemable;
                     } else {
                         $errors[] = __('Product ":name" does not exist in the target fiscal year.', ['name' => $item->itemable->name]);
                     }
@@ -326,6 +344,8 @@ class FiscalYearTransferService
 
                     if ($target) {
                         $serviceMapping[$item->itemable_id] = $target->id;
+                    } elseif ($transferDependencies) {
+                        $missingServices[$item->itemable_id] = $item->itemable;
                     } else {
                         $errors[] = __('Service ":name" does not exist in the target fiscal year.', ['name' => $item->itemable->name]);
                     }
@@ -339,20 +359,27 @@ class FiscalYearTransferService
             'customer_id' => $customerId,
             'product_mapping' => $productMapping,
             'service_mapping' => $serviceMapping,
+            'missing_customer' => $missingCustomer,
+            'missing_products' => $missingProducts,
+            'missing_services' => $missingServices,
         ];
     }
 
-    private static function _validateAncillaryCostItemsDependencies(AncillaryCost $ac, int $targetFiscalYearId): array
+    private static function _validateAncillaryCostItemsDependencies(AncillaryCost $ac, int $targetFiscalYearId, bool $transferDependencies = false): array
     {
         $errors = [];
         $customerId = null;
         $productMapping = [];
+        $missingCustomer = null;
+        $missingProducts = [];
 
         if ($ac->customer) {
             $targetCustomer = Customer::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $targetFiscalYearId)->where('name', $ac->customer->name)->first();
 
             if ($targetCustomer) {
                 $customerId = $targetCustomer->id;
+            } elseif ($transferDependencies) {
+                $missingCustomer = $ac->customer;
             } else {
                 $errors[] = __('Customer ":name" (ancillary cost) does not exist in the target fiscal year.', ['name' => $ac->customer->name]);
             }
@@ -364,6 +391,8 @@ class FiscalYearTransferService
 
                 if ($target) {
                     $productMapping[$item->product_id] = $target->id;
+                } elseif ($transferDependencies) {
+                    $missingProducts[$item->product_id] = $item->product;
                 } else {
                     $errors[] = __('Product ":name" does not exist in the target fiscal year.', ['name' => $item->product->name]);
                 }
@@ -375,7 +404,156 @@ class FiscalYearTransferService
             'errors' => $errors,
             'customer_id' => $customerId,
             'product_mapping' => $productMapping,
+            'missing_customer' => $missingCustomer,
+            'missing_products' => $missingProducts,
         ];
+    }
+
+    private static function _materializeInvoiceDependencies(array $validation, int $targetFiscalYearId): array
+    {
+        if ($validation['customer_id'] === null && $validation['missing_customer']) {
+            $validation['customer_id'] = self::_findOrCreateCustomerInTarget($validation['missing_customer'], $targetFiscalYearId)->id;
+        }
+
+        foreach ($validation['missing_products'] as $sourceId => $product) {
+            $validation['product_mapping'][$sourceId] = self::_findOrCreateProductInTarget($product, $targetFiscalYearId)->id;
+        }
+
+        foreach ($validation['missing_services'] as $sourceId => $service) {
+            $validation['service_mapping'][$sourceId] = self::_findOrCreateServiceInTarget($service, $targetFiscalYearId)->id;
+        }
+
+        return $validation;
+    }
+
+    private static function _materializeAncillaryCostDependencies(array $validation, int $targetFiscalYearId): array
+    {
+        if ($validation['customer_id'] === null && $validation['missing_customer']) {
+            $validation['customer_id'] = self::_findOrCreateCustomerInTarget($validation['missing_customer'], $targetFiscalYearId)->id;
+        }
+
+        foreach ($validation['missing_products'] as $sourceId => $product) {
+            $validation['product_mapping'][$sourceId] = self::_findOrCreateProductInTarget($product, $targetFiscalYearId)->id;
+        }
+
+        return $validation;
+    }
+
+    private static function _findOrCreateCustomerInTarget(Customer $source, int $targetFiscalYearId): Customer
+    {
+        $existing = Customer::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $targetFiscalYearId)->where('name', $source->name)->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        $source->loadMissing('subject');
+        $sourceSubject = $source->subject;
+        if (! $sourceSubject && $source->subject_id) {
+            $sourceSubject = Subject::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $source->fiscal_year_id)->find($source->subject_id);
+        }
+
+        $customer = new Customer;
+        $customer->fill(collect($source->getAttributes())->except(['id', 'fiscal_year_id', 'group_id', 'introducer_id', 'subject_id', 'created_at', 'updated_at'])->toArray());
+        $customer->fiscal_year_id = $targetFiscalYearId;
+        $customer->group_id = null;
+        $customer->introducer_id = null;
+        $customer->subject_id = null;
+
+        self::_withActiveFiscalYear($targetFiscalYearId, fn () => $customer->saveQuietly());
+
+        if ($sourceSubject) {
+            $subject = self::_findOrCreateSubjectInTarget($sourceSubject, $targetFiscalYearId);
+            $subject->subjectable()->associate($customer);
+            $subject->save();
+            $customer->updateQuietly(['subject_id' => $subject->id]);
+            $customer->setRelation('subject', $subject);
+        }
+
+        return $customer;
+    }
+
+    private static function _findOrCreateProductInTarget(Product $source, int $targetFiscalYearId): Product
+    {
+        $existing = Product::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $targetFiscalYearId)->where('name', $source->name)->first()
+            ?? Product::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $targetFiscalYearId)->where('code', $source->code)->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        $source->loadMissing('incomeSubject', 'salesReturnsSubject', 'cogsSubject', 'inventorySubject');
+        $subjectColumns = ['income_subject_id', 'sales_returns_subject_id', 'cogs_subject_id', 'inventory_subject_id'];
+        $product = new Product;
+        $product->fill(collect($source->getAttributes())->except(['id', 'fiscal_year_id', 'group', 'subject_id', ...$subjectColumns, 'created_at', 'updated_at'])->toArray());
+        $product->fiscal_year_id = $targetFiscalYearId;
+        $product->group = null;
+
+        self::_withActiveFiscalYear($targetFiscalYearId, fn () => $product->save());
+
+        $relations = [
+            'income_subject_id' => 'incomeSubject',
+            'sales_returns_subject_id' => 'salesReturnsSubject',
+            'cogs_subject_id' => 'cogsSubject',
+            'inventory_subject_id' => 'inventorySubject',
+        ];
+        $mapped = [];
+        foreach ($relations as $column => $relation) {
+            if (! $source->$relation) {
+                continue;
+            }
+
+            $subject = self::_findOrCreateSubjectInTarget($source->$relation, $targetFiscalYearId);
+            $subject->subjectable()->associate($product);
+            $subject->save();
+            $mapped[$column] = $subject->id;
+        }
+        if ($mapped) {
+            $product->updateQuietly($mapped);
+        }
+
+        return $product;
+    }
+
+    private static function _findOrCreateServiceInTarget(Service $source, int $targetFiscalYearId): Service
+    {
+        $existing = Service::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $targetFiscalYearId)->where('name', $source->name)->first()
+            ?? Service::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $targetFiscalYearId)->where('code', $source->code)->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        $source->loadMissing('subject', 'cogsSubject', 'salesReturnsSubject');
+        $subjectColumns = ['subject_id', 'cogs_subject_id', 'sales_returns_subject_id'];
+        $service = new Service;
+        $service->fill(collect($source->getAttributes())->except(['id', 'fiscal_year_id', 'group', ...$subjectColumns, 'created_at', 'updated_at'])->toArray());
+        $service->fiscal_year_id = $targetFiscalYearId;
+        $service->group = null;
+
+        self::_withActiveFiscalYear($targetFiscalYearId, fn () => $service->save());
+
+        $relations = [
+            'subject_id' => 'subject',
+            'cogs_subject_id' => 'cogsSubject',
+            'sales_returns_subject_id' => 'salesReturnsSubject',
+        ];
+        $mapped = [];
+        foreach ($relations as $column => $relation) {
+            if (! $source->$relation) {
+                continue;
+            }
+
+            $subject = self::_findOrCreateSubjectInTarget($source->$relation, $targetFiscalYearId);
+            $subject->subjectable()->associate($service);
+            $subject->save();
+            $mapped[$column] = $subject->id;
+        }
+        if ($mapped) {
+            $service->updateQuietly($mapped);
+        }
+
+        return $service;
     }
 
     private static function _findOrCreateSubjectInTarget(Subject $sourceSubject, int $targetFiscalYearId): Subject
