@@ -65,8 +65,9 @@ class FiscalYearTransferService
     }
 
     /**
-     * Validate both ends of a transfer before opening a transaction. Fiscal years
-     * are company-owned now, so a transfer must never cross company boundaries.
+     * Validate both ends of a transfer before opening a transaction. Fiscal year
+     * ownership is resolved from the explicit fiscal-year IDs rather than from
+     * the active company context.
      */
     private static function _validateTransferFiscalYears(int $sourceFiscalYearId, int $targetFiscalYearId): array
     {
@@ -85,10 +86,6 @@ class FiscalYearTransferService
 
         if ($source->isClosed() || $target->isClosed()) {
             $errors[] = __('This fiscal year is already closed.');
-        }
-
-        if ((int) $source->company_id !== (int) $target->company_id) {
-            $errors[] = __('Fiscal years must belong to the same company.');
         }
 
         return $errors;
