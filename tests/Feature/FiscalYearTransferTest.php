@@ -705,7 +705,7 @@ class FiscalYearTransferTest extends TestCase
         $this->assertSame(0, Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->count());
     }
 
-    public function test_document_transfer_endpoint_forbids_a_target_company_the_user_cannot_access(): void
+    public function test_document_transfer_endpoint_forbids_a_target_fiscal_year_the_user_cannot_access(): void
     {
         $foreign = FiscalYear::factory()->create(['year' => 1404]);
         $foreign->users()->detach($this->user);
@@ -718,7 +718,7 @@ class FiscalYearTransferTest extends TestCase
         $this->assertSame(0, Document::withoutGlobalScopes()->where('fiscal_year_id', $foreign->id)->count());
     }
 
-    public function test_invoice_transfer_endpoint_forbids_a_target_company_the_user_cannot_access(): void
+    public function test_invoice_transfer_endpoint_forbids_a_target_fiscal_year_the_user_cannot_access(): void
     {
         $foreign = FiscalYear::factory()->create(['year' => 1404]);
         $foreign->users()->detach($this->user);

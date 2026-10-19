@@ -8,6 +8,7 @@ use App\Models\AncillaryCostItem;
 use App\Models\Config;
 use App\Models\Customer;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Payment;
@@ -18,18 +19,17 @@ use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class FiscalYearTransferService
 {
     public static function transferDocument(Document $document, int $targetFiscalYearId, User $user): array
     {
-        $guardResult = self::_ensureTransferYearsOpen($document, $targetFiscalYearId);
-        if ($guardResult !== null) {
-            return $guardResult;
-        }
-
         $document->load(['documentable', 'transactions.subject']);
+
+        $fiscalYearErrors = self::_validateTransferFiscalYears((int) $document->fiscal_year_id, $targetFiscalYearId);
+        if ($fiscalYearErrors) {
+            return ['success' => false, 'errors' => $fiscalYearErrors];
+        }
 
         if ($document->documentable) {
             return [
@@ -49,11 +49,6 @@ class FiscalYearTransferService
 
     public static function transferInvoice(Invoice $invoice, int $targetFiscalYearId, User $user, bool $transferDependencies = false): array
     {
-        $guardResult = self::_ensureTransferYearsOpen($invoice, $targetFiscalYearId);
-        if ($guardResult !== null) {
-            return $guardResult;
-        }
-
         $invoice->load([
             'customer', 'items.itemable', 'document.transactions.subject',
             'payments.payer', 'payments.settlementSubjectRelation', 'payments.document.transactions.subject',
@@ -61,21 +56,35 @@ class FiscalYearTransferService
             'ancillaryCosts.document.transactions.subject',
         ]);
 
+        $fiscalYearErrors = self::_validateTransferFiscalYears((int) $invoice->fiscal_year_id, $targetFiscalYearId);
+        if ($fiscalYearErrors) {
+            return ['success' => false, 'errors' => $fiscalYearErrors];
+        }
+
         return self::_executeInvoiceChainTransfer($invoice, $targetFiscalYearId, $user, $transferDependencies);
     }
 
-    private static function _ensureTransferYearsOpen(Document|Invoice $source, int $targetFiscalYearId): ?array
+    /**
+     * Validate both ends of a transfer before opening a transaction.
+     * Fiscal year ownership is resolved from the explicit fiscal-year IDs rather than from the active company context.
+     */
+    private static function _validateTransferFiscalYears(int $sourceFiscalYearId, int $targetFiscalYearId): array
     {
-        try {
-            app(FiscalYearMutationGuard::class)->ensureOpen($source, $targetFiscalYearId);
-        } catch (ValidationException $exception) {
-            return [
-                'success' => false,
-                'errors' => collect($exception->errors())->flatten()->all(),
-            ];
+        $fiscalYears = FiscalYear::withoutGlobalScopes()->whereKey([$sourceFiscalYearId, $targetFiscalYearId])->get()->keyBy('id');
+
+        $source = $fiscalYears->get($sourceFiscalYearId);
+        $target = $fiscalYears->get($targetFiscalYearId);
+        $errors = [];
+
+        if (! $source || ! $target) {
+            return [__('The fiscal year could not be resolved.')];
         }
 
-        return null;
+        if ($source->isClosed() || $target->isClosed()) {
+            $errors[] = __('This fiscal year is already closed.');
+        }
+
+        return $errors;
     }
 
     private static function _executeInvoiceChainTransfer(Invoice $invoice, int $targetFiscalYearId, User $user, bool $transferDependencies): array
