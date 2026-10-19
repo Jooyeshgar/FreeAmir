@@ -355,13 +355,13 @@
                                 data-tip="{{ $invoice->status->isApprovedOrSettled() ? '' : __('Only approved invoices can be returned.') }}">
                                 @if ($invoice->invoice_type === App\Enums\InvoiceType::BUY)
                                     <a href="{{ route('invoices.create', ['invoice_type' => 'return_buy', 'returned_invoice_id' => $invoice->id, 'service_buy' => $isServiceBuy ? '1' : null]) }}"
-                                        class="btn btn-sm lg:btn-md btn-primary {{ $invoice->status->isApprovedOrSettled() && !$fiscalYearClosed ? '' : 'btn-disabled' }}"
+                                        class="btn btn-sm lg:btn-md btn-primary {{ $invoice->status->isApprovedOrSettled() && !$fiscalYearClosed && !$fiscalYearClosed ? '' : 'btn-disabled' }}"
                                         @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : '' }}">
                                         {{ __('Create return buy invoice') }}
                                     </a>
                                 @elseif ($invoice->invoice_type === App\Enums\InvoiceType::SELL)
                                     <a href="{{ route('invoices.create', ['invoice_type' => 'return_sell', 'returned_invoice_id' => $invoice->id]) }}"
-                                        class="btn btn-sm lg:btn-md btn-primary {{ $invoice->status->isApprovedOrSettled() && !$fiscalYearClosed ? '' : 'btn-disabled' }}"
+                                        class="btn btn-sm lg:btn-md btn-primary {{ $invoice->status->isApprovedOrSettled() && !$fiscalYearClosed && !$fiscalYearClosed ? '' : 'btn-disabled' }}"
                                         @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : '' }}">
                                         {{ __('Create return sell invoice') }}
                                     </a>
@@ -843,7 +843,7 @@
                 @if (auth()->user()->can('invoices.payments.store') || auth()->user()->can('invoices.payments.update'))
                     @can('invoices.payments.store')
                         <div class="flex flex-wrap gap-2 mt-4">
-                        @if ($fiscalYearClosed || $paymentDecision->hasErrors())
+                        @if ($fiscalYearClosed || $fiscalYearClosed || $paymentDecision->hasErrors())
                             <span class="tooltip"
                                 data-tip="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : $paymentDecision->messages->pluck('text')->implode(' ') }}">
                                 <button
@@ -1366,7 +1366,7 @@
                         @endif
                     @endcan
 
-                    @if (!$fiscalYearClosed && !$invoice->status->isApprovedOrSettled() && !$invoice->invoice_type->isVoid() && !$hasMoadianSuccess)
+                    @if (!$fiscalYearClosed && !$fiscalYearClosed && !$invoice->status->isApprovedOrSettled() && !$invoice->invoice_type->isVoid() && !$hasMoadianSuccess)
                         <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm lg:btn-md btn-primary gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 lg:h-5 lg:w-5" fill="none"
                                 viewBox="0 0 24 24" stroke="currentColor">
@@ -1377,7 +1377,7 @@
                         </a>
                     @else
                         <span class="tooltip"
-                            data-tip="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : ($invoice->invoice_type->isVoid() ? __('Editing is not allowed for void invoices.') : __('Editing is not allowed for approved invoices.')) }}">
+                            data-tip="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : ($fiscalYearClosed ? $fiscalYearClosedMessage : ($invoice->invoice_type->isVoid() ? __('Editing is not allowed for void invoices.') : __('Editing is not allowed for approved invoices.'))) }}">
                             <button class="btn btn-sm lg:btn-md btn-primary gap-2 btn-disabled cursor-not-allowed">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 lg:h-5 lg:w-5" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor">
@@ -1561,7 +1561,9 @@
                 form.addEventListener('submit', function(e) {
                     e.preventDefault();
 
-                    if (confirm(this.dataset.confirmMessage)) {
+                    if (confirm(
+                            '{{ __('This invoice has warnings for change its status, are you sure to change status?') }}'
+                        )) {
                         this.submit();
                     }
                 });

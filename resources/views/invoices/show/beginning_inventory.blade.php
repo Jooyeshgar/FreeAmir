@@ -81,7 +81,7 @@
                 @can('invoices.edit')
                     @if ($fiscalYearClosed)
                         <button class="btn btn-sm btn-primary btn-disabled cursor-not-allowed" disabled title="{{ __('This fiscal year is already closed.') }}">{{ __('Edit invoice') }}</button>
-                    @elseif (! $invoice->status->isApprovedOrSettled())
+                    @elseif (! $invoice->status->isApprovedOrSettled() || $fiscalYearClosed)
                         <a class="btn btn-sm btn-primary" href="{{ route('invoices.edit', $invoice) }}">{{ __('Edit invoice') }}</a>
                     @endif
                 @endcan
@@ -92,7 +92,7 @@
                         <form action="{{ route('invoices.change-status', [$invoice, $invoice->status->isApprovedOrSettled() ? 'unapproved' : 'approved']) }}{{ $changeStatusValidation->hasWarning() ? '?confirm=1' : '' }}"
                             method="POST">
                             @csrf
-                            <button @disabled($fiscalYearClosed) class="btn btn-sm {{ $invoice->status->isApprovedOrSettled() ? 'btn-warning' : 'btn-success' }} {{ $fiscalYearClosed ? 'btn-disabled cursor-not-allowed' : '' }}" type="submit" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">
+                            <button @disabled($fiscalYearClosed) class="btn btn-sm {{ $invoice->status->isApprovedOrSettled() || $fiscalYearClosed ? 'btn-warning btn-disabled cursor-not-allowed' : 'btn-success' }}" type="submit" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">
                                 {{ $invoice->status->isApprovedOrSettled() ? __('Unapprove') : __('Approve') }}
                             </button>
                         </form>

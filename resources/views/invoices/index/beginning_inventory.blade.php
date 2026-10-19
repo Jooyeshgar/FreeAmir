@@ -75,7 +75,7 @@
                                     <form action="{{ route('invoices.change-status', [$invoice, $invoice->status->isApprovedOrSettled() ? 'unapproved' : 'approved']) }}{{ $invoice->changeStatusValidation->hasWarning() ? '?confirm=1' : '' }}"
                                         method="POST" class="{{ $invoice->changeStatusValidation->hasWarning() ? 'change-status-form' : '' }}">
                                         @csrf
-                                        <button @disabled($fiscalYearClosed) class="btn btn-sm {{ $invoice->status->isApprovedOrSettled() ? 'btn-warning' : 'btn-success' }} {{ $fiscalYearClosed ? 'btn-disabled cursor-not-allowed' : '' }}" type="submit" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">
+                                        <button @disabled($fiscalYearClosed) @disabled($fiscalYearClosed) class="btn btn-sm {{ $invoice->status->isApprovedOrSettled() || $fiscalYearClosed ? 'btn-warning btn-disabled cursor-not-allowed' : 'btn-success' }} {{ $fiscalYearClosed ? 'btn-disabled cursor-not-allowed' : '' }}" type="submit" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">
                                             {{ $invoice->status->isApprovedOrSettled() ? __('Unapprove') : __('Approve') }}
                                         </button>
                                     </form>
