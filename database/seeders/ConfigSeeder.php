@@ -79,7 +79,6 @@ class ConfigSeeder extends Seeder
             'sundry_cost' => '040013',
             'bank' => '010',
             'bank_service_fee' => '040010',
-            'bank_service_fee' => '040010',
             'income' => '050',
             'sell_discount' => '066002',
             'buy_discount' => '066001',
