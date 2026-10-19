@@ -151,6 +151,10 @@ class ChequeController extends Controller
 
     private function validateCheque(Request $request, ?Cheque $cheque = null): array
     {
+        if ($request->has('bank_service_fee')) {
+            $request->merge(['bank_service_fee' => $this->chequeService->validateBankServiceFee($request->all())]);
+        }
+
         $normalized = [
             'title' => trim($request->input('title')),
             'amount' => convertToFloat($request->input('amount', 0)),
@@ -194,6 +198,7 @@ class ChequeController extends Controller
                     'exclude_unless:direction,'.ChequeType::PAYABLE->value,
                     Rule::exists('chequebooks', 'id')->where('fiscal_year_id', getActiveFiscalYear()),
                 ],
+                'bank_service_fee' => ['sometimes'],
                 'description' => ['nullable', 'string', 'max:1000'],
             ],
         );
@@ -216,6 +221,10 @@ class ChequeController extends Controller
 
     private function validateTransition(Request $request): array
     {
+        if ($request->has('bank_service_fee')) {
+            $request->merge(['bank_service_fee' => $this->chequeService->validateBankServiceFee($request->all())]);
+        }
+
         if ($request->filled('date')) {
             $request->merge(['date' => jalaliInputToGregorian($request->input('date'), 'date')]);
         }
@@ -225,6 +234,7 @@ class ChequeController extends Controller
                 'date' => ['nullable', 'date'],
                 'bank_account_id' => ['nullable', Rule::exists('bank_accounts', 'id')->where('fiscal_year_id', getActiveFiscalYear())],
                 'customer_id' => ['nullable', Rule::exists('customers', 'id')->where('fiscal_year_id', getActiveFiscalYear())],
+                'bank_service_fee' => ['sometimes'],
                 'description' => ['nullable', 'string', 'max:1000'],
             ],
         );

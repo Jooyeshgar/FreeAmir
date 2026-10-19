@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\ChequeType;
+use App\Enums\CustomerType;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Http\Middleware\CheckPermission;
@@ -20,6 +21,7 @@ use App\Models\Payment;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\ChequeService;
+use App\Services\FiscalYearService;
 use App\Services\InvoiceService;
 use App\Services\PaymentService;
 use Cookie;
@@ -94,8 +96,8 @@ class ChequeManagementTest extends TestCase
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
 
-        $this->customer = Customer::create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Customer', 'subject_id' => 201]);
-        $this->vendor = Customer::create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Vendor', 'subject_id' => 202]);
+        $this->customer = Customer::create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Customer', 'type' => CustomerType::INDIVIDUAL, 'subject_id' => 201]);
+        $this->vendor = Customer::create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Vendor', 'type' => CustomerType::INDIVIDUAL, 'subject_id' => 202]);
 
         $this->bank = Bank::create(['name' => 'Test Bank', 'fiscal_year_id' => $this->fiscalYearId]);
         $this->account = BankAccount::create(['bank_id' => $this->bank->id, 'name' => 'Main account', 'number' => '123456', 'type' => 1, 'subject_id' => 203]);
@@ -356,8 +358,8 @@ class ChequeManagementTest extends TestCase
 
         $cheque = Cheque::latest('id')->firstOrFail();
         $response->assertRedirect(route('cheques.show', $cheque));
-        $this->assertSame('2026-01-01', $cheque->getRawOriginal('write_date'));
-        $this->assertSame('2026-02-01', $cheque->getRawOriginal('due_date'));
+        $this->assertSame('2026-01-01', $cheque->write_date->toDateString());
+        $this->assertSame('2026-02-01', $cheque->due_date->toDateString());
         $this->get(route('cheques.show', $cheque))->assertOk()->assertSee('۱۴۰۴/۱۰/۱۱')->assertSee('۱۴۰۴/۱۱/۱۲');
         $this->get(route('cheques.edit', $cheque))->assertOk()->assertSee('value="1404/10/11"', false)->assertSee('value="1404/11/12"', false);
     }
@@ -658,6 +660,7 @@ class ChequeManagementTest extends TestCase
         $this->get(route('invoices.show', $invoice))
             ->assertOk()
             ->assertSee('name="cheque_number"', false)
+            ->assertSee('id="cheque_payment_fee"', false)
             ->assertSee('id="cheque_issue_date"', false)
             ->assertSee('id="cheque_due_date"', false)
             ->assertSee('preventScroll: true', false);
@@ -913,6 +916,645 @@ class ChequeManagementTest extends TestCase
         ];
     }
 
+    private function feeSubject(): int
+    {
+        $subjectId = DB::table('subjects')->insertGetId([
+            'fiscal_year_id' => getActiveFiscalYear(), 'code' => '040010', 'name' => 'کارمزد بانک', 'type' => 1, 'parent_id' => null,
+        ]);
+        Config::create([
+            'fiscal_year_id' => getActiveFiscalYear(), 'key' => 'bank_service_fee', 'value' => (string) $subjectId,
+            'desc' => 'کارمزد بانک', 'type' => 3, 'category' => 1,
+        ]);
+
+        return (int) $subjectId;
+    }
+
+    public function test_invoice_cheque_fee_posts_to_expense_and_bank_without_changing_face_amount_sell(): void
+    {
+        $this->assertInvoiceChequeFeePosting(InvoiceType::SELL, ChequeType::RECEIVABLE);
+    }
+
+    public function test_invoice_cheque_fee_posts_to_expense_and_bank_without_changing_face_amount_buy(): void
+    {
+        $this->assertInvoiceChequeFeePosting(InvoiceType::BUY, ChequeType::PAYABLE);
+    }
+
+    public function test_invoice_cheque_fee_posts_to_expense_and_bank_without_changing_face_amount_return_sell(): void
+    {
+        $this->assertInvoiceChequeFeePosting(InvoiceType::RETURN_SELL, ChequeType::PAYABLE);
+    }
+
+    public function test_invoice_cheque_fee_posts_to_expense_and_bank_without_changing_face_amount_return_buy(): void
+    {
+        $this->assertInvoiceChequeFeePosting(InvoiceType::RETURN_BUY, ChequeType::RECEIVABLE);
+    }
+
+    private function assertInvoiceChequeFeePosting(InvoiceType $type, ChequeType $direction): void
+    {
+        $expenseId = $this->feeSubject();
+        $invoice = $this->invoice($type, $this->customer, 100);
+        $data = [...$this->invoiceChequeData($invoice, $direction, 100), 'bank_service_fee' => 2];
+        $cheque = $this->service->register($this->user, $data);
+        $payment = $invoice->payments()->firstOrFail();
+        $transactions = $payment->document->transactions;
+        $feeHistory = $cheque->histories()->firstOrFail();
+        $this->assertBalanced($payment->document);
+        $this->assertBalanced($feeHistory->document);
+        $this->assertSame('2.00', $feeHistory->bank_service_fee);
+        $this->assertSame('2.00', $payment->bank_service_fee);
+        $this->assertEquals(100, (float) $cheque->amount);
+        $this->assertEquals(100, (float) $payment->amount);
+        $this->assertEquals(-2, $feeHistory->document->transactions->where('subject_id', $expenseId)->sum('value'));
+        $this->assertCount(4, $feeHistory->document->transactions);
+        $this->assertEquals(2, $transactions->where('subject_id', $this->account->subject_id)->sum('value'));
+        $expectedCustomer = $direction === ChequeType::RECEIVABLE ? 100 : -100;
+        $this->assertEquals($expectedCustomer, $transactions->where('subject_id', $this->customer->subject_id)->sum('value'));
+        $this->assertEquals($direction === ChequeType::RECEIVABLE ? -100 : 100, $transactions->where('subject_id', $payment->settlement_subject_id)->sum('value'));
+        $this->assertTrue($invoice->fresh()->status->isPaid());
+        $this->assertSame(1, $cheque->histories()->count());
+    }
+
+    public function test_updating_cheque_preserves_fee_when_edit_form_omits_it(): void
+    {
+        $expenseId = $this->feeSubject();
+        $invoice = $this->invoice(InvoiceType::SELL, $this->customer, 100);
+        $data = [...$this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 100), 'bank_service_fee' => 2];
+        $cheque = $this->service->register($this->user, $data);
+        unset($data['bank_service_fee']);
+        $data['amount'] = 60;
+        $this->service->update($cheque, $this->user, $data);
+        $payment = $invoice->payments()->firstOrFail();
+        $this->assertSame('2.00', $payment->bank_service_fee);
+        $this->assertEquals(-2, $cheque->histories()->firstOrFail()->document->transactions->where('subject_id', $expenseId)->sum('value'));
+        $this->assertBalanced($payment->document);
+        $this->assertTrue($invoice->fresh()->status->isPartiallyPaid());
+        $this->assertEquals(40, app(PaymentService::class)->remainingAmount($invoice));
+    }
+
+    public function test_cheque_fee_is_not_posted_again_at_deposit_or_clearance_and_is_removed_with_payment(): void
+    {
+        $expenseId = $this->feeSubject();
+        $invoice = $this->invoice(InvoiceType::SELL, $this->customer, 100);
+        $cheque = $this->service->register($this->user, [
+            ...$this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 100), 'bank_service_fee' => 2,
+            'bank_account_id' => $this->account->id,
+        ]);
+        $payment = $invoice->payments()->firstOrFail();
+        $cheque = $this->service->transition($cheque, $this->user, 'deposit', ['bank_account_id' => $this->account->id]);
+        $cheque = $this->service->transition($cheque, $this->user, 'clear');
+        $documentIds = $cheque->histories()->pluck('document_id')->filter();
+        $this->assertSame(1, Transaction::whereIn('document_id', $documentIds)->where('subject_id', $expenseId)->count());
+        $this->assertEquals(100, app(PaymentService::class)->paidAmount($invoice));
+        app(PaymentService::class)->deletePayment($payment);
+        $this->assertSame(0, Transaction::whereIn('document_id', $documentIds)->count());
+        $this->assertTrue($invoice->fresh()->status->isApproved());
+    }
+
+    public function test_invalid_invoice_cheque_fee_or_overpayment_leaves_no_records_negative(): void
+    {
+        $this->assertInvalidInvoiceChequeLeavesNoRecords(-2, 100);
+    }
+
+    public function test_invalid_invoice_cheque_fee_or_overpayment_leaves_no_records_overpayment(): void
+    {
+        $this->assertInvalidInvoiceChequeLeavesNoRecords(2, 101);
+    }
+
+    private function assertInvalidInvoiceChequeLeavesNoRecords(float $fee, float $amount): void
+    {
+        $this->feeSubject();
+        $invoice = $this->invoice(InvoiceType::SELL, $this->customer, 100);
+        $before = Document::count();
+        try {
+            $this->service->register($this->user, [
+                ...$this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, $amount), 'bank_service_fee' => $fee,
+            ]);
+            $this->fail('Expected invalid cheque payment to fail.');
+        } catch (ValidationException $exception) {
+            $this->assertSame(0, $invoice->payments()->count());
+            $this->assertSame(0, Cheque::count());
+            $this->assertSame($before, Document::count());
+        }
+    }
+
+    public function test_invoice_cheque_http_accepts_optional_fee_blank(): void
+    {
+        $this->assertInvoiceChequeHttpAcceptsFee('', '0.00');
+    }
+
+    public function test_invoice_cheque_http_accepts_optional_fee_persian(): void
+    {
+        $this->assertInvoiceChequeHttpAcceptsFee('۲', '2.00');
+    }
+
+    private function assertInvoiceChequeHttpAcceptsFee(string $fee, string $expected): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+        $this->feeSubject();
+        $invoice = $this->invoice(InvoiceType::SELL, $this->customer, 100);
+        $data = $this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 100);
+        $data['issue_date'] = toEnglish(formatDate($invoice->date));
+        $data['due_date'] = toEnglish(formatDate($invoice->date->copy()->addMonth()));
+        $this->post(route('invoices.payments.store-cheque', $invoice), [...$data, 'bank_service_fee' => $fee])
+            ->assertSessionHasNoErrors()->assertRedirect(route('invoices.show', $invoice));
+        $this->assertSame($expected, $invoice->payments()->firstOrFail()->bank_service_fee);
+    }
+
+    private function chequeAtStage(string $stage): Cheque
+    {
+        $cheque = match ($stage) {
+            'issued' => $this->issuedCheque(),
+            'guarantee' => $this->receivedCheque(ChequeType::GUARANTEE),
+            default => $this->receivedCheque(),
+        };
+        if (in_array($stage, ['deposited', 'cleared'])) {
+            $cheque = $this->service->transition($cheque, $this->user, 'deposit', ['bank_account_id' => $this->account->id]);
+        }
+        if ($stage === 'cleared') {
+            $cheque = $this->service->transition($cheque, $this->user, 'clear');
+        }
+
+        $cheque->update(['bank_account_id' => $this->account->id]);
+
+        return $cheque->fresh();
+    }
+
+    public function test_each_cheque_stage_accepts_and_posts_its_own_fee_deposit(): void
+    {
+        $this->assertChequeStageFeePosting('received', 'deposit');
+    }
+
+    public function test_each_cheque_stage_accepts_and_posts_its_own_fee_clear_received(): void
+    {
+        $this->assertChequeStageFeePosting('deposited', 'clear');
+    }
+
+    public function test_each_cheque_stage_accepts_and_posts_its_own_fee_bounce_received(): void
+    {
+        $this->assertChequeStageFeePosting('deposited', 'bounce');
+    }
+
+    public function test_each_cheque_stage_accepts_and_posts_its_own_fee_endorse(): void
+    {
+        $this->assertChequeStageFeePosting('received', 'endorse');
+    }
+
+    public function test_each_cheque_stage_accepts_and_posts_its_own_fee_return(): void
+    {
+        $this->assertChequeStageFeePosting('received', 'return');
+    }
+
+    public function test_each_cheque_stage_accepts_and_posts_its_own_fee_clear_issued(): void
+    {
+        $this->assertChequeStageFeePosting('issued', 'clear');
+    }
+
+    public function test_each_cheque_stage_accepts_and_posts_its_own_fee_bounce_issued(): void
+    {
+        $this->assertChequeStageFeePosting('issued', 'bounce');
+    }
+
+    public function test_each_cheque_stage_accepts_and_posts_its_own_fee_cancel_issued(): void
+    {
+        $this->assertChequeStageFeePosting('issued', 'cancel');
+    }
+
+    public function test_each_cheque_stage_accepts_and_posts_its_own_fee_execute_guarantee(): void
+    {
+        $this->assertChequeStageFeePosting('guarantee', 'execute');
+    }
+
+    public function test_each_cheque_stage_accepts_and_posts_its_own_fee_cancel_guarantee(): void
+    {
+        $this->assertChequeStageFeePosting('guarantee', 'cancel');
+    }
+
+    public function test_each_cheque_stage_accepts_and_posts_its_own_fee_later_fee(): void
+    {
+        $this->assertChequeStageFeePosting('cleared', 'fee');
+    }
+
+    private function assertChequeStageFeePosting(string $stage, string $action): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+        $expenseId = $this->feeSubject();
+        $cheque = $this->chequeAtStage($stage);
+        $previousStatus = $cheque->status;
+        $paymentCount = $cheque->payments()->count();
+        $this->post(route('cheques.transition', [$cheque, $action]), [
+            'bank_service_fee' => '۲٬۸۸۰٫۵۰',
+            'bank_account_id' => $this->account->id,
+            'customer_id' => $this->vendor->id,
+            'date' => toEnglish(formatDate('2026-02-01')),
+        ])->assertSessionHasNoErrors()->assertRedirect(route('cheques.show', $cheque));
+
+        $history = $cheque->histories()->latest('id')->firstOrFail();
+        $this->assertSame('2880.50', $history->bank_service_fee);
+        $this->assertSame('2026-02-01', $history->document->date->toDateString());
+        $this->assertBalanced($history->document);
+        $this->assertEquals(-2880.5, $history->document->transactions->where('subject_id', $expenseId)->sum('value'));
+        $expectedCustomer = match ($action) {
+            'return' => -1000,
+            'execute' => 1000,
+            'bounce' => $stage === 'issued' ? 1000 : 0,
+            'cancel' => $stage === 'issued' ? 1000 : 0,
+            default => 0,
+        };
+        $this->assertEquals($expectedCustomer, $history->document->transactions->where('subject_id', $cheque->customer->subject_id)->sum('value'));
+        $expectedBank = 2880.5 + ($action === 'clear' ? ($stage === 'issued' ? 1000 : -1000) : 0);
+        $this->assertEquals($expectedBank, $history->document->transactions->where('subject_id', $this->account->subject_id)->sum('value'));
+        $this->assertEquals(1000, (float) $cheque->fresh()->amount);
+        if ($action === 'fee') {
+            $this->assertSame($previousStatus, $cheque->fresh()->status);
+            $this->assertSame($paymentCount, $cheque->payments()->count());
+        }
+    }
+
+    public function test_standalone_guarantee_registration_records_fee_without_settlement(): void
+    {
+        $this->feeSubject();
+        $cheque = $this->service->register($this->user, [
+            ...$this->data(ChequeType::RECEIVABLE, ChequeType::GUARANTEE, $this->customer),
+            'bank_service_fee' => 2,
+            'bank_account_id' => $this->account->id,
+        ]);
+        $history = $cheque->histories()->firstOrFail();
+        $this->assertSame('2.00', $history->bank_service_fee);
+        $this->assertNotNull($history->document_id);
+        $this->assertSame(0, $cheque->payments()->count());
+        $this->assertBalanced($history->document);
+    }
+
+    public function test_editing_guarantee_fee_replaces_its_document_and_zero_removes_it(): void
+    {
+        $expenseId = $this->feeSubject();
+        $data = [
+            ...$this->data(ChequeType::RECEIVABLE, ChequeType::GUARANTEE, $this->customer),
+            'bank_service_fee' => 2,
+            'bank_account_id' => $this->account->id,
+        ];
+        $cheque = $this->service->register($this->user, $data);
+        $firstDocumentId = $cheque->histories()->firstOrFail()->document_id;
+        $cheque = $this->service->update($cheque, $this->user, [...$data, 'bank_service_fee' => 3]);
+        $history = $cheque->histories()->firstOrFail();
+        $this->assertDatabaseMissing('documents', ['id' => $firstDocumentId]);
+        $this->assertSame('3.00', $history->bank_service_fee);
+        $this->assertEquals(-3, $history->document->transactions->where('subject_id', $expenseId)->sum('value'));
+        $this->assertBalanced($history->document);
+        $secondDocumentId = $history->document_id;
+        $cheque = $this->service->update($cheque, $this->user, [...$data, 'bank_service_fee' => 0]);
+        $this->assertDatabaseMissing('documents', ['id' => $secondDocumentId]);
+        $this->assertNull($cheque->histories()->firstOrFail()->document_id);
+        $this->assertSame('0.00', $cheque->histories()->firstOrFail()->bank_service_fee);
+        $this->assertSame(0, $cheque->payments()->count());
+    }
+
+    public function test_http_registration_and_transition_reject_invalid_fees_negative(): void
+    {
+        $this->assertHttpRejectsInvalidFee(-1);
+    }
+
+    public function test_http_registration_and_transition_reject_invalid_fees_text(): void
+    {
+        $this->assertHttpRejectsInvalidFee('invalid');
+    }
+
+    public function test_http_registration_and_transition_reject_invalid_fees_array(): void
+    {
+        $this->assertHttpRejectsInvalidFee(['1']);
+    }
+
+    public function test_http_registration_and_transition_reject_invalid_fees_too_large(): void
+    {
+        $this->assertHttpRejectsInvalidFee('10000000000000000');
+    }
+
+    private function assertHttpRejectsInvalidFee(mixed $fee): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+        $data = $this->data(ChequeType::RECEIVABLE, ChequeType::SETTLEMENT, $this->customer);
+        $data['issue_date'] = toEnglish(formatDate($data['issue_date']));
+        $data['due_date'] = toEnglish(formatDate($data['due_date']));
+
+        $this->post(route('cheques.store'), [...$data, 'bank_service_fee' => $fee])
+            ->assertSessionHasErrors('bank_service_fee');
+        $this->assertSame(0, Cheque::count());
+
+        $cheque = $this->receivedCheque();
+        $this->post(route('cheques.transition', [$cheque, 'deposit']), [
+            'bank_account_id' => $this->account->id,
+            'bank_service_fee' => $fee,
+        ])->assertSessionHasErrors('bank_service_fee');
+        $this->assertSame(ChequeType::REGISTERED, $cheque->fresh()->status);
+        $this->assertSame(1, $cheque->histories()->count());
+    }
+
+    public function test_service_registration_accepts_a_localized_bank_service_fee(): void
+    {
+        $this->feeSubject();
+        $cheque = $this->service->register($this->user, [
+            ...$this->data(ChequeType::RECEIVABLE, ChequeType::SETTLEMENT, $this->customer),
+            'bank_service_fee' => ' ۱٬۲۳۴٫۵۶ ',
+            'bank_account_id' => $this->account->id,
+        ]);
+
+        $history = $cheque->histories()->firstOrFail();
+        $this->assertSame('1234.56', $history->bank_service_fee);
+        $this->assertBalanced($history->document);
+    }
+
+    public function test_invalid_fee_rolls_back_the_transition_negative(): void
+    {
+        $this->assertInvalidFeeRollsBackTransition(-1);
+    }
+
+    public function test_invalid_fee_rolls_back_the_transition_text(): void
+    {
+        $this->assertInvalidFeeRollsBackTransition('invalid');
+    }
+
+    public function test_invalid_fee_rolls_back_the_transition_array(): void
+    {
+        $this->assertInvalidFeeRollsBackTransition(['1']);
+    }
+
+    public function test_invalid_fee_rolls_back_the_transition_too_large(): void
+    {
+        $this->assertInvalidFeeRollsBackTransition('10000000000000000');
+    }
+
+    private function assertInvalidFeeRollsBackTransition(mixed $fee): void
+    {
+        $cheque = $this->receivedCheque();
+        $beforeDocuments = Document::count();
+        try {
+            $this->service->transition($cheque, $this->user, 'deposit', [
+                'bank_account_id' => $this->account->id,
+                'bank_service_fee' => $fee,
+            ]);
+            $this->fail('Expected invalid fee to be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('bank_service_fee', $exception->errors());
+            $this->assertSame(ChequeType::REGISTERED, $cheque->fresh()->status);
+            $this->assertSame(1, $cheque->histories()->count());
+            $this->assertSame($beforeDocuments, Document::count());
+        }
+    }
+
+    public function test_missing_fee_expense_configuration_rolls_back_transition(): void
+    {
+        $cheque = $this->receivedCheque();
+        $beforeDocuments = Document::count();
+        try {
+            $this->service->transition($cheque, $this->user, 'deposit', [
+                'bank_account_id' => $this->account->id,
+                'bank_service_fee' => 2,
+            ]);
+            $this->fail('Expected missing fee configuration to be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('bank_service_fee', $exception->errors());
+            $this->assertSame(ChequeType::REGISTERED, $cheque->fresh()->status);
+            $this->assertSame(1, $cheque->histories()->count());
+            $this->assertSame($beforeDocuments, Document::count());
+        }
+    }
+
+    public function test_fees_accumulate_across_bounce_and_redeposit_without_affecting_invoice(): void
+    {
+        $expenseId = $this->feeSubject();
+        $invoice = $this->invoice(InvoiceType::SELL, $this->customer, 100);
+        $cheque = $this->service->register($this->user, [
+            ...$this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 100),
+            'bank_service_fee' => 1,
+        ]);
+        foreach (['deposit' => 2, 'bounce' => 3] as $action => $fee) {
+            $cheque = $this->service->transition($cheque, $this->user, $action, [
+                'bank_account_id' => $this->account->id,
+                'bank_service_fee' => $fee,
+            ]);
+        }
+        $cheque = $this->service->transition($cheque, $this->user, 'deposit', ['bank_account_id' => $this->account->id]);
+        $cheque = $this->service->transition($cheque, $this->user, 'clear', [
+            'bank_service_fee' => 4,
+        ]);
+        $this->assertEquals(10, $cheque->histories()->sum('bank_service_fee'));
+        $this->assertEquals(100, app(PaymentService::class)->paidAmount($invoice));
+        $this->assertTrue($invoice->fresh()->status->isPaid());
+        $documentIds = $cheque->histories()->pluck('document_id')->filter();
+        $this->assertEquals(-10, Transaction::whereIn('document_id', $documentIds)->where('subject_id', $expenseId)->sum('value'));
+        app(PaymentService::class)->deletePayment($invoice->payments()->firstOrFail());
+        $this->assertSame(0, Document::whereIn('id', $documentIds)->count());
+        $this->assertSame(0, Transaction::whereIn('document_id', $documentIds)->count());
+    }
+
+    public function test_registration_form_and_http_store_accept_a_standalone_fee(): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+        $this->feeSubject();
+        $this->get(route('cheques.create'))->assertOk()
+            ->assertSee('name="bank_service_fee"', false)
+            ->assertDontSee('name="fee_bank_account_id"', false);
+        $data = $this->data(ChequeType::PAYABLE, ChequeType::SETTLEMENT, $this->vendor);
+        $data['issue_date'] = toEnglish(formatDate($data['issue_date']));
+        $data['due_date'] = toEnglish(formatDate($data['due_date']));
+        $this->post(route('cheques.store'), [
+            ...$data, 'bank_service_fee' => '۲', 'bank_account_id' => $this->account->id,
+        ])->assertSessionHasNoErrors();
+        $cheque = Cheque::latest('id')->firstOrFail();
+        $this->assertSame('2.00', $cheque->histories()->firstOrFail()->bank_service_fee);
+        $this->assertBalanced($cheque->histories()->firstOrFail()->document);
+    }
+
+    public function test_fee_forms_are_available_for_each_action_and_after_clearance(): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+        $this->user->givePermissionTo(Permission::findOrCreate('cheques.transition'));
+        $cheque = $this->receivedCheque();
+        $this->get(route('cheques.show', $cheque))->assertOk()
+            ->assertSee('id="cheque_deposit_fee"', false)
+            ->assertSee('id="cheque_endorse_fee"', false)
+            ->assertSee('id="cheque_return_fee"', false)
+            ->assertSee('id="cheque_fee_fee"', false);
+        $cheque = $this->service->transition($cheque, $this->user, 'deposit', ['bank_account_id' => $this->account->id]);
+        $this->get(route('cheques.show', $cheque))->assertOk()
+            ->assertSee('id="cheque_clear_fee"', false)
+            ->assertSee('id="cheque_bounce_fee"', false);
+        $cheque = $this->service->transition($cheque, $this->user, 'clear');
+        $this->get(route('cheques.show', $cheque))->assertOk()->assertSee('id="cheque_fee_fee"', false);
+    }
+
+    public function test_fee_rejects_bank_subject_from_another_fiscal_year_of_the_same_company(): void
+    {
+        $this->feeSubject();
+        $cheque = $this->issuedCheque();
+        $otherFiscalYear = FiscalYear::factory()->create([
+            'company_id' => FiscalYear::findOrFail($this->fiscalYearId)->company_id,
+            'year' => 1406,
+        ]);
+        DB::table('subjects')->where('id', $this->account->subject_id)->update(['fiscal_year_id' => $otherFiscalYear->id]);
+        $beforeDocuments = Document::count();
+        try {
+            $this->service->transition($cheque, $this->user, 'fee', ['bank_service_fee' => 2]);
+            $this->fail('Expected a foreign bank subject to be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('bank_account_id', $exception->errors());
+            $this->assertSame(1, $cheque->histories()->count());
+            $this->assertSame($beforeDocuments, Document::count());
+        }
+    }
+
+    public function test_zero_fee_needs_no_account_or_expense_configuration(): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+        $cheque = $this->receivedCheque();
+        $this->post(route('cheques.transition', [$cheque, 'deposit']), [
+            'bank_service_fee' => '', 'bank_account_id' => $this->account->id,
+        ])->assertSessionHasNoErrors();
+        $history = $cheque->histories()->latest('id')->firstOrFail();
+        $this->assertSame('0.00', $history->bank_service_fee);
+        $this->assertCount(2, $history->document->transactions);
+    }
+
+    public function test_positive_fee_requires_the_cheques_related_bank_account(): void
+    {
+        $this->feeSubject();
+        $cheque = $this->receivedCheque();
+        $beforeDocuments = Document::count();
+
+        try {
+            $this->service->transition($cheque, $this->user, 'fee', [
+                'bank_service_fee' => 2,
+                'bank_account_id' => $this->account->id,
+            ]);
+            $this->fail('Expected a cheque without a related bank account to reject the fee.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('bank_account_id', $exception->errors());
+            $this->assertSame(1, $cheque->histories()->count());
+            $this->assertSame($beforeDocuments, Document::count());
+        }
+    }
+
+    public function test_fee_uses_the_cheque_bank_relation_instead_of_the_submitted_account(): void
+    {
+        $expenseId = $this->feeSubject();
+        $cheque = $this->issuedCheque();
+
+        $this->service->transition($cheque, $this->user, 'fee', [
+            'bank_service_fee' => 2,
+            'bank_account_id' => 999999,
+        ]);
+
+        $document = $cheque->histories()->latest('id')->firstOrFail()->document;
+        $this->assertBalanced($document);
+        $this->assertEquals(-2, $document->transactions->where('subject_id', $expenseId)->sum('value'));
+        $this->assertEquals(2, $document->transactions->where('subject_id', $this->account->subject_id)->sum('value'));
+        $this->assertEquals(0, $document->transactions->where('subject_id', $this->vendor->subject_id)->sum('value'));
+    }
+
+    public function test_fee_history_export_and_import_uses_existing_document_reference(): void
+    {
+        $this->feeSubject();
+        $cheque = $this->service->register($this->user, [
+            ...$this->data(ChequeType::RECEIVABLE, ChequeType::GUARANTEE, $this->customer),
+            'bank_service_fee' => 2,
+            'bank_account_id' => $this->account->id,
+        ]);
+        $history = $cheque->histories()->firstOrFail();
+        $export = FiscalYearService::exportData(getActiveFiscalYear(), ['cheques']);
+        $this->assertSame('2.00', $export['cheque_histories'][0]['bank_service_fee']);
+        $this->assertArrayNotHasKey('fee_bank_account_id', $export['cheque_histories'][0]);
+        $this->assertArrayNotHasKey('fee_document_id', $export['cheque_histories'][0]);
+        $replacement = $this->receivedCheque(ChequeType::GUARANTEE);
+        $newDocument = $history->document->replicate();
+        $newDocument->save();
+        $method = new \ReflectionMethod(FiscalYearService::class, '_importChequeHistories');
+        $method->invoke(null, $export['cheque_histories'], getActiveFiscalYear(),
+            [$cheque->id => $replacement->id], [$history->document_id => $newDocument->id], []);
+        $imported = $replacement->histories()->latest('id')->firstOrFail();
+        $this->assertSame('2.00', $imported->bank_service_fee);
+        $this->assertSame($newDocument->id, $imported->document_id);
+    }
+
+    public function test_valid_fees_are_normalized_and_rounded_omitted(): void
+    {
+        $this->assertFeeNormalization([], 0.0);
+    }
+
+    public function test_valid_fees_are_normalized_and_rounded_null(): void
+    {
+        $this->assertFeeNormalization(['bank_service_fee' => null], 0.0);
+    }
+
+    public function test_valid_fees_are_normalized_and_rounded_blank(): void
+    {
+        $this->assertFeeNormalization(['bank_service_fee' => ''], 0.0);
+    }
+
+    public function test_valid_fees_are_normalized_and_rounded_zero(): void
+    {
+        $this->assertFeeNormalization(['bank_service_fee' => 0], 0.0);
+    }
+
+    public function test_valid_fees_are_normalized_and_rounded_rounded(): void
+    {
+        $this->assertFeeNormalization(['bank_service_fee' => '12.345'], 12.35);
+    }
+
+    public function test_valid_fees_are_normalized_and_rounded_english_separators(): void
+    {
+        $this->assertFeeNormalization(['bank_service_fee' => '1,234.56'], 1234.56);
+    }
+
+    public function test_valid_fees_are_normalized_and_rounded_persian_separators(): void
+    {
+        $this->assertFeeNormalization(['bank_service_fee' => ' ۱٬۲۳۴٫۵۶ '], 1234.56);
+    }
+
+    private function assertFeeNormalization(array $data, float $expected): void
+    {
+        $this->assertSame($expected, app(ChequeService::class)->validateBankServiceFee($data));
+    }
+
+    public function test_invalid_fees_raise_a_field_validation_error_negative(): void
+    {
+        $this->assertInvalidFeeValidationError(-1);
+    }
+
+    public function test_invalid_fees_raise_a_field_validation_error_text(): void
+    {
+        $this->assertInvalidFeeValidationError('invalid');
+    }
+
+    public function test_invalid_fees_raise_a_field_validation_error_array(): void
+    {
+        $this->assertInvalidFeeValidationError(['1']);
+    }
+
+    public function test_invalid_fees_raise_a_field_validation_error_upper_limit(): void
+    {
+        $this->assertInvalidFeeValidationError('10000000000000000');
+    }
+
+    public function test_invalid_fees_raise_a_field_validation_error_infinity(): void
+    {
+        $this->assertInvalidFeeValidationError(INF);
+    }
+
+    public function test_invalid_fees_raise_a_field_validation_error_not_a_number(): void
+    {
+        $this->assertInvalidFeeValidationError(NAN);
+    }
+
+    private function assertInvalidFeeValidationError(mixed $fee): void
+    {
+        try {
+            app(ChequeService::class)->validateBankServiceFee(['bank_service_fee' => $fee]);
+            $this->fail('Expected invalid fee to be rejected.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('bank_service_fee', $exception->errors());
+        }
+    }
+
     private function invoice(InvoiceType $type, Customer $accountSide, float $amount): Invoice
     {
         return Invoice::create([
@@ -941,7 +1583,7 @@ class ChequeManagementTest extends TestCase
             ),
             'invoice_id' => $invoice->id,
             'issue_date' => $invoice->date->toDateString(),
-            'bank_account_id' => $direction === ChequeType::PAYABLE ? $this->account->id : null,
+            'bank_account_id' => $this->account->id,
         ];
     }
 

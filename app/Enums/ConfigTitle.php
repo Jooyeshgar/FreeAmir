@@ -7,6 +7,7 @@ enum ConfigTitle: string
     case CUST_SUBJECT = 'CUST_SUBJECT';
     case CASH_BOOK = 'CASH_BOOK';
     case BANK = 'BANK';
+    case BANK_SERVICE_FEE = 'BANK_SERVICE_FEE';
     case INCOME = 'INCOME';
     case COST = 'COST';
     case SUNDRY_COST = 'SUNDRY_COST';
@@ -34,6 +35,7 @@ enum ConfigTitle: string
             self::CASH_BOOK => __('Cash balances'),
             self::SUNDRY_COST => __('Sundry cost'),
             self::BANK => __('Banks'),
+            self::BANK_SERVICE_FEE => __('Bank service fee'),
             self::INCOME => __('Income'),
             self::COST => __('Cost'),
             self::PAYROLL => __('Payroll'),

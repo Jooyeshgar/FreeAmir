@@ -336,7 +336,7 @@ class InvoiceController extends Controller
         $remainingAmount = $paymentService->remainingAmount($invoice);
         $chequeDirection = $chequeService->directionForInvoice($invoice);
         $chequeBanks = $chequeDirection && $chequeDirection !== ChequeType::PAYABLE ? Bank::orderBy('name')->get() : collect();
-        $chequeBankAccounts = $chequeDirection === ChequeType::PAYABLE ? BankAccount::with('bank')->orderBy('name')->get() : collect();
+        $chequeBankAccounts = $chequeDirection ? BankAccount::with('bank')->orderBy('name')->get() : collect();
         $chequebooks = $chequeDirection === ChequeType::PAYABLE ? Chequebook::with('bankAccount.bank')->orderBy('serial_prefix')->get() : collect();
 
         $ancillaryCostProductIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->unique()->values()->all();

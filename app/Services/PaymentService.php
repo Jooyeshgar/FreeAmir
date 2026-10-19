@@ -7,6 +7,7 @@ use App\Enums\ChequeType;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\Cheque;
+use App\Models\Config;
 use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\Payment;
@@ -69,6 +70,13 @@ class PaymentService
             $decision->addMessage('error', __('Payment amount exceeds the remaining balance of the invoice.'));
         }
 
+        $fee = ($data['bank_service_fee'] ?? '') === '' ? 0 : $data['bank_service_fee'];
+        if (! is_numeric($fee) || ! is_finite((float) $fee) || $fee < 0) {
+            $decision->addMessage('error', __('Bank service fee must be zero or greater.'));
+        } elseif ($fee > 0 && ! $this->bankServiceFeeSubjectId()) {
+            $decision->addMessage('error', __('Configure a bank service fee expense account for the active fiscal year.'));
+        }
+
         return $decision;
     }
 
@@ -82,12 +90,14 @@ class PaymentService
 
             $subjectId = (int) $data['subject_id'];
             $date = $data['date'] ?? now()->toDateString();
-            $document = $this->paymentDocument($user, $invoice, $subjectId, $data['amount'], $date);
+            $fee = round((float) ($data['bank_service_fee'] ?? 0), 2);
+            $document = $this->paymentDocument($user, $invoice, $subjectId, $data['amount'], $date, $fee);
 
             $payment = Payment::create([
                 'invoice_id' => $invoice->id,
                 'payer_id' => $invoice->customer_id,
                 'amount' => $data['amount'],
+                'bank_service_fee' => $fee,
                 'date' => $date,
                 'description' => $data['description'] ?? null,
                 'reference_number' => $data['reference_number'] ?? null,
@@ -104,11 +114,12 @@ class PaymentService
         });
     }
 
-    public function saveChequePayment(User $user, ?Invoice $invoice, Cheque $cheque, Document $document, int $settlementSubjectId, ?Payment $payment = null): Payment
+    public function saveChequePayment(User $user, ?Invoice $invoice, Cheque $cheque, Document $document, int $settlementSubjectId, ?Payment $payment = null, float $fee = 0): Payment
     {
         if ($invoice) {
             $decision = $this->validateInvoicePayment($invoice, [
                 'amount' => (float) $cheque->amount,
+                'bank_service_fee' => $fee,
                 'date' => $cheque->write_date->toDateString(),
             ], $payment);
             if ($decision->hasErrors()) {
@@ -123,6 +134,7 @@ class PaymentService
             'cheque_id' => $cheque->id,
             'payer_id' => $cheque->direction === ChequeType::RECEIVABLE ? $cheque->customer_id : null,
             'amount' => $cheque->amount,
+            'bank_service_fee' => $fee,
             'date' => $cheque->write_date,
             'description' => $cheque->desc,
             'reference_number' => $cheque->sayad_number,
@@ -165,7 +177,34 @@ class PaymentService
         }
     }
 
-    private function paymentDocument(User $user, Invoice $invoice, int $settlementSubjectId, float $amount, ?string $date = null)
+    private function bankServiceFeeSubjectId(): ?int
+    {
+        // Read the scoped setting directly to avoid using another fiscal year's cached config.
+        $subjectId = (int) Config::where('key', 'bank_service_fee')->value('value');
+
+        return $subjectId && Subject::whereKey($subjectId)->exists() ? $subjectId : null;
+    }
+
+    public function bankServiceFeeTransactions(float $fee, int $settlementSubjectId): array
+    {
+        if ($fee <= 0) {
+            return [];
+        }
+
+        $expenseSubjectId = $this->bankServiceFeeSubjectId();
+        if (! $expenseSubjectId) {
+            throw ValidationException::withMessages([
+                'bank_service_fee' => __('Configure a bank service fee expense account for the active fiscal year.'),
+            ]);
+        }
+
+        return [
+            ['subject_id' => $expenseSubjectId, 'desc' => __('Bank service fee'), 'value' => -$fee],
+            ['subject_id' => $settlementSubjectId, 'desc' => __('Bank service fee'), 'value' => $fee],
+        ];
+    }
+
+    private function paymentDocument(User $user, Invoice $invoice, int $settlementSubjectId, float $amount, ?string $date = null, float $fee = 0)
     {
         $customerSubjectId = $invoice->customer->subject?->id ?? $invoice->customer->subject_id;
         $customerSign = in_array($invoice->invoice_type, [InvoiceType::SELL, InvoiceType::RETURN_BUY]) ? 1 : -1;
@@ -183,6 +222,7 @@ class PaymentService
                 'value' => -$customerSign * $amount,
             ],
         ];
+        $transactions = array_merge($transactions, $this->bankServiceFeeTransactions($fee, $settlementSubjectId));
 
         $documentData = [
             'date' => $date ?? now()->toDateString(),
@@ -286,7 +326,16 @@ class PaymentService
                 return $decision;
             }
 
-            $document = $this->paymentDocument($user, $invoice, $settlementSubjectId, (float) $payment->amount, $payment->date?->toDateString());
+            $decision = $this->validateInvoicePayment($invoice, [
+                'amount' => (float) $payment->amount,
+                'subject_id' => $settlementSubjectId,
+                'bank_service_fee' => (float) $payment->bank_service_fee,
+            ], $payment);
+            if ($decision->hasErrors()) {
+                return $decision;
+            }
+
+            $document = $this->paymentDocument($user, $invoice, $settlementSubjectId, (float) $payment->amount, $payment->date?->toDateString(), (float) $payment->bank_service_fee);
 
             $payment->document_id = $document->id;
             $payment->save();

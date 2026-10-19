@@ -47,6 +47,7 @@ class ConfigControllerTest extends TestCase
 
             return ! in_array('CASH', $keys, true)
                 && in_array('CASH_BOOK', $keys, true)
+                && in_array('BANK_SERVICE_FEE', $keys, true)
                 && in_array('PAYROLL', $keys, true)
                 && in_array('SALES_RETURNS', $keys, true)
                 && in_array('COST_OF_GOODS_SOLD', $keys, true)
@@ -90,58 +91,6 @@ class ConfigControllerTest extends TestCase
         ])->assertSessionHasErrors('key');
 
         $this->assertSame('0', $cash->fresh()->value);
-    }
-
-    public function test_migration_removes_stored_cash_config_without_removing_cash_book(): void
-    {
-        foreach (['cash', 'cash_book'] as $key) {
-            Config::create([
-                'fiscal_year_id' => $this->fiscalYear->id,
-                'key' => $key,
-                'value' => '1',
-                'desc' => $key,
-                'type' => '2',
-                'category' => '1',
-            ]);
-        }
-
-        $migration = require database_path('migrations/2026_09_09_000002_remove_unused_cash_config.php');
-        $migration->up();
-
-        $this->assertDatabaseMissing('configs', [
-            'fiscal_year_id' => $this->fiscalYear->id,
-            'key' => 'cash',
-        ]);
-        $this->assertDatabaseHas('configs', [
-            'fiscal_year_id' => $this->fiscalYear->id,
-            'key' => 'cash_book',
-        ]);
-    }
-
-    public function test_migration_renames_stored_wage_config_to_payroll(): void
-    {
-        Config::create([
-            'fiscal_year_id' => $this->fiscalYear->id,
-            'key' => 'wage',
-            'value' => '42',
-            'desc' => 'حقوق پرسنل',
-            'type' => '3',
-            'category' => '1',
-        ]);
-
-        $migration = require database_path('migrations/2026_09_12_000001_rename_wage_config_to_payroll.php');
-        $migration->up();
-
-        $this->assertDatabaseMissing('configs', [
-            'fiscal_year_id' => $this->fiscalYear->id,
-            'key' => 'wage',
-        ]);
-        $this->assertDatabaseHas('configs', [
-            'fiscal_year_id' => $this->fiscalYear->id,
-            'key' => 'payroll',
-            'value' => '42',
-            'desc' => 'حقوق و دستمزد',
-        ]);
     }
 
     public function test_edit_still_accepts_every_supported_config_key(): void

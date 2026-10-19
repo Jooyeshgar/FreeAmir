@@ -37,11 +37,13 @@ class PaymentController extends Controller
     {
         $request->merge([
             'amount' => convertToFloat($request->input('amount', 0)),
+            'bank_service_fee' => $this->normalizeBankServiceFee($request),
             'date' => $request->input('date') ? convertToGregorian($request->input('date')) : null,
         ]);
 
         $validated = $request->validate([
             'amount' => ['required', 'numeric', 'gt:0'],
+            'bank_service_fee' => ['required', 'numeric', 'min:0'],
             'subject_id' => ['required', 'integer', 'exists:subjects,id'],
             'date' => ['nullable', 'date'],
             'description' => ['nullable', 'string', 'max:1000'],
@@ -58,11 +60,20 @@ class PaymentController extends Controller
 
     public function storeCheque(Request $request, Invoice $invoice)
     {
+        if ($request->has('bank_service_fee')) {
+            $request->merge(['bank_service_fee' => $this->normalizeBankServiceFee($request)]);
+        }
+
+        $request->validate([
+            'bank_service_fee' => ['sometimes', 'required', 'numeric', 'min:0', 'lt:10000000000000000'],
+        ]);
+
         $direction = $this->chequeService->directionForInvoice($invoice);
         abort_unless($direction, 422, __('This invoice type cannot be settled by cheque.'));
 
         $normalized = [
             'amount' => convertToFloat($request->input('amount', 0)),
+            'bank_service_fee' => $this->normalizeBankServiceFee($request),
             'sayad_number' => preg_replace('/\D/', '', toEnglish((string) $request->input('sayad_number'))),
             'serial' => trim(toEnglish((string) $request->input('serial'))),
             'cheque_number' => trim(toEnglish((string) $request->input('cheque_number'))),
@@ -76,6 +87,7 @@ class PaymentController extends Controller
 
         $validated = Validator::make(array_replace($request->all(), $normalized), [
             'amount' => ['required', 'numeric', 'gt:0'],
+            'bank_service_fee' => ['required', 'numeric', 'min:0'],
             'issue_date' => ['required', 'date'],
             'due_date' => ['required', 'date', 'after_or_equal:issue_date'],
             'serial' => ['nullable', 'string', 'max:50'],
@@ -103,6 +115,17 @@ class PaymentController extends Controller
         ]);
 
         return redirect()->route('invoices.show', $invoice)->with('success', __('Invoice payment cheque registered successfully.'));
+    }
+
+    private function normalizeBankServiceFee(Request $request): mixed
+    {
+        $fee = $request->input('bank_service_fee') ?? 0;
+        if (is_string($fee)) {
+            $fee = str_replace([',', '٬', '٫'], ['', '', '.'], trim(toEnglish($fee)));
+            $fee = $fee === '' ? 0 : $fee;
+        }
+
+        return $fee;
     }
 
     public function destroy(Invoice $invoice, Payment $payment)
