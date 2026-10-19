@@ -1567,9 +1567,7 @@
                 form.addEventListener('submit', function(e) {
                     e.preventDefault();
 
-                    if (confirm(
-                            '{{ __('This invoice has warnings for change its status, are you sure to change status?') }}'
-                        )) {
+                    if (confirm(this.dataset.confirmMessage)) {
                         this.submit();
                     }
                 });
