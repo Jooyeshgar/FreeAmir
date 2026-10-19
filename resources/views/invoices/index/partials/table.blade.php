@@ -105,8 +105,9 @@
                                         <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed">{{ __('Unapprove') }}</button>
                                     </span>
                                 @else
-                                    <form action="{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}{{ $invoice->changeStatusValidation->hasWarning() ? '?confirm=1' : '' }}"
-                                        method="POST" class="inline-block {{ $invoice->changeStatusValidation->hasWarning() ? 'change-status-form' : '' }}">
+                                    <form action="{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}{{ ($invoice->changeStatusValidation->hasWarning() || $isSettled) ? '?confirm=1' : '' }}"
+                                        method="POST" class="inline-block {{ ($invoice->changeStatusValidation->hasWarning() || $isSettled) ? 'change-status-form' : '' }}"
+                                        data-confirm-message="{{ $isSettled ? __('Deactivating this paid or partially paid invoice will remove its payment accounting documents while keeping the payment records. Are you sure?') : __('This invoice has warnings for change its status, are you sure to change status?') }}">
                                         @csrf
                                         <button type="submit" x-data="{}" data-tip="{{ $invoice->changeStatusValidation->toText() }}"
                                             class="btn btn-sm inline-flex tooltip {{ $canUnapprove ? 'btn-warning' : 'btn-success' }} {{ $canApprove && $invoice->changeStatusValidation->hasWarning() ? 'btn-outline' : '' }}">
@@ -134,7 +135,7 @@
                         @endif
 
                         @if (!$deleteDisabled)
-                            <form action="{{ route('invoices.destroy', $invoice) }}" method="POST">
+                            <form action="{{ route('invoices.destroy', $invoice) }}{{ $isSettled ? '?confirm=1' : '' }}" method="POST" class="{{ $isSettled ? 'delete-settled-form' : '' }}">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>

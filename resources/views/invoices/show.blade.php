@@ -1297,9 +1297,10 @@
                                 </span>
                             @else
                                 <form
-                                    action="{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}{{ $changeStatusValidation->hasWarning() ? '?confirm=1' : '' }}"
+                                    action="{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}{{ ($changeStatusValidation->hasWarning() || $isSettled) ? '?confirm=1' : '' }}"
                                     method="POST"
-                                    class="inline-block {{ $changeStatusValidation->hasWarning() ? 'change-status-form' : '' }}">
+                                    class="inline-block {{ ($changeStatusValidation->hasWarning() || $isSettled) ? 'change-status-form' : '' }}"
+                                    data-confirm-message="{{ $isSettled ? __('Deactivating this paid or partially paid invoice will remove its payment accounting documents while keeping the payment records. Are you sure?') : __('This invoice has warnings for change its status, are you sure to change status?') }}">
                                     @csrf
                                     <button type="submit" x-data="{}"
                                         data-tip="{{ $changeStatusValidation->toText() }}"

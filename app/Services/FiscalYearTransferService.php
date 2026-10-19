@@ -8,6 +8,7 @@ use App\Models\AncillaryCostItem;
 use App\Models\Config;
 use App\Models\Customer;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Payment;
@@ -24,6 +25,11 @@ class FiscalYearTransferService
     public static function transferDocument(Document $document, int $targetFiscalYearId, User $user): array
     {
         $document->load(['documentable', 'transactions.subject']);
+
+        $fiscalYearErrors = self::_validateTransferFiscalYears((int) $document->fiscal_year_id, $targetFiscalYearId);
+        if ($fiscalYearErrors) {
+            return ['success' => false, 'errors' => $fiscalYearErrors];
+        }
 
         if ($document->documentable) {
             return [
@@ -50,7 +56,42 @@ class FiscalYearTransferService
             'ancillaryCosts.document.transactions.subject',
         ]);
 
+        $fiscalYearErrors = self::_validateTransferFiscalYears((int) $invoice->fiscal_year_id, $targetFiscalYearId);
+        if ($fiscalYearErrors) {
+            return ['success' => false, 'errors' => $fiscalYearErrors];
+        }
+
         return self::_executeInvoiceChainTransfer($invoice, $targetFiscalYearId, $user, $transferDependencies);
+    }
+
+    /**
+     * Validate both ends of a transfer before opening a transaction. Fiscal years
+     * are company-owned now, so a transfer must never cross company boundaries.
+     */
+    private static function _validateTransferFiscalYears(int $sourceFiscalYearId, int $targetFiscalYearId): array
+    {
+        $fiscalYears = FiscalYear::withoutGlobalScopes()
+            ->whereKey([$sourceFiscalYearId, $targetFiscalYearId])
+            ->get()
+            ->keyBy('id');
+
+        $source = $fiscalYears->get($sourceFiscalYearId);
+        $target = $fiscalYears->get($targetFiscalYearId);
+        $errors = [];
+
+        if (! $source || ! $target) {
+            return [__('The fiscal year could not be resolved.')];
+        }
+
+        if ($source->isClosed() || $target->isClosed()) {
+            $errors[] = __('This fiscal year is already closed.');
+        }
+
+        if ((int) $source->company_id !== (int) $target->company_id) {
+            $errors[] = __('Fiscal years must belong to the same company.');
+        }
+
+        return $errors;
     }
 
     private static function _executeInvoiceChainTransfer(Invoice $invoice, int $targetFiscalYearId, User $user, bool $transferDependencies): array
