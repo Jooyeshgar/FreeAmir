@@ -529,6 +529,7 @@
     "Cash book": "دفتر نقدی",
     "Category": "دسته‌بندی",
     "Caution": "هشدار",
+    "Change status": "تغییر وضعیت",
     "Change My Information": "تغییر اطلاعات من",
     "Change User Information": "تغییر اطلاعات کاربری",
     "Changed At": "تغییر در",
@@ -2811,8 +2812,8 @@
     "This invoice has warnings for change its status, are you sure to change status?": "این فاکتور برای تغییر وضعیت دارای هشدار است، برای تغییر وضعیت مطمئن هستید؟",
     "Deactivating this paid or partially paid invoice will remove its payment accounting documents while keeping the payment records. Please confirm this action.": "با غیرفعال کردن این فاکتور پرداخت‌شده یا ناقص پرداخت‌شده، اسناد حسابداری پرداخت‌های آن حذف می‌شوند و سوابق پرداخت باقی می‌مانند. لطفاً این عملیات را تأیید کنید.",
     "Deactivating this paid or partially paid invoice will remove its payment accounting documents while keeping the payment records. Are you sure?": "با غیرفعال کردن این فاکتور پرداخت‌شده یا ناقص پرداخت‌شده، اسناد حسابداری پرداخت‌های آن حذف می‌شوند و سوابق پرداخت باقی می‌مانند. آیا مطمئن هستید؟",
-    "Deleting this paid or partially paid invoice will remove its payments and accounting documents. Please confirm this action.": "با حذف این فاکتور پرداخت‌شده یا ناقص پرداخت‌شده، پرداخت‌ها و اسناد حسابداری آن حذف می‌شوند. لطفاً این عملیات را تأیید کنید.",
-    "Deleting this paid or partially paid invoice will remove its payments and accounting documents. Are you sure?": "با حذف این فاکتور پرداخت‌شده یا ناقص پرداخت‌شده، پرداخت‌ها و اسناد حسابداری آن حذف می‌شوند. آیا مطمئن هستید؟",
+    "Deleting this paid or partially paid invoice will remove its payments and accounting documents. Please confirm this action.": "با حذف این فاکتور پرداخت‌شده یا ناقص پرداخت‌شده، پرداخت‌ها و اسناد حسابداری آن حذف می‌شوند و سوابق پرداخت باقی می‌مانند. لطفاً این عملیات را تأیید کنید.",
+    "Deleting this paid or partially paid invoice will remove its payments and accounting documents. Are you sure?": "با حذف این فاکتور پرداخت‌شده یا ناقص پرداخت‌شده، پرداخت‌ها و اسناد حسابداری آن حذف می‌شوند و سوابق پرداخت باقی می‌مانند. آیا مطمئن هستید؟",
     "This invoice is fully paid.": "این فاکتور به‌طور کامل پرداخت شده است.",
     "This invoice is voided.": "این فاکتور باطل شده است",
     "This invoice number has already been used for this company.": "این شماره فاکتور قبلاً برای این شرکت استفاده شده است.",
@@ -3541,11 +3542,11 @@
     "Company details": "جزئیات شرکت",
     "People with access to this fiscal year.": "افراد دارای دسترسی به این سال مالی.",
     "No users are assigned to this fiscal year.": "هیچ کاربری به این سال مالی اختصاص داده نشده است.",
-    "Create missing customer, products, services, and their accounting subjects in the target fiscal year": "ایجاد مشتری، کالا، خدمت و سرفصل‌های حسابداری آن‌ها در سال مالی مقصد",
     "Bank service fee": "کارمزد بانک",
     "Bank service fee must be zero or greater.": "کارمزد بانک باید صفر یا بیشتر باشد.",
     "Configure a bank service fee expense account for the active fiscal year.": "حساب هزینه کارمزد بانک را برای سال مالی فعال تنظیم کنید.",
     "Enter only the fee charged at this stage. Leave zero if no fee was charged.": "فقط کارمزد این مرحله را وارد کنید. اگر کارمزدی پرداخت نشده است، مقدار صفر را وارد کنید.",
     "Record bank service fee": "ثبت کارمزد بانک",
-    "Enter a bank service fee greater than zero.": "کارمزد بانک باید بیشتر از صفر باشد."
+    "Enter a bank service fee greater than zero.": "کارمزد بانک باید بیشتر از صفر باشد.",
+    "Invoice and settlement operations are read-only.": "عملیات فاکتور و تسویه فقط به‌صورت خواندنی در دسترس است."
 }

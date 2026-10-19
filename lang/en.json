@@ -533,6 +533,7 @@
     "Cash book": "Cash book",
     "Category": "Category",
     "Caution": "Caution",
+    "Change status": "Change status",
     "Change My Information": "Change My Information",
     "Change User Information": "Change User Information",
     "Changed At": "Changed At",
@@ -3540,11 +3541,11 @@
     "Company details": "Company details",
     "People with access to this fiscal year.": "People with access to this fiscal year.",
     "No users are assigned to this fiscal year.": "No users are assigned to this fiscal year.",
-    "Create missing customer, products, services, and their accounting subjects in the target fiscal year": "Create missing customer, products, services, and their accounting subjects in the target fiscal year",
     "Bank service fee": "Bank service fee",
     "Bank service fee must be zero or greater.": "Bank service fee must be zero or greater.",
     "Configure a bank service fee expense account for the active fiscal year.": "Configure a bank service fee expense account for the active fiscal year.",
     "Enter only the fee charged at this stage. Leave zero if no fee was charged.": "Enter only the fee charged at this stage. Leave zero if no fee was charged.",
     "Record bank service fee": "Record bank service fee",
-    "Enter a bank service fee greater than zero.": "Enter a bank service fee greater than zero."
+    "Enter a bank service fee greater than zero.": "Enter a bank service fee greater than zero.",
+    "Invoice and settlement operations are read-only.": "Invoice and settlement operations are read-only."
 }

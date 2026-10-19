@@ -51,6 +51,8 @@ class MoadianService
 
     public function sendInvoice(Invoice $invoice): bool
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $fiscalyear = FiscalYear::find(getActiveFiscalYear());
         $company = $fiscalyear->company;
 
@@ -92,8 +94,8 @@ class MoadianService
             $decision->addMessage('error', __('Cannot send a buy or return buy invoice to moadian.'));
         }
 
-        $fiscalyear = FiscalYear::find(getActiveFiscalYear());
-        $company = $fiscalyear->company;
+        $fiscalYear = FiscalYear::with('company')->findOrFail($invoice->fiscal_year_id);
+        $company = $fiscalYear->company;
 
         if (! $company || ! $company->moadian_username || ! $company->tax_id || ! $company->decryptedPrivateKey() || ! $company->decryptedCertificate()) {
             $decision->addMessage('error', __('Moadian credentials are not fully configured. Please set the username, tax ID, certificate and private key in company settings.'));
@@ -133,6 +135,8 @@ class MoadianService
 
     public function moadianStatus(string $referenceNumber, Invoice $invoice): array
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $fiscalYear = FiscalYear::with('company')->findOrFail($invoice->fiscal_year_id);
         $company = $fiscalYear->company;
         $client = $this->clientFor($company);
