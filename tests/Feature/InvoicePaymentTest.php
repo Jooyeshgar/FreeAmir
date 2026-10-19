@@ -705,10 +705,6 @@ class InvoicePaymentTest extends TestCase
             'company_id' => FiscalYear::findOrFail($this->fiscalYearId)->company_id,
             'year' => 1406,
         ]);
-        $otherYear = FiscalYear::factory()->create([
-            'company_id' => FiscalYear::findOrFail($this->fiscalYearId)->company_id,
-            'year' => 1406,
-        ]);
         Subject::withoutGlobalScopes()->whereKey($expenseSubjectId)->update(['fiscal_year_id' => $otherYear->id]);
         // A cached setting from another year must never bypass fiscal-year scoping.
         config(['amir.bank_service_fee' => $expenseSubjectId]);
@@ -728,10 +724,6 @@ class InvoicePaymentTest extends TestCase
     public function test_fee_uses_the_current_year_setting_even_when_cached_setting_is_from_another_year(): void
     {
         $expenseSubjectId = $this->feeSubjectId();
-        $otherYear = FiscalYear::factory()->create([
-            'company_id' => FiscalYear::findOrFail($this->fiscalYearId)->company_id,
-            'year' => 1406,
-        ]);
         $otherYear = FiscalYear::factory()->create([
             'company_id' => FiscalYear::findOrFail($this->fiscalYearId)->company_id,
             'year' => 1406,
