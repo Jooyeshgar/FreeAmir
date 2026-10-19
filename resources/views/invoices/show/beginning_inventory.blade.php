@@ -3,6 +3,13 @@
         <div class="card-body gap-6">
             <x-show-message-bags />
 
+            @php $fiscalYearClosed = $invoice->fiscalYear?->isClosed() ?? false; @endphp
+            @if ($fiscalYearClosed)
+                <div class="alert alert-warning shadow-sm">
+                    <span>{{ __('This fiscal year is already closed.') }} {{ __('Invoice and settlement operations are read-only.') }}</span>
+                </div>
+            @endif
+
             <div class="flex flex-wrap items-start justify-between gap-4">
                 <div>
                     <h1 class="text-2xl font-bold">{{ $invoice->title }}</h1>
@@ -71,7 +78,7 @@
             <div class="card-actions justify-end">
                 <a class="btn btn-sm" href="{{ route('invoices.index', ['invoice_type' => 'beginning_inventory']) }}">{{ __('Back') }}</a>
                 @can('invoices.edit')
-                    @unless ($invoice->status->isApprovedOrSettled())
+                    @unless ($invoice->status->isApprovedOrSettled() || $fiscalYearClosed)
                         <a class="btn btn-sm btn-primary" href="{{ route('invoices.edit', $invoice) }}">{{ __('Edit invoice') }}</a>
                     @endunless
                 @endcan
@@ -82,7 +89,7 @@
                         <form action="{{ route('invoices.change-status', [$invoice, $invoice->status->isApprovedOrSettled() ? 'unapproved' : 'approved']) }}{{ $changeStatusValidation->hasWarning() ? '?confirm=1' : '' }}"
                             method="POST">
                             @csrf
-                            <button class="btn btn-sm {{ $invoice->status->isApprovedOrSettled() ? 'btn-warning' : 'btn-success' }}" type="submit">
+                            <button @disabled($fiscalYearClosed) class="btn btn-sm {{ $invoice->status->isApprovedOrSettled() || $fiscalYearClosed ? 'btn-warning btn-disabled cursor-not-allowed' : 'btn-success' }}" type="submit" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">
                                 {{ $invoice->status->isApprovedOrSettled() ? __('Unapprove') : __('Approve') }}
                             </button>
                         </form>

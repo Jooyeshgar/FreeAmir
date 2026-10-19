@@ -24,6 +24,8 @@ class GroupActionService
 
     public function approveInactiveInvoices(): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         // Match status validation and inventory costing: date, then internal ID.
         $invoices = Invoice::where('status', InvoiceStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('id')
             ->orWhereHas('ancillaryCosts', function ($query) {
@@ -69,6 +71,8 @@ class GroupActionService
 
     public function inactivateDependentInvoices(Invoice $invoice): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         // Find all conflicting invoices recursively (only invoices, not products or ancillary costs)
         $conflictingInvoices = $this->getConflictingInvoices($invoice);
 

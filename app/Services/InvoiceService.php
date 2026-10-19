@@ -32,6 +32,8 @@ class InvoiceService
      */
     public static function createInvoice(User $user, array $invoiceData, array $items = [], bool $approved = false): array
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $date = $invoiceData['date'] ?? now()->toDateString();
         $items = self::assignWarehouseToItems($items, $invoiceData['warehouse_id'] ?? null);
 
@@ -161,6 +163,8 @@ class InvoiceService
      */
     public static function updateInvoice(int $invoiceId, array $invoiceData, array $items = [], bool $approved = false): array
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $invoice = Invoice::findOrFail($invoiceId);
         $requestedInvoiceType = InvoiceType::tryFromName($invoiceData['invoice_type'] ?? null);
 
@@ -392,6 +396,8 @@ class InvoiceService
      */
     public static function deleteInvoice(int $invoiceId): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         DB::transaction(function () use ($invoiceId) {
             $invoice = Invoice::findOrFail($invoiceId);
 
@@ -545,6 +551,8 @@ class InvoiceService
 
     public function changeInvoiceStatus(Invoice $invoice, string $status): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         DB::transaction(function () use ($invoice, $status) {
             match ($status) {
                 'ready_to_approve' => $invoice->update(['status' => InvoiceStatus::READY_TO_APPROVE]),
@@ -1300,6 +1308,8 @@ class InvoiceService
 
     public function voidInvoice(Invoice $invoice, User $user, string $date, float $number): array
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $voidInvoice = null;
 
         DB::transaction(function () use ($invoice, $user, $date, $number, &$voidInvoice) {
