@@ -397,6 +397,14 @@ class InvoiceService
             $chequeIds = $invoice->payments()->whereNotNull('cheque_id')->pluck('cheque_id')->unique();
             Cheque::whereIn('id', $chequeIds)->each(fn (Cheque $cheque) => app(ChequeService::class)->delete($cheque));
 
+            if ($invoice->status->isApprovedOrSettled()) {
+                (new self)->unapproveInvoice($invoice);
+            }
+
+            foreach ($invoice->payments()->whereNull('cheque_id')->get() as $payment) {
+                app(PaymentService::class)->deletePayment($payment);
+            }
+
             app(ActivityLogService::class)->deleteModels($invoice->items()->getQuery());
 
             $invoice->delete();
@@ -570,6 +578,12 @@ class InvoiceService
     private function unapproveInvoice(Invoice $invoice): void
     {
         $invoice->status = InvoiceStatus::UNAPPROVED;
+
+        foreach ($invoice->payments()->whereNotNull('document_id')->get() as $payment) {
+            if (! $payment->cheque_id) {
+                app(PaymentService::class)->removePaymentDocument($payment);
+            }
+        }
 
         if ($invoice->document) {
             DocumentService::deleteDocument($invoice->document_id);

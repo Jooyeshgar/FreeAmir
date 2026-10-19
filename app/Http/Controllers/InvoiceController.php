@@ -478,13 +478,17 @@ class InvoiceController extends Controller
         return $redirect->with($msgType, $msg);
     }
 
-    public function destroy(Invoice $invoice)
+    public function destroy(Request $request, Invoice $invoice)
     {
         $isBeginningInventory = $invoice->invoice_type->isBeginningInventory();
         $indexType = $invoice->invoice_type->valueName();
 
-        if ($invoice->status->isApprovedOrSettled()) {
+        if ($isBeginningInventory && $invoice->status->isApprovedOrSettled()) {
             return redirect()->route('invoices.index', ['invoice_type' => $indexType])->with('error', __('Only unapproved and unpaided invoices can be deleted.'));
+        }
+
+        if ($invoice->status->isApprovedOrSettled() && ! $request->boolean('confirm')) {
+            return redirect()->back()->with('warning', __('Deleting this paid or partially paid invoice will remove its payments and accounting documents. Please confirm this action.'));
         }
 
         if (! $isBeginningInventory && $invoice->ancillaryCosts()->exists() && $invoice->ancillaryCosts->every(fn ($ac) => $ac->status->isApproved())) {
@@ -709,8 +713,9 @@ class InvoiceController extends Controller
                 ->with('error', __('Invalid status action.'));
         }
 
-        if ($invoice->status->isPartiallyPaid() || $invoice->status->isPaid()) {
-            return redirect()->back()->with('error', __('Remove the recorded payments before changing the invoice status.'));
+        $settled = $invoice->status->isPartiallyPaid() || $invoice->status->isPaid();
+        if ($settled && ! request()->boolean('confirm')) {
+            return redirect()->back()->with('warning', __('Deactivating this paid or partially paid invoice will remove its payment accounting documents while keeping the payment records. Please confirm this action.'));
         }
 
         $decision = $this->invoiceService->getChangeStatusDecision($invoice, $status);

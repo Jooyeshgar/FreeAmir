@@ -5,10 +5,12 @@ namespace App\Services;
 use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
 use App\Models\AncillaryCostItem;
+use App\Models\Config;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
+use App\Models\Payment;
 use App\Models\Product;
 use App\Models\Scopes\FiscalYearScope;
 use App\Models\Service;
@@ -43,6 +45,7 @@ class FiscalYearTransferService
     {
         $invoice->load([
             'customer', 'items.itemable', 'document.transactions.subject',
+            'payments.payer', 'payments.settlementSubjectRelation', 'payments.document.transactions.subject',
             'ancillaryCosts.customer', 'ancillaryCosts.items.product',
             'ancillaryCosts.document.transactions.subject',
         ]);
@@ -112,8 +115,64 @@ class FiscalYearTransferService
                 }
             }
 
+            self::_transferInvoicePayments($invoice, $newInvoice, $targetFiscalYearId, $user, $invValidation['customer_id']);
+            self::_transferBankServiceFeeConfig($invoice, $targetFiscalYearId);
+
             return ['success' => true, 'warnings' => $warnings];
         });
+    }
+
+    private static function _transferInvoicePayments(Invoice $sourceInvoice, Invoice $targetInvoice, int $targetFiscalYearId, User $user, ?int $targetCustomerId): void
+    {
+        foreach ($sourceInvoice->payments as $payment) {
+            $targetSettlementSubjectId = null;
+            $sourceSettlementSubject = $payment->settlementSubject();
+            if ($sourceSettlementSubject) {
+                $targetSettlementSubjectId = self::_findOrCreateSubjectInTarget($sourceSettlementSubject, $targetFiscalYearId)->id;
+            }
+
+            $newPayment = new Payment;
+            $newPayment->fill(collect($payment->getAttributes())->except([
+                'id', 'invoice_id', 'document_id', 'payer_id', 'settlement_subject_id', 'cheque_id', 'creator_id',
+                'created_at', 'updated_at',
+            ])->toArray());
+            $newPayment->invoice_id = $targetInvoice->id;
+            $newPayment->payer_id = $targetCustomerId;
+            $newPayment->settlement_subject_id = $targetSettlementSubjectId;
+            $newPayment->creator_id = $user->id;
+            $newPayment->cheque_id = null;
+            $newPayment->document_id = null;
+            $newPayment->save();
+
+            if ($payment->document) {
+                $newDocument = self::_transferDocumentOnly($payment->document, $targetFiscalYearId, $user, $newPayment->id, Payment::class);
+                $newPayment->document_id = $newDocument->id;
+                $newPayment->save();
+            }
+        }
+    }
+
+    private static function _transferBankServiceFeeConfig(Invoice $sourceInvoice, int $targetFiscalYearId): void
+    {
+        $sourceConfig = Config::withoutGlobalScope(FiscalYearScope::class)
+            ->where('fiscal_year_id', $sourceInvoice->fiscal_year_id)
+            ->where('key', 'bank_service_fee')
+            ->first();
+
+        if (! $sourceConfig || ! $sourceConfig->value) {
+            return;
+        }
+
+        $sourceSubject = Subject::withoutGlobalScopes()->find((int) $sourceConfig->value);
+        if (! $sourceSubject) {
+            return;
+        }
+
+        $targetSubject = self::_findOrCreateSubjectInTarget($sourceSubject, $targetFiscalYearId);
+        Config::withoutGlobalScope(FiscalYearScope::class)->updateOrCreate(
+            ['fiscal_year_id' => $targetFiscalYearId, 'key' => 'bank_service_fee'],
+            collect($sourceConfig->getAttributes())->except(['id', 'fiscal_year_id'])->merge(['value' => (string) $targetSubject->id])->toArray(),
+        );
     }
 
     private static function _withActiveFiscalYear(int $fiscalYearId, callable $callback): mixed

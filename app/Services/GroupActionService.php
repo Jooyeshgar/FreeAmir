@@ -45,6 +45,10 @@ class GroupActionService
 
                 $this->invoiceService->changeInvoiceStatus($invoice, 'approved');
 
+                foreach ($invoice->payments()->whereNull('document_id')->whereNull('cheque_id')->get() as $payment) {
+                    $this->paymentService->createPaymentDocument(auth()->user(), $payment->fresh('invoice'));
+                }
+
                 foreach ($invoice->ancillaryCosts as $ancillaryCost) {
                     $validation = $this->ancillaryCostService->getChangeStatusValidation($ancillaryCost);
 

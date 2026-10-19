@@ -8,7 +8,7 @@
 
 <body>
     @php
-        $company = $invoice->company;
+        $company = $invoice->fiscalYear?->company;
         $companyLogo = null;
 
         if ($company?->logo && Illuminate\Support\Facades\Storage::disk('public')->exists($company->logo)) {
@@ -66,7 +66,7 @@
             <tr>
                 <td class="contractSection" width="33%">
                     شماره ملی: {{ localizeNumber($company?->national_code ?? '') }}<br />
-                    شماره تلفن: <bdo dir="ltr">{{ localizeNumber($company?->phone_number ?? '') }}</bdo>
+                    شماره تلفن: <bdo dir="ltr">{{ $invoice->customer->mobile ? localizeNumber($invoice->customer->mobile) : ($invoice->customer->phone ? localizeNumber($invoice->customer->phone) : '') }}</bdo>
                 </td>
                 <td class="contractSection" width="30%">
                     شماره اقتصادی: {{ localizeNumber($company?->economical_code ?? '') }}<br />

@@ -8,17 +8,20 @@ use App\Enums\InvoiceType;
 use App\Enums\SubjectType;
 use App\Models\AncillaryCost;
 use App\Models\AncillaryCostItem;
+use App\Models\Config;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
+use App\Models\Payment;
 use App\Models\Product;
 use App\Models\Service;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\FiscalYearTransferService;
+use App\Services\PaymentService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
@@ -369,6 +372,43 @@ class FiscalYearTransferTest extends TestCase
         $newItem = InvoiceItem::where('invoice_id', $newInvoice->id)->first();
         $this->assertSame(Service::class, $newItem->itemable_type);
         $this->assertSame($targetService->id, $newItem->itemable_id);
+    }
+
+    public function test_invoice_transfer_carries_recorded_payments_and_bank_fee_subject_config(): void
+    {
+        $root = $this->makeSubject($this->source, '700', 'Receivables');
+        $customerSubject = $this->makeSubject($this->source, '700001', 'ACME', $root);
+        $customer = $this->makeCustomer($this->source, 'ACME');
+        $customer->subject_id = $customerSubject->id;
+        $customer->saveQuietly();
+        $customerSubject->subjectable()->associate($customer);
+        $customerSubject->save();
+        $cashRoot = $this->makeSubject($this->source, '100', 'Cash');
+        $cash = $this->makeSubject($this->source, '100001', 'Cash account', $cashRoot);
+        $feeRoot = $this->makeSubject($this->source, '600', 'Expenses');
+        $fee = $this->makeSubject($this->source, '600001', 'Bank fees', $feeRoot);
+        Config::create(['key' => 'bank_service_fee', 'value' => (string) $fee->id, 'fiscal_year_id' => $this->source->id, 'type' => 3, 'category' => 1]);
+
+        $invoice = $this->makeInvoice($this->source, ['customer_id' => $customer->id, 'invoice_type' => InvoiceType::SELL, 'amount' => 100]);
+        $this->activate($this->source);
+        app(PaymentService::class)->createPayment($this->user, $invoice, [
+            'amount' => 60, 'subject_id' => $cash->id, 'bank_service_fee' => 2,
+        ]);
+
+        $this->makeCustomer($this->target, 'ACME');
+        $result = FiscalYearTransferService::transferInvoice($invoice->fresh(), $this->target->id, $this->user);
+
+        $this->assertTrue($result['success'], json_encode($result));
+        $targetInvoice = $this->targetInvoices()->first();
+        $targetPayment = Payment::withoutGlobalScopes()->where('invoice_id', $targetInvoice->id)->first();
+        $this->assertNotNull($targetPayment);
+        $this->assertEqualsWithDelta(60, (float) $targetPayment->amount, 0.01);
+        $this->assertEqualsWithDelta(2, (float) $targetPayment->bank_service_fee, 0.01);
+        $this->assertNotNull($targetPayment->document_id);
+        $targetConfig = Config::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->where('key', 'bank_service_fee')->first();
+        $this->assertNotNull($targetConfig);
+        $this->assertDatabaseHas('subjects', ['id' => $targetConfig->value, 'fiscal_year_id' => $this->target->id, 'name' => 'Bank fees']);
+        $this->assertDatabaseHas('subjects', ['id' => $targetPayment->settlement_subject_id, 'fiscal_year_id' => $this->target->id, 'name' => 'Cash account']);
     }
 
     public function test_invoice_transfer_can_create_missing_dependencies_and_recreate_their_subject_trees(): void
