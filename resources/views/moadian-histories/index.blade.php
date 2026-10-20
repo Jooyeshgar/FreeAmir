@@ -40,7 +40,7 @@
             </div>
 
             <div class="overflow-x-auto">
-                <table class="min-w-[48rem] w-full divide-y">
+                <table class="table min-w-[48rem] w-full">
                     <thead>
                         <tr>
                             @if(!isset($invoice))
@@ -50,6 +50,7 @@
                             <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('Reference Number') }}</th>
                             <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('UID') }}</th>
                             <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('Date') }}</th>
+                            <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('Details') }}</th>
                             <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('Action') }}</th>
                         </tr>
                     </thead>
@@ -74,6 +75,7 @@
                                 <td class="text-gray-500">{{ $history->data['referenceNumber'] ?? '-' }}</td>
                                 <td class="text-gray-500">{{ $history->data['uid'] ?? '-' }}</td>
                                 <td class="text-gray-500">{{ localizeNumber($history->created_at->format('Y/m/d H:i')) }}</td>
+                                <td>@include('moadian-histories._details', ['history' => $history])</td>
                                 <td>
                                     <div class="flex items-center justify-center py-2">
                                         @if($isLatest)
@@ -101,7 +103,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="{{ isset($invoice) ? 5 : 6 }}" class="text-center text-gray-500 p-3">{{ __('No moadian histories found.') }}</td>
+                                <td colspan="{{ isset($invoice) ? 6 : 7 }}" class="text-center text-gray-500 p-3">{{ __('No moadian histories found.') }}</td>
                             </tr>
                         @endforelse
                     </tbody>

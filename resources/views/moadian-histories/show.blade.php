@@ -54,14 +54,15 @@
                 </div>
             </div>
 
-            <div>
-                <table class="w-full divide-y">
+            <div class="overflow-x-auto">
+                <table class="table w-full">
                     <thead>
                         <tr>
                             <th class="px-2 py-2 text-xs text-gray-500">{{ __('Status') }}</th>
                             <th class="px-2 py-2 text-xs text-gray-500">{{ __('Reference Number') }}</th>
                             <th class="px-2 py-2 text-xs text-gray-500">{{ __('UID') }}</th>
                             <th class="px-2 py-2 text-xs text-gray-500">{{ __('Date') }}</th>
+                            <th class="px-2 py-2 text-xs text-gray-500">{{ __('Details') }}</th>
                         </tr>
                     </thead>
                     <tbody class="text-center">
@@ -78,6 +79,7 @@
                                 <td class="px-2 py-1 text-gray-500">{{ $history->data['referenceNumber'] ?? '-' }}</td>
                                 <td class="px-2 py-1 text-gray-500">{{ $history->data['uid'] ?? '-' }}</td>
                                 <td class="px-2 py-1 text-gray-500">{{ localizeNumber($history->created_at->format('Y/m/d H:i')) }}</td>
+                                <td class="px-2 py-1">@include('moadian-histories._details', ['history' => $history])</td>
                             </tr>
                         @empty
                             <tr>
