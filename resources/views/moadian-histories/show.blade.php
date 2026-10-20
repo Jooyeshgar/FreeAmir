@@ -32,7 +32,7 @@
                     </div>
                 </form>
 
-                <div>
+                <div class="flex flex-wrap items-center gap-2">
                     @can('invoices.moadian-check-status')
                         @if ($referenceNumber)
                             <form method="POST" action="{{ route('invoices.moadian-check-status', $invoice) }}">

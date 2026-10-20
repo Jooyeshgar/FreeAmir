@@ -83,6 +83,13 @@ class MoadianService
     public function validateSendMoadian(Invoice $invoice): InvoiceStatusDecision
     {
         $decision = new InvoiceStatusDecision;
+        $customer = $invoice->customer;
+
+        if ($customer?->type === CustomerType::LEGAL_ENTITY && blank($customer->ecnmcs_code)) {
+            throw ValidationException::withMessages([
+                'ecnmcs_code' => __('validation.required', ['attribute' => __('Economic code')]),
+            ]);
+        }
 
         if (! $invoice->status->isApprovedOrSettled()) {
             $decision->addMessage('error', __('Cannot send an unapproved invoice to moadian.'));

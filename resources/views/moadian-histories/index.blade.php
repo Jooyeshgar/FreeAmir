@@ -77,7 +77,7 @@
                                 <td class="text-gray-500">{{ localizeNumber($history->created_at->format('Y/m/d H:i')) }}</td>
                                 <td>@include('moadian-histories._details', ['history' => $history])</td>
                                 <td>
-                                    <div class="flex items-center justify-center py-2">
+                                    <div class="flex items-center justify-center gap-2 py-2">
                                         @if($isLatest)
                                             @if($history->invoice?->moadianReferenceNumber())
                                                 @can('invoices.moadian-check-status')
