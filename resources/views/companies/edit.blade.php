@@ -44,7 +44,7 @@
                                     }
                                 }
                                 try {
-                                    const response = await fetch(@js(route('companies.test-moadian-connection', $company)), {
+                                    const response = await fetch(@js($testFiscalYear ? route('companies.test-moadian-connection', $testFiscalYear) : ''), {
                                         method: 'POST',
                                         headers: { Accept: 'application/json' },
                                         body: data,
@@ -76,23 +76,27 @@
                         </div>
                         <div>
                             <x-file-input name="certificate" title="{{ __('SSL Certificate') }}" accept=".crt,.cer" />
+                            <p class="text-sm text-base-content/60 mt-1">{{ __('Allowed certificate files: .crt or .cer with a valid X.509 certificate.') }}</p>
                             @if ($company->certificate_path)
                                 <p class="text-sm text-base-content/60 mt-1">{{ __('Current file') }}: {{ basename($company->certificate_path) }}</p>
                             @endif
                         </div>
                         <div>
-                            <x-file-input name="private_key" title="{{ __('Private Key') }}" accept=".pem" />
+                            <x-file-input name="private_key" title="{{ __('Private Key') }}" accept=".pem,.key" />
+                            <p class="text-sm text-base-content/60 mt-1">{{ __('Allowed private key files: .pem or .key with PEM-formatted content.') }}</p>
                             @if ($company->private_key_path)
                                 <p class="text-sm text-base-content/60 mt-1">{{ __('Current file') }}: {{ basename($company->private_key_path) }}</p>
                             @endif
                         </div>
                         @can('companies.test-moadian-connection')
                             <div class="sm:col-span-2">
-                                <button type="button" @click="testConnection()" :disabled="testing" class="btn btn-outline">
-                                    <span x-show="testing" class="loading loading-spinner loading-sm"></span>
-                                    {{ __('Test Moadian Connection') }}
-                                </button>
-                                <p class="text-sm mt-2">{{ __('The connection test uses the entered settings and selected key files without saving. Select both key files for each test.') }}</p>
+                                @if ($testFiscalYear)
+                                    <button type="button" @click="testConnection()" :disabled="testing" class="btn btn-outline">
+                                        <span x-show="testing" class="loading loading-spinner loading-sm"></span>
+                                        {{ __('Test Moadian Connection') }}
+                                    </button>
+                                @endif
+                                <p class="text-sm mt-2">{{ __('For each key, the connection test uses its uploaded file if selected, or the saved company file otherwise. It uses the username and tax ID entered above.') }}</p>
                                 <p x-cloak x-show="message" x-text="message" role="status" aria-live="polite"
                                     :class="connected ? 'text-success' : 'text-error'" class="text-sm mt-2"></p>
                             </div>
