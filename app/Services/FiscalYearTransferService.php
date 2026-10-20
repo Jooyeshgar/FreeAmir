@@ -7,13 +7,16 @@ use App\Models\AncillaryCost;
 use App\Models\AncillaryCostItem;
 use App\Models\Config;
 use App\Models\Customer;
+use App\Models\CustomerGroup;
 use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Payment;
 use App\Models\Product;
+use App\Models\ProductGroup;
 use App\Models\Scopes\FiscalYearScope;
 use App\Models\Service;
+use App\Models\ServiceGroup;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
@@ -540,7 +543,14 @@ class FiscalYearTransferService
         $customer = new Customer;
         $customer->fill(collect($source->getAttributes())->except(['id', 'fiscal_year_id', 'group_id', 'introducer_id', 'subject_id', 'created_at', 'updated_at'])->toArray());
         $customer->fiscal_year_id = $targetFiscalYearId;
-        $customer->group_id = null;
+        $customerGroup = self::_findOrCreateGroupInTarget(
+            $source->group_id,
+            $source->fiscal_year_id,
+            CustomerGroup::class,
+            ['subject_id'],
+            $targetFiscalYearId,
+        );
+        $customer->group_id = $customerGroup?->id;
         $customer->introducer_id = null;
         $customer->subject_id = null;
 
@@ -571,7 +581,14 @@ class FiscalYearTransferService
         $product = new Product;
         $product->fill(collect($source->getAttributes())->except(['id', 'fiscal_year_id', 'group', 'subject_id', ...$subjectColumns, 'created_at', 'updated_at'])->toArray());
         $product->fiscal_year_id = $targetFiscalYearId;
-        $product->group = null;
+        $productGroup = self::_findOrCreateGroupInTarget(
+            $source->group,
+            $source->fiscal_year_id,
+            ProductGroup::class,
+            ['sales_returns_subject_id', 'income_subject_id', 'cogs_subject_id', 'inventory_subject_id', 'buyId', 'sellId'],
+            $targetFiscalYearId,
+        );
+        $product->group = $productGroup?->id;
 
         self::_withActiveFiscalYear($targetFiscalYearId, fn () => $product->save());
 
@@ -613,7 +630,14 @@ class FiscalYearTransferService
         $service = new Service;
         $service->fill(collect($source->getAttributes())->except(['id', 'fiscal_year_id', 'group', ...$subjectColumns, 'created_at', 'updated_at'])->toArray());
         $service->fiscal_year_id = $targetFiscalYearId;
-        $service->group = null;
+        $serviceGroup = self::_findOrCreateGroupInTarget(
+            $source->group,
+            $source->fiscal_year_id,
+            ServiceGroup::class,
+            ['subject_id', 'cogs_subject_id', 'sales_returns_subject_id'],
+            $targetFiscalYearId,
+        );
+        $service->group = $serviceGroup?->id;
 
         self::_withActiveFiscalYear($targetFiscalYearId, fn () => $service->save());
 
@@ -638,6 +662,63 @@ class FiscalYearTransferService
         }
 
         return $service;
+    }
+
+    private static function _findOrCreateGroupInTarget(?int $sourceGroupId, int $sourceFiscalYearId, string $groupClass, array $subjectColumns, int $targetFiscalYearId): CustomerGroup|ProductGroup|ServiceGroup|null
+    {
+        if (! $sourceGroupId) {
+            return null;
+        }
+
+        $sourceGroup = $groupClass::withoutGlobalScope(FiscalYearScope::class)
+            ->where('fiscal_year_id', $sourceFiscalYearId)
+            ->find($sourceGroupId);
+
+        if (! $sourceGroup) {
+            return null;
+        }
+
+        $targetGroup = $groupClass::withoutGlobalScope(FiscalYearScope::class)
+            ->where('fiscal_year_id', $targetFiscalYearId)
+            ->where('name', $sourceGroup->name)
+            ->first();
+
+        if ($targetGroup) {
+            return $targetGroup;
+        }
+
+        $targetGroup = new $groupClass;
+        $targetGroup->fill(collect($sourceGroup->getAttributes())->except(['id', 'fiscal_year_id', 'created_at', 'updated_at', ...$subjectColumns])->toArray());
+        $targetGroup->fiscal_year_id = $targetFiscalYearId;
+
+        $mappedSubjects = [];
+        foreach ($subjectColumns as $column) {
+            $sourceSubjectId = $sourceGroup->{$column};
+            if (! $sourceSubjectId) {
+                continue;
+            }
+
+            $sourceSubject = Subject::withoutGlobalScope(FiscalYearScope::class)
+                ->where('fiscal_year_id', $sourceFiscalYearId)
+                ->find($sourceSubjectId);
+
+            if (! $sourceSubject) {
+                continue;
+            }
+
+            $targetSubject = self::_findOrCreateSubjectInTarget($sourceSubject, $targetFiscalYearId);
+            $targetGroup->{$column} = $targetSubject->id;
+            $mappedSubjects[] = $targetSubject;
+        }
+
+        $targetGroup->save();
+
+        foreach ($mappedSubjects as $subject) {
+            $subject->subjectable()->associate($targetGroup);
+            $subject->save();
+        }
+
+        return $targetGroup;
     }
 
     private static function _findOrCreateSubjectInTarget(Subject $sourceSubject, int $targetFiscalYearId): Subject
