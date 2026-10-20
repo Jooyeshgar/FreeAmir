@@ -47,13 +47,18 @@ class StoreCustomerRequest extends FormRequest
                 'string',
                 'max:15',
                 'regex:/^\d+$/',
-                Rule::unique('customers', 'phone')->ignore($customerId),
+                Rule::unique('customers', 'phone')
+                    ->where('fiscal_year_id', getActiveFiscalYear())
+                    ->ignore($customerId),
             ],
             'mobile' => [
                 'nullable',
                 'string',
                 'max:15',
                 'regex:/^09\d{9}$/',
+                Rule::unique('customers', 'mobile')
+                    ->where('fiscal_year_id', getActiveFiscalYear())
+                    ->ignore($customerId),
             ],
             'fax' => 'nullable|string',
             'address' => 'nullable|max:100|string|regex:/^[\w\d\s]*$/u',
