@@ -212,7 +212,7 @@ class PayrollController extends Controller
      */
     public function store(Request $request, MonthlyAttendance $monthlyAttendance): RedirectResponse
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($monthlyAttendance);
 
         $validated = $request->validate([
             'decree_id' => ['required', 'integer', 'exists:salary_decrees,id'],
@@ -248,7 +248,7 @@ class PayrollController extends Controller
      */
     public function updateItem(Request $request, PayrollItem $payrollItem): RedirectResponse
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($payrollItem->payroll ?? $payrollItem);
 
         $validated = $request->validate([
             'calculated_amount' => ['required', 'numeric'],
@@ -299,7 +299,7 @@ class PayrollController extends Controller
      */
     public function destroy(Payroll $payroll): RedirectResponse
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($payroll);
 
         $payroll->items()->delete();
         $payroll->delete();
@@ -309,7 +309,7 @@ class PayrollController extends Controller
 
     private function transition(Request $request, Payroll $payroll, PayrollStatus $toStatus, string $message): RedirectResponse
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($payroll);
 
         $validated = $request->validate([
             'note' => ['nullable', 'string', 'max:1000'],

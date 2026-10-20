@@ -91,9 +91,9 @@ class EmployeePortalController extends Controller
 
     public function updateEmployeeInformation(Request $request): RedirectResponse
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
-
         $employee = $this->currentEmployee();
+
+        app(FiscalYearMutationGuard::class)->ensureOpen($employee);
 
         if ($request->integer('employee_id') != auth()->user()->employee->id) {
             abort(403, __('You do not have access to change this employee information.'));
@@ -368,9 +368,9 @@ class EmployeePortalController extends Controller
      */
     public function storePersonnelRequest(Request $request): RedirectResponse
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
-
         $employee = $this->currentEmployee();
+
+        app(FiscalYearMutationGuard::class)->ensureOpen($employee);
 
         $this->applyDailyRequestShiftTimes($request, $employee);
 
@@ -467,7 +467,7 @@ class EmployeePortalController extends Controller
      */
     public function updatePersonnelRequest(Request $request, PersonnelRequest $personnelRequest): RedirectResponse
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($personnelRequest);
 
         if (! $personnelRequest->status?->isPending()) {
             throw ValidationException::withMessages([
@@ -522,7 +522,7 @@ class EmployeePortalController extends Controller
 
     public function destroyPersonnelRequest(Request $request, PersonnelRequest $personnelRequest): RedirectResponse
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($personnelRequest);
 
         if (! $personnelRequest->status?->isPending()) {
             throw ValidationException::withMessages([

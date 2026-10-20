@@ -61,10 +61,6 @@ class AttendanceLogController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
-
-        $gregorianLogDate = $request->has('log_date') ? jalaliInputToGregorian($request->input('log_date'), 'log_date') : null;
-
         $validated = $request->validate([
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
             'log_date' => ['required', 'string'],
@@ -73,6 +69,11 @@ class AttendanceLogController extends Controller
             'is_manual' => ['boolean'],
             'description' => ['nullable', 'string', 'max:1000'],
         ]);
+
+        $employee = Employee::findOrFail($validated['employee_id']);
+        app(FiscalYearMutationGuard::class)->ensureOpen($employee);
+
+        $gregorianLogDate = $request->has('log_date') ? jalaliInputToGregorian($request->input('log_date'), 'log_date') : null;
 
         AttendanceLog::create(array_merge(
             $validated,
@@ -105,7 +106,7 @@ class AttendanceLogController extends Controller
 
     public function update(Request $request, AttendanceLog $attendanceLog): RedirectResponse
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($attendanceLog);
 
         $gregorianLogDate = $request->has('log_date') ? jalaliInputToGregorian($request->input('log_date'), 'log_date') : null;
 
@@ -142,7 +143,7 @@ class AttendanceLogController extends Controller
 
     public function destroy(Request $request, AttendanceLog $attendanceLog): RedirectResponse
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($attendanceLog);
 
         $attendanceLog->delete();
 
@@ -265,7 +266,7 @@ class AttendanceLogController extends Controller
 
     public function recalculate(AttendanceLog $attendanceLog): RedirectResponse
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($attendanceLog);
 
         $this->attendanceService->recalculateLog($attendanceLog);
 
@@ -274,7 +275,7 @@ class AttendanceLogController extends Controller
 
     public function recalculateAll(MonthlyAttendance $monthlyAttendance): RedirectResponse
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($monthlyAttendance);
 
         foreach ($monthlyAttendance->logs as $log) {
             $this->attendanceService->recalculateLog($log);
@@ -334,8 +335,6 @@ class AttendanceLogController extends Controller
 
     public function bulkStore(Request $request): RedirectResponse
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
-
         $validated = $request->validate([
             'employee_ids' => ['required', 'array', 'min:1'],
             'employee_ids.*' => ['required', 'integer', 'distinct', Rule::exists('employees', 'id')->where('is_active', true)],
@@ -343,6 +342,10 @@ class AttendanceLogController extends Controller
             'duration' => ['required', 'integer', 'min:29', 'max:31'],
             'override' => ['nullable', 'boolean'],
         ]);
+
+        foreach ($validated['employee_ids'] as $employeeId) {
+            app(FiscalYearMutationGuard::class)->ensureOpen(Employee::findOrFail((int) $employeeId));
+        }
 
         $override = $request->boolean('override');
 

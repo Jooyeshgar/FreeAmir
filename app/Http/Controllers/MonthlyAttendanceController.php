@@ -46,13 +46,13 @@ class MonthlyAttendanceController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
-
         $validated = $request->validate([
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
             'start_date' => ['required', 'regex:/^\d{4}\/\d{1,2}\/\d{1,2}$/'],
             'duration' => ['required', 'integer', 'min:28', 'max:31'],
         ]);
+
+        app(FiscalYearMutationGuard::class)->ensureOpen(Employee::findOrFail($validated['employee_id']));
 
         [$jalaliYear, $jalaliMonth] = array_map('intval', explode('/', $validated['start_date']));
 
@@ -79,14 +79,16 @@ class MonthlyAttendanceController extends Controller
 
     public function bulkStore(Request $request): RedirectResponse
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
-
         $validated = $request->validate([
             'employee_ids' => ['required', 'array', 'min:1'],
             'employee_ids.*' => ['required', 'integer', 'exists:employees,id', 'distinct'],
             'start_date' => ['required', 'regex:/^\d{4}\/\d{1,2}\/\d{1,2}$/'],
             'duration' => ['required', 'integer', 'min:28', 'max:31'],
         ]);
+
+        foreach ($validated['employee_ids'] as $employeeId) {
+            app(FiscalYearMutationGuard::class)->ensureOpen(Employee::findOrFail((int) $employeeId));
+        }
 
         [$jalaliYear, $jalaliMonth] = array_map('intval', explode('/', $validated['start_date']));
 
@@ -171,7 +173,7 @@ class MonthlyAttendanceController extends Controller
 
     public function update(Request $request, MonthlyAttendance $monthlyAttendance): RedirectResponse
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($monthlyAttendance);
 
         $validated = $request->validate([
             'work_days' => ['required', 'integer', 'min:0', 'max:31'],
@@ -199,7 +201,7 @@ class MonthlyAttendanceController extends Controller
 
     public function destroy(MonthlyAttendance $monthlyAttendance): RedirectResponse
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($monthlyAttendance);
 
         $monthlyAttendance->employee->leave_remain += $monthlyAttendance->paid_leave - $monthlyAttendance->employee->workShift->paid_leave;
         $monthlyAttendance->employee->save();
@@ -212,7 +214,7 @@ class MonthlyAttendanceController extends Controller
 
     public function recalculate(Request $request, MonthlyAttendance $monthlyAttendance): RedirectResponse
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($monthlyAttendance);
 
         $validated = $request->validate([
             'start_date' => ['required'],
