@@ -67,7 +67,7 @@ class AttendanceService
      */
     public function recalculateLog(AttendanceLog $log): AttendanceLog
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($log);
 
         $logDate = $log->log_date instanceof Carbon
             ? $log->log_date

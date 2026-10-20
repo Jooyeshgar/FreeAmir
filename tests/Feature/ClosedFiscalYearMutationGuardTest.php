@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
+use App\Models\AttendanceLog;
 use App\Models\Cheque;
 use App\Models\Company;
 use App\Models\Customer;
@@ -12,16 +13,21 @@ use App\Models\Document;
 use App\Models\Employee;
 use App\Models\FiscalYear;
 use App\Models\Invoice;
+use App\Models\MonthlyAttendance;
 use App\Models\Payment;
+use App\Models\Payroll;
+use App\Models\SalaryDecree;
 use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
 use App\Services\AncillaryCostService;
+use App\Services\AttendanceService;
 use App\Services\FiscalYearMutationGuard;
 use App\Services\GroupActionService;
 use App\Services\InvoiceService;
 use App\Services\MoadianService;
 use App\Services\PaymentService;
+use App\Services\PayrollService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -89,6 +95,83 @@ class ClosedFiscalYearMutationGuardTest extends TestCase
     {
         $this->expectException(ValidationException::class);
         app(FiscalYearMutationGuard::class)->ensureOpen();
+    }
+
+    public function test_payroll_creation_rejects_closed_target_year_when_an_open_year_is_active(): void
+    {
+        $openYear = FiscalYear::factory()->create([
+            'company_id' => $this->closedYear->company_id,
+            'year' => $this->closedYear->year + 1,
+        ]);
+        config(['active-fiscal-year-id' => $openYear->id]);
+
+        // This test only needs fiscal-year ownership to verify validation, not persisted attendance or salary decree records.
+        $attendance = new MonthlyAttendance(['fiscal_year_id' => $this->closedYear->id]);
+        $decree = new SalaryDecree(['fiscal_year_id' => $this->closedYear->id]);
+
+        try {
+            app(PayrollService::class)->createFromAttendance($attendance, $decree, $this->closedYear->id);
+            $this->fail('Payroll creation unexpectedly accepted a closed target year.');
+        } catch (ValidationException $exception) {
+            $this->assertSame(
+                __('This fiscal year is already closed.'),
+                $exception->errors()['fiscal_year'][0]
+            );
+        }
+    }
+
+    public function test_payroll_creation_rejects_attendance_or_decree_from_another_year(): void
+    {
+        $targetYear = FiscalYear::factory()->create([
+            'company_id' => $this->closedYear->company_id,
+            'year' => $this->closedYear->year + 1,
+        ]);
+
+        $otherOpenYear = FiscalYear::factory()->create([
+            'company_id' => $this->closedYear->company_id,
+            'year' => $this->closedYear->year + 2,
+        ]);
+
+        config(['active-fiscal-year-id' => $targetYear->id]);
+
+        // The test isolates the fiscal-year consistency validation without requiring unrelated database records.
+        $attendance = new MonthlyAttendance(['fiscal_year_id' => $otherOpenYear->id]);
+        $decree = new SalaryDecree(['fiscal_year_id' => $targetYear->id]);
+
+        try {
+            app(PayrollService::class)->createFromAttendance($attendance, $decree, $targetYear->id);
+            $this->fail('Payroll creation unexpectedly accepted records from different fiscal years.');
+        } catch (ValidationException $exception) {
+            $this->assertSame(
+                __('Payroll attendance and salary decree must belong to the target fiscal year.'),
+                $exception->errors()['fiscal_year'][0]
+            );
+        }
+    }
+
+    public function test_record_recalculations_reject_closed_owning_year_when_an_open_year_is_active(): void
+    {
+        $openYear = FiscalYear::factory()->create([
+            'company_id' => $this->closedYear->company_id,
+            'year' => $this->closedYear->year + 1,
+        ]);
+        config(['active-fiscal-year-id' => $openYear->id]);
+
+        // Recalculation must reject records belonging to a closed year before attempting database mutations.
+        foreach ([
+            fn () => app(PayrollService::class)->recalculateTotals(new Payroll(['fiscal_year_id' => $this->closedYear->id])),
+            fn () => app(AttendanceService::class)->recalculateLog(new AttendanceLog(['fiscal_year_id' => $this->closedYear->id])),
+        ] as $mutation) {
+            try {
+                $mutation();
+                $this->fail('A record recalculation unexpectedly accepted a closed owning year.');
+            } catch (ValidationException $exception) {
+                $this->assertSame(
+                    __('This fiscal year is already closed.'),
+                    $exception->errors()['fiscal_year'][0]
+                );
+            }
+        }
     }
 
     public function test_nested_invoice_mutations_are_guarded_before_writing(): void
