@@ -101,9 +101,11 @@
                         </div>
                         <div>
                             <x-file-input name="certificate" title="{{ __('SSL Certificate') }}" accept=".crt,.cer" />
+                            <p class="text-sm text-base-content/60 mt-1">{{ __('Allowed certificate files: .crt or .cer with a valid X.509 certificate.') }}</p>
                         </div>
                         <div>
-                            <x-file-input name="private_key" title="{{ __('Private Key') }}" accept=".pem" />
+                            <x-file-input name="private_key" title="{{ __('Private Key') }}" accept=".pem,.key" />
+                            <p class="text-sm text-base-content/60 mt-1">{{ __('Allowed private key files: .pem or .key with PEM-formatted content.') }}</p>
                         </div>
                     </fieldset>
                     <div class="col-span-2">
