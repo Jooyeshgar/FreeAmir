@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Enums\PersonnelRequestType;
 use App\Models\AncillaryCost;
 use App\Models\AttendanceLog;
 use App\Models\Cheque;
@@ -16,6 +17,7 @@ use App\Models\Invoice;
 use App\Models\MonthlyAttendance;
 use App\Models\Payment;
 use App\Models\Payroll;
+use App\Models\PersonnelRequest;
 use App\Models\SalaryDecree;
 use App\Models\User;
 use App\Models\WorkShift;
@@ -172,6 +174,40 @@ class ClosedFiscalYearMutationGuardTest extends TestCase
                 );
             }
         }
+    }
+
+    public function test_personnel_request_log_sync_rejects_closed_request_before_writing_when_an_open_year_is_active(): void
+    {
+        $openYear = FiscalYear::factory()->create([
+            'company_id' => $this->fiscalYear->company_id,
+            'year' => $this->fiscalYear->year + 1,
+        ]);
+        config(['active-fiscal-year-id' => $openYear->id]);
+
+        $logDate = '2025-01-06';
+        $request = PersonnelRequest::factory()->create([
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'employee_id' => $this->employee->id,
+            'request_type' => PersonnelRequestType::LEAVE_WITHOUT_PAY_HOURLY,
+            'start_date' => "$logDate 08:00:00",
+            'end_date' => "$logDate 10:00:00",
+        ]);
+
+        try {
+            app(AttendanceService::class)->syncPersonnelRequestLogs($request);
+            $this->fail('Personnel-request log sync unexpectedly accepted a closed owning year.');
+        } catch (ValidationException $exception) {
+            $this->assertSame(
+                __('This fiscal year is already closed.'),
+                $exception->errors()['fiscal_year'][0]
+            );
+        }
+
+        $this->assertDatabaseMissing('attendance_logs', [
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'employee_id' => $this->employee->id,
+            'log_date' => $logDate,
+        ]);
     }
 
     public function test_nested_invoice_mutations_are_guarded_before_writing(): void
