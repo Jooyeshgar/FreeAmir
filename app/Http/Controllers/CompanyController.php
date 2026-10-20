@@ -277,9 +277,14 @@ class CompanyController extends Controller
     public function edit(Company $company): View
     {
         $this->ensureCompanyAccess($company);
+        $user = auth()->user();
+        $testFiscalYear = $user->can('access-super-admin-panel')
+            ? $company->fiscalYears()->first()
+            : $user->fiscalYears()->where('company_id', $company->id)->first();
 
         return view('companies.edit', [
             'company' => $company,
+            'testFiscalYear' => $testFiscalYear,
         ]);
     }
 
@@ -428,20 +433,35 @@ class CompanyController extends Controller
     public function testMoadianConnection(Request $request, FiscalYear $fiscalYear, MoadianService $moadianService): JsonResponse
     {
         $this->ensureFiscalYearAccess($fiscalYear);
+        $company = $fiscalYear->company;
 
         $validated = $request->validate([
             'moadian_username' => ['required', 'string', 'max:20'],
             'tax_id' => ['required', 'string', 'regex:/^(\d{11}|\d{14})$/'],
-            'certificate' => ['required', 'file', 'extensions:crt,cer', 'max:1024'],
-            'private_key' => ['required', 'file', 'extensions:pem', 'max:1024'],
+            'certificate' => ['nullable', 'file', 'extensions:crt,cer', 'max:1024'],
+            'private_key' => ['nullable', 'file', 'extensions:pem,key', 'max:1024'],
         ]);
+
+        $certificate = $request->file('certificate')?->getContent() ?? $company->decryptedCertificate();
+        $privateKey = $request->file('private_key')?->getContent() ?? $company->decryptedPrivateKey();
+
+        $errors = [];
+        if (! $certificate) {
+            $errors['certificate'] = __('Upload a certificate or save one in company settings before testing the connection.');
+        }
+        if (! $privateKey) {
+            $errors['private_key'] = __('Upload a private key or save one in company settings before testing the connection.');
+        }
+        if ($errors) {
+            throw ValidationException::withMessages($errors);
+        }
 
         try {
             $connected = $moadianService->testConnection(
                 $validated['moadian_username'],
                 $validated['tax_id'],
-                $request->file('private_key')->getContent(),
-                $request->file('certificate')->getContent(),
+                $privateKey,
+                $certificate,
             );
         } catch (\Exception $e) {
             $connected = false;
@@ -469,7 +489,7 @@ class CompanyController extends Controller
 
     private function privateKeyRules(): array
     {
-        return ['nullable', 'file', 'extensions:pem', function ($_, $value, $fail) {
+        return ['nullable', 'file', 'extensions:pem,key', function ($_, $value, $fail) {
             if (! preg_match('/-----BEGIN\s+[\w\s]+-----/', file_get_contents($value->getRealPath()))) {
                 $fail(__('The private key file must contain valid PEM-formatted content.'));
             }
