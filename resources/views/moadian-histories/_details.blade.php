@@ -79,7 +79,7 @@
 
         <details class="mt-4">
             <summary class="cursor-pointer text-sm font-medium link">{{ __('Response Data') }}</summary>
-            <pre class="mt-2 max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-box bg-base-200 p-3 text-xs" dir="auto">{{ json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}</pre>
+            <pre class="mt-2 max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-box bg-base-200 p-3 text-xs text-left" dir="ltr">{{ json_encode($response, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) }}</pre>
         </details>
     </div>
     <form method="dialog" class="modal-backdrop"><button aria-label="{{ __('Close') }}"></button></form>
