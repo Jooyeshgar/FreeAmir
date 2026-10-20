@@ -559,7 +559,7 @@ class AttendanceService
      */
     public function syncPersonnelRequestLogs(PersonnelRequest $personnelRequest, bool $subtract = false): void
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($personnelRequest);
 
         $field = match ($personnelRequest->request_type) {
             PersonnelRequestType::LEAVE_HOURLY,
