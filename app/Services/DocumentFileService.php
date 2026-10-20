@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Document;
 use App\Models\DocumentFile;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +19,8 @@ class DocumentFileService
 
     public function create(array $data): DocumentFile
     {
-        $this->fiscalYearMutationGuard->ensureOpen();
+        $documentId = $data['document_id'] ?? null;
+        $this->fiscalYearMutationGuard->ensureOpen($documentId ? Document::find($documentId) : getActiveFiscalYear());
 
         return DB::transaction(function () use ($data): DocumentFile {
             if (isset($data['file'])) {
@@ -33,7 +35,7 @@ class DocumentFileService
 
     public function update(DocumentFile $documentFile, array $data): void
     {
-        $this->fiscalYearMutationGuard->ensureOpen();
+        $this->fiscalYearMutationGuard->ensureOpen($documentFile);
 
         DB::transaction(function () use ($documentFile, $data) {
             if (isset($data['file'])) {
@@ -50,7 +52,7 @@ class DocumentFileService
 
     public function delete(DocumentFile $documentFile): void
     {
-        $this->fiscalYearMutationGuard->ensureOpen();
+        $this->fiscalYearMutationGuard->ensureOpen($documentFile);
 
         DB::transaction(function () use ($documentFile) {
             $this->deleteFile($documentFile->path);

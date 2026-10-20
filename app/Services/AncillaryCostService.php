@@ -33,11 +33,10 @@ class AncillaryCostService
      */
     public static function createAncillaryCost(User $user, array $data, bool $approved = false)
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        $invoice = Invoice::withoutGlobalScopes()->findOrFail($data['invoice_id']);
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
 
         self::validateAncillaryCostData($data);
-
-        $invoice = Invoice::findOrFail($data['invoice_id']);
 
         $document = null;
         $ancillaryCost = self::createAncillaryCostWithoutApproval($data);
@@ -140,7 +139,7 @@ class AncillaryCostService
 
     public static function updateAncillaryCost(User $user, AncillaryCost $ancillaryCost, array $data, bool $approve = false)
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($ancillaryCost);
 
         self::validateAncillaryCostData($data);
 
@@ -207,7 +206,7 @@ class AncillaryCostService
      */
     public static function deleteAncillaryCost(AncillaryCost $ancillaryCost): void
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($ancillaryCost);
 
         DB::transaction(function () use ($ancillaryCost) {
             $invoice = $ancillaryCost->invoice;
@@ -304,7 +303,7 @@ class AncillaryCostService
 
     public function changeAncillaryCostStatus(AncillaryCost $ancillaryCost, string $status): void
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($ancillaryCost);
 
         DB::transaction(function () use ($ancillaryCost, $status) {
             match ($status) {

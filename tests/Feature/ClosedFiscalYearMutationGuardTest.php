@@ -25,6 +25,7 @@ use App\Services\MoadianService;
 use App\Services\PaymentService;
 use App\Services\PayrollService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
@@ -79,6 +80,7 @@ class ClosedFiscalYearMutationGuardTest extends TestCase
             'fiscal_year_id' => $this->fiscalYear->id,
             'work_site_id' => $workSite->id,
             'work_shift_id' => $workShift->id,
+            'device_id' => 'DEV-001',
         ]);
 
         $this->actingAs($this->user);
@@ -263,5 +265,20 @@ class ClosedFiscalYearMutationGuardTest extends TestCase
             ->assertSee('disabled', false)
             ->assertSee(__('This fiscal year is already closed.'))
             ->assertSee($this->employee->last_name);
+    }
+
+    public function test_closed_year_allows_read_only_attendance_import_preview(): void
+    {
+        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'attendance.attendance-logs.import.preview']));
+
+        $file = UploadedFile::fake()->createWithContent('attendance.tsv', "DEV-001\t2025-01-06 08:00:00\tignored\t0\tignored\tignored\nDEV-001\t2025-01-06 17:00:00\tignored\t1\tignored\tignored\n");
+
+        $this->post(route('attendance.attendance-logs.import.preview'), [
+            'import_type' => 'device_tsv',
+            'duplicate_mode' => 'ignore',
+            'file' => $file,
+        ])
+            ->assertOk()
+            ->assertSessionDoesntHaveErrors('fiscal_year');
     }
 }
