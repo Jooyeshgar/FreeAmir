@@ -8,12 +8,17 @@ use App\Http\Requests\Api\StoreDocumentRequest;
 use App\Models\Document;
 use App\Services\DocumentFileService;
 use App\Services\DocumentService;
+use App\Services\FiscalYearMutationGuard;
 use Illuminate\Http\JsonResponse;
 
 class DocumentController extends Controller
 {
+    public function __construct(private readonly FiscalYearMutationGuard $fiscalYearMutationGuard) {}
+
     public function store(StoreDocumentRequest $request): JsonResponse
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         $document = DocumentService::createDocument(
             $request->user(),
             $request->safe()->only(['title', 'number', 'date']),
@@ -44,6 +49,7 @@ class DocumentController extends Controller
         $document = Document::withoutGlobalScopes()
             ->where('fiscal_year_id', getActiveFiscalYear())
             ->findOrFail($documentId);
+        $this->fiscalYearMutationGuard->ensureOpen();
         $data = $request->validated();
         $data['document_id'] = $document->id;
         $data['user_id'] = $request->user()->id;
