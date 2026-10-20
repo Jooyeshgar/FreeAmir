@@ -745,7 +745,7 @@ class InvoiceController extends Controller
                 $query->where('status', InvoiceStatus::APPROVED_INACTIVE);
             }])
             ->orderBy('date')
-            ->orderBy('number')
+            ->orderBy('id')
             ->paginate(30);
 
         $this->validateInvoicesAncillaryCosts($invoices->getCollection());

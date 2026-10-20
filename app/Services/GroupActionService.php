@@ -7,7 +7,6 @@ use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
 use App\Models\Invoice;
 use App\Models\Product;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
@@ -25,7 +24,8 @@ class GroupActionService
 
     public function approveInactiveInvoices(): void
     {
-        $invoices = Invoice::where('status', InvoiceStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('number')
+        // Match status validation and inventory costing: date, then internal ID.
+        $invoices = Invoice::where('status', InvoiceStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('id')
             ->orWhereHas('ancillaryCosts', function ($query) {
                 $query->where('status', InvoiceStatus::APPROVED_INACTIVE);
             })->get();
@@ -72,12 +72,11 @@ class GroupActionService
         // Find all conflicting invoices recursively (only invoices, not products or ancillary costs)
         $conflictingInvoices = $this->getConflictingInvoices($invoice);
 
-        // Sort by date DESC, then number DESC (latest first for unapproving)
-        $sortedInvoices = collect($conflictingInvoices)->sortByDesc(function ($inv) {
-            $date = $inv->date instanceof Carbon ? $inv->date->format('Y-m-d') : $inv->date;
-
-            return $date.str_pad((string) $inv->number, 10, '0', STR_PAD_LEFT);
-        })->values()->all();
+        // Reverse the approval order so later inventory movements are undone first.
+        $sortedInvoices = collect($conflictingInvoices)->sortBy([
+            ['date', 'desc'],
+            ['id', 'desc'],
+        ])->values()->all();
 
         DB::transaction(function () use ($sortedInvoices) {
             foreach ($sortedInvoices as $conflictInvoice) {
@@ -173,7 +172,7 @@ class GroupActionService
                 $q->where('date', '>', $invoice->date)
                     ->orWhere(function ($sub) use ($invoice) {
                         $sub->where('date', $invoice->date)
-                            ->where('number', '>', $invoice->number);
+                            ->where('id', '>', $invoice->id);
                     });
             })
             ->whereIn('status', InvoiceStatus::approvedOrSettled())

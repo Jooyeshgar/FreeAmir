@@ -236,6 +236,61 @@ class InvoiceGroupActionTest extends TestCase
         $this->assertInvoiceStatus($returnSellInv->id, InvoiceStatus::APPROVED);
     }
 
+    public function test_approve_inactive_invoices_uses_date_then_id_when_same_day_numbers_are_reversed(): void
+    {
+        $product = $this->createProduct(['quantity' => 0, 'average_cost' => 0]);
+        $date = now()->toDateString();
+        $buy = $this->buy([$this->productItem($product, 20, 100)], true, 2000, now()->subDay()->toDateString())['invoice'];
+        $firstSell = $this->sell([$this->productItem($product, 3, 150)], true, 1273, $date)['invoice'];
+        $secondSell = $this->sell([$this->productItem($product, 2, 150)], true, 1272, $date)['invoice'];
+
+        foreach ([$secondSell, $firstSell, $buy] as $invoice) {
+            $this->unapproveInvoice($invoice);
+            $invoice->update(['status' => InvoiceStatus::APPROVED_INACTIVE]);
+        }
+
+        app(GroupActionService::class)->approveInactiveInvoices();
+
+        foreach ([$buy, $firstSell, $secondSell] as $invoice) {
+            $invoice->refresh();
+            $this->assertSame(InvoiceStatus::APPROVED, $invoice->status);
+            $this->assertNotNull($invoice->document_id);
+            $this->assertEqualsWithDelta(0, $invoice->document->transactions()->sum('value'), 0.01);
+        }
+
+        $this->assertEqualsWithDelta(15, $product->fresh()->quantity, 0.01);
+        $this->assertEqualsWithDelta(100, $product->fresh()->average_cost, 0.01);
+        $this->assertEqualsWithDelta(20, $firstSell->items()->firstOrFail()->quantity_at, 0.01);
+        $this->assertEqualsWithDelta(17, $secondSell->items()->firstOrFail()->quantity_at, 0.01);
+    }
+
+    public function test_inactivate_dependencies_uses_reverse_date_and_id_order_for_same_day_invoices(): void
+    {
+        $product = $this->createProduct(['quantity' => 0, 'average_cost' => 0]);
+        $date = now()->toDateString();
+        $firstBuy = $this->buy([$this->productItem($product, 10, 100)], true, 1273, $date)['invoice'];
+        $secondBuy = $this->buy([$this->productItem($product, 10, 200)], true, 1271, $date)['invoice'];
+        $thirdBuy = $this->buy([$this->productItem($product, 10, 300)], true, 1272, $date)['invoice'];
+
+        $service = app(GroupActionService::class);
+        $service->inactivateDependentInvoices($firstBuy);
+
+        foreach ([$firstBuy, $secondBuy, $thirdBuy] as $invoice) {
+            $this->assertInvoiceStatus($invoice->id, InvoiceStatus::APPROVED_INACTIVE);
+            $this->assertNull($invoice->fresh()->document_id);
+        }
+        $this->assertEqualsWithDelta(0, $product->fresh()->quantity, 0.01);
+        $this->assertEqualsWithDelta(0, $product->fresh()->average_cost, 0.01);
+
+        $service->approveInactiveInvoices();
+
+        foreach ([$firstBuy, $secondBuy, $thirdBuy] as $invoice) {
+            $this->assertInvoiceStatus($invoice->id, InvoiceStatus::APPROVED);
+        }
+        $this->assertEqualsWithDelta(30, $product->fresh()->quantity, 0.01);
+        $this->assertEqualsWithDelta(200, $product->fresh()->average_cost, 0.01);
+    }
+
     public function test_single_status_changes_cover_pending_ready_rejected_approve_and_unapprove(): void
     {
         $product = $this->createProduct(['quantity' => 200]);
