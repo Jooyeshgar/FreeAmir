@@ -243,7 +243,7 @@ class MoadianService
     private function moadianInvoiceItems(): void
     {
         foreach ($this->invoice->items as $item) {
-            $amountAfterDiscount = $item->unit_price * $item->quantity - $item->discount;
+            $amountAfterDiscount = $item->unit_price * $item->quantity - $item->unit_discount;
 
             $body = new InvoiceItem;
             $body->sstid = $item->itemable->sstid;
