@@ -93,6 +93,7 @@ class EnsureFiscalYearOpen
                 'salary.work-site-contracts.create',
                 'employee-portal.change-employee-information',
                 'employee-portal.personnel-requests.create',
+                'attendance.attendance-logs.import.preview',
             ]);
         }
 
@@ -116,6 +117,7 @@ class EnsureFiscalYearOpen
             'backups.import',
             'documents.export.download',
             'invoices.export',
+            'attendance.attendance-logs.import.preview',
             'commercial-ledgers.store',
             'commercial-ledgers.destroy',
             'companies.close-fiscal-year',

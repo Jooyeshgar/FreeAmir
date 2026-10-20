@@ -33,7 +33,7 @@ class InvoiceService
      */
     public static function createInvoice(User $user, array $invoiceData, array $items = [], bool $approved = false): array
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoiceData['fiscal_year_id'] ?? getActiveFiscalYear());
 
         $date = $invoiceData['date'] ?? now()->toDateString();
         $items = self::assignWarehouseToItems($items, $invoiceData['warehouse_id'] ?? null);
@@ -168,6 +168,7 @@ class InvoiceService
         app(FiscalYearMutationGuard::class)->ensureOpen(Invoice::withoutGlobalScopes()->findOrFail($invoiceId));
 
         $invoice = Invoice::findOrFail($invoiceId);
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
         $requestedInvoiceType = InvoiceType::tryFromName($invoiceData['invoice_type'] ?? null);
 
         if ($requestedInvoiceType !== $invoice->invoice_type) {
@@ -415,10 +416,11 @@ class InvoiceService
      */
     public static function deleteInvoice(int $invoiceId): void
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen(Invoice::withoutGlobalScopes()->findOrFail($invoiceId));
+        $invoice = Invoice::withoutGlobalScopes()->find($invoiceId);
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
 
         DB::transaction(function () use ($invoiceId) {
-            $invoice = Invoice::findOrFail($invoiceId);
+            $invoice = Invoice::withoutGlobalScopes()->findOrFail($invoiceId);
 
             $chequeIds = $invoice->payments()->whereNotNull('cheque_id')->pluck('cheque_id')->unique();
             Cheque::whereIn('id', $chequeIds)->each(fn (Cheque $cheque) => app(ChequeService::class)->delete($cheque));

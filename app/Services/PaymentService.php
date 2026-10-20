@@ -293,7 +293,7 @@ class PaymentService
 
     public function deletePayment(Payment $payment): void
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen($payment->invoice()->withoutGlobalScopes()->first() ?? $payment);
+        app(FiscalYearMutationGuard::class)->ensureOpen($payment);
 
         DB::transaction(function () use ($payment) {
             $lockedPayment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
@@ -338,7 +338,7 @@ class PaymentService
 
     public function removePaymentDocument(Payment $payment): void
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen($payment->invoice()->withoutGlobalScopes()->first() ?? $payment);
+        app(FiscalYearMutationGuard::class)->ensureOpen($payment);
 
         DB::transaction(function () use ($payment) {
             if ($payment->cheque_id) {
@@ -362,7 +362,7 @@ class PaymentService
 
     public function createPaymentDocument(User $user, Payment $payment): InvoiceStatusDecision
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen($payment->invoice()->withoutGlobalScopes()->first() ?? $payment);
+        app(FiscalYearMutationGuard::class)->ensureOpen($payment);
 
         return DB::transaction(function () use ($user, $payment) {
             $decision = new InvoiceStatusDecision;

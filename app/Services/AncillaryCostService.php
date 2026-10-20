@@ -33,11 +33,10 @@ class AncillaryCostService
      */
     public static function createAncillaryCost(User $user, array $data, bool $approved = false)
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen(Invoice::withoutGlobalScopes()->findOrFail($data['invoice_id']));
+        $invoice = Invoice::withoutGlobalScopes()->findOrFail($data['invoice_id']);
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
 
         self::validateAncillaryCostData($data);
-
-        $invoice = Invoice::findOrFail($data['invoice_id']);
 
         $document = null;
         $ancillaryCost = self::createAncillaryCostWithoutApproval($data);

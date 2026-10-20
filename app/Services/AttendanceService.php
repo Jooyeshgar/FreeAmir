@@ -379,7 +379,8 @@ class AttendanceService
      */
     public function calculateAndStore(int $employeeId, Carbon $startDate, int $durationDays, int $jalaliYear, int $jalaliMonth): MonthlyAttendance
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        $employee = Employee::findOrFail($employeeId);
+        app(FiscalYearMutationGuard::class)->ensureOpen($employee);
         $fiscalYearId = getActiveFiscalYear();
         $endDate = $startDate->copy()->addDays($durationDays - 1);
 

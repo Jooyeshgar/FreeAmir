@@ -95,7 +95,7 @@ class DocumentService
      */
     public static function updateDocument(Document $document, array $data)
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($document);
 
         $validator = Validator::make($data, [
             'number' => 'nullable|decimal:0,2',
@@ -152,7 +152,7 @@ class DocumentService
      */
     public static function updateTransaction(Transaction $transaction, array $data)
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($transaction);
 
         $validator = Validator::make($data, [
             'subject_id' => 'integer',
@@ -173,7 +173,8 @@ class DocumentService
 
     public static function updateDocumentTransactions(int $documentId, array $transactionsData): void
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        $document = Document::findOrFail($documentId);
+        app(FiscalYearMutationGuard::class)->ensureOpen($document);
 
         DB::beginTransaction();
 
@@ -199,7 +200,8 @@ class DocumentService
 
     public static function deleteDocument(int $documentId): void
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        $document = Document::findOrFail($documentId);
+        app(FiscalYearMutationGuard::class)->ensureOpen($document);
 
         DB::transaction(function () use ($documentId) {
             $documentFiles = DocumentFile::where('document_id', $documentId)->get();
@@ -214,7 +216,7 @@ class DocumentService
 
     public static function changeDocumentStatus(Document $document, User $user, string $status): void
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($document);
 
         DB::transaction(function () use ($document, $user, $status) {
             match ($status) {
