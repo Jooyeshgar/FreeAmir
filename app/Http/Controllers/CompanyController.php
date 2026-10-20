@@ -277,9 +277,14 @@ class CompanyController extends Controller
     public function edit(Company $company): View
     {
         $this->ensureCompanyAccess($company);
+        $user = auth()->user();
+        $testFiscalYear = $user->can('access-super-admin-panel')
+            ? $company->fiscalYears()->first()
+            : $user->fiscalYears()->where('company_id', $company->id)->first();
 
         return view('companies.edit', [
             'company' => $company,
+            'testFiscalYear' => $testFiscalYear,
         ]);
     }
 
@@ -425,9 +430,10 @@ class CompanyController extends Controller
         }];
     }
 
-    public function testMoadianConnection(Request $request, Company $company, MoadianService $moadianService): JsonResponse
+    public function testMoadianConnection(Request $request, FiscalYear $fiscalYear, MoadianService $moadianService): JsonResponse
     {
-        $this->ensureCompanyAccess($company);
+        $this->ensureFiscalYearAccess($fiscalYear);
+        $company = $fiscalYear->company;
 
         $validated = $request->validate([
             'moadian_username' => ['required', 'string', 'max:20'],
