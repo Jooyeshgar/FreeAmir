@@ -26,9 +26,11 @@
                                     </a>
                                 </td>
                                 <td>
-                                    <a href="{{ route('customers.show', $invoice->customer) }}" class="text-primary link link-hover">
-                                        {{ $invoice->customer->name }}
-                                    </a>
+                                    @if ($invoice->customer)
+                                        <a href="{{ route('customers.show', $invoice->customer) }}" class="text-primary link link-hover">
+                                            {{ $invoice->customer->name }}
+                                        </a>
+                                    @endif
                                 </td>
                                 <td>{{ $invoice->date ? formatDate($invoice->date) : '' }}</td>
                                 <td>{{ formatNumber($invoice->amount - $invoice->subtraction) }}</td>
@@ -44,9 +46,11 @@
                                             {{ formatDocumentNumber($ancillaryCost->invoice->number) }}</a>
                                     </td>
                                     <td>
-                                        <a href="{{ route('customers.show', $ancillaryCost->customer) }}" class="text-primary link link-hover">
-                                            {{ $ancillaryCost->customer->name ?? '' }}
-                                        </a>
+                                        @if ($ancillaryCost->customer)
+                                            <a href="{{ route('customers.show', $ancillaryCost->customer) }}" class="text-primary link link-hover">
+                                                {{ $ancillaryCost->customer->name }}
+                                            </a>
+                                        @endif
                                     </td>
                                     <td>{{ $ancillaryCost->date ? formatDate($ancillaryCost->date) : '' }}</td>
                                     <td>{{ formatNumber($ancillaryCost->amount - $ancillaryCost->subtraction) }}</td>
