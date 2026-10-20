@@ -29,7 +29,7 @@ class MoadianHistoryController extends Controller
             $query->whereDate('created_at', $request->input('date'));
         }
 
-        $moadianHistories = $query->latest()->paginate(10)->withQueryString();
+        $moadianHistories = $query->latest()->paginate(30)->withQueryString();
 
         $latestHistoryIds = MoadianHistory::whereIn('invoice_id', $moadianHistories->pluck('invoice_id')->unique())
             ->selectRaw('MAX(id) as id')
@@ -55,7 +55,7 @@ class MoadianHistoryController extends Controller
             $query->whereDate('created_at', $request->input('date'));
         }
 
-        $moadianHistories = $query->latest()->paginate(10)->withQueryString();
+        $moadianHistories = $query->latest()->paginate(30)->withQueryString();
 
         $referenceNumber = $invoice->moadianReferenceNumber();
 
