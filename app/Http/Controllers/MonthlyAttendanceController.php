@@ -8,6 +8,7 @@ use App\Models\MonthlyAttendance;
 use App\Models\PublicHoliday;
 use App\Models\SalaryDecree;
 use App\Services\AttendanceService;
+use App\Services\FiscalYearMutationGuard;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -45,6 +46,8 @@ class MonthlyAttendanceController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $validated = $request->validate([
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
             'start_date' => ['required', 'regex:/^\d{4}\/\d{1,2}\/\d{1,2}$/'],
@@ -76,6 +79,8 @@ class MonthlyAttendanceController extends Controller
 
     public function bulkStore(Request $request): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $validated = $request->validate([
             'employee_ids' => ['required', 'array', 'min:1'],
             'employee_ids.*' => ['required', 'integer', 'exists:employees,id', 'distinct'],
@@ -166,6 +171,8 @@ class MonthlyAttendanceController extends Controller
 
     public function update(Request $request, MonthlyAttendance $monthlyAttendance): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $validated = $request->validate([
             'work_days' => ['required', 'integer', 'min:0', 'max:31'],
             'present_days' => ['required', 'integer', 'min:0', 'max:31'],
@@ -192,6 +199,8 @@ class MonthlyAttendanceController extends Controller
 
     public function destroy(MonthlyAttendance $monthlyAttendance): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $monthlyAttendance->employee->leave_remain += $monthlyAttendance->paid_leave - $monthlyAttendance->employee->workShift->paid_leave;
         $monthlyAttendance->employee->save();
 
@@ -203,6 +212,8 @@ class MonthlyAttendanceController extends Controller
 
     public function recalculate(Request $request, MonthlyAttendance $monthlyAttendance): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $validated = $request->validate([
             'start_date' => ['required'],
             'duration' => ['required', 'integer', 'min:28', 'max:31'],

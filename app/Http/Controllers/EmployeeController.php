@@ -17,6 +17,7 @@ use App\Models\OrgChart;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
 use App\Models\WorkSiteContract;
+use App\Services\FiscalYearMutationGuard;
 use App\Services\ReportExportService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -89,6 +90,8 @@ class EmployeeController extends Controller
 
     public function store(StoreEmployeeRequest $request): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         Employee::create(array_merge(
             $request->validated(),
             ['fiscal_year_id' => getActiveFiscalYear()]
@@ -130,6 +133,8 @@ class EmployeeController extends Controller
 
     public function update(UpdateEmployeeRequest $request, Employee $employee): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $validated = $request->validated();
         if ($employee->user && ($employee->first_name !== $validated['first_name'] || $employee->last_name !== $validated['last_name'])) {
             $employee->user->name = $validated['first_name'].' '.$validated['last_name'];
@@ -144,6 +149,8 @@ class EmployeeController extends Controller
 
     public function destroy(Employee $employee): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $employee->delete();
 
         return redirect()->route('hr.employees.index')

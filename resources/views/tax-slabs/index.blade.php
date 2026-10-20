@@ -5,7 +5,7 @@
         <div class="card-body">
             <div class="card-actions">
                 @can('salary.tax-slabs.create')
-                    <a href="{{ route('salary.tax-slabs.create') }}" class="btn btn-sm btn-primary">
+                    <a href="{{ route('salary.tax-slabs.create') }}" @class(['btn btn-sm btn-primary', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">
                         {{ __('Create Yearly Tax Slab') }}
                     </a>
                 @endcan
@@ -35,7 +35,7 @@
                                 <td>
                                     <div class="inline-flex gap-2">
                                         @can('salary.tax-slabs.edit')
-                                            <a href="{{ route('salary.tax-slabs.edit', $taxSlab) }}" class="btn btn-sm btn-info">
+                                            <a href="{{ route('salary.tax-slabs.edit', $taxSlab) }}" @class(['btn btn-sm btn-info', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">
                                                 {{ __('Edit') }}
                                             </a>
                                         @endcan
@@ -44,7 +44,7 @@
                                                 onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-error">
+                                                <button type="submit" @disabled(activeFiscalYearIsClosed()) class="btn btn-sm btn-error {{ activeFiscalYearIsClosed() ? 'opacity-60' : '' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Delete') }}">
                                                     {{ __('Delete') }}
                                                 </button>
                                             </form>

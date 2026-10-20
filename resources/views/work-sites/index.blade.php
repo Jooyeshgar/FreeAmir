@@ -14,7 +14,7 @@
 
             <div class="card-actions">
                 @can('salary.work-sites.create')
-                    <a href="{{ route('salary.work-sites.create') }}" class="btn btn-primary">
+                    <a href="{{ route('salary.work-sites.create') }}" @class(['btn btn-primary', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">
                         {{ __('Create Work Site') }}
                     </a>
                 @endcan
@@ -47,7 +47,7 @@
                                 <td>
                                     <div class="inline-flex gap-2">
                                         @can('salary.work-sites.edit')
-                                            <a href="{{ route('salary.work-sites.edit', $workSite) }}" class="btn btn-sm btn-info">
+                                            <a href="{{ route('salary.work-sites.edit', $workSite) }}" @class(['btn btn-sm btn-info', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">
                                                 {{ __('Edit') }}
                                             </a>
                                         @endcan
@@ -61,7 +61,7 @@
                                                 onsubmit="return confirm('{{ __('All of the employees in this work site will be removed. Are you sure?') }}')">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-error">
+                                                <button type="submit" @disabled(activeFiscalYearIsClosed()) class="btn btn-sm btn-error {{ activeFiscalYearIsClosed() ? 'opacity-60' : '' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Delete') }}">
                                                     {{ __('Delete') }}
                                                 </button>
                                             </form>
