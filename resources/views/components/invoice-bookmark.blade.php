@@ -1,6 +1,6 @@
 @props(['invoice'])
 
-@canany(['invoices.index', 'invoices.show', 'invoices.*'])
+@can('invoices.bookmark')
     <form action="{{ route('invoices.bookmark', $invoice) }}" method="POST" class="inline-flex">
         @csrf
         @method('PATCH')
@@ -16,4 +16,4 @@
             </svg>
         </button>
     </form>
-@endcanany
+@endcan

@@ -102,6 +102,7 @@ class RolesAndPermissionsSeeder extends Seeder
             // Invoices and their statuses
             'invoices' => [
                 ...self::CRUD,
+                'bookmark',
                 'dashboard', 'print', 'export', 'change-status', 'search', 'approve', 'get-items',
                 'moadian-form', 'moadian-histories.index', 'moadian-histories.show', 'send-moadian', 'moadian-check-status',
                 'search-customer', 'search-product-service',

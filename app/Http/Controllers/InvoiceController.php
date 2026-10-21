@@ -6,7 +6,6 @@ use App\Enums\ChequeType;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Http\Requests\StoreInvoiceRequest;
-use App\Http\Requests\UpdateInvoiceBookmarkRequest;
 use App\Models\Bank;
 use App\Models\BankAccount;
 use App\Models\Chequebook;
@@ -350,9 +349,20 @@ class InvoiceController extends Controller
         return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects', 'paidAmount', 'remainingAmount', 'chequeDirection', 'chequeBanks', 'chequeBankAccounts', 'chequebooks', 'fiscalYears', 'canCreateAncillaryCost'));
     }
 
-    public function updateBookmark(UpdateInvoiceBookmarkRequest $request, Invoice $invoice): RedirectResponse
+    public function updateBookmark(Request $request, Invoice $invoice): RedirectResponse
     {
-        $invoice->is_bookmarked = $request->boolean('is_bookmarked');
+        abort_unless(
+            $request->user()->can('invoices.bookmark')
+                && (int) $invoice->fiscal_year_id === getActiveFiscalYear()
+                && $request->user()->fiscalYears()->whereKey($invoice->fiscal_year_id)->exists(),
+            403
+        );
+
+        $validated = $request->validate([
+            'is_bookmarked' => ['required', 'boolean'],
+        ]);
+
+        $invoice->is_bookmarked = $validated['is_bookmarked'];
         $invoice->save();
 
         return back();

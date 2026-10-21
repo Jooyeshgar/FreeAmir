@@ -3554,5 +3554,9 @@
     "Configure a bank service fee expense account for the active fiscal year.": "Configure a bank service fee expense account for the active fiscal year.",
     "Enter only the fee charged at this stage. Leave zero if no fee was charged.": "Enter only the fee charged at this stage. Leave zero if no fee was charged.",
     "Record bank service fee": "Record bank service fee",
-    "Enter a bank service fee greater than zero.": "Enter a bank service fee greater than zero."
+    "Enter a bank service fee greater than zero.": "Enter a bank service fee greater than zero.",
+    "Bookmark": "Bookmark",
+    "Bookmark invoice": "Bookmark invoice",
+    "Remove invoice bookmark": "Remove invoice bookmark",
+    "Bookmarked invoices only": "Bookmarked invoices only"
 }
