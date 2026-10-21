@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Enums\ChequeType;
 use App\Models\Invoice;
 use App\Models\Payment;
-use App\Models\Subject;
 use App\Services\ChequeService;
 use App\Services\PaymentService;
 use Illuminate\Http\Request;
@@ -57,19 +56,6 @@ class PaymentController extends Controller
         }
 
         return redirect()->route('invoices.show', $invoice)->with('success', __('Payment recorded successfully.'));
-    }
-
-    public function edit(Invoice $invoice, Payment $payment)
-    {
-        abort_unless($payment->invoice_id === $invoice->id && ! $payment->cheque_id, 404);
-
-        return view('payments.edit', [
-            'invoice' => $invoice,
-            'payment' => $payment,
-            'settlementSubjects' => $this->paymentService->settlementSubjects(),
-            'selectedSubject' => Subject::find(old('subject_id', $payment->settlementSubject()?->id)),
-            'remainingAmount' => $this->paymentService->remainingAmount($invoice, $payment),
-        ]);
     }
 
     public function update(Request $request, Invoice $invoice, Payment $payment)
