@@ -158,7 +158,10 @@ class ProductService
 
         if (! $product->oversell && (float) $stock->quantity + $delta < 0) {
             throw ValidationException::withMessages([
-                'quantity' => __('The selected warehouse does not have enough stock.'),
+                'quantity' => __('The selected warehouse does not have enough stock for product :name (code: :code).', [
+                    'name' => $product->name,
+                    'code' => $product->code,
+                ]),
             ]);
         }
 
