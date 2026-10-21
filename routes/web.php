@@ -175,6 +175,8 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::post('invoices/{invoice}/payments', [Controllers\PaymentController::class, 'store'])->name('invoices.payments.store');
     Route::get('invoices/{invoice}/payments/subjects', [Controllers\PaymentController::class, 'searchSubjects'])->name('invoices.payments.search-subjects');
     Route::post('invoices/{invoice}/payments/cheque', [Controllers\PaymentController::class, 'storeCheque'])->name('invoices.payments.store-cheque');
+    Route::get('invoices/{invoice}/payments/{payment}/edit', [Controllers\PaymentController::class, 'edit'])->name('invoices.payments.edit');
+    Route::put('invoices/{invoice}/payments/{payment}', [Controllers\PaymentController::class, 'update'])->name('invoices.payments.update');
     Route::delete('invoices/{invoice}/payments/{payment}', [Controllers\PaymentController::class, 'destroy'])->name('invoices.payments.destroy');
     Route::post('invoices/{invoice}/payments/{payment}/document', [Controllers\PaymentController::class, 'createDocument'])->name('invoices.payments.create-document');
     Route::delete('invoices/{invoice}/payments/{payment}/document', [Controllers\PaymentController::class, 'destroyDocument'])->name('invoices.payments.destroy-document');
