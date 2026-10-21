@@ -17,6 +17,7 @@ use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Service;
 use App\Models\ServiceGroup;
+use App\Models\Subject;
 use App\Models\Warehouse;
 use App\Services\AncillaryCostService;
 use App\Services\ChequeService;
@@ -332,6 +333,7 @@ class InvoiceController extends Controller
 
         $paymentDecision = $paymentService->validateInvoicePayment($invoice);
         $settlementSubjects = $paymentService->settlementSubjects();
+        $paymentModalSubject = old('subject_id') ? Subject::find(old('subject_id')) : null;
         $paidAmount = $paymentService->paidAmount($invoice);
         $remainingAmount = $paymentService->remainingAmount($invoice);
         $chequeDirection = $chequeService->directionForInvoice($invoice);
@@ -344,7 +346,7 @@ class InvoiceController extends Controller
 
         $fiscalYears = auth()->user()->fiscalYears()->with('company')->where('fiscal_years.id', '!=', getActiveFiscalYear())->orderByDesc('year')->get();
 
-        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects', 'paidAmount', 'remainingAmount', 'chequeDirection', 'chequeBanks', 'chequeBankAccounts', 'chequebooks', 'fiscalYears', 'canCreateAncillaryCost'));
+        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects', 'paymentModalSubject', 'paidAmount', 'remainingAmount', 'chequeDirection', 'chequeBanks', 'chequeBankAccounts', 'chequebooks', 'fiscalYears', 'canCreateAncillaryCost'));
     }
 
     public function print(Invoice $invoice, ReportExportService $reportExportService)

@@ -757,11 +757,6 @@
                                         <td class="px-4 py-3">{{ $payment->description ?? '—' }}</td>
                                         <td class="px-4 py-3">
                                             <div class="flex flex-wrap gap-2 items-center">
-                                                @if (!$payment->cheque_id)
-                                                    @can('invoices.payments.edit')
-                                                        <a href="{{ route('invoices.payments.edit', [$invoice, $payment]) }}" class="btn btn-xs btn-outline">{{ __('Edit') }}</a>
-                                                    @endcan
-                                                @endif
                                                 @if ($payment->document && !$payment->cheque_id)
                                                     @can('invoices.payments.destroy-document')
                                                         <form class="m-0" method="POST"
@@ -784,6 +779,22 @@
                                                     @endcan
                                                 @endif
 
+                                                @if (!$payment->cheque_id)
+                                                    @can('invoices.payments.edit')
+                                                        <button type="button" class="btn btn-xs btn-outline" data-payment-id="{{ $payment->id }}"
+                                                            @click="$dispatch('invoice-payment-edit', {
+                                                                id: @js($payment->id),
+                                                                amount: @js((string) $payment->amount),
+                                                                bankServiceFee: @js((string) $payment->bank_service_fee),
+                                                                subjectId: @js($payment->settlement_subject_id ?? $payment->settlementSubject()?->id),
+                                                                subjectName: @js($payment->settlementSubject()?->name),
+                                                                availableAmount: @js((string) ($remainingAmount + ($payment->document_id ? (float) $payment->amount : 0))),
+                                                                date: @js($payment->date ? convertToJalali($payment->date, true) : ''),
+                                                                referenceNumber: @js($payment->reference_number ?? ''),
+                                                                description: @js($payment->description ?? '')
+                                                            })">{{ __('Edit') }}</button>
+                                                    @endcan
+                                                @endif
                                                 @can('invoices.payments.destroy')
                                                     <form class="m-0" method="POST" action="{{ route('invoices.payments.destroy', [$invoice, $payment]) }}"
                                                         onsubmit="return confirm('{{ __('Are you sure you want to remove this payment? Its accounting document will be reversed.') }}')">
@@ -805,8 +816,9 @@
                     </div>
                 @endif
 
-                @can('invoices.payments.store')
-                    <div class="flex flex-wrap gap-2 mt-4">
+                @if (auth()->user()->can('invoices.payments.store') || auth()->user()->can('invoices.payments.edit'))
+                    @can('invoices.payments.store')
+                        <div class="flex flex-wrap gap-2 mt-4">
                         @if ($paymentDecision->hasErrors())
                             <span class="tooltip"
                                 data-tip="{{ $paymentDecision->messages->pluck('text')->implode(' ') }}">
@@ -814,7 +826,8 @@
                                     class="btn btn-primary btn-disabled cursor-not-allowed">{{ __('Record Payment') }}</button>
                             </span>
                         @else
-                            <button type="button" class="btn btn-primary gap-2" onclick="payment_modal.showModal()">
+                            <button type="button" class="btn btn-primary gap-2"
+                                onclick="window.dispatchEvent(new CustomEvent('invoice-payment-create')); payment_modal.showModal()">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -835,11 +848,30 @@
                                 @endcan
                             @endif
                         @endif
-                    </div>
+                        </div>
+                    @endcan
 
-                    <dialog id="payment_modal" class="modal">
+                    @php
+                        $editingPayment = $invoice->payments->firstWhere('id', old('payment_id'));
+                        $paymentModalState = [
+                            'amount' => old('amount', $editingPayment?->amount ?? $remainingAmount),
+                            'bankServiceFee' => old('bank_service_fee', $editingPayment?->bank_service_fee ?? '0'),
+                            'subjectId' => old('subject_id', $editingPayment?->settlement_subject_id ?? $editingPayment?->settlementSubject()?->id ?? ''),
+                            'subjectName' => $paymentModalSubject?->name ?? $editingPayment?->settlementSubject()?->name ?? '',
+                            'date' => old('date', $editingPayment?->date ? convertToJalali($editingPayment->date, true) : convertToJalali(now(), true)),
+                            'referenceNumber' => old('reference_number', $editingPayment?->reference_number ?? ''),
+                            'description' => old('description', $editingPayment?->description ?? ''),
+                            'paymentId' => old('payment_id', ''),
+                            'availableAmount' => $editingPayment
+                                ? $remainingAmount + ($editingPayment->document_id ? (float) $editingPayment->amount : 0)
+                                : $remainingAmount,
+                            'editing' => old('payment_mode') === 'edit',
+                            'restore' => old('payment_mode') !== null,
+                        ];
+                    @endphp
+                    <dialog id="payment_modal" class="modal" x-data="invoicePaymentForm(@js($paymentModalState), @js(route('invoices.payments.store', $invoice)), @js(route('invoices.payments.update', [$invoice, '__PAYMENT__'])))" x-on:invoice-payment-edit.window="edit($event.detail)" x-on:invoice-payment-create.window="create()" x-init="restore()">
                         <div class="modal-box">
-                            <h3 class="text-lg font-bold mb-4">{{ __('Record Payment') }}</h3>
+                            <h3 class="text-lg font-bold mb-4" x-text="editing ? '{{ __('Edit Payment') }}' : '{{ __('Record Payment') }}'"></h3>
                             @php
                                 $settlementGroups = $settlementSubjects
                                     ->groupBy(fn($subject) => $subject->parent?->name ?? __('Other'))
@@ -859,13 +891,15 @@
                                     )
                                     ->values();
                             @endphp
-                            <form method="POST" action="{{ route('invoices.payments.store', $invoice) }}"
-                                class="space-y-4">
+                            <form method="POST" :action="action" class="space-y-4">
                                 @csrf
+                                <input type="hidden" name="_method" value="PUT" :disabled="!editing">
+                                <input type="hidden" name="payment_id" :value="paymentId">
+                                <input type="hidden" name="payment_mode" :value="editing ? 'edit' : 'create'">
                                 <div>
                                     <label class="label"><span
                                             class="label-text">{{ __('Settlement Account') }}</span></label>
-                                    <div x-data="settlementSelect(@js($settlementGroups), @js(route('invoices.payments.search-subjects', $invoice)))" @click.outside="open = false" class="relative">
+                                    <div x-data="settlementSelect(@js($settlementGroups), @js(route('invoices.payments.search-subjects', $invoice)), @js($paymentModalState['subjectId']), @js($paymentModalState['subjectName']))" @click.outside="open = false" class="relative">
                                         <input type="hidden" name="subject_id" :value="selectedId">
                                         <button type="button" @click="toggle()"
                                             class="input input-bordered w-full flex items-center justify-between text-left">
@@ -912,43 +946,43 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div x-data="{ amountInput: '{{ $remainingAmount }}' }">
+                                <div>
                                     <label class="label"><span class="label-text">{{ __('Amount') }}</span></label>
                                     <x-text-input input_name="amount" input_class="input-bordered locale-number"
-                                        input_value="{{ $remainingAmount }}" required x-model="amountInput"
-                                        @input="amountInput = $store.utils.cleanupNumber($event.target.value)"
-                                        x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(amountInput))" />
+                                        input_value="{{ $paymentModalState['amount'] }}" required x-model="amount"
+                                        @input="amount = $store.utils.cleanupNumber($event.target.value)"
+                                        x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(amount))" />
                                     <span class="text-xs text-gray-500">{{ __('Remaining Amount') }}:
-                                        {{ formatNumber($remainingAmount) }}</span>
+                                        <span x-text="$store.utils.convertToFarsi($store.utils.formatNumber(availableAmount))"></span></span>
                                 </div>
-                                <div x-data="{ feeInput: @js(old('bank_service_fee', '0')) }">
+                                <div>
                                     <label class="label" for="invoice_payment_fee"><span class="label-text">{{ __('Bank service fee') }}</span></label>
                                     <x-text-input input_name="bank_service_fee" id_input="invoice_payment_fee"
-                                        input_class="input-bordered locale-number" input_value="{{ old('bank_service_fee', '0') }}"
-                                        x-model="feeInput" @input="feeInput = $store.utils.cleanupNumber($event.target.value)"
-                                        x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(feeInput))" />
+                                        input_class="input-bordered locale-number" input_value="{{ $paymentModalState['bankServiceFee'] }}"
+                                        x-model="bankServiceFee" @input="bankServiceFee = $store.utils.cleanupNumber($event.target.value)"
+                                        x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(bankServiceFee))" />
                                 </div>
                                 <div>
                                     <label class="label"><span class="label-text">{{ __('Date') }}</span></label>
                                     <x-text-input data-jdp input_name="date" id_input="invoice_payment_date"
-                                        autocomplete="off" readonly
-                                        input_class="input-bordered" input_value="{{ convertToJalali(now(), true) }}" />
+                                        autocomplete="off" readonly x-model="date"
+                                        input_class="input-bordered" input_value="{{ $paymentModalState['date'] }}" />
                                 </div>
                                 <div>
                                     <label class="label"><span
                                             class="label-text">{{ __('Reference Number') }}</span></label>
                                     <x-text-input input_name="reference_number" input_class="input-bordered"
-                                        maxlength="20" />
+                                        maxlength="20" x-model="referenceNumber" input_value="{{ $paymentModalState['referenceNumber'] }}" />
                                 </div>
                                 <div>
                                     <label class="label"><span
                                             class="label-text">{{ __('Description') }}</span></label>
-                                    <textarea name="description" class="textarea textarea-bordered w-full" rows="2"></textarea>
+                                    <textarea name="description" class="textarea textarea-bordered w-full" rows="2" x-model="description">{{ $paymentModalState['description'] }}</textarea>
                                 </div>
                                 <div class="modal-action">
                                     <button type="button" class="btn btn-sm md:btn-sm lg:btn-md"
-                                        onclick="payment_modal.close()">{{ __('Cancel') }}</button>    
-                                    <button type="submit" class="btn btn-sm md:btn-sm lg:btn-md btn-primary">{{ __('Save') }}</button>
+                                        onclick="payment_modal.close()">{{ __('Cancel') }}</button>
+                                    <button type="submit" class="btn btn-sm md:btn-sm lg:btn-md btn-primary" x-text="editing ? '{{ __('Edit') }}' : '{{ __('Save') }}'"></button>
                                 </div>
                             </form>
                         </div>
@@ -956,6 +990,7 @@
                             <button>{{ __('close') }}</button>
                         </form>
                     </dialog>
+                    @can('invoices.payments.store')
                     @if($chequeDirection)
                         @can('invoices.payments.store-cheque')
                             <dialog id="cheque_payment_modal" class="modal">
@@ -1056,6 +1091,7 @@
                             </dialog>
                         @endcan
                     @endif
+                    @endcan
                     @pushOnce('scripts')
                         <script type="module">
                             const invoiceModalDateSelector = [
@@ -1107,7 +1143,7 @@
                             });
                         </script>
                     @endPushOnce
-                @endcan
+                @endif
             </div>
 
             <div class="card-actions justify-between mt-4">
@@ -1361,7 +1397,58 @@
     @endcan
 
     <script>
-        function settlementSelect(groups, url) {
+        function invoicePaymentForm(initial, createUrl, updateUrl) {
+            return {
+                amount: initial.amount,
+                availableAmount: initial.availableAmount,
+                bankServiceFee: initial.bankServiceFee,
+                date: initial.date,
+                referenceNumber: initial.referenceNumber,
+                description: initial.description,
+                paymentId: initial.paymentId,
+                editing: initial.editing,
+                action: initial.editing ? updateUrl.replace('__PAYMENT__', initial.paymentId) : createUrl,
+                restore() {
+                    if (!initial.restore) return;
+                    this.action = this.editing ? updateUrl.replace('__PAYMENT__', this.paymentId) : createUrl;
+                    this.$nextTick(() => {
+                        this.setSubject(initial.subjectId, initial.subjectName);
+                        document.getElementById('payment_modal').showModal();
+                    });
+                },
+                setSubject(id, name) {
+                    const selector = document.querySelector('#payment_modal [x-ref="settlementSearch"]')?.closest('[x-data]');
+                    if (selector && window.Alpine) Alpine.$data(selector).setSelection(id, name);
+                },
+                create() {
+                    this.editing = false;
+                    this.paymentId = '';
+                    this.action = createUrl;
+                    this.amount = @js((string) $remainingAmount);
+                    this.availableAmount = @js((string) $remainingAmount);
+                    this.bankServiceFee = '0';
+                    this.date = @js(convertToJalali(now(), true));
+                    this.referenceNumber = '';
+                    this.description = '';
+                    this.setSubject('', '');
+                },
+                edit(payment) {
+                    this.editing = true;
+                    this.paymentId = payment.id;
+                    this.action = updateUrl.replace('__PAYMENT__', payment.id);
+                    this.amount = payment.amount;
+                    this.availableAmount = payment.availableAmount;
+                    this.bankServiceFee = payment.bankServiceFee;
+                    this.date = payment.date;
+                    this.referenceNumber = payment.referenceNumber;
+                    this.description = payment.description;
+                    this.setSubject(payment.subjectId, payment.subjectName);
+                    document.getElementById('payment_modal').showModal();
+                },
+            };
+        }
+
+        function settlementSelect(groups, url, selectedId = '', selectedLabel = '') {
             return {
                 open: false,
                 search: '',
@@ -1369,8 +1456,12 @@
                 initialGroups: groups || [],
                 loading: false,
                 requestId: 0,
-                selectedId: '',
-                selectedLabel: '',
+                selectedId: selectedId ? Number(selectedId) : '',
+                selectedLabel,
+                setSelection(id, name) {
+                    this.selectedId = id ? Number(id) : '';
+                    this.selectedLabel = name || '';
+                },
                 toggle() {
                     this.open = !this.open;
                     if (this.open) {

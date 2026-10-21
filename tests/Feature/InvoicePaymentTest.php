@@ -787,8 +787,11 @@ class InvoicePaymentTest extends TestCase
         $document = $payment->document;
         $bank = $this->bankAccountSubjectId();
         $before = Document::count();
+        $this->user->givePermissionTo(Permission::findOrCreate('invoices.payments.edit'));
 
-        $this->get(route('invoices.payments.edit', [$invoice, $payment]))->assertOk()
+        $this->get(route('invoices.show', $invoice))->assertOk()
+            ->assertSee('data-payment-id="'.$payment->id.'"', false)
+            ->assertSee('id="payment_modal"', false)
             ->assertSee('name="bank_service_fee"', false)
             ->assertSee('name="subject_id"', false);
         $this->put(route('invoices.payments.update', [$invoice, $payment]), [
@@ -890,7 +893,9 @@ class InvoicePaymentTest extends TestCase
         $invoice = $this->approvedSell(100, 1);
         $other = $this->approvedSell(100, 1);
         $payment = $this->recordPayment($other, ['amount' => 40, 'subject_id' => $this->cashSubjectId()]);
-        $this->get(route('invoices.payments.edit', [$invoice, $payment]))->assertNotFound();
+        $this->user->givePermissionTo(Permission::findOrCreate('invoices.payments.edit'));
+        $this->get(route('invoices.show', $invoice))->assertOk()
+            ->assertDontSee('data-payment-id="'.$payment->id.'"', false);
         $this->put(route('invoices.payments.update', [$invoice, $payment]), [
             'amount' => 10, 'subject_id' => $this->cashSubjectId(),
         ])->assertNotFound();
@@ -899,16 +904,19 @@ class InvoicePaymentTest extends TestCase
 
     public function test_payment_edit_requires_its_own_permissions(): void
     {
+        $this->user->givePermissionTo(Permission::findOrCreate('invoices.show'));
         $invoice = $this->approvedSell(100, 1);
         $payment = $this->recordPayment($invoice, ['amount' => 100, 'subject_id' => $this->cashSubjectId()]);
-        $this->get(route('invoices.payments.edit', [$invoice, $payment]))->assertForbidden();
+        $this->get(route('invoices.show', $invoice))->assertOk()
+            ->assertDontSee('data-payment-id="'.$payment->id.'"', false);
         $data = ['amount' => 60, 'subject_id' => $this->cashSubjectId()];
         $this->put(route('invoices.payments.update', [$invoice, $payment]), $data)->assertForbidden();
         $this->user->givePermissionTo([
             Permission::findOrCreate('invoices.payments.edit'),
             Permission::findOrCreate('invoices.payments.update'),
         ]);
-        $this->get(route('invoices.payments.edit', [$invoice, $payment]))->assertOk();
+        $this->get(route('invoices.show', $invoice))->assertOk()
+            ->assertSee('data-payment-id="'.$payment->id.'"', false);
         $this->put(route('invoices.payments.update', [$invoice, $payment]), $data)
             ->assertSessionHasNoErrors()->assertRedirect(route('invoices.show', $invoice));
         $this->assertSame('60.00', $payment->fresh()->amount);
