@@ -781,7 +781,7 @@
 
                                                 @if (!$payment->cheque_id)
                                                     @can('invoices.payments.edit')
-                                                        <button type="button" class="btn btn-xs btn-outline" data-payment-id="{{ $payment->id }}"
+                                                        <button type="button" x-data="{}" class="btn btn-xs btn-outline" data-payment-id="{{ $payment->id }}"
                                                             @click="$dispatch('invoice-payment-edit', {
                                                                 id: @js($payment->id),
                                                                 amount: @js((string) $payment->amount),
