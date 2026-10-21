@@ -293,6 +293,10 @@ class AncillaryCostService
      */
     public static function getEditDeleteStatus(AncillaryCost $ancillaryCost): array
     {
+        if (app(FiscalYearMutationGuard::class)->resolveFiscalYear($ancillaryCost)?->isClosed()) {
+            return ['allowed' => false, 'reason' => __('This fiscal year is already closed.')];
+        }
+
         try {
             self::checkAncillaryCostDeleteableOrEditable($ancillaryCost);
 
@@ -402,6 +406,10 @@ class AncillaryCostService
 
     public static function getChangeStatusValidation(AncillaryCost $ancillaryCost): array
     {
+        if (app(FiscalYearMutationGuard::class)->resolveFiscalYear($ancillaryCost)?->isClosed()) {
+            return ['allowed' => false, 'reason' => __('This fiscal year is already closed.')];
+        }
+
         // When unapproving, skip the sync check — the user must be able to unapprove
         // so they can then edit and re-sync the items.
         if ($ancillaryCost->status->isApproved()) {

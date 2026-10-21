@@ -590,7 +590,7 @@
                                                             <span class="tooltip"
                                                                 data-tip="{{ $ancillaryChangeStatusValidation['reason'] ?? '' }}">
                                                                 <button
-                                                                    class="btn btn-xs {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }} btn-disabled cursor-not-allowed">
+                                                                    class="btn btn-xs {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }} btn-disabled cursor-not-allowed" disabled title="{{ $ancillaryChangeStatusValidation['reason'] ?? '' }}">
                                                                     {{ __($ancillaryCost->status?->isApproved() ? 'Unapprove' : 'Approve') }}
                                                                 </button>
                                                             </span>
@@ -633,7 +633,7 @@
                                                         @else
                                                             <span class="tooltip" data-tip="{{ $editTooltip }}">
                                                                 <button
-                                                                    class="btn btn-xs btn-info btn-disabled cursor-not-allowed">
+                                                                    class="btn btn-xs btn-info btn-disabled cursor-not-allowed" disabled title="{{ $editTooltip }}">
                                                                     {{ __('Edit') }}
                                                                 </button>
                                                             </span>
@@ -654,7 +654,7 @@
                                                         @else
                                                             <span class="tooltip" data-tip="{{ $deleteTooltip }}">
                                                                 <button
-                                                                    class="btn btn-xs btn-error btn-disabled cursor-not-allowed">
+                                                                    class="btn btn-xs btn-error btn-disabled cursor-not-allowed" disabled title="{{ $deleteTooltip }}">
                                                                     {{ __('Delete') }}
                                                                 </button>
                                                             </span>
