@@ -1,6 +1,13 @@
 <x-app-layout :title="__('Conflicts')">
     <x-show-message-bags />
 
+    @php $fiscalYearClosed = $invoice->fiscalYear?->isClosed() ?? false; @endphp
+    @if ($fiscalYearClosed)
+        <div class="alert alert-warning mb-4">
+            <span>{{ __('This fiscal year is already closed.') }} {{ __('Invoice and settlement operations are read-only.') }}</span>
+        </div>
+    @endif
+
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <x-show-messages type="warning" message="{{ __('conflict_notice') }}" />
@@ -39,7 +46,8 @@
                 <div class="px-4 py-2 text-left">
                     <form method="POST" action="{{ route('invoices.group-action', $invoice) }}">
                         @csrf
-                        <button type="submit" class="btn btn-primary">{{ __('Delete All Documents') }}</button>
+                        <button type="submit" class="btn btn-primary {{ $fiscalYearClosed ? 'btn-disabled cursor-not-allowed' : '' }}"
+                            @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ __('Delete All Documents') }}</button>
                     </form>
                 </div>
             @endif

@@ -91,6 +91,34 @@ class ClosedYearNestedOperationControlsTest extends TestCase
         }
     }
 
+    public function test_bulk_and_conflict_pages_disable_closed_year_writes_and_preserve_open_year_actions(): void
+    {
+        $this->invoice->update(['status' => InvoiceStatus::APPROVED_INACTIVE]);
+        $pages = [
+            [route('invoices.inactive'), __('Approve All')],
+            [route('invoices.conflicts', $this->invoice), __('Delete All Documents')],
+        ];
+
+        foreach ([false, true] as $closed) {
+            $this->year->update(['closed_at' => $closed ? now() : null]);
+            foreach ($pages as [$url, $label]) {
+                $this->assertControls($url, [$label], $closed);
+                $response = $this->get($url)->assertOk();
+                if ($closed) {
+                    $response->assertSeeText(__('This fiscal year is already closed.'));
+                } else {
+                    $response->assertDontSeeText(__('This fiscal year is already closed.'));
+                }
+                $response->assertSee(formatDocumentNumber($this->invoice->number));
+            }
+        }
+
+        foreach ([route('invoices.inactive.approve'), route('invoices.group-action', $this->invoice)] as $url) {
+            $this->postJson($url)->assertUnprocessable()->assertJsonValidationErrors('fiscal_year');
+            $this->assertSame(InvoiceStatus::APPROVED_INACTIVE, $this->invoice->fresh()->status);
+        }
+    }
+
     private function assertControls(string $url, array $labels, bool $disabled, ?string $rowLink = null): void
     {
         $response = $this->get($url)->assertOk();
@@ -103,6 +131,7 @@ class ClosedYearNestedOperationControlsTest extends TestCase
             $this->assertSame(1, $buttons->length, $url.' '.$label);
             $button = $buttons->item(0);
             $this->assertSame($disabled, $button->hasAttribute('disabled'), $url.' '.$label);
+            $this->assertSame($disabled, in_array('btn-disabled', explode(' ', $button->getAttribute('class')), true), $url.' '.$label);
             if ($disabled) {
                 $this->assertSame(__('This fiscal year is already closed.'), $button->getAttribute('title'));
             }
