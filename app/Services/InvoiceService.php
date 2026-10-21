@@ -163,7 +163,7 @@ class InvoiceService
      */
     public static function updateInvoice(int $invoiceId, array $invoiceData, array $items = [], bool $approved = false): array
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen(Invoice::withoutGlobalScopes()->findOrFail($invoiceId));
 
         $invoice = Invoice::findOrFail($invoiceId);
         $requestedInvoiceType = InvoiceType::tryFromName($invoiceData['invoice_type'] ?? null);
@@ -396,7 +396,7 @@ class InvoiceService
      */
     public static function deleteInvoice(int $invoiceId): void
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen(Invoice::withoutGlobalScopes()->findOrFail($invoiceId));
 
         DB::transaction(function () use ($invoiceId) {
             $invoice = Invoice::findOrFail($invoiceId);
@@ -551,7 +551,7 @@ class InvoiceService
 
     public function changeInvoiceStatus(Invoice $invoice, string $status): void
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
 
         DB::transaction(function () use ($invoice, $status) {
             match ($status) {
@@ -1308,7 +1308,7 @@ class InvoiceService
 
     public function voidInvoice(Invoice $invoice, User $user, string $date, float $number): array
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
 
         $voidInvoice = null;
 

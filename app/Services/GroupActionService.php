@@ -71,7 +71,7 @@ class GroupActionService
 
     public function inactivateDependentInvoices(Invoice $invoice): void
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
 
         // Find all conflicting invoices recursively (only invoices, not products or ancillary costs)
         $conflictingInvoices = $this->getConflictingInvoices($invoice);

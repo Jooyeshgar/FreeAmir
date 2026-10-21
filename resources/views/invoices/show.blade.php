@@ -93,17 +93,6 @@
                 </div>
             @endif
 
-            @php
-                $fiscalYearClosed = $invoice->fiscalYear?->isClosed() ?? false;
-                $fiscalYearClosedMessage = __('This fiscal year is already closed.');
-            @endphp
-
-            @if ($fiscalYearClosed)
-                <div class="alert alert-warning shadow-sm">
-                    <span>{{ $fiscalYearClosedMessage }} {{ __('Invoice and settlement operations are read-only.') }}</span>
-                </div>
-            @endif
-
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
                 <div
                     class="stats shadow bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60 dark:from-slate-800 dark:to-sky-950/40 dark:border-sky-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
@@ -813,6 +802,7 @@
                                                 @if (!$payment->cheque_id)
                                                     @can('invoices.payments.update')
                                                         <button type="button" x-data="{}" class="btn btn-xs btn-outline" data-payment-id="{{ $payment->id }}"
+                                                            @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : '' }}"
                                                             @click="$dispatch('invoice-payment-edit', {
                                                                 id: @js($payment->id),
                                                                 amount: @js((string) $payment->amount),
@@ -902,6 +892,7 @@
                                 : $remainingAmount,
                             'editing' => old('payment_mode') === 'edit',
                             'restore' => old('payment_mode') !== null,
+                            'closed' => $fiscalYearClosed,
                         ];
                     @endphp
                     <dialog id="payment_modal" class="modal" x-data="invoicePaymentForm(@js($paymentModalState), @js(route('invoices.payments.store', $invoice)), @js(route('invoices.payments.update', [$invoice, '__PAYMENT__'])))" x-on:invoice-payment-edit.window="edit($event.detail)" x-on:invoice-payment-create.window="create()" x-init="restore()">
@@ -926,7 +917,7 @@
                                     )
                                     ->values();
                             @endphp
-                            <form method="POST" :action="action" class="space-y-4">
+                            <form method="POST" :action="action" class="space-y-4" @submit="if (@js($fiscalYearClosed)) $event.preventDefault()">
                                 @csrf
                                 <input type="hidden" name="_method" value="PUT" :disabled="!editing">
                                 <input type="hidden" name="payment_id" :value="paymentId">
@@ -1017,7 +1008,7 @@
                                 <div class="modal-action">
                                     <button type="button" class="btn btn-sm md:btn-sm lg:btn-md"
                                         onclick="payment_modal.close()">{{ __('Cancel') }}</button>
-                                    <button type="submit" class="btn btn-sm md:btn-sm lg:btn-md btn-primary" x-text="editing ? '{{ __('Edit') }}' : '{{ __('Save') }}'"></button>
+                                    <button type="submit" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : '' }}" class="btn btn-sm md:btn-sm lg:btn-md btn-primary" x-text="editing ? '{{ __('Edit') }}' : '{{ __('Save') }}'"></button>
                                 </div>
                             </form>
                         </div>
@@ -1463,7 +1454,7 @@
                 editing: initial.editing,
                 action: initial.editing ? updateUrl.replace('__PAYMENT__', initial.paymentId) : createUrl,
                 restore() {
-                    if (!initial.restore) return;
+                    if (initial.closed || !initial.restore) return;
                     this.action = this.editing ? updateUrl.replace('__PAYMENT__', this.paymentId) : createUrl;
                     this.$nextTick(() => {
                         this.setSubject(initial.subjectId, initial.subjectName);
@@ -1475,6 +1466,7 @@
                     if (selector && window.Alpine) Alpine.$data(selector).setSelection(id, name);
                 },
                 create() {
+                    if (initial.closed) return;
                     this.editing = false;
                     this.paymentId = '';
                     this.action = createUrl;
@@ -1487,6 +1479,7 @@
                     this.setSubject('', '');
                 },
                 edit(payment) {
+                    if (initial.closed) return;
                     this.editing = true;
                     this.paymentId = payment.id;
                     this.action = updateUrl.replace('__PAYMENT__', payment.id);

@@ -51,7 +51,7 @@ class MoadianService
 
     public function sendInvoice(Invoice $invoice): bool
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
 
         $fiscalyear = FiscalYear::find(getActiveFiscalYear());
         $company = $fiscalyear->company;
@@ -142,7 +142,7 @@ class MoadianService
 
     public function moadianStatus(string $referenceNumber, Invoice $invoice): array
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
 
         $fiscalYear = FiscalYear::with('company')->findOrFail($invoice->fiscal_year_id);
         $company = $fiscalYear->company;
