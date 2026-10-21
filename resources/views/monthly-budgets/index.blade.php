@@ -360,15 +360,17 @@
                         <h3 class="card-title text-base">{{ __('Product Profitability') }}</h3>
                         <div class="overflow-x-auto">
                             <table class="table table-sm">
-                                <thead><tr><th>{{ __('Product') }}</th><th>{{ __('Product Group') }}</th><th class="text-end">{{ __('Net Product Sales') }}</th><th class="text-end">{{ __('Cost of Goods Sold') }}</th><th class="text-end">{{ __('Gross Profit') }}</th><th class="text-end">{{ __('Gross margin') }}</th></tr></thead>
+                                <thead><tr><th>{{ __('Product') }}</th><th>{{ __('Product Group') }}</th><th class="text-end">{{ __('Net Product Sales') }}</th><th class="text-end">{{ __('Sales change') }}</th><th class="text-end">{{ __('Cost of Goods Sold') }}</th><th class="text-end">{{ __('Gross Profit') }}</th><th class="text-end">{{ __('Profit change') }}</th><th class="text-end">{{ __('Gross margin') }}</th></tr></thead>
                                 <tbody>
                                     @foreach ($profitability['products'] as $product)
                                         <tr>
                                             <td>@can('products.show')<a class="link link-hover" href="{{ route('products.show', $product['id']) }}">{{ $product['name'] }}</a>@else{{ $product['name'] }}@endcan @if ($product['missingCost']) <span class="badge badge-warning badge-xs">{{ __('Cost unavailable') }}</span> @endif</td>
                                             <td>{{ $product['group'] ?? '—' }}</td>
                                             <td class="text-end">{{ localizeNumber(number_format($product['sales'], 0)) }}</td>
+                                            <td class="text-end">{{ is_null($product['salesChange']) ? '—' : localizeNumber(number_format($product['salesChange'], 0)) }}</td>
                                             <td class="text-end">{{ localizeNumber(number_format($product['cogs'], 0)) }}</td>
                                             <td class="text-end">{{ localizeNumber(number_format($product['grossProfit'], 0)) }}</td>
+                                            <td class="text-end">{{ is_null($product['grossProfitChange']) ? '—' : localizeNumber(number_format($product['grossProfitChange'], 0)) }}</td>
                                             <td class="text-end">{{ is_null($product['grossMargin']) ? '—' : localizeNumber(number_format($product['grossMargin'], 1)).'%' }}</td>
                                         </tr>
                                     @endforeach
