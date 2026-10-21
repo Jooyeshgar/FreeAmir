@@ -66,7 +66,11 @@ class GroupActionService
                     $decision = $this->paymentService->createPaymentDocument(auth()->user(), $payment->fresh('invoice'));
                     if ($decision->hasErrors()) {
                         throw ValidationException::withMessages([
-                            'payment' => $decision->messages->pluck('text')->all(),
+                            'payment' => $decision->messages->map(fn ($message) => __('Invoice #:invoice_number: Payment #:id cannot be restored due to: :reason', [
+                                'invoice_number' => $invoice->number,
+                                'id' => $payment->id,
+                                'reason' => $message->text,
+                            ]))->all(),
                         ]);
                     }
                 }
