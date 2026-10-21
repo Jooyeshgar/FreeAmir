@@ -780,7 +780,7 @@
                                                 @endif
 
                                                 @if (!$payment->cheque_id)
-                                                    @can('invoices.payments.edit')
+                                                    @can('invoices.payments.update')
                                                         <button type="button" x-data="{}" class="btn btn-xs btn-outline" data-payment-id="{{ $payment->id }}"
                                                             @click="$dispatch('invoice-payment-edit', {
                                                                 id: @js($payment->id),
@@ -816,7 +816,7 @@
                     </div>
                 @endif
 
-                @if (auth()->user()->can('invoices.payments.store') || auth()->user()->can('invoices.payments.edit'))
+                @if (auth()->user()->can('invoices.payments.store') || auth()->user()->can('invoices.payments.update'))
                     @can('invoices.payments.store')
                         <div class="flex flex-wrap gap-2 mt-4">
                         @if ($paymentDecision->hasErrors())

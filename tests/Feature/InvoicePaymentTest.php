@@ -787,7 +787,7 @@ class InvoicePaymentTest extends TestCase
         $document = $payment->document;
         $bank = $this->bankAccountSubjectId();
         $before = Document::count();
-        $this->user->givePermissionTo(Permission::findOrCreate('invoices.payments.edit'));
+        $this->user->givePermissionTo(Permission::findOrCreate('invoices.payments.update'));
 
         $this->get(route('invoices.show', $invoice))->assertOk()
             ->assertSee('<button type="button" x-data="{}" class="btn btn-xs btn-outline" data-payment-id="'.$payment->id.'"', false)
@@ -894,7 +894,7 @@ class InvoicePaymentTest extends TestCase
         $invoice = $this->approvedSell(100, 1);
         $other = $this->approvedSell(100, 1);
         $payment = $this->recordPayment($other, ['amount' => 40, 'subject_id' => $this->cashSubjectId()]);
-        $this->user->givePermissionTo(Permission::findOrCreate('invoices.payments.edit'));
+        $this->user->givePermissionTo(Permission::findOrCreate('invoices.payments.update'));
         $this->get(route('invoices.show', $invoice))->assertOk()
             ->assertDontSee('data-payment-id="'.$payment->id.'"', false);
         $this->put(route('invoices.payments.update', [$invoice, $payment]), [
@@ -913,7 +913,7 @@ class InvoicePaymentTest extends TestCase
         $data = ['amount' => 60, 'subject_id' => $this->cashSubjectId()];
         $this->put(route('invoices.payments.update', [$invoice, $payment]), $data)->assertForbidden();
         $this->user->givePermissionTo([
-            Permission::findOrCreate('invoices.payments.edit'),
+            Permission::findOrCreate('invoices.payments.update'),
             Permission::findOrCreate('invoices.payments.update'),
         ]);
         $this->get(route('invoices.show', $invoice))->assertOk()
@@ -966,7 +966,7 @@ class InvoicePaymentTest extends TestCase
         $migration = require database_path('migrations/2026_10_21_070000_add_invoice_payment_edit_permissions.php');
         $migration->up();
         $migration->up();
-        foreach (['invoices.payments.edit', 'invoices.payments.update'] as $name) {
+        foreach (['invoices.payments.update', 'invoices.payments.update'] as $name) {
             $this->assertTrue($role->fresh()->hasPermissionTo($name));
             $this->assertTrue($this->user->fresh()->hasPermissionTo($name));
         }
