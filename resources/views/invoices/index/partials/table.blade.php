@@ -2,6 +2,7 @@
     <table class="table w-full">
         <thead>
             <tr>
+                <th class="px-4 py-2">{{ __('Bookmark') }}</th>
                 <th class="px-4 py-2">{{ __('Invoice Number') }}</th>
                 <th class="px-4 py-2">{{ __('Customer') }}</th>
                 <th class="px-4 py-2">{{ __('Document') }}</th>
@@ -35,6 +36,7 @@
                     $moadianStatus = $showMoadianColumn ? \App\Enums\MoadianStatus::fromData($invoice->latestMoadianHistory?->data['status'] ?? null) : null;
                 @endphp
                 <tr class="{{ $isVoided ? 'text-gray-500' : '' }}">
+                    <td class="px-4 py-2"><x-invoice-bookmark :invoice="$invoice" /></td>
                     <td class="px-4 py-2">
                         <a href="{{ route('invoices.show', $invoice) }}" class="link link-hover">{{ formatDocumentNumber($invoice->number) }}</a>
                     </td>
@@ -156,6 +158,9 @@
 @if (request('status') !== null)
     @php
         $backParams = ['invoice_type' => $invoiceType];
+        if (request()->boolean('bookmarked')) {
+            $backParams['bookmarked'] = 1;
+        }
         if (in_array($invoiceType, ['buy', 'return_buy'])) {
             $backParams['service_buy'] = request('service_buy');
         }

@@ -107,6 +107,8 @@ class InvoiceController extends Controller
 
     private function applyInvoiceFilters(Builder $builder, Request $request, ?InvoiceType $invoiceType, bool $isServiceBuy): void
     {
+        $builder->when($request->boolean('bookmarked'), fn ($q) => $q->where('is_bookmarked', true));
+
         if ($invoiceType !== null) {
             $builder->where('invoice_type', $invoiceType);
         }
@@ -348,6 +350,25 @@ class InvoiceController extends Controller
         $fiscalYears = auth()->user()->fiscalYears()->with('company')->where('fiscal_years.id', '!=', getActiveFiscalYear())->orderByDesc('year')->get();
 
         return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects', 'paymentModalSubject', 'paidAmount', 'remainingAmount', 'chequeDirection', 'chequeBanks', 'chequeBankAccounts', 'chequebooks', 'fiscalYears', 'canCreateAncillaryCost'));
+    }
+
+    public function updateBookmark(Request $request, Invoice $invoice): RedirectResponse
+    {
+        abort_unless(
+            $request->user()->can('invoices.bookmark')
+                && (int) $invoice->fiscal_year_id === getActiveFiscalYear()
+                && $request->user()->fiscalYears()->whereKey($invoice->fiscal_year_id)->exists(),
+            403
+        );
+
+        $validated = $request->validate([
+            'is_bookmarked' => ['required', 'boolean'],
+        ]);
+
+        $invoice->is_bookmarked = $validated['is_bookmarked'];
+        $invoice->save();
+
+        return back();
     }
 
     public function print(Invoice $invoice, ReportExportService $reportExportService)
