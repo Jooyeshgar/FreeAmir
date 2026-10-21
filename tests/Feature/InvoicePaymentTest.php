@@ -938,6 +938,29 @@ class InvoicePaymentTest extends TestCase
         $this->assertTrue($invoice->fresh()->status->isPaid());
     }
 
+    public function test_closed_invoice_disables_payment_editing_and_displays_one_closure_banner(): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+        $this->user->givePermissionTo(Permission::findOrCreate('invoices.payments.update'));
+        $invoice = $this->approvedSell(100, 1);
+        $payment = $this->recordPayment($invoice, ['amount' => 100, 'subject_id' => $this->cashSubjectId()]);
+        FiscalYear::findOrFail($this->fiscalYearId)->update(['closed_at' => now()]);
+
+        $response = $this->get(route('invoices.show', $invoice))->assertOk();
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="UTF-8">'.$response->getContent());
+        $xpath = new \DOMXPath($dom);
+        $edit = $xpath->query('//button[@data-payment-id="'.$payment->id.'"]')->item(0);
+        $this->assertNotNull($edit);
+        $this->assertTrue($edit->hasAttribute('disabled'));
+        $this->assertSame(__('This fiscal year is already closed.'), $edit->getAttribute('title'));
+        $submit = $xpath->query('//dialog[@id="payment_modal"]//button[@type="submit"]')->item(0);
+        $this->assertTrue($submit->hasAttribute('disabled'));
+        $this->assertSame(1, substr_count($response->getContent(), __('Invoice and settlement operations are read-only.')));
+        $response->assertSee('if (initial.closed || !initial.restore) return;', false)
+            ->assertSee('if (initial.closed) return;', false);
+    }
+
     public function test_edit_payment_rolls_back_when_document_update_fails(): void
     {
         $invoice = $this->approvedSell(100, 1);

@@ -58,6 +58,7 @@
                         @forelse ($moadianHistories as $history)
                             @php
                                 $status = isset($history->data['status']) ? Str::upper($history->data['status']) : 'UNKNOWN';
+                                $fiscalYearClosed = $history->invoice?->fiscalYear?->isClosed() ?? false;
                                 $isLatest = in_array($history->id, $latestHistoryIds, true);
                             @endphp
                             <tr>
@@ -83,7 +84,7 @@
                                                 @can('invoices.moadian-check-status')
                                                     <form method="POST" action="{{ route('invoices.moadian-check-status', $history->invoice_id) }}">
                                                         @csrf
-                                                        <button type="submit" class="btn btn-xs btn-info">{{ __('Check Status') }}</button>
+                                                        <button type="submit" class="btn btn-xs btn-info {{ $fiscalYearClosed ? 'btn-disabled' : '' }}" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ __('Check Status') }}</button>
                                                     </form>
                                                 @endcan
                                             @endif
@@ -91,7 +92,7 @@
                                                 @can('invoices.send-moadian')
                                                     <form method="POST" action="{{ route('invoices.send-moadian', $history->invoice_id) }}">
                                                         @csrf
-                                                        <button type="submit" class="btn btn-xs btn-info">{{ __('Send Again') }}</button>
+                                                        <button type="submit" class="btn btn-xs btn-info {{ $fiscalYearClosed ? 'btn-disabled' : '' }}" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ __('Send Again') }}</button>
                                                     </form>
                                                 @endcan
                                             @elseif($status === 'SUCCESS')

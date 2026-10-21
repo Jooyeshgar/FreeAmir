@@ -59,7 +59,9 @@ class MoadianHistoryController extends Controller
 
         $referenceNumber = $invoice->moadianReferenceNumber();
 
-        return view('moadian-histories.show', compact('moadianHistories', 'invoice', 'latestHistoryStatus', 'referenceNumber'));
+        $fiscalYearClosed = $invoice->fiscalYear?->isClosed() ?? false;
+
+        return view('moadian-histories.show', compact('moadianHistories', 'invoice', 'latestHistoryStatus', 'referenceNumber', 'fiscalYearClosed'));
     }
 
     public function checkStatus(Invoice $invoice): RedirectResponse

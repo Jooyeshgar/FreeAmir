@@ -529,6 +529,7 @@
     "Cash book": "دفتر نقدی",
     "Category": "دسته‌بندی",
     "Caution": "هشدار",
+    "Change status": "تغییر وضعیت",
     "Change My Information": "تغییر اطلاعات من",
     "Change User Information": "تغییر اطلاعات کاربری",
     "Changed At": "تغییر در",
@@ -3550,7 +3551,6 @@
     "Company details": "جزئیات شرکت",
     "People with access to this fiscal year.": "افراد دارای دسترسی به این سال مالی.",
     "No users are assigned to this fiscal year.": "هیچ کاربری به این سال مالی اختصاص داده نشده است.",
-    "Create missing customer, products, services, and their accounting subjects in the target fiscal year": "ایجاد مشتری، کالا، خدمت و سرفصل‌های حسابداری آن‌ها در سال مالی مقصد",
     "Bank service fee": "کارمزد بانک",
     "Bank service fee must be zero or greater.": "کارمزد بانک باید صفر یا بیشتر باشد.",
     "Configure a bank service fee expense account for the active fiscal year.": "حساب هزینه کارمزد بانک را برای سال مالی فعال تنظیم کنید.",
@@ -3558,5 +3558,6 @@
     "Record bank service fee": "ثبت کارمزد بانک",
     "Enter a bank service fee greater than zero.": "کارمزد بانک باید بیشتر از صفر باشد.",
     "Edit Payment": "ویرایش پرداخت",
-    "Payment updated successfully.": "پرداخت با موفقیت ویرایش شد."
+    "Payment updated successfully.": "پرداخت با موفقیت ویرایش شد.",
+    "Invoice and settlement operations are read-only.": "عملیات فاکتور و تسویه فقط به‌صورت خواندنی در دسترس است."
 }

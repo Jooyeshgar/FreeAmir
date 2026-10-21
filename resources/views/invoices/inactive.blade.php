@@ -1,6 +1,13 @@
 <x-app-layout :title="__('Approve Inactive')">
     <x-show-message-bags />
 
+    @php $fiscalYearClosed = \App\Models\FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false; @endphp
+    @if ($fiscalYearClosed)
+        <div class="alert alert-warning mb-4">
+            <span>{{ __('This fiscal year is already closed.') }} {{ __('Invoice and settlement operations are read-only.') }}</span>
+        </div>
+    @endif
+
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body p-4 sm:p-6">
             <form method="POST" action="{{ route('invoices.inactive.approve') }}">
@@ -62,7 +69,8 @@
                 </div>
 
                 <div class="flex justify-end mt-4 gap-3">
-                    <button type="submit" class="btn btn-primary btn-sm gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm gap-2 {{ $fiscalYearClosed ? 'btn-disabled cursor-not-allowed' : '' }}"
+                        @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">
                         <span id="toggle-text">{{ __('Approve All') }}</span>
                     </button>
 

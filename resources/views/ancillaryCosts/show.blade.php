@@ -87,7 +87,7 @@
                                 <div class="stat-title">{{ __('Status') }}</div>
                                 <div class="stat-value">
                                     <span class="tooltip" data-tip="{{ $changeStatusValidation['reason'] ?? '' }}">
-                                        <button class="btn {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }} btn-disabled cursor-not-allowed">
+                                        <button class="btn {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }} btn-disabled cursor-not-allowed" disabled title="{{ $changeStatusValidation['reason'] ?? '' }}">
                                             {{ __($ancillaryCost->status?->isApproved() ? 'Unapprove' : 'Approve') }}
                                         </button>
                                     </span>
@@ -215,13 +215,17 @@
                 </a>
 
                 <div class="flex flex-wrap gap-2">
-                    @if (!empty($editDeleteStatus) && ($editDeleteStatus['allowed'] ?? false) && !$ancillaryCost->status?->isApproved())
-                        @can('ancillary-costs.edit')
+                    @can('ancillary-costs.edit')
+                        @if (!empty($editDeleteStatus) && ($editDeleteStatus['allowed'] ?? false) && !$ancillaryCost->status?->isApproved())
                             <a href="{{ route('invoices.ancillary-costs.edit', [$invoice ?? $ancillaryCost->invoice_id, $ancillaryCost]) }}" class="btn btn-primary gap-2">
                                 {{ __('Edit') }}
                             </a>
-                        @endcan
-                    @endif
+                        @elseif (!($editDeleteStatus['allowed'] ?? true))
+                            <span class="tooltip" data-tip="{{ $editDeleteStatus['reason'] ?? '' }}">
+                                <button type="button" class="btn btn-primary btn-disabled" disabled title="{{ $editDeleteStatus['reason'] ?? '' }}">{{ __('Edit') }}</button>
+                            </span>
+                        @endif
+                    @endcan
                 </div>
             </div>
         </div>

@@ -82,7 +82,18 @@
         <div class="card-body min-w-0 gap-3 p-4 sm:p-5 lg:p-8 space-y-5 lg:space-y-8">
             <x-show-message-bags />
 
-            <div class="grid [&>*]:min-w-0 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+            @php
+                $fiscalYearClosed = $invoice->fiscalYear?->isClosed() ?? false;
+                $fiscalYearClosedMessage = __('This fiscal year is already closed.');
+            @endphp
+
+            @if ($fiscalYearClosed)
+                <div class="alert alert-warning shadow-sm">
+                    <span>{{ $fiscalYearClosedMessage }} {{ __('Invoice and settlement operations are read-only.') }}</span>
+                </div>
+            @endif
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
                 <div
                     class="stats shadow bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60 dark:from-slate-800 dark:to-sky-950/40 dark:border-sky-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
                     <div class="stat min-w-0 px-4 py-3 lg:px-6 lg:py-4">
@@ -343,12 +354,14 @@
                                 data-tip="{{ $invoice->status->isApprovedOrSettled() ? '' : __('Only approved invoices can be returned.') }}">
                                 @if ($invoice->invoice_type === App\Enums\InvoiceType::BUY)
                                     <a href="{{ route('invoices.create', ['invoice_type' => 'return_buy', 'returned_invoice_id' => $invoice->id, 'service_buy' => $isServiceBuy ? '1' : null]) }}"
-                                        class="btn btn-sm lg:btn-md btn-primary {{ $invoice->status->isApprovedOrSettled() ? '' : 'btn-disabled' }}">
+                                        class="btn btn-sm lg:btn-md btn-primary {{ $invoice->status->isApprovedOrSettled() && !$fiscalYearClosed ? '' : 'btn-disabled' }}"
+                                        @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : '' }}">
                                         {{ __('Create return buy invoice') }}
                                     </a>
                                 @elseif ($invoice->invoice_type === App\Enums\InvoiceType::SELL)
                                     <a href="{{ route('invoices.create', ['invoice_type' => 'return_sell', 'returned_invoice_id' => $invoice->id]) }}"
-                                        class="btn btn-sm lg:btn-md btn-primary {{ $invoice->status->isApprovedOrSettled() ? '' : 'btn-disabled' }}">
+                                        class="btn btn-sm lg:btn-md btn-primary {{ $invoice->status->isApprovedOrSettled() && !$fiscalYearClosed ? '' : 'btn-disabled' }}"
+                                        @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : '' }}">
                                         {{ __('Create return sell invoice') }}
                                     </a>
                                 @endif
@@ -563,7 +576,7 @@
 
                                                 <div class="flex flex-wrap gap-2 items-center">
                                                     @can('ancillary-costs.approve')
-                                                        @if ($ancillaryChangeStatusValidation['allowed'] ?? false)
+                                                        @if (($ancillaryChangeStatusValidation['allowed'] ?? false) && !$fiscalYearClosed)
                                                             <form method="POST"
                                                                 action="{{ route('ancillary-costs.change-status', [$ancillaryCost, $ancillaryCost->status?->isApproved() ? 'unapprove' : 'approve']) }}"
                                                                 class="inline-block">
@@ -577,7 +590,7 @@
                                                             <span class="tooltip"
                                                                 data-tip="{{ $ancillaryChangeStatusValidation['reason'] ?? '' }}">
                                                                 <button
-                                                                    class="btn btn-xs {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }} btn-disabled cursor-not-allowed">
+                                                                    class="btn btn-xs {{ $ancillaryCost->status?->isApproved() ? 'btn-warning' : 'btn-success' }} btn-disabled cursor-not-allowed" disabled title="{{ $ancillaryChangeStatusValidation['reason'] ?? '' }}">
                                                                     {{ __($ancillaryCost->status?->isApproved() ? 'Unapprove' : 'Approve') }}
                                                                 </button>
                                                             </span>
@@ -594,16 +607,21 @@
                                                     @php
                                                         $editDeleteAllowed =
                                                             ($ancillaryEditDeleteStatus['allowed'] ?? false) &&
-                                                            !$ancillaryCost->status?->isApproved();
+                                                            !$ancillaryCost->status?->isApproved() &&
+                                                            !$fiscalYearClosed;
                                                         $editDeleteDisabledReason = $ancillaryCost->status?->isApproved()
                                                             ? null
                                                             : $ancillaryEditDeleteStatus['reason'] ?? null;
-                                                        $editTooltip = $ancillaryCost->status?->isApproved()
+                                                        $editTooltip = $fiscalYearClosed
+                                                            ? $fiscalYearClosedMessage
+                                                            : ($ancillaryCost->status?->isApproved()
                                                             ? __('Unapprove the ancillary cost first to edit')
-                                                            : $ancillaryEditDeleteStatus['reason'] ?? '';
-                                                        $deleteTooltip = $ancillaryCost->status?->isApproved()
+                                                            : $ancillaryEditDeleteStatus['reason'] ?? '');
+                                                        $deleteTooltip = $fiscalYearClosed
+                                                            ? $fiscalYearClosedMessage
+                                                            : ($ancillaryCost->status?->isApproved()
                                                             ? __('Unapprove the ancillary cost first to delete')
-                                                            : $ancillaryEditDeleteStatus['reason'] ?? '';
+                                                            : $ancillaryEditDeleteStatus['reason'] ?? '');
                                                     @endphp
 
                                                     @can('ancillary-costs.edit')
@@ -615,7 +633,7 @@
                                                         @else
                                                             <span class="tooltip" data-tip="{{ $editTooltip }}">
                                                                 <button
-                                                                    class="btn btn-xs btn-info btn-disabled cursor-not-allowed">
+                                                                    class="btn btn-xs btn-info btn-disabled cursor-not-allowed" disabled title="{{ $editTooltip }}">
                                                                     {{ __('Edit') }}
                                                                 </button>
                                                             </span>
@@ -636,7 +654,7 @@
                                                         @else
                                                             <span class="tooltip" data-tip="{{ $deleteTooltip }}">
                                                                 <button
-                                                                    class="btn btn-xs btn-error btn-disabled cursor-not-allowed">
+                                                                    class="btn btn-xs btn-error btn-disabled cursor-not-allowed" disabled title="{{ $deleteTooltip }}">
                                                                     {{ __('Delete') }}
                                                                 </button>
                                                             </span>
@@ -656,14 +674,14 @@
                     @endif
                     @can('ancillary-costs.create')
                         <div class="flex mt-2">
-                            @if ($canCreateAncillaryCost)
+                            @if ($canCreateAncillaryCost && !$fiscalYearClosed)
                                 <a href="{{ route('invoices.ancillary-costs.create', $invoice) }}"
                                     class="btn btn-sm lg:btn-md btn-primary">
                                     {{ __('Create Ancillary Cost') }}
                                 </a>
                             @else
                                 <span class="tooltip"
-                                    data-tip="{{ __('Cannot add new ancillary cost for approved invoice because of COGS calculations.') }}">
+                                    data-tip="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : __('Cannot add new ancillary cost for approved invoice because of COGS calculations.') }}">
                                     <button
                                         class="btn btn-sm lg:btn-md btn-primary btn-disabled cursor-not-allowed">{{ __('Create Ancillary Cost') }}</button>
                                 </span>
@@ -764,8 +782,9 @@
                                                             onsubmit="return confirm('{{ __('Remove this payment\'s accounting document? The payment will be kept but will no longer count toward the paid amount.') }}')">
                                                             @csrf
                                                             @method('DELETE')
-                                                            <button type="submit"
-                                                                class="btn btn-xs btn-warning">{{ __('Remove Document') }}</button>
+                                                            <button type="submit" @disabled($fiscalYearClosed)
+                                                                class="btn btn-xs btn-warning {{ $fiscalYearClosed ? 'btn-disabled cursor-not-allowed' : '' }}"
+                                                                title="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : '' }}">{{ __('Remove Document') }}</button>
                                                         </form>
                                                     @endcan
                                                 @elseif (!$payment->cheque_id && $payment->settlement_subject_id)
@@ -773,8 +792,9 @@
                                                         <form class="m-0" method="POST"
                                                             action="{{ route('invoices.payments.create-document', [$invoice, $payment]) }}">
                                                             @csrf
-                                                            <button type="submit"
-                                                                class="btn btn-xs btn-success">{{ __('Create Document') }}</button>
+                                                            <button type="submit" @disabled($fiscalYearClosed)
+                                                                class="btn btn-xs btn-success {{ $fiscalYearClosed ? 'btn-disabled cursor-not-allowed' : '' }}"
+                                                                title="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : '' }}">{{ __('Create Document') }}</button>
                                                         </form>
                                                     @endcan
                                                 @endif
@@ -782,6 +802,7 @@
                                                 @if (!$payment->cheque_id)
                                                     @can('invoices.payments.update')
                                                         <button type="button" x-data="{}" class="btn btn-xs btn-outline" data-payment-id="{{ $payment->id }}"
+                                                            @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : '' }}"
                                                             @click="$dispatch('invoice-payment-edit', {
                                                                 id: @js($payment->id),
                                                                 amount: @js((string) $payment->amount),
@@ -800,7 +821,9 @@
                                                         onsubmit="return confirm('{{ __('Are you sure you want to remove this payment? Its accounting document will be reversed.') }}')">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button type="submit" class="btn btn-xs btn-error">{{ __('Delete') }}</button>
+                                                        <button type="submit" @disabled($fiscalYearClosed)
+                                                            class="btn btn-xs btn-error {{ $fiscalYearClosed ? 'btn-disabled cursor-not-allowed' : '' }}"
+                                                            title="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : '' }}">{{ __('Delete') }}</button>
                                                     </form>
                                                 @endcan
                                             </div>
@@ -819,9 +842,9 @@
                 @if (auth()->user()->can('invoices.payments.store') || auth()->user()->can('invoices.payments.update'))
                     @can('invoices.payments.store')
                         <div class="flex flex-wrap gap-2 mt-4">
-                        @if ($paymentDecision->hasErrors())
+                        @if ($fiscalYearClosed || $paymentDecision->hasErrors())
                             <span class="tooltip"
-                                data-tip="{{ $paymentDecision->messages->pluck('text')->implode(' ') }}">
+                                data-tip="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : $paymentDecision->messages->pluck('text')->implode(' ') }}">
                                 <button
                                     class="btn btn-sm lg:btn-md btn-primary btn-disabled cursor-not-allowed">{{ __('Record Payment') }}</button>
                             </span>
@@ -837,7 +860,9 @@
                             </button>
                             @if($chequeDirection)
                                 @can('invoices.payments.store-cheque')
-                                    <button type="button" class="btn btn-sm lg:btn-md btn-secondary gap-2" onclick="cheque_payment_modal.showModal()">
+                                    <button type="button" @disabled($fiscalYearClosed)
+                                        class="btn btn-sm lg:btn-md btn-secondary gap-2 {{ $fiscalYearClosed ? 'btn-disabled cursor-not-allowed' : '' }}"
+                                        title="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : '' }}" onclick="cheque_payment_modal.showModal()">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 lg:h-5 lg:w-5" fill="none"
                                             viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -867,6 +892,7 @@
                                 : $remainingAmount,
                             'editing' => old('payment_mode') === 'edit',
                             'restore' => old('payment_mode') !== null,
+                            'closed' => $fiscalYearClosed,
                         ];
                     @endphp
                     <dialog id="payment_modal" class="modal" x-data="invoicePaymentForm(@js($paymentModalState), @js(route('invoices.payments.store', $invoice)), @js(route('invoices.payments.update', [$invoice, '__PAYMENT__'])))" x-on:invoice-payment-edit.window="edit($event.detail)" x-on:invoice-payment-create.window="create()" x-init="restore()">
@@ -891,7 +917,7 @@
                                     )
                                     ->values();
                             @endphp
-                            <form method="POST" :action="action" class="space-y-4">
+                            <form method="POST" :action="action" class="space-y-4" @submit="if (@js($fiscalYearClosed)) $event.preventDefault()">
                                 @csrf
                                 <input type="hidden" name="_method" value="PUT" :disabled="!editing">
                                 <input type="hidden" name="payment_id" :value="paymentId">
@@ -982,7 +1008,7 @@
                                 <div class="modal-action">
                                     <button type="button" class="btn btn-sm md:btn-sm lg:btn-md"
                                         onclick="payment_modal.close()">{{ __('Cancel') }}</button>
-                                    <button type="submit" class="btn btn-sm md:btn-sm lg:btn-md btn-primary" x-text="editing ? '{{ __('Edit') }}' : '{{ __('Save') }}'"></button>
+                                    <button type="submit" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : '' }}" class="btn btn-sm md:btn-sm lg:btn-md btn-primary" x-text="editing ? '{{ __('Edit') }}' : '{{ __('Save') }}'"></button>
                                 </div>
                             </form>
                         </div>
@@ -1157,11 +1183,13 @@
                     {{ __('Back') }}
                 </a>
 
-                <div class="contents md:flex md:min-w-0 md:flex-nowrap md:gap-2 md:overflow-x-auto [&>.btn]:h-auto [&>.btn]:min-h-8 [&>.btn]:min-w-0 [&>.btn]:whitespace-normal [&>.btn]:px-2 [&>.btn]:py-2 [&>form]:min-w-0 [&>form>.btn]:h-auto [&>form>.btn]:min-h-8 [&>form>.btn]:w-full [&>form>.btn]:whitespace-normal [&>form>.btn]:px-2 [&>form>.btn]:py-2 [&>.tooltip]:min-w-0 [&>.tooltip>.btn]:h-auto [&>.tooltip>.btn]:min-h-8 [&>.tooltip>.btn]:w-full [&>.tooltip>.btn]:whitespace-normal [&>.tooltip>.btn]:px-2 [&>.tooltip>.btn]:py-2 md:[&>.btn]:shrink-0 md:[&>.btn]:whitespace-nowrap md:[&>form]:shrink-0 md:[&>form>.btn]:whitespace-nowrap md:[&>.tooltip]:shrink-0 md:[&>.tooltip>.btn]:whitespace-nowrap">
+                <div class="contents md:flex md:min-w-0 md:flex-nowrap md:gap-2 [&>.btn]:h-auto [&>.btn]:min-h-8 [&>.btn]:min-w-0 [&>.btn]:whitespace-normal [&>.btn]:px-2 [&>.btn]:py-2 [&>form]:min-w-0 [&>form>.btn]:h-auto [&>form>.btn]:min-h-8 [&>form>.btn]:w-full [&>form>.btn]:whitespace-normal [&>form>.btn]:px-2 [&>form>.btn]:py-2 [&>.tooltip]:min-w-0 [&>.tooltip>.btn]:h-auto [&>.tooltip>.btn]:min-h-8 [&>.tooltip>.btn]:w-full [&>.tooltip>.btn]:whitespace-normal [&>.tooltip>.btn]:px-2 [&>.tooltip>.btn]:py-2 md:[&>.btn]:shrink-0 md:[&>.btn]:whitespace-nowrap md:[&>form]:shrink-0 md:[&>form>.btn]:whitespace-nowrap md:[&>.tooltip]:shrink-0 md:[&>.tooltip>.btn]:whitespace-nowrap">
                     @can('invoices.transfer')
                         @if ($fiscalYears->isNotEmpty())
-                            <button type="button" onclick="document.getElementById('inv-transfer-modal').showModal()"
-                                class="btn btn-sm lg:btn-md gap-2">
+                            <button type="button" @disabled($fiscalYearClosed)
+                                onclick="document.getElementById('inv-transfer-modal').showModal()"
+                                class="btn btn-sm lg:btn-md gap-2 {{ $fiscalYearClosed ? 'btn-disabled cursor-not-allowed' : '' }}"
+                                title="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : '' }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 lg:h-5 lg:w-5" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1182,7 +1210,7 @@
                             $invoice->status->isApprovedInactive();
                         // Settled invoices are shown as disabled in the list and cannot
                         // change status until their payments are removed.
-                        $canUnapprove = $invoice->status->isApprovedOrSettled();
+                        $canUnapprove = $invoice->status->isApproved();
                         $isSettled = $invoice->status->isPartiallyPaid() || $invoice->status->isPaid();
 
                         $hasMoadianSuccess = $invoice->moadianHistories->contains(function ($history) {
@@ -1221,6 +1249,10 @@
                                     <button class="btn btn-sm lg:btn-md btn-error btn-disabled cursor-not-allowed"
                                         title="{{ __('The original invoice must be sent successfully to Moadian before sending its void invoice.') }}">{{ __('Send Moadian') }}</button>
                                 </span>
+                            @elseif ($fiscalYearClosed)
+                                <span class="tooltip" data-tip="{{ $fiscalYearClosedMessage }}">
+                                    <button class="btn btn-success btn-disabled cursor-not-allowed" disabled>{{ __('Send Moadian') }}</button>
+                                </span>
                             @else
                                 <form method="POST" action="{{ route('invoices.send-moadian', $invoice) }}">
                                     @csrf
@@ -1235,6 +1267,7 @@
                             @if (
                                 $invoice->status->isApprovedOrSettled() &&
                                     !$invoice->voidInvoice &&
+                                    !$fiscalYearClosed &&
                                     $invoice->getReturnInvoice()->isEmpty())
                                 <a href="{{ route('invoices.void-form', $invoice) }}" class="btn btn-sm lg:btn-md btn-warning">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 lg:h-5 lg:w-5" fill="none"
@@ -1246,11 +1279,13 @@
                                 </a>
                             @else
                                 @php
-                                    $voidDisabledTip = $invoice->voidInvoice
+                                    $voidDisabledTip = $fiscalYearClosed
+                                        ? $fiscalYearClosedMessage
+                                        : ($invoice->voidInvoice
                                         ? __('Invoice has voided already.')
                                         : ($invoice->getReturnInvoice()->isNotEmpty()
                                             ? __('Only approved sell invoices without return invoices can be voided.')
-                                            : __('Invoice must be approved before voiding.'));
+                                            : __('Invoice must be approved before voiding.')));
                                 @endphp
                                 <span class="tooltip" data-tip="{{ $voidDisabledTip }}">
                                     <button class="btn btn-sm lg:btn-md btn-warning gap-2 btn-disabled cursor-not-allowed">
@@ -1276,7 +1311,7 @@
                     @endif
 
                     @can('invoices.approve')
-                        @if ($isSellWorkflow && ($invoice->status->isPreInvoice() || $invoice->status->isRejected()))
+                        @if (!$fiscalYearClosed && $isSellWorkflow && ($invoice->status->isPreInvoice() || $invoice->status->isRejected()))
                             <form action="{{ route('invoices.change-status', [$invoice, 'ready_to_approve']) }}"
                                 method="POST" class="inline-block">
                                 @csrf
@@ -1284,7 +1319,7 @@
                             </form>
                         @endif
 
-                        @if ($isSellWorkflow && $invoice->status->isPreInvoice())
+                        @if (!$fiscalYearClosed && $isSellWorkflow && $invoice->status->isPreInvoice())
                             <form action="{{ route('invoices.change-status', [$invoice, 'rejected']) }}" method="POST"
                                 class="inline-block">
                                 @csrf
@@ -1292,7 +1327,7 @@
                             </form>
                         @endif
 
-                        @if ($canChangeStatus)
+                        @if ($canChangeStatus && !$fiscalYearClosed)
                             @if ($changeStatusValidation->hasErrors())
                                 <a data-tip="{{ $changeStatusValidation->toText() }}"
                                     href="{{ route('invoices.conflicts', $invoice) }}"
@@ -1317,10 +1352,20 @@
                                     </button>
                                 </form>
                             @endif
+                        @elseif ($fiscalYearClosed)
+                            <span class="tooltip" data-tip="{{ $fiscalYearClosedMessage }}">
+                                <button class="btn btn-warning btn-disabled cursor-not-allowed" disabled>{{ __('Change status') }}</button>
+                            </span>
+                        @elseif ($isSettled)
+                            <span class="tooltip"
+                                data-tip="{{ __('A paid or partially paid invoice cannot change its status until its payments (or their payment documents) are removed.') }}">
+                                <button
+                                    class="btn btn-warning btn-disabled cursor-not-allowed">{{ __('Unapprove') }}</button>
+                            </span>
                         @endif
                     @endcan
 
-                    @if (!$invoice->status->isApprovedOrSettled() && !$invoice->invoice_type->isVoid() && !$hasMoadianSuccess)
+                    @if (!$fiscalYearClosed && !$invoice->status->isApprovedOrSettled() && !$invoice->invoice_type->isVoid() && !$hasMoadianSuccess)
                         <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm lg:btn-md btn-primary gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 lg:h-5 lg:w-5" fill="none"
                                 viewBox="0 0 24 24" stroke="currentColor">
@@ -1331,7 +1376,7 @@
                         </a>
                     @else
                         <span class="tooltip"
-                            data-tip="{{ $invoice->invoice_type->isVoid() ? __('Editing is not allowed for void invoices.') : __('Editing is not allowed for approved invoices.') }}">
+                            data-tip="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : ($invoice->invoice_type->isVoid() ? __('Editing is not allowed for void invoices.') : __('Editing is not allowed for approved invoices.')) }}">
                             <button class="btn btn-sm lg:btn-md btn-primary gap-2 btn-disabled cursor-not-allowed">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 lg:h-5 lg:w-5" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor">
@@ -1409,7 +1454,7 @@
                 editing: initial.editing,
                 action: initial.editing ? updateUrl.replace('__PAYMENT__', initial.paymentId) : createUrl,
                 restore() {
-                    if (!initial.restore) return;
+                    if (initial.closed || !initial.restore) return;
                     this.action = this.editing ? updateUrl.replace('__PAYMENT__', this.paymentId) : createUrl;
                     this.$nextTick(() => {
                         this.setSubject(initial.subjectId, initial.subjectName);
@@ -1421,6 +1466,7 @@
                     if (selector && window.Alpine) Alpine.$data(selector).setSelection(id, name);
                 },
                 create() {
+                    if (initial.closed) return;
                     this.editing = false;
                     this.paymentId = '';
                     this.action = createUrl;
@@ -1433,6 +1479,7 @@
                     this.setSubject('', '');
                 },
                 edit(payment) {
+                    if (initial.closed) return;
                     this.editing = true;
                     this.paymentId = payment.id;
                     this.action = updateUrl.replace('__PAYMENT__', payment.id);

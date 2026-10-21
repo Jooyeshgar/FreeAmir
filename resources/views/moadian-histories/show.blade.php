@@ -2,10 +2,10 @@
     <div class="card bg-base-100">
         <div class="card-body">
             <h2 class="card-title">
-                <x-user-guide-link source="invoices/sells/moadian-histories/how-to-use-moadian.md" />
                 <a href="{{ route('invoices.show', $invoice) }}" class="link-hover">
                     {{ __('Invoice') . ' ' . $invoice->invoice_type->label() . ' #' . formatDocumentNumber($invoice->number ?? $invoice->id) }}
                 </a>
+                <x-user-guide-link source="invoices/sells/moadian-histories/how-to-use-moadian.md" />
             </h2>
 
             <x-show-message-bags />
@@ -37,7 +37,7 @@
                         @if ($referenceNumber)
                             <form method="POST" action="{{ route('invoices.moadian-check-status', $invoice) }}">
                                 @csrf
-                                <button type="submit" class="btn btn-sm btn-warning">{{ __('Check Status') }}</button>
+                                <button type="submit" class="btn btn-sm btn-warning {{ $fiscalYearClosed ? 'btn-disabled' : '' }}" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ __('Check Status') }}</button>
                             </form>
                         @endif
                     @endcan
@@ -45,7 +45,7 @@
                         @if($latestHistoryStatus === 'FAILED')
                             <form method="POST" action="{{ route('invoices.send-moadian', $invoice) }}">
                                 @csrf
-                                <button type="submit" class="btn btn-sm btn-secondary">{{ __('Send Again') }}</button>
+                                <button type="submit" class="btn btn-sm btn-secondary {{ $fiscalYearClosed ? 'btn-disabled' : '' }}" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ __('Send Again') }}</button>
                             </form>
                         @elseif($latestHistoryStatus === 'SUCCESS')
                             <span class="btn btn-sm btn-disabled">{{ __('Sent') }}</span>

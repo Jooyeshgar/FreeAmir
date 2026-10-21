@@ -33,6 +33,8 @@ class AncillaryCostService
      */
     public static function createAncillaryCost(User $user, array $data, bool $approved = false)
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen(Invoice::withoutGlobalScopes()->findOrFail($data['invoice_id']));
+
         self::validateAncillaryCostData($data);
 
         $invoice = Invoice::findOrFail($data['invoice_id']);
@@ -138,6 +140,8 @@ class AncillaryCostService
 
     public static function updateAncillaryCost(User $user, AncillaryCost $ancillaryCost, array $data, bool $approve = false)
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($ancillaryCost);
+
         self::validateAncillaryCostData($data);
 
         $createdDocument = null;
@@ -203,6 +207,8 @@ class AncillaryCostService
      */
     public static function deleteAncillaryCost(AncillaryCost $ancillaryCost): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($ancillaryCost);
+
         DB::transaction(function () use ($ancillaryCost) {
             $invoice = $ancillaryCost->invoice;
             $wasApproved = $ancillaryCost->status->isApproved();
@@ -287,6 +293,10 @@ class AncillaryCostService
      */
     public static function getEditDeleteStatus(AncillaryCost $ancillaryCost): array
     {
+        if (app(FiscalYearMutationGuard::class)->resolveFiscalYear($ancillaryCost)?->isClosed()) {
+            return ['allowed' => false, 'reason' => __('This fiscal year is already closed.')];
+        }
+
         try {
             self::checkAncillaryCostDeleteableOrEditable($ancillaryCost);
 
@@ -298,6 +308,8 @@ class AncillaryCostService
 
     public function changeAncillaryCostStatus(AncillaryCost $ancillaryCost, string $status): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($ancillaryCost);
+
         DB::transaction(function () use ($ancillaryCost, $status) {
             match ($status) {
                 'approve' => $this->toggleInvoiceApproval($ancillaryCost, true),
@@ -394,6 +406,10 @@ class AncillaryCostService
 
     public static function getChangeStatusValidation(AncillaryCost $ancillaryCost): array
     {
+        if (app(FiscalYearMutationGuard::class)->resolveFiscalYear($ancillaryCost)?->isClosed()) {
+            return ['allowed' => false, 'reason' => __('This fiscal year is already closed.')];
+        }
+
         // When unapproving, skip the sync check — the user must be able to unapprove
         // so they can then edit and re-sync the items.
         if ($ancillaryCost->status->isApproved()) {

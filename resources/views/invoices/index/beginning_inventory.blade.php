@@ -27,6 +27,7 @@
         </thead>
         <tbody>
             @forelse ($invoices as $invoice)
+                @php $fiscalYearClosed = $invoice->fiscalYear?->isClosed() ?? false; @endphp
                 <tr>
                     <td>{{ formatDocumentNumber($invoice->number) }}</td>
                 <td>
@@ -58,24 +59,28 @@
                                     <form action="{{ route('invoices.change-status', [$invoice, $invoice->status->isApprovedOrSettled() ? 'unapproved' : 'approved']) }}{{ $invoice->changeStatusValidation->hasWarning() ? '?confirm=1' : '' }}"
                                         method="POST" class="{{ $invoice->changeStatusValidation->hasWarning() ? 'change-status-form' : '' }}">
                                         @csrf
-                                        <button class="btn btn-sm {{ $invoice->status->isApprovedOrSettled() ? 'btn-warning' : 'btn-success' }}" type="submit">
+                                        <button @disabled($fiscalYearClosed) class="btn btn-sm {{ $invoice->status->isApprovedOrSettled() ? 'btn-warning' : 'btn-success' }} {{ $fiscalYearClosed ? 'btn-disabled cursor-not-allowed' : '' }}" type="submit" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">
                                             {{ $invoice->status->isApprovedOrSettled() ? __('Unapprove') : __('Approve') }}
                                         </button>
                                     </form>
                                 @endif
                             @endcan
                             @can('invoices.edit')
-                                <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                @if ($fiscalYearClosed)
+                                    <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" disabled title="{{ __('This fiscal year is already closed.') }}">{{ __('Edit') }}</button>
+                                @else
+                                    <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                @endif
                             @endcan
                             @can('invoices.destroy')
-                                @if(!$invoice->status->isApprovedOrSettled())
+                                @if(!$invoice->status->isApprovedOrSettled() && !$fiscalYearClosed)
                                     <form action="{{ route('invoices.destroy', $invoice) }}" method="POST">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
                                     </form>
                                 @else
-                                    <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed">{{ __('Delete') }}</button>
+                                    <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ __('Delete') }}</button>
                                 @endif
                             @endcan
                         </div>
