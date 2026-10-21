@@ -3558,5 +3558,9 @@
     "Enter a bank service fee greater than zero.": "Enter a bank service fee greater than zero.",
     "Edit Payment": "Edit Payment",
     "Payment updated successfully.": "Payment updated successfully.",
-    "Invoice and settlement operations are read-only.": "Invoice and settlement operations are read-only."
+    "Invoice and settlement operations are read-only.": "Invoice and settlement operations are read-only.",
+    "Bookmark": "Bookmark",
+    "Bookmark invoice": "Bookmark invoice",
+    "Remove invoice bookmark": "Remove invoice bookmark",
+    "Bookmarked invoices only": "Bookmarked invoices only"
 }
