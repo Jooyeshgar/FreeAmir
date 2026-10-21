@@ -14,9 +14,9 @@
 
             <div class="card-actions">
                 @can('salary.work-site-contracts.create')
-                    <a href="{{ route('salary.work-site-contracts.create') }}" @class(['btn btn-primary', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">
+                    <x-closed-year-action-link href="{{ route('salary.work-site-contracts.create') }}" class="btn btn-primary">
                         {{ __('Create Work Site Contract') }}
-                    </a>
+                    </x-closed-year-action-link>
                 @endcan
             </div>
 
@@ -47,9 +47,9 @@
                                 <td>
                                     <div class="inline-flex gap-2">
                                         @can('salary.work-site-contracts.edit')
-                                            <a href="{{ route('salary.work-site-contracts.edit', $contract) }}" @class(['btn btn-sm btn-info', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">
+                                            <x-closed-year-action-link href="{{ route('salary.work-site-contracts.edit', $contract) }}" class="btn btn-sm btn-info">
                                                 {{ __('Edit') }}
-                                            </a>
+                                            </x-closed-year-action-link>
                                         @endcan
                                         @can('salary.work-site-contracts.delete')
                                             <form action="{{ route('salary.work-site-contracts.destroy', $contract) }}" method="POST" class="inline-block"

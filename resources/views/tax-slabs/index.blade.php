@@ -5,9 +5,9 @@
         <div class="card-body">
             <div class="card-actions">
                 @can('salary.tax-slabs.create')
-                    <a href="{{ route('salary.tax-slabs.create') }}" @class(['btn btn-sm btn-primary', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">
+                    <x-closed-year-action-link href="{{ route('salary.tax-slabs.create') }}" class="btn btn-sm btn-primary">
                         {{ __('Create Yearly Tax Slab') }}
-                    </a>
+                    </x-closed-year-action-link>
                 @endcan
             </div>
 
@@ -35,9 +35,9 @@
                                 <td>
                                     <div class="inline-flex gap-2">
                                         @can('salary.tax-slabs.edit')
-                                            <a href="{{ route('salary.tax-slabs.edit', $taxSlab) }}" @class(['btn btn-sm btn-info', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">
+                                            <x-closed-year-action-link href="{{ route('salary.tax-slabs.edit', $taxSlab) }}" class="btn btn-sm btn-info">
                                                 {{ __('Edit') }}
-                                            </a>
+                                            </x-closed-year-action-link>
                                         @endcan
                                         @can('salary.tax-slabs.delete')
                                             <form action="{{ route('salary.tax-slabs.destroy', $taxSlab) }}" method="POST" class="inline-block"

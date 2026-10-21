@@ -21,9 +21,9 @@
 
             <div class="card-actions">
                 @can('salary.payroll-elements.create')
-                    <a href="{{ route('salary.payroll-elements.create') }}" @class(['btn btn-sm btn-primary', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">
+                    <x-closed-year-action-link href="{{ route('salary.payroll-elements.create') }}" class="btn btn-sm btn-primary">
                         {{ __('Create Payroll Element') }}
-                    </a>
+                    </x-closed-year-action-link>
                 @endcan
             </div>
 
@@ -70,9 +70,9 @@
                                 <td>
                                     <div class="inline-flex gap-2">
                                         @can('salary.payroll-elements.edit')
-                                            <a href="{{ route('salary.payroll-elements.edit', $element) }}" @class(['btn btn-sm btn-info', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">
+                                            <x-closed-year-action-link href="{{ route('salary.payroll-elements.edit', $element) }}" class="btn btn-sm btn-info">
                                                 {{ __('Edit') }}
-                                            </a>
+                                            </x-closed-year-action-link>
                                         @endcan
                                         @can('salary.payroll-elements.delete')
                                             @unless ($element->is_system_locked)

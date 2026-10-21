@@ -42,11 +42,11 @@
 
             {{-- New request button --}}
             <div class="flex justify-end mb-2">
-                <a href="{{ route('employee-portal.personnel-requests.create', ['tab' => $tab]) }}" @class(['btn btn-primary btn-circle', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">
+                <x-closed-year-action-link href="{{ route('employee-portal.personnel-requests.create', ['tab' => $tab]) }}" class="btn btn-primary btn-circle">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                     </svg>
-                </a>
+                </x-closed-year-action-link>
             </div>
 
             <div class="overflow-x-auto">
@@ -95,9 +95,9 @@
                                 <td class="whitespace-nowrap">
                                     <div class="flex flex-nowrap items-center gap-2">
                                         @if ($req->status?->isPending())
-                                            <a href="{{ route('employee-portal.personnel-requests.edit', ['tab' => $tab, 'personnel_request' => $req->id]) }}" @class(['btn btn-sm btn-info', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">
+                                            <x-closed-year-action-link href="{{ route('employee-portal.personnel-requests.edit', ['tab' => $tab, 'personnel_request' => $req->id]) }}" class="btn btn-sm btn-info">
                                                 {{ __('Edit') }}
-                                            </a>
+                                            </x-closed-year-action-link>
                                             <form action="{{ route('employee-portal.personnel-requests.destroy', ['tab' => $tab, 'personnel_request' => $req->id]) }}" method="POST" class="inline-block"
                                                 onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                                 @csrf

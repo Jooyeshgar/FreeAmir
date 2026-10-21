@@ -55,25 +55,25 @@
             {{-- Table header row --}}
             <div class="flex items-center justify-end gap-2">
                 @can('attendance.attendance-logs.bulk-create')
-                    <a href="{{ route('attendance.attendance-logs.bulk-create') }}" @class(['btn btn-sm btn-outline btn-accent', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">
+                    <x-closed-year-action-link href="{{ route('attendance.attendance-logs.bulk-create') }}" class="btn btn-sm btn-outline btn-accent">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
                         {{ __('Bulk Create') }}
-                    </a>
+                    </x-closed-year-action-link>
                 @endcan
                 @can('attendance.attendance-logs.create')
-                    <a href="{{ route('attendance.attendance-logs.import') }}" @class(['btn btn-sm btn-outline btn-secondary', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">
+                    <x-closed-year-action-link href="{{ route('attendance.attendance-logs.import') }}" class="btn btn-sm btn-outline btn-secondary">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
                         </svg>
                         {{ __('Import') }}
-                    </a>
-                    <a href="{{ route('attendance.attendance-logs.create') }}" @class(['btn btn-primary btn-circle', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">
+                    </x-closed-year-action-link>
+                    <x-closed-year-action-link href="{{ route('attendance.attendance-logs.create') }}" class="btn btn-primary btn-circle">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                         </svg>
-                    </a>
+                    </x-closed-year-action-link>
                 @endcan
             </div>
 
@@ -120,9 +120,9 @@
                                             {{ __('Show') }}
                                         </a>
                                         @can('attendance.attendance-logs.edit')
-                                            <a href="{{ route('attendance.attendance-logs.edit', $log) }}" @class(['btn btn-sm btn-info', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">
+                                            <x-closed-year-action-link href="{{ route('attendance.attendance-logs.edit', $log) }}" class="btn btn-sm btn-info">
                                                 {{ __('Edit') }}
-                                            </a>
+                                            </x-closed-year-action-link>
                                         @endcan
                                         @can('attendance.attendance-logs.edit')
                                             <form action="{{ route('attendance.attendance-logs.recalculate', $log) }}" method="POST" class="inline-block"

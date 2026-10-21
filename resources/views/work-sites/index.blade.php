@@ -14,9 +14,9 @@
 
             <div class="card-actions">
                 @can('salary.work-sites.create')
-                    <a href="{{ route('salary.work-sites.create') }}" @class(['btn btn-primary', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">
+                    <x-closed-year-action-link href="{{ route('salary.work-sites.create') }}" class="btn btn-primary">
                         {{ __('Create Work Site') }}
-                    </a>
+                    </x-closed-year-action-link>
                 @endcan
             </div>
 
@@ -47,9 +47,9 @@
                                 <td>
                                     <div class="inline-flex gap-2">
                                         @can('salary.work-sites.edit')
-                                            <a href="{{ route('salary.work-sites.edit', $workSite) }}" @class(['btn btn-sm btn-info', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">
+                                            <x-closed-year-action-link href="{{ route('salary.work-sites.edit', $workSite) }}" class="btn btn-sm btn-info">
                                                 {{ __('Edit') }}
-                                            </a>
+                                            </x-closed-year-action-link>
                                         @endcan
                                         @can('salary.work-sites.index')
                                             <a href="{{ route('salary.work-site-contracts.index', ['work_site_id' => $workSite->id]) }}" class="btn btn-sm btn-ghost">

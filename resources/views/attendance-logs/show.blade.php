@@ -489,13 +489,13 @@
 
                 <div class="flex flex-wrap gap-2">
                     @can('attendance.attendance-logs.edit')
-                        <a href="{{ route('attendance.attendance-logs.edit', $attendanceLog) }}" @class(['btn btn-primary gap-2', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">
+                        <x-closed-year-action-link href="{{ route('attendance.attendance-logs.edit', $attendanceLog) }}" class="btn btn-primary gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 0l.172.172a2 2 0 010 2.828L12 16H9v-3z" />
                             </svg>
                             {{ __('Edit') }}
-                        </a>
+                        </x-closed-year-action-link>
 
                         <form action="{{ route('attendance.attendance-logs.recalculate', $attendanceLog) }}" method="POST" class="inline-block"
                             onsubmit="return confirm('{{ __('Recalculate this attendance log? Stored values will be overwritten with the computed values.') }}')">

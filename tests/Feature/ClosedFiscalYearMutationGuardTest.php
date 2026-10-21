@@ -30,9 +30,12 @@ use App\Services\InvoiceService;
 use App\Services\MoadianService;
 use App\Services\PaymentService;
 use App\Services\PayrollService;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
@@ -272,6 +275,55 @@ class ClosedFiscalYearMutationGuardTest extends TestCase
             ->assertSee('disabled', false)
             ->assertSee(__('This fiscal year is already closed.'))
             ->assertSee($this->employee->last_name);
+    }
+
+    public function test_closed_year_action_links_are_inert_and_explain_why_they_are_disabled(): void
+    {
+        $createUrl = route('hr.organization-units.create');
+
+        $response = $this->get(route('hr.organization-units.index'));
+
+        $response->assertOk()
+            ->assertDontSee('href="'.$createUrl.'"', false)
+            ->assertSee('role="link" aria-disabled="true" tabindex="-1"', false)
+            ->assertSee('title="'.__('This fiscal year is already closed.').'"', false)
+            ->assertSee(__('This fiscal year is already closed.'));
+    }
+
+    public function test_active_fiscal_year_closed_state_is_cached_per_request_and_fiscal_year(): void
+    {
+        $openYear = FiscalYear::factory()->create([
+            'company_id' => $this->fiscalYear->company_id,
+            'year' => $this->fiscalYear->year + 1,
+            'closed_at' => null,
+        ]);
+        $request = request();
+        $request->attributes->remove('active-fiscal-year-closed');
+        $closedYearQueries = 0;
+
+        DB::listen(function (QueryExecuted $query) use (&$closedYearQueries): void {
+            if (str_contains($query->sql, 'fiscal_years') && str_contains($query->sql, 'closed_at')) {
+                $closedYearQueries++;
+            }
+        });
+
+        config(['active-fiscal-year-id' => $this->fiscalYear->id]);
+        $this->assertTrue(activeFiscalYearIsClosed());
+        $this->assertTrue(activeFiscalYearIsClosed());
+        $this->assertSame(1, $closedYearQueries);
+
+        config(['active-fiscal-year-id' => $openYear->id]);
+        $this->assertFalse(activeFiscalYearIsClosed());
+        $this->assertFalse(activeFiscalYearIsClosed());
+        $this->assertSame(2, $closedYearQueries);
+
+        $this->fiscalYear->update(['closed_at' => null]);
+        $queryCountBeforeNextRequest = $closedYearQueries;
+        $this->app->instance('request', Request::create('/'));
+
+        config(['active-fiscal-year-id' => $this->fiscalYear->id]);
+        $this->assertFalse(activeFiscalYearIsClosed());
+        $this->assertSame($queryCountBeforeNextRequest + 1, $closedYearQueries);
     }
 
     public function test_closed_year_allows_read_only_attendance_import_preview(): void

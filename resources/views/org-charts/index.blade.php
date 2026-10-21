@@ -14,7 +14,7 @@
 
             <div class="card-actions">
                 @can('hr.org-charts.create')
-                    <a href="{{ route('hr.org-charts.create') }}" @class(['btn btn-primary', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">{{ __('Create Node') }}</a>
+                    <x-closed-year-action-link href="{{ route('hr.org-charts.create') }}" class="btn btn-primary">{{ __('Create Node') }}</x-closed-year-action-link>
                 @endcan
             </div>
 
@@ -43,9 +43,9 @@
                                 <td>
                                     <div class="inline-flex gap-2">
                                         @can('hr.org-charts.edit')
-                                            <a href="{{ route('hr.org-charts.edit', $orgChart) }}" @class(['btn btn-sm btn-info', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">
+                                            <x-closed-year-action-link href="{{ route('hr.org-charts.edit', $orgChart) }}" class="btn btn-sm btn-info">
                                                 {{ __('Edit') }}
-                                            </a>
+                                            </x-closed-year-action-link>
                                         @endcan
                                         @can('hr.org-charts.delete')
                                             <form action="{{ route('hr.org-charts.destroy', $orgChart) }}" method="POST"

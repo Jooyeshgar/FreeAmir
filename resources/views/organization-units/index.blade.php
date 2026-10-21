@@ -17,7 +17,7 @@
                 </form>
 
                 @can('hr.organization-units.create')
-                    <a href="{{ route('hr.organization-units.create') }}" @class(['btn btn-primary', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">{{ __('Create Organization Unit') }}</a>
+                    <x-closed-year-action-link href="{{ route('hr.organization-units.create') }}" class="btn btn-primary">{{ __('Create Organization Unit') }}</x-closed-year-action-link>
                 @endcan
             </div>
 
@@ -58,9 +58,9 @@
                                 <td>
                                     <div class="inline-flex gap-2">
                                         @can('hr.organization-units.edit')
-                                            <a href="{{ route('hr.organization-units.edit', $organizationUnit) }}" @class(['btn btn-sm btn-info', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">
+                                            <x-closed-year-action-link href="{{ route('hr.organization-units.edit', $organizationUnit) }}" class="btn btn-sm btn-info">
                                                 {{ __('Edit') }}
-                                            </a>
+                                            </x-closed-year-action-link>
                                         @endcan
                                         @can('hr.organization-units.destroy')
                                             <form action="{{ route('hr.organization-units.destroy', $organizationUnit) }}" method="POST" class="inline-block"

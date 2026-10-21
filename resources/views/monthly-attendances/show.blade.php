@@ -34,9 +34,9 @@
                 <div class="flex gap-2 flex-wrap">
                     @if ($isAdminView ?? false)
                         @can('attendance.monthly-attendances.edit')
-                            <a href="{{ route('attendance.monthly-attendances.edit', $monthlyAttendance) }}" @class(['btn btn-sm btn-warning', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">
+                            <x-closed-year-action-link href="{{ route('attendance.monthly-attendances.edit', $monthlyAttendance) }}" class="btn btn-sm btn-warning">
                                 {{ __('Edit') }}
-                            </a>
+                            </x-closed-year-action-link>
                         @endcan
                         @can('attendance.monthly-attendances.delete')
                             <form action="{{ route('attendance.monthly-attendances.destroy', $monthlyAttendance) }}" method="POST" class="inline-block"
@@ -163,9 +163,9 @@
                     @can('attendance.monthly-attendances.payroll.store')
                         @if ($decrees->isEmpty())
                             <p class="text-sm text-warning">{{ __('No active salary decrees found for this employee. Please create one first.') }}</p>
-                            <a href="{{ route('salary.salary-decrees.create', ['employee' => $monthlyAttendance->employee]) }}" @class(['btn btn-sm btn-warning', 'pointer-events-none opacity-60' => activeFiscalYearIsClosed()]) aria-disabled="{{ activeFiscalYearIsClosed() ? 'true' : 'false' }}">
+                            <x-closed-year-action-link href="{{ route('salary.salary-decrees.create', ['employee' => $monthlyAttendance->employee]) }}" class="btn btn-sm btn-warning">
                                 {{ __('Create Decree') }}
-                            </a>
+                            </x-closed-year-action-link>
                         @else
                             <form action="{{ route('attendance.monthly-attendances.payroll.store', $monthlyAttendance) }}" method="POST"
                                 class="flex flex-wrap items-end gap-4">
