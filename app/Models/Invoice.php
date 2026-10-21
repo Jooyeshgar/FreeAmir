@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\Scopes\FiscalYearScope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -77,6 +78,12 @@ class Invoice extends Model
     public function items()
     {
         return $this->hasMany(InvoiceItem::class, 'invoice_id');
+    }
+
+    public function scopeNormalInventoryMovements(Builder $query): void
+    {
+        $query->where('invoice_type', '!=', InvoiceType::BEGINNING_INVENTORY)
+            ->whereHas('items', fn ($items) => $items->where('itemable_type', Product::class));
     }
 
     public function ancillaryCosts()

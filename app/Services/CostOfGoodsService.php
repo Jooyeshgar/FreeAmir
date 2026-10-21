@@ -39,13 +39,6 @@ class CostOfGoodsService
 
             $product = $invoiceItem->itemable;
 
-            if ($invoice->invoice_type === InvoiceType::BUY && ! $invoice->status->isApprovedOrSettled() && $invoiceItem->cog_before !== null) {
-                $product->average_cost = $invoiceItem->cog_before;
-                $product->save();
-
-                continue;
-            }
-
             if ($invoice->invoice_type === InvoiceType::BEGINNING_INVENTORY) {
                 self::updateBeginningInventoryAverageCost($invoice, $invoiceItem, $product);
 
@@ -82,7 +75,7 @@ class CostOfGoodsService
 
             $totalCosts = $baseCost;
             $totalCosts += $ancillaryCostsValue;
-            $totalCosts += self::sumPreviousCogContribution($invoice, $invoiceItem, $previousInvoice, $product->id, $availableQuantity);
+            $totalCosts += self::sumPreviousCogContribution($invoice, $previousInvoice, $product->id, $availableQuantity);
 
             $denominator = $availableQuantity + $newQuantity;
             $product->average_cost = $denominator > 0 ? ($totalCosts / $denominator) : 0;
@@ -149,9 +142,7 @@ class CostOfGoodsService
         if ($invoice->status->isApprovedOrSettled()) {
             return [
                 'baseCost' => (float) $invoiceItem->amount - (float) ($invoiceItem->vat ?? 0),
-                'availableQuantity' => $invoice->invoice_type === InvoiceType::BUY && $invoiceItem->cog_before !== null
-                    ? (float) $invoiceItem->quantity_at
-                    : (float) self::sumQuantityApprovedPreviousInvoices($invoice, $invoiceItem),
+                'availableQuantity' => (float) self::sumQuantityApprovedPreviousInvoices($invoice, $invoiceItem),
                 'newQuantity' => (float) $invoiceItem->quantity,
                 'ancillaryCosts' => $invoice->ancillaryCosts,
             ];
@@ -229,14 +220,8 @@ class CostOfGoodsService
         return (float) $ancillaryCosts->where('status', InvoiceStatus::APPROVED)->flatMap->items->where('product_id', $productId)->sum('amount');
     }
 
-    private static function sumPreviousCogContribution(Invoice $invoice, InvoiceItem $invoiceItem, ?Invoice $previousInvoice, int $productId, float $availableQuantity): float
+    private static function sumPreviousCogContribution(Invoice $invoice, ?Invoice $previousInvoice, int $productId, float $availableQuantity): float
     {
-        // Purchases retain their approval-time inputs so later recalculations also
-        // preserve beginning inventory approved after a backdated invoice.
-        if ($invoice->status->isApprovedOrSettled() && $invoice->invoice_type === InvoiceType::BUY && $invoiceItem->cog_before !== null) {
-            return (float) $invoiceItem->cog_before * $availableQuantity;
-        }
-
         if (! $previousInvoice) {
             return 0.0;
         }

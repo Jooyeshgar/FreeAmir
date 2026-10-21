@@ -172,10 +172,10 @@ class WarehouseInvoiceStockTest extends TestCase
             'average_cost' => 100,
         ]);
 
+        $beginningInventory = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900, '2026-01-01');
         $buy = $this->createInvoice(InvoiceType::BUY, 4, $this->mainWarehouse, true, null, 100, '2026-01-02');
         $sell = $this->createInvoice(InvoiceType::SELL, 2, $this->mainWarehouse, false, null, 100, '2026-01-03');
         $this->approve($sell);
-        $beginningInventory = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900, '2026-01-01');
 
         $this->assertSame(InvoiceStatus::APPROVED, $beginningInventory->status);
         $this->assertEqualsWithDelta(7, (float) $this->product->fresh()->quantity, 0.001);
