@@ -3,21 +3,21 @@
     $invoice->invoice_type->label() .
     ' #' .
     formatDocumentNumber($invoice->number ?? $invoice->id)">
-    <div class="card bg-base-100 shadow-xl">
+    <div class="invoice-show card w-full bg-base-100 text-sm lg:text-base shadow-xl">
         <div
-            class="card-header bg-gradient-to-r from-blue-50 to-indigo-50 dark:text-white dark:from-gray-800 dark:to-gray-700 px-6 py-4 rounded-t-2xl border-b-2 border-primary/20">
+            class="card-header bg-gradient-to-r from-blue-50 to-indigo-50 dark:text-white dark:from-gray-800 dark:to-gray-700 px-4 py-3 sm:px-5 lg:px-6 lg:py-4 rounded-t-2xl border-b-2 border-primary/20">
             <div>
-                <h2 class="text-2xl font-bold text-gray-800 dark:text-white">
+                <h2 class="text-lg sm:text-xl lg:text-2xl break-words font-bold text-gray-800 dark:text-white">
                     {{ __('Invoice') }} {{ $invoice->invoice_type->label() }}
                     #{{ formatDocumentNumber($invoice->number ?? $invoice->id) }} - {{ $invoice->title }}
                 </h2>
-                <p class="mt-1 float-end">
+                <p class="mt-1 text-xs sm:text-sm lg:text-base sm:text-end">
                     {{ __('Issued on :date', ['date' => $invoice->date ? formatDate($invoice->date) : __('Unknown')]) }}
                 </p>
             </div>
             <div class="flex flex-wrap gap-2 mt-2">
-                <span class="badge badge-lg badge-primary gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                <span class="badge badge-sm md:badge-md lg:badge-lg h-auto max-w-full whitespace-normal break-words py-1 badge-primary gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M7 7h.01M7 3h10a2 2 0 012 2v4a2 2 0 01-.586 1.414l-7 7a2 2 0 01-2.828 0l-4.586-4.586A2 2 0 014 12V5a2 2 0 012-2z" />
@@ -25,8 +25,8 @@
                     {{ $invoice->invoice_type->label() }}
                 </span>
                 <span
-                    class="badge badge-lg {{ $invoice->status->isApproved() ? 'badge-primary' : ($invoice->status->isPaid() ? 'badge-success' : ($invoice->status->isPartiallyPaid() ? 'badge-info' : ($invoice->status->isRejected() ? 'badge-error' : 'badge-warning'))) }} gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                    class="badge badge-sm md:badge-md lg:badge-lg h-auto max-w-full whitespace-normal break-words py-1 {{ $invoice->status->isApproved() ? 'badge-primary' : ($invoice->status->isPaid() ? 'badge-success' : ($invoice->status->isPartiallyPaid() ? 'badge-info' : ($invoice->status->isRejected() ? 'badge-error' : 'badge-warning'))) }} gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -36,8 +36,8 @@
 
                 @if ($invoice->warehouse)
                     <a href="{{ route('warehouses.show', $invoice->warehouse) }}"
-                        class="badge badge-lg badge-secondary gap-2 link">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                        class="badge badge-sm md:badge-md lg:badge-lg h-auto max-w-full whitespace-normal break-words py-1 badge-secondary gap-2 link">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24"
                             stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-4h6v4M9 9h.01M15 9h.01M9 13h.01M15 13h.01" />
@@ -47,7 +47,7 @@
                 @endif
 
                 @if ($isMoadianSendable && $invoice->status->isApprovedOrSettled())
-                    <a class="badge badge-lg link"
+                    <a class="badge badge-sm md:badge-md lg:badge-lg h-auto max-w-full whitespace-normal break-words py-1 link"
                         href="{{ route('invoices.moadian-histories.show', $invoice) }}">{{ __('Moadian Histories') }}</a>
                 @endif
 
@@ -57,8 +57,8 @@
                 @endphp
 
                 @if ($voidInvoice || $voidedInvoice)
-                    <span class="badge badge-lg badge-error gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                    <span class="badge badge-sm md:badge-md lg:badge-lg h-auto max-w-full whitespace-normal break-words py-1 badge-error gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24"
                             stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M9 2h6l5 5v13a2 2 0 01-2 2H6a2 2 0 01-2-2V4a2 2 0 012-2h3z" />
@@ -79,61 +79,61 @@
             </div>
         </div>
 
-        <div class="card-body space-y-8">
+        <div class="card-body min-w-0 gap-3 p-4 sm:p-5 lg:p-8 space-y-5 lg:space-y-8">
             <x-show-message-bags />
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="grid [&>*]:min-w-0 grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
                 <div
                     class="stats shadow bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60 dark:from-slate-800 dark:to-sky-950/40 dark:border-sky-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
-                    <div class="stat">
-                        <div class="stat-title text-blue-500 dark:text-sky-300">{{ __('Subtotal') }}
+                    <div class="stat min-w-0 px-4 py-3 lg:px-6 lg:py-4">
+                        <div class="stat-title whitespace-normal text-xs md:text-sm text-blue-500 dark:text-sky-300">{{ __('Subtotal') }}
                             ({{ config('amir.currency') ?? __('Rial') }})</div>
-                        <div class="stat-value text-blue-600 dark:text-sky-200 text-3xl">
+                        <div class="stat-value whitespace-normal text-blue-600 dark:text-sky-200 text-xl md:text-2xl lg:text-3xl break-all tabular-nums">
                             {{ formatNumber($invoice->items->reduce(fn($carry, $item) => $carry + ($item->quantity ?? 0) * ($item->unit_price ?? 0), 0)) }}
                         </div>
-                        <div class="stat-desc text-blue-400 dark:text-sky-400/80">{{ __('Before discounts and tax') }}
+                        <div class="stat-desc whitespace-normal text-blue-400 dark:text-sky-400/80">{{ __('Before discounts and tax') }}
                         </div>
                     </div>
                 </div>
 
                 <div
                     class="stats shadow bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200/60 dark:from-slate-800 dark:to-amber-950/40 dark:border-amber-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
-                    <div class="stat">
-                        <div class="stat-title text-amber-500 dark:text-amber-300">{{ __('Discounts') }}
+                    <div class="stat min-w-0 px-4 py-3 lg:px-6 lg:py-4">
+                        <div class="stat-title whitespace-normal text-xs md:text-sm text-amber-500 dark:text-amber-300">{{ __('Discounts') }}
                             ({{ config('amir.currency') ?? __('Rial') }})</div>
-                        <div class="stat-value text-amber-600 dark:text-amber-200 text-3xl">
+                        <div class="stat-value whitespace-normal text-amber-600 dark:text-amber-200 text-xl md:text-2xl lg:text-3xl break-all tabular-nums">
                             {{ formatNumber($invoice->items->reduce(fn($carry, $item) => $carry + ($item->unit_discount ?? 0), 0)) }}
                         </div>
-                        <div class="stat-desc text-amber-400 dark:text-amber-400/80">{{ __('Total deductions') }}</div>
+                        <div class="stat-desc whitespace-normal text-amber-400 dark:text-amber-400/80">{{ __('Total deductions') }}</div>
                     </div>
                 </div>
 
                 <div
                     class="stats shadow bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200/60 dark:from-slate-800 dark:to-emerald-950/40 dark:border-emerald-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
-                    <div class="stat">
-                        <div class="stat-title text-emerald-500 dark:text-emerald-300">{{ __('VAT') }}
+                    <div class="stat min-w-0 px-4 py-3 lg:px-6 lg:py-4">
+                        <div class="stat-title whitespace-normal text-xs md:text-sm text-emerald-500 dark:text-emerald-300">{{ __('VAT') }}
                             ({{ config('amir.currency') ?? __('Rial') }})</div>
-                        <div class="stat-value text-emerald-600 dark:text-emerald-200 text-3xl">
+                        <div class="stat-value whitespace-normal text-emerald-600 dark:text-emerald-200 text-xl md:text-2xl lg:text-3xl break-all tabular-nums">
                             {{ formatNumber($invoice->items->reduce(fn($carry, $item) => $carry + ($item->vat ?? 0), 0)) }}
                         </div>
-                        <div class="stat-desc text-emerald-400 dark:text-emerald-400/80">{{ __('Collected tax') }}
+                        <div class="stat-desc whitespace-normal text-emerald-400 dark:text-emerald-400/80">{{ __('Collected tax') }}
                         </div>
                     </div>
                 </div>
 
                 <div
                     class="stats shadow bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/60 dark:from-slate-800 dark:to-indigo-950/40 dark:border-indigo-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
-                    <div class="stat">
-                        <div class="stat-title text-indigo-500 dark:text-indigo-300">{{ __('Grand total') }}
+                    <div class="stat min-w-0 px-4 py-3 lg:px-6 lg:py-4">
+                        <div class="stat-title whitespace-normal text-xs md:text-sm text-indigo-500 dark:text-indigo-300">{{ __('Grand total') }}
                             ({{ config('amir.currency') ?? __('Rial') }})</div>
-                        <div class="stat-value text-indigo-600 dark:text-indigo-200 text-3xl">
+                        <div class="stat-value whitespace-normal text-indigo-600 dark:text-indigo-200 text-xl md:text-2xl lg:text-3xl break-all tabular-nums">
                             {{ formatNumber(($invoice->amount ?? 0) - ($invoice->subtraction ?? 0)) }}</div>
-                        <div class="stat-desc text-indigo-400 dark:text-indigo-400/80">{{ __('Payable amount') }}</div>
+                        <div class="stat-desc whitespace-normal text-indigo-400 dark:text-indigo-400/80">{{ __('Payable amount') }}</div>
                     </div>
                 </div>
 
                 @if ($changeStatusValidation->hasErrors() || $changeStatusValidation->hasWarning())
-                    <div class="stats bg-base-100 gap-2 shadow col-span-4">
+                    <div class="stats bg-base-100 gap-2 shadow col-span-full">
                         <x-show-messages :message="$changeStatusValidation->toDetailText()" type="alert" />
                     </div>
                 @endif
@@ -141,7 +141,7 @@
             </div>
             @if ($invoice->description)
                 <div>
-                    <div class="divider text-lg font-semibold">{{ __('Notes') }}</div>
+                    <div class="divider text-sm md:text-base lg:text-lg whitespace-nowrap font-semibold">{{ __('Notes') }}</div>
                     <div class="alert bg-base-200">
                         <div>
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
@@ -156,15 +156,15 @@
             @endif
 
             <div>
-                <div class="divider text-lg font-semibold">{{ __('Customer Details') }}</div>
+                <div class="divider text-sm md:text-base lg:text-lg whitespace-nowrap font-semibold">{{ __('Customer Details') }}</div>
                 @if ($invoice->customer)
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div class="grid [&>*]:min-w-0 grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4">
                         <div class="card bg-base-200 shadow">
                             <div class="card-body p-4">
                                 <h3
                                     class="card-title text-xs uppercase tracking-wide text-gray-500 dark:text-slate-300">
                                     {{ __('Customer') }}</h3>
-                                <p class="text-lg font-semibold text-gray-800 dark:text-slate-100">
+                                <p class="text-sm md:text-base lg:text-lg break-words font-semibold text-gray-800 dark:text-slate-100">
                                     {{ $invoice->customer->name }}</p>
                             </div>
                         </div>
@@ -173,7 +173,7 @@
                                 <h3
                                     class="card-title text-xs uppercase tracking-wide text-gray-500 dark:text-slate-300">
                                     {{ __('Phone') }}</h3>
-                                <p class="text-lg font-semibold text-gray-800 dark:text-slate-100">
+                                <p class="text-sm md:text-base lg:text-lg break-words font-semibold text-gray-800 dark:text-slate-100">
                                     {{ $invoice->customer->phone ? localizeNumber($invoice->customer->phone) : '—' }}
                                 </p>
                             </div>
@@ -183,7 +183,7 @@
                                 <h3
                                     class="card-title text-xs uppercase tracking-wide text-gray-500 dark:text-slate-300">
                                     {{ __('Mobile') }}</h3>
-                                <p class="text-lg font-semibold text-gray-800 dark:text-slate-100">
+                                <p class="text-sm md:text-base lg:text-lg break-words font-semibold text-gray-800 dark:text-slate-100">
                                     {{ $invoice->customer->mobile ? localizeNumber($invoice->customer->mobile) : '—' }}
                                 </p>
                             </div>
@@ -193,7 +193,7 @@
                                 <h3
                                     class="card-title text-xs uppercase tracking-wide text-gray-500 dark:text-slate-300">
                                     {{ __('Economic code') }}</h3>
-                                <p class="text-lg font-semibold text-gray-800 dark:text-slate-100">
+                                <p class="text-sm md:text-base lg:text-lg break-words font-semibold text-gray-800 dark:text-slate-100">
                                     {{ $invoice->customer->ecnmcs_code ? localizeNumber($invoice->customer->ecnmcs_code) : '—' }}
                                 </p>
                             </div>
@@ -203,7 +203,7 @@
                                 <h3
                                     class="card-title text-xs uppercase tracking-wide text-gray-500 dark:text-slate-300">
                                     {{ __('Postal code') }}</h3>
-                                <p class="text-lg font-semibold text-gray-800 dark:text-slate-100">
+                                <p class="text-sm md:text-base lg:text-lg break-words font-semibold text-gray-800 dark:text-slate-100">
                                     {{ $invoice->customer->postal_code ? localizeNumber($invoice->customer->postal_code) : '—' }}
                                 </p>
                             </div>
@@ -232,28 +232,28 @@
             </div>
 
             <div>
-                <div class="divider text-lg font-semibold">{{ __('Items') }}</div>
-                <div>
-                    <table class="table w-full">
+                <div class="divider text-sm md:text-base lg:text-lg whitespace-nowrap font-semibold">{{ __('Items') }}</div>
+                <div class="min-w-0 overflow-x-auto">
+                    <table class="table table-xs md:table-sm lg:table-md w-full">
                         <thead>
                             <tr>
-                                <th class="px-4 py-3">#</th>
-                                <th class="px-4 py-3 text-right">
+                                <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">#</th>
+                                <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">
                                     {{ $invoice->invoice_type == App\Enums\InvoiceType::BUY ? __('Product') : __('Product/Service') }}
                                 </th>
-                                <th class="px-4 py-3 text-right">{{ __('Description') }}</th>
-                                <th class="px-4 py-3 text-right">{{ __('Quantity') }}</th>
-                                <th class="px-4 py-3 text-right">{{ __('Unit price') }}</th>
-                                <th class="px-4 py-3 text-right">{{ __('Discount') }}</th>
-                                <th class="px-4 py-3 text-right">{{ __('VAT') }}</th>
-                                <th class="px-4 py-3 text-right">{{ __('Total') }}</th>
+                                <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ __('Description') }}</th>
+                                <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ __('Quantity') }}</th>
+                                <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ __('Unit price') }}</th>
+                                <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ __('Discount') }}</th>
+                                <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ __('VAT') }}</th>
+                                <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ __('Total') }}</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse ($invoice->items as $index => $item)
                                 <tr class="hover:bg-base-300">
-                                    <td class="px-4 py-3">{{ localizeNumber($index + 1) }}</td>
-                                    <td class="px-4 py-3">
+                                    <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">{{ localizeNumber($index + 1) }}</td>
+                                    <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">
                                         @if ($item->itemable)
                                             <a href="{{ route($item->itemable instanceof App\Models\Product ? 'products.show' : 'services.show', $item->itemable) }}"
                                                 class="link link-hover link-primary">
@@ -264,13 +264,13 @@
                                                 class="text-gray-500 dark:text-slate-400">{{ __('Removed product/service') }}</span>
                                         @endif
                                     </td>
-                                    <td class="px-4 py-3">{{ $item->description }}</td>
-                                    <td class="px-4 py-3 text-right">{{ formatNumber($item->quantity ?? 0) }}</td>
-                                    <td class="px-4 py-3 text-right">{{ formatNumber($item->unit_price ?? 0) }}</td>
-                                    <td class="px-4 py-3 text-right">{{ formatNumber($item->unit_discount ?? 0) }}
+                                    <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">{{ $item->description }}</td>
+                                    <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ formatNumber($item->quantity ?? 0) }}</td>
+                                    <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ formatNumber($item->unit_price ?? 0) }}</td>
+                                    <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ formatNumber($item->unit_discount ?? 0) }}
                                     </td>
-                                    <td class="px-4 py-3 text-right">{{ formatNumber($item->vat ?? 0) }}</td>
-                                    <td class="px-4 py-3 text-right">
+                                    <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ formatNumber($item->vat ?? 0) }}</td>
+                                    <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">
                                         {{ formatNumber(($item->quantity ?? 0) * ($item->unit_price ?? 0) - ($item->unit_discount ?? 0) + ($item->vat ?? 0)) }}
                                     </td>
                                 </tr>
@@ -286,7 +286,7 @@
                         <tfoot>
                             <tr>
                                 <td colspan="8"
-                                    class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
+                                    class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right text-sm text-gray-600 dark:text-slate-300">
                                     {{ __('Total items: :count', ['count' => localizeNumber($invoice->items->count())]) }}
                                 </td>
                             </tr>
@@ -300,31 +300,31 @@
                 <!-- Returned Invoice Information -->
                 <div>
                     @if ($invoice->getReturnInvoice())
-                        <div class="divider text-lg font-semibold">{{ __('Invoice') }}
+                        <div class="divider text-sm md:text-base lg:text-lg whitespace-nowrap font-semibold">{{ __('Invoice') }}
                             {{ __('Return from') }}{{ $invoice->invoice_type->label() }}</div>
-                        <div>
-                            <table class="table w-full">
+                        <div class="min-w-0 overflow-x-auto">
+                            <table class="table table-xs md:table-sm lg:table-md w-full">
                                 <thead>
                                     <tr>
-                                        <th class="px-4 py-3">#</th>
-                                        <th class="px-4 py-3 text-right">{{ __('Invoice Number') }}</th>
-                                        <th class="px-4 py-3 text-right">{{ __('Date') }}</th>
-                                        <th class="px-4 py-3 text-right">{{ __('Amount') }}</th>
+                                        <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">#</th>
+                                        <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ __('Invoice Number') }}</th>
+                                        <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ __('Date') }}</th>
+                                        <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ __('Amount') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @forelse ($invoice->getReturnInvoice() as $index => $returnedInvoice)
                                         <tr class="hover:bg-base-300">
-                                            <td class="px-4 py-3">{{ localizeNumber($index + 1) }}</td>
-                                            <td class="px-4 py-3">
+                                            <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">{{ localizeNumber($index + 1) }}</td>
+                                            <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">
                                                 <a href="{{ route('invoices.show', $returnedInvoice) }}"
                                                     class="link link-hover link-primary">
                                                     {{ formatDocumentNumber($returnedInvoice->number) }}
                                                 </a>
                                             </td>
-                                            <td class="px-4 py-3 text-right">{{ formatDate($returnedInvoice->date) }}
+                                            <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ formatDate($returnedInvoice->date) }}
                                             </td>
-                                            <td class="px-4 py-3 text-right">
+                                            <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">
                                                 {{ formatNumber($returnedInvoice->amount) }}</td>
                                         </tr>
                                     @empty
@@ -343,12 +343,12 @@
                                 data-tip="{{ $invoice->status->isApprovedOrSettled() ? '' : __('Only approved invoices can be returned.') }}">
                                 @if ($invoice->invoice_type === App\Enums\InvoiceType::BUY)
                                     <a href="{{ route('invoices.create', ['invoice_type' => 'return_buy', 'returned_invoice_id' => $invoice->id, 'service_buy' => $isServiceBuy ? '1' : null]) }}"
-                                        class="btn btn-primary {{ $invoice->status->isApprovedOrSettled() ? '' : 'btn-disabled' }}">
+                                        class="btn btn-sm lg:btn-md btn-primary {{ $invoice->status->isApprovedOrSettled() ? '' : 'btn-disabled' }}">
                                         {{ __('Create return buy invoice') }}
                                     </a>
                                 @elseif ($invoice->invoice_type === App\Enums\InvoiceType::SELL)
                                     <a href="{{ route('invoices.create', ['invoice_type' => 'return_sell', 'returned_invoice_id' => $invoice->id]) }}"
-                                        class="btn btn-primary {{ $invoice->status->isApprovedOrSettled() ? '' : 'btn-disabled' }}">
+                                        class="btn btn-sm lg:btn-md btn-primary {{ $invoice->status->isApprovedOrSettled() ? '' : 'btn-disabled' }}">
                                         {{ __('Create return sell invoice') }}
                                     </a>
                                 @endif
@@ -359,16 +359,16 @@
             @endif
 
             @if (in_array($invoice->invoice_type, [App\Enums\InvoiceType::RETURN_BUY, App\Enums\InvoiceType::RETURN_SELL]))
-                <div class="divider text-lg font-semibold">{{ __('Invoice') }}
+                <div class="divider text-sm md:text-base lg:text-lg whitespace-nowrap font-semibold">{{ __('Invoice') }}
                     {{ $invoice->getReturnedInvoice()?->invoice_type->label() }}</div>
                 @if ($invoice->getReturnedInvoice())
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div class="grid [&>*]:min-w-0 grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 lg:gap-4">
                         <div class="card bg-base-200">
                             <div class="card-body p-4">
                                 <h3 class="card-title text-sm font-medium text-gray-500 dark:text-slate-300">
                                     {{ __('Title') }}
                                     {{ __('Invoice') }}</h3>
-                                <p class="text-lg font-semibold text-gray-800 dark:text-slate-100">
+                                <p class="text-sm md:text-base lg:text-lg break-words font-semibold text-gray-800 dark:text-slate-100">
                                     <a href="{{ route('invoices.show', $invoice->getReturnedInvoice()) }}"
                                         class="link link-hover link-primary">
                                         {{ $invoice->getReturnedInvoice()?->title }}
@@ -381,77 +381,77 @@
 
                         <div
                             class="stats shadow bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200/60 dark:from-slate-800 dark:to-sky-950/40 dark:border-sky-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
-                            <div class="stat">
-                                <div class="stat-title text-blue-500 dark:text-sky-300">{{ __('Subtotal') }}
+                            <div class="stat min-w-0 px-4 py-3 lg:px-6 lg:py-4">
+                                <div class="stat-title whitespace-normal text-xs md:text-sm text-blue-500 dark:text-sky-300">{{ __('Subtotal') }}
                                     ({{ config('amir.currency') ?? __('Rial') }})</div>
-                                <div class="stat-value text-blue-600 dark:text-sky-200 text-3xl">
+                                <div class="stat-value whitespace-normal text-blue-600 dark:text-sky-200 text-xl md:text-2xl lg:text-3xl break-all tabular-nums">
                                     {{ formatNumber($invoice->getReturnedInvoice()?->items->reduce(fn($carry, $item) => $carry + ($item->quantity ?? 0) * ($item->unit_price ?? 0), 0)) }}
                                 </div>
-                                <div class="stat-desc text-blue-400 dark:text-sky-400/80">
+                                <div class="stat-desc whitespace-normal text-blue-400 dark:text-sky-400/80">
                                     {{ __('Before discounts and tax') }}</div>
                             </div>
                         </div>
 
                         <div
                             class="stats shadow bg-gradient-to-br from-amber-50 to-amber-100 border border-amber-200/60 dark:from-slate-800 dark:to-amber-950/40 dark:border-amber-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
-                            <div class="stat">
-                                <div class="stat-title text-amber-500 dark:text-amber-300">{{ __('Discounts') }}
+                            <div class="stat min-w-0 px-4 py-3 lg:px-6 lg:py-4">
+                                <div class="stat-title whitespace-normal text-xs md:text-sm text-amber-500 dark:text-amber-300">{{ __('Discounts') }}
                                     ({{ config('amir.currency') ?? __('Rial') }})</div>
-                                <div class="stat-value text-amber-600 dark:text-amber-200 text-3xl">
+                                <div class="stat-value whitespace-normal text-amber-600 dark:text-amber-200 text-xl md:text-2xl lg:text-3xl break-all tabular-nums">
                                     {{ formatNumber($invoice->getReturnedInvoice()?->items->reduce(fn($carry, $item) => $carry + ($item->unit_discount ?? 0), 0)) }}
                                 </div>
-                                <div class="stat-desc text-amber-400 dark:text-amber-400/80">
+                                <div class="stat-desc whitespace-normal text-amber-400 dark:text-amber-400/80">
                                     {{ __('Total deductions') }}</div>
                             </div>
                         </div>
 
                         <div
                             class="stats shadow bg-gradient-to-br from-emerald-50 to-emerald-100 border border-emerald-200/60 dark:from-slate-800 dark:to-emerald-950/40 dark:border-emerald-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
-                            <div class="stat">
-                                <div class="stat-title text-emerald-500 dark:text-emerald-300">{{ __('VAT') }}
+                            <div class="stat min-w-0 px-4 py-3 lg:px-6 lg:py-4">
+                                <div class="stat-title whitespace-normal text-xs md:text-sm text-emerald-500 dark:text-emerald-300">{{ __('VAT') }}
                                     ({{ config('amir.currency') ?? __('Rial') }})</div>
-                                <div class="stat-value text-emerald-600 dark:text-emerald-200 text-3xl">
+                                <div class="stat-value whitespace-normal text-emerald-600 dark:text-emerald-200 text-xl md:text-2xl lg:text-3xl break-all tabular-nums">
                                     {{ formatNumber($invoice->getReturnedInvoice()?->items->reduce(fn($carry, $item) => $carry + ($item->vat ?? 0), 0)) }}
                                 </div>
-                                <div class="stat-desc text-emerald-400 dark:text-emerald-400/80">
+                                <div class="stat-desc whitespace-normal text-emerald-400 dark:text-emerald-400/80">
                                     {{ __('Collected tax') }}</div>
                             </div>
                         </div>
 
                         <div
                             class="stats shadow bg-gradient-to-br from-indigo-50 to-indigo-100 border border-indigo-200/60 dark:from-slate-800 dark:to-indigo-950/40 dark:border-indigo-500/20 dark:shadow-none dark:ring-1 dark:ring-white/5">
-                            <div class="stat">
-                                <div class="stat-title text-indigo-500 dark:text-indigo-300">{{ __('Grand total') }}
+                            <div class="stat min-w-0 px-4 py-3 lg:px-6 lg:py-4">
+                                <div class="stat-title whitespace-normal text-xs md:text-sm text-indigo-500 dark:text-indigo-300">{{ __('Grand total') }}
                                     ({{ config('amir.currency') ?? __('Rial') }})</div>
-                                <div class="stat-value text-indigo-600 dark:text-indigo-200 text-3xl">
+                                <div class="stat-value whitespace-normal text-indigo-600 dark:text-indigo-200 text-xl md:text-2xl lg:text-3xl break-all tabular-nums">
                                     {{ formatNumber(($invoice->getReturnedInvoice()?->amount ?? 0) - ($invoice->getReturnedInvoice()?->subtraction ?? 0)) }}
                                 </div>
-                                <div class="stat-desc text-indigo-400 dark:text-indigo-400/80">
+                                <div class="stat-desc whitespace-normal text-indigo-400 dark:text-indigo-400/80">
                                     {{ __('Payable amount') }}</div>
                             </div>
                         </div>
                     </div>
-                    <div>
-                        <table class="table w-full">
+                    <div class="min-w-0 overflow-x-auto">
+                        <table class="table table-xs md:table-sm lg:table-md w-full">
                             <thead>
                                 <tr>
-                                    <th class="px-4 py-3">#</th>
-                                    <th class="px-4 py-3 text-right">
+                                    <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">#</th>
+                                    <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">
                                         {{ $invoice->invoice_type == App\Enums\InvoiceType::BUY ? __('Product') : __('Product/Service') }}
                                     </th>
-                                    <th class="px-4 py-3 text-right">{{ __('Description') }}</th>
-                                    <th class="px-4 py-3 text-right">{{ __('Quantity') }}</th>
-                                    <th class="px-4 py-3 text-right">{{ __('Unit price') }}</th>
-                                    <th class="px-4 py-3 text-right">{{ __('Discount') }}</th>
-                                    <th class="px-4 py-3 text-right">{{ __('VAT') }}</th>
-                                    <th class="px-4 py-3 text-right">{{ __('Total') }}</th>
+                                    <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ __('Description') }}</th>
+                                    <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ __('Quantity') }}</th>
+                                    <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ __('Unit price') }}</th>
+                                    <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ __('Discount') }}</th>
+                                    <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ __('VAT') }}</th>
+                                    <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ __('Total') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse ($invoice->getReturnedInvoice()?->items as $index => $item)
                                     <tr class="hover:bg-base-300">
-                                        <td class="px-4 py-3">{{ localizeNumber($index + 1) }}</td>
-                                        <td class="px-4 py-3">
+                                        <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">{{ localizeNumber($index + 1) }}</td>
+                                        <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">
                                             @if ($item->itemable)
                                                 <a href="{{ route($item->itemable instanceof App\Models\Product ? 'products.show' : 'services.show', $item->itemable) }}"
                                                     class="link link-hover link-primary">
@@ -462,15 +462,15 @@
                                                     class="text-gray-500 dark:text-slate-400">{{ __('Removed product/service') }}</span>
                                             @endif
                                         </td>
-                                        <td class="px-4 py-3">{{ $item->description }}</td>
-                                        <td class="px-4 py-3 text-right">{{ formatNumber($item->quantity ?? 0) }}
+                                        <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">{{ $item->description }}</td>
+                                        <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ formatNumber($item->quantity ?? 0) }}
                                         </td>
-                                        <td class="px-4 py-3 text-right">{{ formatNumber($item->unit_price ?? 0) }}
+                                        <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ formatNumber($item->unit_price ?? 0) }}
                                         </td>
-                                        <td class="px-4 py-3 text-right">
+                                        <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">
                                             {{ formatNumber($item->unit_discount ?? 0) }}</td>
-                                        <td class="px-4 py-3 text-right">{{ formatNumber($item->vat ?? 0) }}</td>
-                                        <td class="px-4 py-3 text-right">
+                                        <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ formatNumber($item->vat ?? 0) }}</td>
+                                        <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">
                                             {{ formatNumber(($item->quantity ?? 0) * ($item->unit_price ?? 0) - ($item->unit_discount ?? 0) + ($item->vat ?? 0)) }}
                                         </td>
                                     </tr>
@@ -486,7 +486,7 @@
                             <tfoot>
                                 <tr>
                                     <td colspan="8"
-                                        class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
+                                        class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right text-sm text-gray-600 dark:text-slate-300">
                                         {{ __('Total items: :count', ['count' => localizeNumber($invoice->getReturnedInvoice()?->items->count() ?? 0)]) }}
                                     </td>
                                 </tr>
@@ -502,35 +502,35 @@
 
             @if ($invoice->invoice_type === App\Enums\InvoiceType::BUY && !$isServiceBuy)
                 <div>
-                    <div class="divider text-lg font-semibold">{{ __('Ancillary Costs') }}</div>
+                    <div class="divider text-sm md:text-base lg:text-lg whitespace-nowrap font-semibold">{{ __('Ancillary Costs') }}</div>
                     @if ($invoice->ancillaryCosts->isNotEmpty())
-                        <div class="mt-4">
-                            <table class="table w-full">
+                        <div class="mt-4 min-w-0 overflow-x-auto">
+                            <table class="table table-xs md:table-sm lg:table-md w-full">
                                 <thead>
                                     <tr>
-                                        <th class="px-4 py-3">{{ __('Ancillary Cost Number') }}</th>
-                                        <th class="px-4 py-3">{{ __('Doc Number') }}</th>
-                                        <th class="px-4 py-3">{{ __('Cost Type') }}</th>
-                                        <th class="px-4 py-3">{{ __('Status') }}</th>
-                                        <th class="px-4 py-3 text-right">{{ __('Amount') }}</th>
-                                        <th class="px-4 py-3 text-right">{{ __('VAT') }}</th>
-                                        <th class="px-4 py-3 text-right">{{ __('Total') }}</th>
-                                        <th class="px-4 py-3">{{ __('Action') }}</th>
+                                        <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">{{ __('Ancillary Cost Number') }}</th>
+                                        <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">{{ __('Doc Number') }}</th>
+                                        <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">{{ __('Cost Type') }}</th>
+                                        <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">{{ __('Status') }}</th>
+                                        <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ __('Amount') }}</th>
+                                        <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ __('VAT') }}</th>
+                                        <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ __('Total') }}</th>
+                                        <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">{{ __('Action') }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach ($invoice->ancillaryCosts as $ancillaryCost)
                                         <tr class="hover:bg-base-300">
-                                            <td class="px-4 py-3">
+                                            <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">
                                                 <a class="link" href="{{ route('invoices.ancillary-costs.show', [$invoice, $ancillaryCost]) }}">
                                                     {{ formatDocumentNumber($ancillaryCost->number) }}
                                                 </a>
                                             </td>
-                                            <td class="px-4 py-3">
+                                            <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">
                                                 @if ($ancillaryCost->document_id)
                                                     @can('documents.show')
                                                         <a href="{{ route('documents.show', $ancillaryCost->document_id) }}">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 lg:h-5 lg:w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                                     d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                                             </svg>
@@ -542,16 +542,16 @@
                                                     @endcan
                                                 @endif
                                             </td>
-                                            <td class="px-4 py-3">{{ $ancillaryCost->type?->label() ?? '—' }}</td>
-                                            <td class="px-4 py-3">{{ $ancillaryCost->status?->label() ?? '—' }}</td>
-                                            <td class="px-4 py-3 text-right">
+                                            <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">{{ $ancillaryCost->type?->label() ?? '—' }}</td>
+                                            <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">{{ $ancillaryCost->status?->label() ?? '—' }}</td>
+                                            <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">
                                                 {{ formatNumber((float) ($ancillaryCost->amount ?? 0) - (float) ($ancillaryCost->vat ?? 0)) }}
                                             </td>
-                                            <td class="px-4 py-3 text-right">
+                                            <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">
                                                 {{ formatNumber((float) ($ancillaryCost->vat ?? 0)) }}</td>
-                                            <td class="px-4 py-3 text-right">
+                                            <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">
                                                 {{ formatNumber((float) ($ancillaryCost->amount ?? 0)) }}</td>
-                                            <td class="px-4 py-3">
+                                            <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">
                                                 @php
                                                     $ancillaryChangeStatusValidation = \App\Services\AncillaryCostService::getChangeStatusValidation(
                                                         $ancillaryCost,
@@ -658,14 +658,14 @@
                         <div class="flex mt-2">
                             @if ($canCreateAncillaryCost)
                                 <a href="{{ route('invoices.ancillary-costs.create', $invoice) }}"
-                                    class="btn btn-primary">
+                                    class="btn btn-sm lg:btn-md btn-primary">
                                     {{ __('Create Ancillary Cost') }}
                                 </a>
                             @else
                                 <span class="tooltip"
                                     data-tip="{{ __('Cannot add new ancillary cost for approved invoice because of COGS calculations.') }}">
                                     <button
-                                        class="btn btn-primary btn-disabled cursor-not-allowed">{{ __('Create Ancillary Cost') }}</button>
+                                        class="btn btn-sm lg:btn-md btn-primary btn-disabled cursor-not-allowed">{{ __('Create Ancillary Cost') }}</button>
                                 </span>
                             @endif
                         </div>
@@ -674,27 +674,27 @@
             @endif
 
             <div>
-                <div class="divider text-lg font-semibold">{{ __('Payments') }}</div>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                <div class="divider text-sm md:text-base lg:text-lg whitespace-nowrap font-semibold">{{ __('Payments') }}</div>
+                <div class="grid [&>*]:min-w-0 grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
                     <div class="card bg-base-200 shadow">
                         <div class="card-body p-4">
                             <h3 class="card-title text-xs uppercase tracking-wide text-gray-500 dark:text-slate-300">
                                 {{ __('Invoice Total') }}</h3>
-                            <p class="text-lg font-bold">{{ formatNumber((float) $invoice->amount) }}</p>
+                            <p class="text-sm md:text-base lg:text-lg break-words font-bold">{{ formatNumber((float) $invoice->amount) }}</p>
                         </div>
                     </div>
                     <div class="card bg-base-200 shadow">
                         <div class="card-body p-4">
                             <h3 class="card-title text-xs uppercase tracking-wide text-gray-500 dark:text-slate-300">
                                 {{ __('Paid Amount') }}</h3>
-                            <p class="text-lg font-bold text-success">{{ formatNumber($paidAmount) }}</p>
+                            <p class="text-sm md:text-base lg:text-lg break-words font-bold text-success">{{ formatNumber($paidAmount) }}</p>
                         </div>
                     </div>
                     <div class="card bg-base-200 shadow">
                         <div class="card-body p-4">
                             <h3 class="card-title text-xs uppercase tracking-wide text-gray-500 dark:text-slate-300">
                                 {{ __('Remaining Amount') }}</h3>
-                            <p class="text-lg font-bold {{ $remainingAmount > 0 ? 'text-error' : 'text-success' }}">
+                            <p class="text-sm md:text-base lg:text-lg break-words font-bold {{ $remainingAmount > 0 ? 'text-error' : 'text-success' }}">
                                 {{ formatNumber($remainingAmount) }}</p>
                         </div>
                     </div>
@@ -702,24 +702,24 @@
 
                 @if ($invoice->payments->isNotEmpty())
                     <div class="mt-4 overflow-x-auto">
-                        <table class="table w-full">
+                        <table class="table table-xs md:table-sm lg:table-md w-full">
                             <thead>
                                 <tr>
-                                    <th class="px-4 py-3">{{ __('Date') }}</th>
-                                    <th class="px-4 py-3">{{ __('Settlement Account') }}</th>
-                                    <th class="px-4 py-3 text-right">{{ __('Amount') }}</th>
-                                    <th class="px-4 py-3 text-right">{{ __('Bank service fee') }}</th>
-                                    <th class="px-4 py-3">{{ __('Doc Number') }}</th>
-                                    <th class="px-4 py-3">{{ __('Description') }}</th>
-                                    <th class="px-4 py-3">{{ __('Action') }}</th>
+                                    <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">{{ __('Date') }}</th>
+                                    <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">{{ __('Settlement Account') }}</th>
+                                    <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ __('Amount') }}</th>
+                                    <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ __('Bank service fee') }}</th>
+                                    <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">{{ __('Doc Number') }}</th>
+                                    <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">{{ __('Description') }}</th>
+                                    <th class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">{{ __('Action') }}</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach ($invoice->payments as $payment)
                                     <tr class="hover:bg-base-300">
-                                        <td class="px-4 py-3">
+                                        <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">
                                             {{ $payment->date ? formatDate($payment->date) : '—' }}</td>
-                                        <td class="px-4 py-3">
+                                        <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">
                                             @if($payment->cheque)
                                                 @can('cheques.show')
                                                     <a class="link link-primary" href="{{ route('cheques.show', $payment->cheque) }}">
@@ -736,10 +736,10 @@
                                                 {{ $payment->settlementSubject()?->fullname() ?? '—' }}
                                             @endif
                                         </td>
-                                        <td class="px-4 py-3 text-right">{{ formatNumber((float) $payment->amount) }}
+                                        <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ formatNumber((float) $payment->amount) }}
                                         </td>
-                                        <td class="px-4 py-3 text-right">{{ formatNumber((float) $payment->bank_service_fee) }}</td>
-                                        <td class="px-4 py-3">
+                                        <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ formatNumber((float) $payment->bank_service_fee) }}</td>
+                                        <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">
                                             @if ($payment->document)
                                                 @can('documents.show')
                                                     <a class="link"
@@ -754,8 +754,8 @@
                                                     class="badge badge-ghost">{{ __('No accounting document') }}</span>
                                             @endif
                                         </td>
-                                        <td class="px-4 py-3">{{ $payment->description ?? '—' }}</td>
-                                        <td class="px-4 py-3">
+                                        <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">{{ $payment->description ?? '—' }}</td>
+                                        <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">
                                             <div class="flex flex-wrap gap-2 items-center">
                                                 @if ($payment->document && !$payment->cheque_id)
                                                     @can('invoices.payments.destroy-document')
@@ -779,6 +779,22 @@
                                                     @endcan
                                                 @endif
 
+                                                @if (!$payment->cheque_id)
+                                                    @can('invoices.payments.update')
+                                                        <button type="button" x-data="{}" class="btn btn-xs btn-outline" data-payment-id="{{ $payment->id }}"
+                                                            @click="$dispatch('invoice-payment-edit', {
+                                                                id: @js($payment->id),
+                                                                amount: @js((string) $payment->amount),
+                                                                bankServiceFee: @js((string) $payment->bank_service_fee),
+                                                                subjectId: @js($payment->settlement_subject_id ?? $payment->settlementSubject()?->id),
+                                                                subjectName: @js($payment->settlementSubject()?->name),
+                                                                availableAmount: @js((string) ($remainingAmount + ($payment->document_id ? (float) $payment->amount : 0))),
+                                                                date: @js($payment->date ? convertToJalali($payment->date, true) : ''),
+                                                                referenceNumber: @js($payment->reference_number ?? ''),
+                                                                description: @js($payment->description ?? '')
+                                                            })">{{ __('Edit') }}</button>
+                                                    @endcan
+                                                @endif
                                                 @can('invoices.payments.destroy')
                                                     <form class="m-0" method="POST" action="{{ route('invoices.payments.destroy', [$invoice, $payment]) }}"
                                                         onsubmit="return confirm('{{ __('Are you sure you want to remove this payment? Its accounting document will be reversed.') }}')">
@@ -800,17 +816,19 @@
                     </div>
                 @endif
 
-                @can('invoices.payments.store')
-                    <div class="flex flex-wrap gap-2 mt-4">
+                @if (auth()->user()->can('invoices.payments.store') || auth()->user()->can('invoices.payments.update'))
+                    @can('invoices.payments.store')
+                        <div class="flex flex-wrap gap-2 mt-4">
                         @if ($paymentDecision->hasErrors())
                             <span class="tooltip"
                                 data-tip="{{ $paymentDecision->messages->pluck('text')->implode(' ') }}">
                                 <button
-                                    class="btn btn-primary btn-disabled cursor-not-allowed">{{ __('Record Payment') }}</button>
+                                    class="btn btn-sm lg:btn-md btn-primary btn-disabled cursor-not-allowed">{{ __('Record Payment') }}</button>
                             </span>
                         @else
-                            <button type="button" class="btn btn-primary gap-2" onclick="payment_modal.showModal()">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                            <button type="button" class="btn btn-sm lg:btn-md btn-primary gap-2"
+                                onclick="window.dispatchEvent(new CustomEvent('invoice-payment-create')); payment_modal.showModal()">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 lg:h-5 lg:w-5" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M12 4v16m8-8H4" />
@@ -819,8 +837,8 @@
                             </button>
                             @if($chequeDirection)
                                 @can('invoices.payments.store-cheque')
-                                    <button type="button" class="btn btn-secondary gap-2" onclick="cheque_payment_modal.showModal()">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                                    <button type="button" class="btn btn-sm lg:btn-md btn-secondary gap-2" onclick="cheque_payment_modal.showModal()">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 lg:h-5 lg:w-5" fill="none"
                                             viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M3 7h18M5 11h14M7 15h4m-6 4h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2Z" />
@@ -830,11 +848,30 @@
                                 @endcan
                             @endif
                         @endif
-                    </div>
+                        </div>
+                    @endcan
 
-                    <dialog id="payment_modal" class="modal">
+                    @php
+                        $editingPayment = $invoice->payments->firstWhere('id', old('payment_id'));
+                        $paymentModalState = [
+                            'amount' => old('amount', $editingPayment?->amount ?? $remainingAmount),
+                            'bankServiceFee' => old('bank_service_fee', $editingPayment?->bank_service_fee ?? '0'),
+                            'subjectId' => old('subject_id', $editingPayment?->settlement_subject_id ?? $editingPayment?->settlementSubject()?->id ?? ''),
+                            'subjectName' => $paymentModalSubject?->name ?? $editingPayment?->settlementSubject()?->name ?? '',
+                            'date' => old('date', $editingPayment?->date ? convertToJalali($editingPayment->date, true) : convertToJalali(now(), true)),
+                            'referenceNumber' => old('reference_number', $editingPayment?->reference_number ?? ''),
+                            'description' => old('description', $editingPayment?->description ?? ''),
+                            'paymentId' => old('payment_id', ''),
+                            'availableAmount' => $editingPayment
+                                ? $remainingAmount + ($editingPayment->document_id ? (float) $editingPayment->amount : 0)
+                                : $remainingAmount,
+                            'editing' => old('payment_mode') === 'edit',
+                            'restore' => old('payment_mode') !== null,
+                        ];
+                    @endphp
+                    <dialog id="payment_modal" class="modal" x-data="invoicePaymentForm(@js($paymentModalState), @js(route('invoices.payments.store', $invoice)), @js(route('invoices.payments.update', [$invoice, '__PAYMENT__'])))" x-on:invoice-payment-edit.window="edit($event.detail)" x-on:invoice-payment-create.window="create()" x-init="restore()">
                         <div class="modal-box">
-                            <h3 class="text-lg font-bold mb-4">{{ __('Record Payment') }}</h3>
+                            <h3 class="text-sm md:text-base lg:text-lg break-words font-bold mb-4" x-text="editing ? '{{ __('Edit Payment') }}' : '{{ __('Record Payment') }}'"></h3>
                             @php
                                 $settlementGroups = $settlementSubjects
                                     ->groupBy(fn($subject) => $subject->parent?->name ?? __('Other'))
@@ -854,13 +891,15 @@
                                     )
                                     ->values();
                             @endphp
-                            <form method="POST" action="{{ route('invoices.payments.store', $invoice) }}"
-                                class="space-y-4">
+                            <form method="POST" :action="action" class="space-y-4">
                                 @csrf
+                                <input type="hidden" name="_method" value="PUT" :disabled="!editing">
+                                <input type="hidden" name="payment_id" :value="paymentId">
+                                <input type="hidden" name="payment_mode" :value="editing ? 'edit' : 'create'">
                                 <div>
                                     <label class="label"><span
                                             class="label-text">{{ __('Settlement Account') }}</span></label>
-                                    <div x-data="settlementSelect(@js($settlementGroups), @js(route('invoices.payments.search-subjects', $invoice)))" @click.outside="open = false" class="relative">
+                                    <div x-data="settlementSelect(@js($settlementGroups), @js(route('invoices.payments.search-subjects', $invoice)), @js($paymentModalState['subjectId']), @js($paymentModalState['subjectName']))" @click.outside="open = false" class="relative">
                                         <input type="hidden" name="subject_id" :value="selectedId">
                                         <button type="button" @click="toggle()"
                                             class="input input-bordered w-full flex items-center justify-between text-left">
@@ -907,43 +946,43 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div x-data="{ amountInput: '{{ $remainingAmount }}' }">
+                                <div>
                                     <label class="label"><span class="label-text">{{ __('Amount') }}</span></label>
                                     <x-text-input input_name="amount" input_class="input-bordered locale-number"
-                                        input_value="{{ $remainingAmount }}" required x-model="amountInput"
-                                        @input="amountInput = $store.utils.cleanupNumber($event.target.value)"
-                                        x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(amountInput))" />
+                                        input_value="{{ $paymentModalState['amount'] }}" required x-model="amount"
+                                        @input="amount = $store.utils.cleanupNumber($event.target.value)"
+                                        x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(amount))" />
                                     <span class="text-xs text-gray-500">{{ __('Remaining Amount') }}:
-                                        {{ formatNumber($remainingAmount) }}</span>
+                                        <span x-text="$store.utils.convertToFarsi($store.utils.formatNumber(availableAmount))"></span></span>
                                 </div>
-                                <div x-data="{ feeInput: @js(old('bank_service_fee', '0')) }">
+                                <div>
                                     <label class="label" for="invoice_payment_fee"><span class="label-text">{{ __('Bank service fee') }}</span></label>
                                     <x-text-input input_name="bank_service_fee" id_input="invoice_payment_fee"
-                                        input_class="input-bordered locale-number" input_value="{{ old('bank_service_fee', '0') }}"
-                                        x-model="feeInput" @input="feeInput = $store.utils.cleanupNumber($event.target.value)"
-                                        x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(feeInput))" />
+                                        input_class="input-bordered locale-number" input_value="{{ $paymentModalState['bankServiceFee'] }}"
+                                        x-model="bankServiceFee" @input="bankServiceFee = $store.utils.cleanupNumber($event.target.value)"
+                                        x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(bankServiceFee))" />
                                 </div>
                                 <div>
                                     <label class="label"><span class="label-text">{{ __('Date') }}</span></label>
                                     <x-text-input data-jdp input_name="date" id_input="invoice_payment_date"
-                                        autocomplete="off" readonly
-                                        input_class="input-bordered" input_value="{{ convertToJalali(now(), true) }}" />
+                                        autocomplete="off" readonly x-model="date"
+                                        input_class="input-bordered" input_value="{{ $paymentModalState['date'] }}" />
                                 </div>
                                 <div>
                                     <label class="label"><span
                                             class="label-text">{{ __('Reference Number') }}</span></label>
                                     <x-text-input input_name="reference_number" input_class="input-bordered"
-                                        maxlength="20" />
+                                        maxlength="20" x-model="referenceNumber" input_value="{{ $paymentModalState['referenceNumber'] }}" />
                                 </div>
                                 <div>
                                     <label class="label"><span
                                             class="label-text">{{ __('Description') }}</span></label>
-                                    <textarea name="description" class="textarea textarea-bordered w-full" rows="2"></textarea>
+                                    <textarea name="description" class="textarea textarea-bordered w-full" rows="2" x-model="description">{{ $paymentModalState['description'] }}</textarea>
                                 </div>
                                 <div class="modal-action">
                                     <button type="button" class="btn btn-sm md:btn-sm lg:btn-md"
-                                        onclick="payment_modal.close()">{{ __('Cancel') }}</button>    
-                                    <button type="submit" class="btn btn-sm md:btn-sm lg:btn-md btn-primary">{{ __('Save') }}</button>
+                                        onclick="payment_modal.close()">{{ __('Cancel') }}</button>
+                                    <button type="submit" class="btn btn-sm md:btn-sm lg:btn-md btn-primary" x-text="editing ? '{{ __('Edit') }}' : '{{ __('Save') }}'"></button>
                                 </div>
                             </form>
                         </div>
@@ -951,23 +990,24 @@
                             <button>{{ __('close') }}</button>
                         </form>
                     </dialog>
+                    @can('invoices.payments.store')
                     @if($chequeDirection)
                         @can('invoices.payments.store-cheque')
                             <dialog id="cheque_payment_modal" class="modal">
                                 <div class="modal-box max-w-3xl">
                                     <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
                                         <div>
-                                            <h3 class="text-lg font-bold">{{ __('Pay invoice by cheque') }}</h3>
+                                            <h3 class="text-sm md:text-base lg:text-lg break-words font-bold">{{ __('Pay invoice by cheque') }}</h3>
                                             <p class="text-sm opacity-70">{{ $chequeDirection->label() }} - {{ $invoice->customer?->name }}</p>
                                         </div>
-                                        <span class="badge badge-secondary">{{ __('Remaining Amount') }}: {{ formatNumber($remainingAmount) }}</span>
+                                        <span class="badge badge-sm md:badge-md lg:badge-lg h-auto max-w-full whitespace-normal py-1 badge-secondary">{{ __('Remaining Amount') }}: {{ formatNumber($remainingAmount) }}</span>
                                     </div>
                                     <form method="POST" action="{{ route('invoices.payments.store-cheque', $invoice) }}">
                                         @csrf
                                         <div class="alert alert-info p-1 mb-2 text-sm">
                                             {{ __('If you select a chequebook, it must belong to the selected bank account.') }}
                                         </div>
-                                        <div class="grid gap-4 md:grid-cols-2">
+                                        <div class="grid [&>*]:min-w-0 gap-4 md:grid-cols-2">
                                             <div x-data="{ amountInput: '{{ $remainingAmount }}' }">
                                                 <label class="label"><span class="label-text">{{ __('Amount') }}</span></label>
                                                 <x-text-input input_name="amount" input_class="input-bordered locale-number"
@@ -1051,6 +1091,7 @@
                             </dialog>
                         @endcan
                     @endif
+                    @endcan
                     @pushOnce('scripts')
                         <script type="module">
                             const invoiceModalDateSelector = [
@@ -1102,13 +1143,13 @@
                             });
                         </script>
                     @endPushOnce
-                @endcan
+                @endif
             </div>
 
-            <div class="card-actions justify-between mt-4">
+            <div class="card-actions grid grid-cols-[repeat(2,minmax(0,1fr))] items-stretch gap-2 md:flex md:flex-nowrap md:items-center md:justify-between md:[direction:rtl] mt-4">
                 <a href="{{ route('invoices.index', ['invoice_type' => $invoice->invoice_type, 'service_buy' => $isServiceBuy]) }}"
-                    class="btn btn-ghost gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                    class="btn btn-sm lg:btn-md btn-ghost h-auto min-h-8 min-w-0 whitespace-normal gap-1 px-2 py-2 md:shrink-0 md:gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 lg:h-5 lg:w-5" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -1116,12 +1157,12 @@
                     {{ __('Back') }}
                 </a>
 
-                <div class="flex flex-wrap gap-2">
+                <div class="contents md:flex md:min-w-0 md:flex-nowrap md:gap-2 md:overflow-x-auto [&>.btn]:h-auto [&>.btn]:min-h-8 [&>.btn]:min-w-0 [&>.btn]:whitespace-normal [&>.btn]:px-2 [&>.btn]:py-2 [&>form]:min-w-0 [&>form>.btn]:h-auto [&>form>.btn]:min-h-8 [&>form>.btn]:w-full [&>form>.btn]:whitespace-normal [&>form>.btn]:px-2 [&>form>.btn]:py-2 [&>.tooltip]:min-w-0 [&>.tooltip>.btn]:h-auto [&>.tooltip>.btn]:min-h-8 [&>.tooltip>.btn]:w-full [&>.tooltip>.btn]:whitespace-normal [&>.tooltip>.btn]:px-2 [&>.tooltip>.btn]:py-2 md:[&>.btn]:shrink-0 md:[&>.btn]:whitespace-nowrap md:[&>form]:shrink-0 md:[&>form>.btn]:whitespace-nowrap md:[&>.tooltip]:shrink-0 md:[&>.tooltip>.btn]:whitespace-nowrap">
                     @can('invoices.transfer')
                         @if ($fiscalYears->isNotEmpty())
                             <button type="button" onclick="document.getElementById('inv-transfer-modal').showModal()"
-                                class="btn gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                                class="btn btn-sm lg:btn-md gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 lg:h-5 lg:w-5" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
@@ -1165,25 +1206,25 @@
                             @if ($hasMoadianSuccess)
                                 <span class="tooltip"
                                     data-tip="{{ __('This invoice has already been sent successfully to Moadian and cannot be sent again.') }}">
-                                    <button class="btn btn-success btn-disabled cursor-not-allowed"
+                                    <button class="btn btn-sm lg:btn-md btn-success btn-disabled cursor-not-allowed"
                                         title="{{ __('This invoice has already been sent successfully to Moadian and cannot be sent again.') }}">{{ __('Send Moadian') }}</button>
                                 </span>
                             @elseif (!$invoice->status->isApprovedOrSettled())
                                 <span class="tooltip"
                                     data-tip="{{ __('Approve the invoice first to send to moadian') }}">
-                                    <button class="btn btn-error btn-disabled cursor-not-allowed"
+                                    <button class="btn btn-sm lg:btn-md btn-error btn-disabled cursor-not-allowed"
                                         title="{{ __('Approve the invoice first to send to moadian') }}">{{ __('Send Moadian') }}</button>
                                 </span>
                             @elseif (!$originalHasMoadianSuccess)
                                 <span class="tooltip"
                                     data-tip="{{ __('The original invoice must be sent successfully to Moadian before sending its void invoice.') }}">
-                                    <button class="btn btn-error btn-disabled cursor-not-allowed"
+                                    <button class="btn btn-sm lg:btn-md btn-error btn-disabled cursor-not-allowed"
                                         title="{{ __('The original invoice must be sent successfully to Moadian before sending its void invoice.') }}">{{ __('Send Moadian') }}</button>
                                 </span>
                             @else
                                 <form method="POST" action="{{ route('invoices.send-moadian', $invoice) }}">
                                     @csrf
-                                    <button type="submit" class="btn btn-success">{{ __('Send Moadian') }}</button>
+                                    <button type="submit" class="btn btn-sm lg:btn-md btn-success">{{ __('Send Moadian') }}</button>
                                 </form>
                             @endif
                         @endif
@@ -1195,8 +1236,8 @@
                                 $invoice->status->isApprovedOrSettled() &&
                                     !$invoice->voidInvoice &&
                                     $invoice->getReturnInvoice()->isEmpty())
-                                <a href="{{ route('invoices.void-form', $invoice) }}" class="btn btn-warning">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                                <a href="{{ route('invoices.void-form', $invoice) }}" class="btn btn-sm lg:btn-md btn-warning">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 lg:h-5 lg:w-5" fill="none"
                                         viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
@@ -1212,8 +1253,8 @@
                                             : __('Invoice must be approved before voiding.'));
                                 @endphp
                                 <span class="tooltip" data-tip="{{ $voidDisabledTip }}">
-                                    <button class="btn btn-warning gap-2 btn-disabled cursor-not-allowed">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                                    <button class="btn btn-sm lg:btn-md btn-warning gap-2 btn-disabled cursor-not-allowed">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 lg:h-5 lg:w-5" fill="none"
                                             viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                 d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
@@ -1226,10 +1267,10 @@
                     @endcan
 
                     @if ($invoice->status->isApprovedOrSettled())
-                        <x-export-delivery-choice :id="'invoice-pdf-delivery-'.$invoice->id" export="invoice_pdf" :filters="['invoice_id' => $invoice->id]" :label="__('Print')" :title="__('Receive PDF')" class="btn btn-outline gap-2" 
+                        <x-export-delivery-choice :id="'invoice-pdf-delivery-'.$invoice->id" export="invoice_pdf" :filters="['invoice_id' => $invoice->id]" :label="__('Print')" :title="__('Receive PDF')" class="btn btn-sm lg:btn-md btn-outline gap-2"
                             :desc="__('You can replace your email address to send this pdf to someone else. The email will identify you as the requester.')"/>
                     @else
-                        <a href="{{ route('invoices.print', $invoice) }}" class="btn btn-outline gap-2" target="_blank" rel="noopener">
+                        <a href="{{ route('invoices.print', $invoice) }}" class="btn btn-sm lg:btn-md btn-outline gap-2" target="_blank" rel="noopener">
                             {{ __('Print') }}
                         </a>
                     @endif
@@ -1239,7 +1280,7 @@
                             <form action="{{ route('invoices.change-status', [$invoice, 'ready_to_approve']) }}"
                                 method="POST" class="inline-block">
                                 @csrf
-                                <button type="submit" class="btn btn-success">{{ __('Ready to approve') }}</button>
+                                <button type="submit" class="btn btn-sm lg:btn-md btn-success">{{ __('Ready to approve') }}</button>
                             </form>
                         @endif
 
@@ -1247,7 +1288,7 @@
                             <form action="{{ route('invoices.change-status', [$invoice, 'rejected']) }}" method="POST"
                                 class="inline-block">
                                 @csrf
-                                <button type="submit" class="btn btn-error gap-2">{{ __('Reject') }}</button>
+                                <button type="submit" class="btn btn-sm lg:btn-md btn-error gap-2">{{ __('Reject') }}</button>
                             </form>
                         @endif
 
@@ -1255,12 +1296,12 @@
                             @if ($changeStatusValidation->hasErrors())
                                 <a data-tip="{{ $changeStatusValidation->toText() }}"
                                     href="{{ route('invoices.conflicts', $invoice) }}"
-                                    class="btn btn-accent inline-flex tooltip">
+                                    class="btn btn-sm lg:btn-md btn-accent inline-flex tooltip">
                                     {{ __('Fix Conflict') }}
                                 </a>
                             @elseif ($isVoided)
                                 <span class="tooltip" data-tip="{{ __('To change the status, first unapprove the voiding invoice.') }}">
-                                    <button class="btn btn-error btn-disabled cursor-not-allowed">{{ __('Unapprove') }}</button>
+                                    <button class="btn btn-sm lg:btn-md btn-error btn-disabled cursor-not-allowed">{{ __('Unapprove') }}</button>
                                 </span>
                             @else
                                 <form
@@ -1271,7 +1312,7 @@
                                     @csrf
                                     <button type="submit" x-data="{}"
                                         data-tip="{{ $changeStatusValidation->toText() }}"
-                                        class="btn inline-flex {{ $canUnapprove ? 'btn-warning' : 'btn-success' }} {{ $canApprove && $changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }}">
+                                        class="btn btn-sm lg:btn-md inline-flex {{ $canUnapprove ? 'btn-warning' : 'btn-success' }} {{ $canApprove && $changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }}">
                                         {{ $canUnapprove ? __('Unapprove') : __('Approve') }}
                                     </button>
                                 </form>
@@ -1280,8 +1321,8 @@
                     @endcan
 
                     @if (!$invoice->status->isApprovedOrSettled() && !$invoice->invoice_type->isVoid() && !$hasMoadianSuccess)
-                        <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-primary gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                        <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm lg:btn-md btn-primary gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 lg:h-5 lg:w-5" fill="none"
                                 viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -1291,8 +1332,8 @@
                     @else
                         <span class="tooltip"
                             data-tip="{{ $invoice->invoice_type->isVoid() ? __('Editing is not allowed for void invoices.') : __('Editing is not allowed for approved invoices.') }}">
-                            <button class="btn btn-primary gap-2 btn-disabled cursor-not-allowed">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                            <button class="btn btn-sm lg:btn-md btn-primary gap-2 btn-disabled cursor-not-allowed">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 lg:h-5 lg:w-5" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -1304,8 +1345,8 @@
 
                     @if ($invoice->document)
                         @can('documents.show')
-                            <a href="{{ route('documents.show', $invoice->document) }}" class="btn btn-secondary gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                            <a href="{{ route('documents.show', $invoice->document) }}" class="btn btn-sm lg:btn-md btn-secondary gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 lg:h-5 lg:w-5" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M9 12h6m2 8H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2z" />
@@ -1323,7 +1364,7 @@
         @if ($fiscalYears->isNotEmpty())
             <dialog id="inv-transfer-modal" class="modal">
                 <div class="modal-box">
-                    <h3 class="font-bold text-lg">{{ __('Transfer to another Fiscal Year') }}</h3>
+                    <h3 class="font-bold text-sm md:text-base lg:text-lg">{{ __('Transfer to another Fiscal Year') }}</h3>
                     <form action="{{ route('invoices.transfer', $invoice) }}" method="POST" class="mt-4">
                         @csrf
                         <div class="form-control w-full">
@@ -1356,7 +1397,58 @@
     @endcan
 
     <script>
-        function settlementSelect(groups, url) {
+        function invoicePaymentForm(initial, createUrl, updateUrl) {
+            return {
+                amount: initial.amount,
+                availableAmount: initial.availableAmount,
+                bankServiceFee: initial.bankServiceFee,
+                date: initial.date,
+                referenceNumber: initial.referenceNumber,
+                description: initial.description,
+                paymentId: initial.paymentId,
+                editing: initial.editing,
+                action: initial.editing ? updateUrl.replace('__PAYMENT__', initial.paymentId) : createUrl,
+                restore() {
+                    if (!initial.restore) return;
+                    this.action = this.editing ? updateUrl.replace('__PAYMENT__', this.paymentId) : createUrl;
+                    this.$nextTick(() => {
+                        this.setSubject(initial.subjectId, initial.subjectName);
+                        document.getElementById('payment_modal').showModal();
+                    });
+                },
+                setSubject(id, name) {
+                    const selector = document.querySelector('#payment_modal [x-ref="settlementSearch"]')?.closest('[x-data]');
+                    if (selector && window.Alpine) Alpine.$data(selector).setSelection(id, name);
+                },
+                create() {
+                    this.editing = false;
+                    this.paymentId = '';
+                    this.action = createUrl;
+                    this.amount = @js((string) $remainingAmount);
+                    this.availableAmount = @js((string) $remainingAmount);
+                    this.bankServiceFee = '0';
+                    this.date = @js(convertToJalali(now(), true));
+                    this.referenceNumber = '';
+                    this.description = '';
+                    this.setSubject('', '');
+                },
+                edit(payment) {
+                    this.editing = true;
+                    this.paymentId = payment.id;
+                    this.action = updateUrl.replace('__PAYMENT__', payment.id);
+                    this.amount = payment.amount;
+                    this.availableAmount = payment.availableAmount;
+                    this.bankServiceFee = payment.bankServiceFee;
+                    this.date = payment.date;
+                    this.referenceNumber = payment.referenceNumber;
+                    this.description = payment.description;
+                    this.setSubject(payment.subjectId, payment.subjectName);
+                    document.getElementById('payment_modal').showModal();
+                },
+            };
+        }
+
+        function settlementSelect(groups, url, selectedId = '', selectedLabel = '') {
             return {
                 open: false,
                 search: '',
@@ -1364,8 +1456,12 @@
                 initialGroups: groups || [],
                 loading: false,
                 requestId: 0,
-                selectedId: '',
-                selectedLabel: '',
+                selectedId: selectedId ? Number(selectedId) : '',
+                selectedLabel,
+                setSelection(id, name) {
+                    this.selectedId = id ? Number(id) : '';
+                    this.selectedLabel = name || '';
+                },
                 toggle() {
                     this.open = !this.open;
                     if (this.open) {
