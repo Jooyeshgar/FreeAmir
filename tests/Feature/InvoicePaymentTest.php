@@ -790,6 +790,7 @@ class InvoicePaymentTest extends TestCase
         $this->user->givePermissionTo(Permission::findOrCreate('invoices.payments.edit'));
 
         $this->get(route('invoices.show', $invoice))->assertOk()
+            ->assertSee('<button type="button" x-data="{}" class="btn btn-xs btn-outline" data-payment-id="'.$payment->id.'"', false)
             ->assertSee('data-payment-id="'.$payment->id.'"', false)
             ->assertSee('id="payment_modal"', false)
             ->assertSee('name="bank_service_fee"', false)
