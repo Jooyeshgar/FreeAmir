@@ -3436,6 +3436,7 @@
     "The source and destination warehouses must be different.": "The source and destination warehouses must be different.",
     "The quantity must be greater than zero.": "The quantity must be greater than zero.",
     "The source warehouse does not have enough stock.": "The source warehouse does not have enough stock.",
+    "The selected warehouse does not have enough stock for product :name (code: :code).": "The selected warehouse does not have enough stock for product :name (code: :code).",
     "Manage your warehouses and stock locations": "Manage your warehouses and stock locations",
     "Warehouse List": "Warehouse list",
     "Select a warehouse to view its products.": "Select a warehouse to view its products.",

@@ -3437,6 +3437,7 @@
     "The source and destination warehouses must be different.": "انبار مبدأ و مقصد باید متفاوت باشند.",
     "The quantity must be greater than zero.": "تعداد باید بیشتر از صفر باشد.",
     "The source warehouse does not have enough stock.": "موجودی انبار مبدأ کافی نیست.",
+    "The selected warehouse does not have enough stock for product :name (code: :code).": "موجودی انبار انتخاب‌شده برای کالای :name (کد: :code) کافی نیست.",
     "Manage your warehouses and stock locations": "انبارها و محل‌های نگهداری موجودی را مدیریت کنید",
     "Warehouse List": "فهرست انبارها",
     "Select a warehouse to view its products.": "برای مشاهده محصولات، یک انبار را انتخاب کنید.",
