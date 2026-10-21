@@ -17,24 +17,22 @@ return new class extends Migration
 
         $userPermissions = DB::table($tables['model_has_permissions'])->whereIn($permissionColumn, $existingIds)->get();
 
-        foreach (['invoices.payments.edit', 'invoices.payments.update'] as $name) {
-            DB::table($tables['permissions'])->insertOrIgnore([
-                'name' => $name, 'guard_name' => 'web', 'created_at' => now(), 'updated_at' => now(),
+        DB::table($tables['permissions'])->insertOrIgnore([
+            'name' => 'invoices.payments.update', 'guard_name' => 'web', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $id = DB::table($tables['permissions'])->where('name', 'invoices.payments.update')->where('guard_name', 'web')->value('id');
+
+        foreach ($roleIds as $roleId) {
+            DB::table($tables['role_has_permissions'])->insertOrIgnore([
+                $permissionColumn => $id, $roleColumn => $roleId,
             ]);
+        }
 
-            $id = DB::table($tables['permissions'])->where('name', $name)->where('guard_name', 'web')->value('id');
-
-            foreach ($roleIds as $roleId) {
-                DB::table($tables['role_has_permissions'])->insertOrIgnore([
-                    $permissionColumn => $id, $roleColumn => $roleId,
-                ]);
-            }
-
-            foreach ($userPermissions as $assignment) {
-                $attributes = (array) $assignment;
-                $attributes[$permissionColumn] = $id;
-                DB::table($tables['model_has_permissions'])->insertOrIgnore($attributes);
-            }
+        foreach ($userPermissions as $assignment) {
+            $attributes = (array) $assignment;
+            $attributes[$permissionColumn] = $id;
+            DB::table($tables['model_has_permissions'])->insertOrIgnore($attributes);
         }
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();

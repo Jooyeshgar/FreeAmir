@@ -279,7 +279,6 @@ class RolesAndPermissionsSeeder extends Seeder
                     'ancillary-costs.approve',
                     'ancillary-costs.change-status',
                     'invoices.payments.store',
-                    'invoices.payments.edit',
                     'invoices.payments.update',
                     'invoices.payments.store-cheque',
                     'invoices.payments.destroy',
