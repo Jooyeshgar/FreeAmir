@@ -25,31 +25,31 @@ class GroupActionService
     public function approveInactiveInvoices(): void
     {
         // Match status validation and inventory costing: date, then internal ID.
-        $invoices = Invoice::where('status', InvoiceStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('id')
-            ->orWhereHas('ancillaryCosts', function ($query) {
-                $query->where('status', InvoiceStatus::APPROVED_INACTIVE);
-            })->get();
+        $invoices = Invoice::where(function ($query) {
+            $query->where('status', InvoiceStatus::APPROVED_INACTIVE)
+                ->orWhereHas('ancillaryCosts', fn ($costs) => $costs->where('status', InvoiceStatus::APPROVED_INACTIVE));
+        })->orderBy('date')->orderBy('id')->get();
 
         DB::transaction(function () use ($invoices) {
             foreach ($invoices as $invoice) {
-                $decision = $this->invoiceService->getChangeStatusDecision($invoice, 'approved');
+                if ($invoice->status === InvoiceStatus::APPROVED_INACTIVE) {
+                    $decision = $this->invoiceService->getChangeStatusDecision($invoice, 'approved');
 
-                if ($decision->hasErrors()) {
+                    if ($decision->hasErrors()) {
 
-                    $conflicts = $decision->toText();
+                        $conflicts = $decision->toText();
 
-                    throw ValidationException::withMessages([
-                        'invoice' => [__('Invoice #:number cannot be approved because it has conflicts with: :conflicts', ['number' => $invoice->number, 'conflicts' => $conflicts])],
-                    ]);
+                        throw ValidationException::withMessages([
+                            'invoice' => [__('Invoice #:number cannot be approved because it has conflicts with: :conflicts', ['number' => $invoice->number, 'conflicts' => $conflicts])],
+                        ]);
+                    }
+
+                    $this->invoiceService->changeInvoiceStatus($invoice, 'approved');
                 }
 
-                $this->invoiceService->changeInvoiceStatus($invoice, 'approved');
-
-                foreach ($invoice->payments()->whereNull('document_id')->whereNull('cheque_id')->get() as $payment) {
-                    $this->paymentService->createPaymentDocument(auth()->user(), $payment->fresh('invoice'));
-                }
-
-                foreach ($invoice->ancillaryCosts as $ancillaryCost) {
+                // Restore costs before payments: a fully paid purchase may also
+                // include ancillary costs in its payable amount.
+                foreach ($invoice->ancillaryCosts()->where('status', InvoiceStatus::APPROVED_INACTIVE)->get() as $ancillaryCost) {
                     $validation = $this->ancillaryCostService->getChangeStatusValidation($ancillaryCost);
 
                     if (! $validation['allowed']) {
@@ -60,6 +60,15 @@ class GroupActionService
                     }
 
                     $this->ancillaryCostService->changeAncillaryCostStatus($ancillaryCost, 'approve');
+                }
+
+                foreach ($invoice->payments()->whereNull('document_id')->whereNull('cheque_id')->get() as $payment) {
+                    $decision = $this->paymentService->createPaymentDocument(auth()->user(), $payment->fresh('invoice'));
+                    if ($decision->hasErrors()) {
+                        throw ValidationException::withMessages([
+                            'payment' => $decision->messages->pluck('text')->all(),
+                        ]);
+                    }
                 }
 
                 $this->paymentService->syncInvoiceStatus($invoice->fresh());
@@ -73,10 +82,11 @@ class GroupActionService
         $conflictingInvoices = $this->getConflictingInvoices($invoice);
 
         // Reverse the approval order so later inventory movements are undone first.
-        $sortedInvoices = collect($conflictingInvoices)->sortBy([
-            ['date', 'desc'],
-            ['id', 'desc'],
-        ])->values()->all();
+        $sortedInvoices = collect($conflictingInvoices)->unique('id')
+            ->filter(fn ($conflict) => $conflict->status->isApprovedOrSettled())->sortBy([
+                ['date', 'desc'],
+                ['id', 'desc'],
+            ])->values()->all();
 
         DB::transaction(function () use ($sortedInvoices) {
             foreach ($sortedInvoices as $conflictInvoice) {
@@ -180,6 +190,11 @@ class GroupActionService
                 ->whereIn('itemable_id', $productIds)
             )
             ->get();
+
+        if ($invoice->invoice_type->isBeginningInventory()) {
+            $subsequentInvoices = $subsequentInvoices->merge(Invoice::normalInventoryMovements()
+                ->whereIn('status', InvoiceStatus::approvedOrSettled())->get())->unique('id');
+        }
 
         // Recursively find conflicts for each subsequent invoice
         foreach ($subsequentInvoices as $subsequentInvoice) {
