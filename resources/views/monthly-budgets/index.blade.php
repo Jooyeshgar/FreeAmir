@@ -305,6 +305,7 @@
                     <article class="card border border-base-300 bg-base-100 shadow-sm">
                         <div class="card-body p-4 sm:p-5">
                             <h3 class="card-title text-base">{{ $title }}</h3>
+                            <div class="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-base-content/55" aria-label="{{ __('Change color legend') }}"><span class="text-success">↑ {{ __('Favorable change') }}</span><span class="text-error">↓ {{ __('Unfavorable change') }}</span><span>{{ __('Gray means unavailable or unchanged') }}</span></div>
                             <div class="overflow-x-auto">
                                 <table class="table table-sm">
                                     <thead><tr><th>{{ __('Subject') }}</th><th class="text-end">{{ __('Actual') }}</th><th class="text-end">{{ __('Share') }}</th><th class="text-end">{{ __('Previous month') }}</th><th class="text-end">{{ __('Change') }}</th></tr></thead>
@@ -315,7 +316,14 @@
                                                 <td class="text-end">{{ localizeNumber(number_format($driver['amount'], 0)) }}</td>
                                                 <td class="text-end">{{ is_null($driver['share']) ? '—' : localizeNumber(number_format($driver['share'], 1)).'%' }}</td>
                                                 <td class="text-end">{{ is_null($driver['previous']) ? '—' : localizeNumber(number_format($driver['previous'], 0)) }}</td>
-                                                <td class="text-end">{{ is_null($driver['change']) ? '—' : localizeNumber(number_format($driver['change'], 0)) }}</td>
+                                                <td class="text-end">
+                                                    @if (is_null($driver['change']))
+                                                        <span class="text-base-content/45">—</span>
+                                                    @else
+                                                        @php($favorable = $type === 'income' ? $driver['change'] >= 0 : $driver['change'] <= 0)
+                                                        <span class="font-medium {{ $driver['change'] == 0 ? 'text-base-content/55' : ($favorable ? 'text-success' : 'text-error') }}">{{ $driver['change'] > 0 ? '↑ ' : ($driver['change'] < 0 ? '↓ ' : '→ ') }}{{ localizeNumber(number_format($driver['change'], 0)) }}</span>
+                                                    @endif
+                                                </td>
                                             </tr>
                                         @empty
                                             <tr><td colspan="5" class="text-center text-base-content/50">{{ __('No actual accounting categories are available.') }}</td></tr>
@@ -341,14 +349,16 @@
                             <div class="text-lg font-bold tabular-nums">{{ is_null($value) ? '—' : localizeNumber(number_format($value, 0)) }} @if (! is_null($value)) <span class="text-xs font-normal">{{ $currency }}</span> @endif</div>
                             @if ($key === 'grossProfit')
                                 <div class="text-xs text-base-content/55">{{ __('Gross margin') }}: {{ is_null($profitability['grossMargin']) ? '—' : localizeNumber(number_format($profitability['grossMargin'], 1)).'%' }}</div>
-                                @if (! is_null($profitability['comparisons']['grossMargin']['change'])) <div class="text-[11px] text-base-content/50">{{ __('Margin change') }}: {{ localizeNumber(number_format($profitability['comparisons']['grossMargin']['change'], 1)) }} {{ __('percentage points') }}</div> @endif
+                                @if (! is_null($profitability['comparisons']['grossMargin']['change'])) <div class="text-[11px] {{ $profitability['comparisons']['grossMargin']['change'] == 0 ? 'text-base-content/50' : ($profitability['comparisons']['grossMargin']['change'] > 0 ? 'text-success' : 'text-error') }}">{{ __('Margin change') }}: {{ $profitability['comparisons']['grossMargin']['change'] > 0 ? '↑ ' : ($profitability['comparisons']['grossMargin']['change'] < 0 ? '↓ ' : '→ ') }}{{ localizeNumber(number_format($profitability['comparisons']['grossMargin']['change'], 1)) }} {{ __('percentage points') }}</div> @endif
                             @elseif ($key === 'accountingNet')
                                 <div class="text-xs text-base-content/55">{{ __('Net margin') }}: {{ is_null($profitability['accountingMargin']) ? '—' : localizeNumber(number_format($profitability['accountingMargin'], 1)).'%' }}</div>
-                                @if (! is_null($profitability['accountingComparisons']['accountingMargin']['change'])) <div class="text-[11px] text-base-content/50">{{ __('Margin change') }}: {{ localizeNumber(number_format($profitability['accountingComparisons']['accountingMargin']['change'], 1)) }} {{ __('percentage points') }}</div> @endif
+                                @if (! is_null($profitability['accountingComparisons']['accountingMargin']['change'])) <div class="text-[11px] {{ $profitability['accountingComparisons']['accountingMargin']['change'] == 0 ? 'text-base-content/50' : ($profitability['accountingComparisons']['accountingMargin']['change'] > 0 ? 'text-success' : 'text-error') }}">{{ __('Margin change') }}: {{ $profitability['accountingComparisons']['accountingMargin']['change'] > 0 ? '↑ ' : ($profitability['accountingComparisons']['accountingMargin']['change'] < 0 ? '↓ ' : '→ ') }}{{ localizeNumber(number_format($profitability['accountingComparisons']['accountingMargin']['change'], 1)) }} {{ __('percentage points') }}</div> @endif
                             @endif
                             @if (isset($profitability['comparisons'][$key]) || isset($profitability['accountingComparisons'][$key]))
                                 @php($comparison = $profitability['comparisons'][$key] ?? $profitability['accountingComparisons'][$key])
-                                <div class="mt-1 border-t border-base-200 pt-1 text-[11px] text-base-content/55">{{ __('Previous month') }}: {{ is_null($comparison['previous']) ? '—' : localizeNumber(number_format($comparison['previous'], 0)) }} · {{ __('Change') }}: {{ is_null($comparison['change']) ? '—' : localizeNumber(number_format($comparison['change'], 0)) }} @if (! is_null($comparison['percent'])) ({{ localizeNumber(number_format($comparison['percent'], 1)) }}%) @endif</div>
+                                @php($favorableIncrease = in_array($key, ['sales', 'grossProfit', 'accountingNet'], true))
+                                @php($neutralChange = $key === 'purchases')
+                                <div class="mt-1 border-t border-base-200 pt-1 text-[11px] text-base-content/55">{{ __('Previous month') }}: {{ is_null($comparison['previous']) ? '—' : localizeNumber(number_format($comparison['previous'], 0)) }} · {{ __('Change') }}: @if (is_null($comparison['change']))<span class="text-base-content/45">—</span>@else <span class="font-medium {{ $comparison['change'] == 0 || $neutralChange ? 'text-base-content/55' : (($comparison['change'] > 0) === $favorableIncrease ? 'text-success' : 'text-error') }}">{{ $comparison['change'] > 0 ? '↑ ' : ($comparison['change'] < 0 ? '↓ ' : '→ ') }}{{ localizeNumber(number_format($comparison['change'], 0)) }}</span>@endif @if (! is_null($comparison['percent'])) ({{ localizeNumber(number_format($comparison['percent'], 1)) }}%) @endif</div>
                             @endif
                         </div>
                     </article>
@@ -367,11 +377,11 @@
                                             <td>@can('products.show')<a class="link link-hover" href="{{ route('products.show', $product['id']) }}">{{ $product['name'] }}</a>@else{{ $product['name'] }}@endcan @if ($product['missingCost']) <span class="badge badge-warning badge-xs">{{ __('Cost unavailable') }}</span> @endif</td>
                                             <td>{{ $product['group'] ?? '—' }}</td>
                                             <td class="text-end">{{ localizeNumber(number_format($product['sales'], 0)) }}</td>
-                                            <td class="text-end">{{ is_null($product['salesChange']) ? '—' : localizeNumber(number_format($product['salesChange'], 0)) }}</td>
+                                            <td class="text-end">@if (is_null($product['salesChange']))<span class="text-base-content/45">—</span>@else<span class="font-medium {{ $product['salesChange'] == 0 ? 'text-base-content/55' : ($product['salesChange'] > 0 ? 'text-success' : 'text-error') }}">{{ $product['salesChange'] > 0 ? '↑ ' : ($product['salesChange'] < 0 ? '↓ ' : '→ ') }}{{ localizeNumber(number_format($product['salesChange'], 0)) }}</span>@endif</td>
                                             <td class="text-end">{{ localizeNumber(number_format($product['cogs'], 0)) }}</td>
                                             <td class="text-end">{{ localizeNumber(number_format($product['grossProfit'], 0)) }}</td>
-                                            <td class="text-end">{{ is_null($product['grossProfitChange']) ? '—' : localizeNumber(number_format($product['grossProfitChange'], 0)) }}</td>
-                                            <td class="text-end">{{ is_null($product['grossMargin']) ? '—' : localizeNumber(number_format($product['grossMargin'], 1)).'%' }}</td>
+                                            <td class="text-end">@if (is_null($product['grossProfitChange']))<span class="text-base-content/45">—</span>@else<span class="font-medium {{ $product['grossProfitChange'] == 0 ? 'text-base-content/55' : ($product['grossProfitChange'] > 0 ? 'text-success' : 'text-error') }}">{{ $product['grossProfitChange'] > 0 ? '↑ ' : ($product['grossProfitChange'] < 0 ? '↓ ' : '→ ') }}{{ localizeNumber(number_format($product['grossProfitChange'], 0)) }}</span>@endif</td>
+                                            <td class="text-end"><span class="{{ is_null($product['grossMargin']) || $product['grossMargin'] == 0 ? 'text-base-content/55' : ($product['grossMargin'] > 0 ? 'text-success' : 'text-error') }}">{{ is_null($product['grossMargin']) ? '—' : localizeNumber(number_format($product['grossMargin'], 1)).'%' }}</span></td>
                                         </tr>
                                     @endforeach
                                 </tbody>
