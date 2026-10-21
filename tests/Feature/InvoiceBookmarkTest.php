@@ -35,7 +35,7 @@ class InvoiceBookmarkTest extends TestCase
 
         $this->withoutVite();
         $this->fiscalYear = FiscalYear::factory()->create(['year' => 1405]);
-        $this->user = $this->viewer('invoices.index', 'invoices.show', 'invoices.export');
+        $this->user = $this->viewer('invoices.index', 'invoices.show', 'invoices.export', 'invoices.bookmark');
         $this->withCookies(['active-fiscal-year-id' => (string) $this->fiscalYear->id]);
         config(['active-fiscal-year-id' => $this->fiscalYear->id]);
         $this->app->setLocale('en');
@@ -73,7 +73,7 @@ class InvoiceBookmarkTest extends TestCase
             ->assertRedirect($indexUrl);
         $this->assertTrue($invoice->fresh()->is_bookmarked);
 
-        $otherViewer = $this->viewer('invoices.show');
+        $otherViewer = $this->viewer('invoices.show', 'invoices.bookmark');
         $this->actingAs($otherViewer)->get($detailUrl)->assertOk()
             ->assertSee(route('invoices.bookmark', $invoice), false)
             ->assertSee('aria-pressed="true"', false);
@@ -109,7 +109,7 @@ class InvoiceBookmarkTest extends TestCase
     public function test_index_only_viewer_can_set_a_bookmark_idempotently(): void
     {
         $invoice = $this->invoice();
-        $viewer = $this->viewer('invoices.index');
+        $viewer = $this->viewer('invoices.index', 'invoices.bookmark');
 
         for ($i = 0; $i < 2; $i++) {
             $this->actingAs($viewer)->patch(route('invoices.bookmark', $invoice), ['is_bookmarked' => 1])->assertRedirect();
@@ -170,7 +170,7 @@ class InvoiceBookmarkTest extends TestCase
     public function test_user_outside_the_fiscal_year_cannot_bookmark(): void
     {
         $invoice = $this->invoice();
-        $outsider = $this->viewer('invoices.show');
+        $outsider = $this->viewer('invoices.show', 'invoices.bookmark');
         $outsider->fiscalYears()->detach();
 
         $this->actingAs($outsider)->patch(route('invoices.bookmark', $invoice), ['is_bookmarked' => 1])->assertForbidden();
