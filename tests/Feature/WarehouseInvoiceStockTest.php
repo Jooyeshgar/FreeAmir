@@ -27,6 +27,7 @@ use App\Services\ProductService;
 use App\Services\WarehouseService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Helpers\SeederHelper;
 use Tests\TestCase;
 
@@ -430,13 +431,32 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->assertSame($this->emptyWarehouse->id, $buy->fresh()->warehouse_id);
     }
 
-    public function test_stock_mutation_rejects_an_outgoing_invoice_that_would_make_warehouse_negative(): void
+    #[DataProvider('stockErrorMessages')]
+    public function test_stock_mutation_rejects_an_outgoing_invoice_that_would_make_warehouse_negative(string $locale, string $expectedMessage): void
     {
+        app()->setLocale($locale);
+        $this->product->update(['name' => 'کالای آزمایشی', 'code' => '00123', 'oversell' => false]);
         $sell = $this->createInvoice(InvoiceType::SELL, 1, $this->emptyWarehouse, false);
+        $sell->update(['status' => InvoiceStatus::READY_TO_APPROVE]);
 
-        $this->expectException(ValidationException::class);
+        try {
+            (new InvoiceService)->changeInvoiceStatus($sell, 'approved');
+            $this->fail('Approval should reject insufficient warehouse stock.');
+        } catch (ValidationException $exception) {
+            $this->assertSame(['quantity' => [$expectedMessage]], $exception->errors());
+        }
 
-        (new InvoiceService)->changeInvoiceStatus($sell, 'approved');
+        $this->assertStock($this->emptyWarehouse, 0);
+        $this->assertSame(InvoiceStatus::READY_TO_APPROVE, $sell->fresh()->status);
+        $this->assertEqualsWithDelta(0, (float) $this->product->fresh()->quantity, 0.001);
+    }
+
+    public static function stockErrorMessages(): array
+    {
+        return [
+            'Persian' => ['fa', 'موجودی انبار انتخاب‌شده برای کالای کالای آزمایشی (کد: 00123) کافی نیست.'],
+            'English' => ['en', 'The selected warehouse does not have enough stock for product کالای آزمایشی (code: 00123).'],
+        ];
     }
 
     public function test_void_restores_and_unapproval_removes_stock_from_original_sell_warehouse(): void
