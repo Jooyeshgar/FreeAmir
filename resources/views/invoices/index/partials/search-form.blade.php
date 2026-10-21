@@ -47,7 +47,7 @@
             @if ($showVoided)
                 <x-checkbox name="voided" id="voided" :title="__('Voided')" value="1" :checked="request('voided') == '1'" />
             @endif
-            <x-checkbox name="bookmarked" id="bookmarked" :title="__('Bookmarked invoices only')" value="1" :checked="request()->boolean('bookmarked')" />
+            <x-checkbox name="bookmarked" id="bookmarked" :title="__('Bookmarked invoices')" value="1" :checked="request()->boolean('bookmarked')" />
             <div>
                 <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
             </div>
