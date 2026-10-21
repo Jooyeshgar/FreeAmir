@@ -126,6 +126,53 @@ class BeginningInventoryTest extends TestCase
         $this->assertEqualsWithDelta(0, $this->stockCost($product, $this->mainWarehouse), 0.001);
     }
 
+    public function test_opening_approval_and_reapproval_preserve_existing_stock_and_cost(): void
+    {
+        $invoice = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900, false);
+
+        foreach (range(1, 2) as $attempt) {
+            (new InvoiceService)->changeInvoiceStatus($invoice->fresh(), 'approved');
+
+            $this->assertQuantity($this->product, $this->mainWarehouse, 7);
+            $this->assertEqualsWithDelta(2, (float) $invoice->items()->firstOrFail()->quantity_at, 0.001);
+            $this->assertEqualsWithDelta(678.571, (float) $this->product->fresh()->average_cost, 0.001);
+            $this->assertEqualsWithDelta(692.86, $this->stockCost($this->product, $this->mainWarehouse), 0.001);
+
+            (new InvoiceService)->changeInvoiceStatus($invoice->fresh(), 'unapproved');
+
+            $this->assertQuantity($this->product, $this->mainWarehouse, 2);
+            $this->assertEqualsWithDelta(125, (float) $this->product->fresh()->average_cost, 0.01);
+            $this->assertEqualsWithDelta(175, $this->stockCost($this->product, $this->mainWarehouse), 0.01);
+        }
+    }
+
+    public function test_group_reactivation_preserves_existing_stock_and_orders_opening_snapshots(): void
+    {
+        $this->product->update(['average_cost' => 200]);
+        WarehouseProductStock::query()->where('product_id', $this->product->id)
+            ->where('warehouse_id', $this->mainWarehouse->id)->update(['average_cost' => 200]);
+        $mainInventory = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 200, true, 2, '2026-01-01');
+        $otherInventory = $this->createBeginningInventory($this->product, 5, $this->otherWarehouse, 440, true, 1, '2026-01-01');
+
+        app(GroupActionService::class)->inactivateDependentInvoices($mainInventory);
+
+        $this->assertQuantity($this->product, $this->mainWarehouse, 2);
+        $this->assertEqualsWithDelta(200, (float) $this->product->fresh()->average_cost, 0.001);
+
+        app(GroupActionService::class)->approveInactiveInvoices();
+
+        $this->assertEqualsWithDelta(12, (float) $this->product->fresh()->quantity, 0.001);
+        $this->assertEqualsWithDelta(2, (float) $mainInventory->items()->firstOrFail()->quantity_at, 0.001);
+        $this->assertEqualsWithDelta(7, (float) $otherInventory->items()->firstOrFail()->quantity_at, 0.001);
+        $this->assertEqualsWithDelta(300, (float) $this->product->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(200, $this->stockCost($this->product, $this->mainWarehouse), 0.001);
+        $this->assertEqualsWithDelta(440, $this->stockCost($this->product, $this->otherWarehouse), 0.001);
+        $this->assertEqualsWithDelta(7, (float) WarehouseProductStock::query()
+            ->where('product_id', $this->product->id)->where('warehouse_id', $this->mainWarehouse->id)->value('quantity'), 0.001);
+        $this->assertEqualsWithDelta(5, (float) WarehouseProductStock::query()
+            ->where('product_id', $this->product->id)->where('warehouse_id', $this->otherWarehouse->id)->value('quantity'), 0.001);
+    }
+
     public function test_approved_beginning_inventory_updates_each_warehouse_cost_independently(): void
     {
         $product = $this->product('P-2', 0);

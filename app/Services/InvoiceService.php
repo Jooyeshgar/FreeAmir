@@ -591,19 +591,6 @@ class InvoiceService
     {
         self::assertBeginningInventoryOrder($invoice, InvoiceStatus::APPROVED);
 
-        if ($invoice->invoice_type === InvoiceType::BEGINNING_INVENTORY) {
-            // Rebuild the existing stock baseline from posted invoice history
-            // before applying this opening. Group reactivation processes openings
-            // by date and ID, so quantity_at then reflects earlier openings only.
-            $invoice->loadMissing('items.itemable');
-            $invoice->items
-                ->where('itemable_type', Product::class)
-                ->pluck('itemable')
-                ->filter()
-                ->unique('id')
-                ->each(fn (Product $product) => ProductService::recalculateQuantity($product));
-        }
-
         $invoice->status = InvoiceStatus::APPROVED;
         $createdDocument = self::createDocumentFromInvoiceItems(auth()->user(), $invoice);
         $invoice->document_id = $createdDocument->id;
