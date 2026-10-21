@@ -222,6 +222,7 @@ class InvoiceService
                 ]);
 
                 ProductService::addProductsQuantities($items, $invoice->invoice_type);
+                self::syncInvoiceItems($invoice, $items);
                 $invoice->refresh();
                 CostOfGoodsService::updateProductsAverageCost($invoice);
                 ProductService::updateWarehouseAverageCosts($invoice);
@@ -510,10 +511,20 @@ class InvoiceService
                 }
             }
 
+            $cogBefore = null;
+            if ($product && $invoice->invoice_type === InvoiceType::BUY && $invoice->status->isApprovedOrSettled()) {
+                $hasBeginningInventory = Invoice::where('invoice_type', InvoiceType::BEGINNING_INVENTORY)
+                    ->whereIn('status', InvoiceStatus::approvedOrSettled())
+                    ->whereHas('items', fn ($query) => $query->where('itemable_type', Product::class)->where('itemable_id', $product->id))
+                    ->exists();
+                $cogBefore = $hasBeginningInventory ? $product->average_cost : null;
+            }
+
             $invoiceItemData = [
                 'invoice_id' => $invoice->id,
                 'quantity' => $quantity,
                 'cog_after' => $product?->average_cost ?? $unitPrice,                                            // must be updated after creating invoice
+                'cog_before' => $cogBefore,
                 'quantity_at' => $quantityAt,                                                                    // stock level before this invoice was applied
                 'unit_price' => $unitPrice,
                 'unit_discount' => $unitDiscount,
@@ -576,6 +587,7 @@ class InvoiceService
         $invoice->update();
         ProductService::addProductsQuantities($invoice->items->toArray(), $invoice->invoice_type);
         self::syncInvoiceItems($invoice, self::itemsFormatterForSyncingInvoiceItems($invoice));
+        $invoice->load('items.itemable');
         CostOfGoodsService::updateProductsAverageCost($invoice);
         ProductService::updateWarehouseAverageCosts($invoice);
         self::syncCOGAfterForInvoiceItems($invoice);

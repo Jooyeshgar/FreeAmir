@@ -15,6 +15,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Models\WarehouseProductStock;
+use App\Services\AncillaryCostService;
 use App\Services\InvoiceService;
 use App\Services\ProductService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -340,6 +341,167 @@ class BeginningInventoryTest extends TestCase
             ->assertOk()
             ->assertSee(route('invoices.change-status', [$invoice, 'unapproved']), false)
             ->assertSee(__('Unapprove'));
+    }
+
+    public function test_create_link_stays_enabled_while_a_warehouse_has_no_beginning_inventory(): void
+    {
+        $this->get(route('invoices.index', ['invoice_type' => 'beginning_inventory']))
+            ->assertOk()
+            ->assertSee(route('invoices.create', ['invoice_type' => 'beginning_inventory']), false);
+
+        $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900, false);
+
+        $this->get(route('invoices.index', ['invoice_type' => 'beginning_inventory']))
+            ->assertOk()
+            ->assertSee(route('invoices.create', ['invoice_type' => 'beginning_inventory']), false);
+    }
+
+    public function test_create_is_disabled_when_all_warehouses_have_records_even_when_the_list_is_filtered(): void
+    {
+        $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900, false);
+        $other = $this->createBeginningInventory($this->product, 3, $this->otherWarehouse, 800, false, 2);
+        $other->update(['status' => InvoiceStatus::UNAPPROVED]);
+
+        // An unused warehouse in another fiscal year must not enable creation here.
+        Warehouse::create(['name' => 'Foreign', 'code' => 'FOREIGN', 'fiscal_year_id' => FiscalYear::factory()->create()->id]);
+
+        $this->get(route('invoices.index', [
+            'invoice_type' => 'beginning_inventory',
+            'status' => 'approved',
+            'number' => 999,
+        ]))
+            ->assertOk()
+            ->assertDontSee(route('invoices.create', ['invoice_type' => 'beginning_inventory']), false)
+            ->assertSee('<button type="button" class="btn btn-primary" disabled aria-disabled="true">', false);
+
+        $this->delete(route('invoices.destroy', $other))->assertRedirect();
+
+        $this->get(route('invoices.index', ['invoice_type' => 'beginning_inventory']))
+            ->assertOk()
+            ->assertSee(route('invoices.create', ['invoice_type' => 'beginning_inventory']), false);
+    }
+
+    public function test_create_is_disabled_without_any_warehouses(): void
+    {
+        WarehouseProductStock::query()->delete();
+        Warehouse::query()->delete();
+
+        $this->get(route('invoices.index', ['invoice_type' => 'beginning_inventory']))
+            ->assertOk()
+            ->assertDontSee(route('invoices.create', ['invoice_type' => 'beginning_inventory']), false);
+    }
+
+    public function test_direct_creation_rejects_a_duplicate_without_changing_stock_or_cost(): void
+    {
+        $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900, false);
+        $invoiceCount = Invoice::count();
+
+        $this->post(route('invoices.store'), [
+            'title' => 'Duplicate opening',
+            'date' => convertToJalali(now(), true),
+            'invoice_type' => 'beginning_inventory',
+            'invoice_number' => 2,
+            'warehouse_id' => $this->mainWarehouse->id,
+            'transactions' => [[
+                'item_id' => 'product-'.$this->product->id,
+                'quantity' => 3,
+                'unit' => 800,
+                'total' => 2400,
+            ]],
+        ])->assertSessionHasErrors('warehouse_id');
+
+        $this->assertSame($invoiceCount, Invoice::count());
+        $this->assertQuantity($this->product, $this->mainWarehouse, 2);
+        $this->assertEqualsWithDelta(125, (float) $this->product->fresh()->average_cost, 0.001);
+    }
+
+    public function test_later_purchase_and_sale_preserve_the_cost_of_a_backdated_beginning_inventory(): void
+    {
+        $product = $this->product('BACKDATED-COST', 0);
+        $product->update([
+            'cogs_subject_id' => $this->subject('070001', 'COGS'),
+            'income_subject_id' => $this->subject('050003', 'Sales revenue'),
+        ]);
+        $this->setStock($product, $this->mainWarehouse, 0, 0);
+        $customer = Customer::create([
+            'name' => 'Counterparty',
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'subject_id' => $this->subject('012001', 'Counterparty'),
+        ]);
+
+        $this->createApprovedInvoice($product, $customer, InvoiceType::BUY, $this->mainWarehouse, 10, 100, 1, '2026-01-02');
+        $this->createBeginningInventory($product, 10, $this->mainWarehouse, 300, true, 1, '2026-01-01');
+        $this->assertEqualsWithDelta(200, (float) $product->fresh()->average_cost, 0.001);
+
+        $buy = $this->createApprovedInvoice($product, $customer, InvoiceType::BUY, $this->mainWarehouse, 10, 200, 2, '2026-01-03');
+        $this->assertEqualsWithDelta(200, (float) $product->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(200, (float) $buy->items->first()->cog_after, 0.001);
+        $this->assertEqualsWithDelta(200, (float) $buy->items->first()->cog_before, 0.001);
+        $this->assertEqualsWithDelta(20, (float) $buy->items->first()->quantity_at, 0.001);
+        $this->assertEqualsWithDelta(200, $this->stockCost($product, $this->mainWarehouse), 0.001);
+
+        $ancillaryCost = AncillaryCostService::createAncillaryCost($this->user, [
+            'invoice_id' => $buy->id,
+            'customer_id' => $customer->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'date' => '2026-01-03',
+            'type' => 'Shipping',
+            'amount' => 300,
+            'vatPrice' => 0,
+            'ancillaryCosts' => [['product_id' => $product->id, 'amount' => 300]],
+        ], true)['ancillaryCost'];
+        $this->assertSame(InvoiceStatus::APPROVED, $ancillaryCost->status);
+        $this->assertEqualsWithDelta(210, (float) $product->fresh()->average_cost, 0.001);
+        (new AncillaryCostService)->changeAncillaryCostStatus($ancillaryCost, 'unapprove');
+        $this->assertEqualsWithDelta(200, (float) $product->fresh()->average_cost, 0.001);
+
+        (new InvoiceService)->changeInvoiceStatus($buy->fresh(), 'unapproved');
+        $this->assertEqualsWithDelta(200, (float) $product->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(20, (float) $product->fresh()->quantity, 0.001);
+        (new InvoiceService)->changeInvoiceStatus($buy->fresh(), 'approved');
+        $this->assertEqualsWithDelta(200, (float) $product->fresh()->average_cost, 0.001);
+
+        $sale = $this->createApprovedInvoice($product, $customer, InvoiceType::SELL, $this->mainWarehouse, 4, 500, 1, '2026-01-04');
+        $this->assertEqualsWithDelta(200, (float) $sale->items->first()->cog_after, 0.001);
+        $this->assertDatabaseHas('transactions', [
+            'document_id' => $sale->document_id,
+            'subject_id' => $product->cogs_subject_id,
+            'value' => -800,
+        ]);
+        $this->assertEqualsWithDelta(0, (float) $sale->document->transactions()->sum('value'), 0.001);
+    }
+
+    public function test_editing_an_approved_purchase_keeps_beginning_inventory_in_its_cost_inputs(): void
+    {
+        [, $buy, $product] = $this->openingThenBuy(1, 1);
+
+        InvoiceService::updateInvoice($buy->id, [
+            'title' => 'Replacement purchase',
+            'date' => '2026-01-02',
+            'invoice_type' => InvoiceType::BUY,
+            'customer_id' => $buy->customer_id,
+            'warehouse_id' => $this->mainWarehouse->id,
+            'document_number' => 2,
+            'number' => 1,
+        ], [$this->item($product, 10, 300)], true);
+
+        $item = $buy->fresh('items')->items->first();
+        $this->assertEqualsWithDelta(5, (float) $item->quantity_at, 0.001);
+        $this->assertEqualsWithDelta(100, (float) $item->cog_before, 0.001);
+        $this->assertEqualsWithDelta(15, (float) $product->fresh()->quantity, 0.001);
+        $this->assertEqualsWithDelta(233.33, (float) $product->fresh()->average_cost, 0.01);
+        $this->assertEqualsWithDelta(233.33, $this->stockCost($product, $this->mainWarehouse), 0.01);
+    }
+
+    public function test_legacy_purchases_without_a_cost_before_snapshot_still_use_previous_invoice_cost(): void
+    {
+        [, $buy, $product] = $this->openingThenBuy(1, 1);
+        $buy->items()->update(['cog_before' => null]);
+
+        (new InvoiceService)->changeInvoiceStatus($buy->fresh(), 'unapproved');
+
+        $this->assertEqualsWithDelta(100, (float) $product->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(5, (float) $product->fresh()->quantity, 0.001);
     }
 
     public function test_beginning_inventory_status_controls_are_disabled_only_after_closure(): void
