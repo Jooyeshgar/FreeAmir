@@ -19,6 +19,7 @@ class InvoiceItem extends Model
         'unit_price',
         'unit_discount',
         'cog_after',
+        'cog_before',
         'quantity_at', // quantity before this invoice
         'vat',
         'amount',      // total amount after discount and after vat
@@ -34,5 +35,4 @@ class InvoiceItem extends Model
     {
         return $this->morphTo();
     }
-
 }

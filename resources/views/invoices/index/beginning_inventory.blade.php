@@ -1,8 +1,14 @@
 <div class="card-actions">
     @can('invoices.create')
-        <a href="{{ route('invoices.create', ['invoice_type' => 'beginning_inventory']) }}" class="btn btn-primary">
-            {{ __('Create Beginning Inventory') }}
-        </a>
+        @if ($canCreateBeginningInventory)
+            <a href="{{ route('invoices.create', ['invoice_type' => 'beginning_inventory']) }}" class="btn btn-primary">
+                {{ __('Create Beginning Inventory') }}
+            </a>
+        @else
+            <button type="button" class="btn btn-primary" disabled aria-disabled="true">
+                {{ __('Create Beginning Inventory') }}
+            </button>
+        @endif
     @endcan
 </div>
 

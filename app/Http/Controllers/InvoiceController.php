@@ -91,7 +91,10 @@ class InvoiceController extends Controller
         $invoices->totalProductsQuantity = $itemTotals[Product::class] ?? 0;
         $invoices->totalServicesQuantity = $itemTotals[Service::class] ?? 0;
 
-        return view('invoices.index', ['invoices' => $invoices, 'statusCounts' => $statusCounts, 'service_buy' => $isServiceBuy]);
+        $canCreateBeginningInventory = $invoiceType === InvoiceType::BEGINNING_INVENTORY
+            && Warehouse::whereNotIn('id', Invoice::where('invoice_type', InvoiceType::BEGINNING_INVENTORY)->whereNotNull('warehouse_id')->select('warehouse_id'))->exists();
+
+        return view('invoices.index', ['invoices' => $invoices, 'statusCounts' => $statusCounts, 'service_buy' => $isServiceBuy, 'canCreateBeginningInventory' => $canCreateBeginningInventory]);
     }
 
     public function export(Request $request, ReportExportService $reportExportService): StreamedResponse
