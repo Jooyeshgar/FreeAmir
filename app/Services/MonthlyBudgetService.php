@@ -405,6 +405,16 @@ class MonthlyBudgetService
         $current['isComplete'] = $fiscalYear < $currentYear || ($fiscalYear === $currentYear && $month < $currentMonth);
         $current['comparisonUnavailable'] = $month === 1;
         $current['products'] = collect($current['products'])->sortByDesc('grossProfit')->take(10)->values();
+        $previousProducts = collect($previous['products'] ?? [])->keyBy('id');
+        $current['products'] = $current['products']->map(function (array $product) use ($previousProducts, $month) {
+            $prior = $previousProducts->get($product['id']);
+            $product['previousSales'] = $month === 1 ? null : (float) ($prior['sales'] ?? 0);
+            $product['salesChange'] = is_null($product['previousSales']) ? null : $product['sales'] - $product['previousSales'];
+            $product['previousGrossProfit'] = $month === 1 ? null : (float) ($prior['grossProfit'] ?? 0);
+            $product['grossProfitChange'] = is_null($product['previousGrossProfit']) ? null : $product['grossProfit'] - $product['previousGrossProfit'];
+
+            return $product;
+        });
 
         return $current;
     }
