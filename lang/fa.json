@@ -3555,5 +3555,9 @@
     "Configure a bank service fee expense account for the active fiscal year.": "حساب هزینه کارمزد بانک را برای سال مالی فعال تنظیم کنید.",
     "Enter only the fee charged at this stage. Leave zero if no fee was charged.": "فقط کارمزد این مرحله را وارد کنید. اگر کارمزدی پرداخت نشده است، مقدار صفر را وارد کنید.",
     "Record bank service fee": "ثبت کارمزد بانک",
-    "Enter a bank service fee greater than zero.": "کارمزد بانک باید بیشتر از صفر باشد."
+    "Enter a bank service fee greater than zero.": "کارمزد بانک باید بیشتر از صفر باشد.",
+    "Bookmark": "نشان‌گذاری",
+    "Bookmark invoice": "نشان‌گذاری فاکتور",
+    "Remove invoice bookmark": "حذف نشان فاکتور",
+    "Bookmarked invoices only": "فقط فاکتورهای نشان‌گذاری‌شده"
 }

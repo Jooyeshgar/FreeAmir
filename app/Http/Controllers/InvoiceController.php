@@ -6,6 +6,7 @@ use App\Enums\ChequeType;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Http\Requests\StoreInvoiceRequest;
+use App\Http\Requests\UpdateInvoiceBookmarkRequest;
 use App\Models\Bank;
 use App\Models\BankAccount;
 use App\Models\Chequebook;
@@ -106,6 +107,8 @@ class InvoiceController extends Controller
 
     private function applyInvoiceFilters(Builder $builder, Request $request, ?InvoiceType $invoiceType, bool $isServiceBuy): void
     {
+        $builder->when($request->boolean('bookmarked'), fn ($q) => $q->where('is_bookmarked', true));
+
         if ($invoiceType !== null) {
             $builder->where('invoice_type', $invoiceType);
         }
@@ -345,6 +348,14 @@ class InvoiceController extends Controller
         $fiscalYears = auth()->user()->fiscalYears()->with('company')->where('fiscal_years.id', '!=', getActiveFiscalYear())->orderByDesc('year')->get();
 
         return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects', 'paidAmount', 'remainingAmount', 'chequeDirection', 'chequeBanks', 'chequeBankAccounts', 'chequebooks', 'fiscalYears', 'canCreateAncillaryCost'));
+    }
+
+    public function updateBookmark(UpdateInvoiceBookmarkRequest $request, Invoice $invoice): RedirectResponse
+    {
+        $invoice->is_bookmarked = $request->boolean('is_bookmarked');
+        $invoice->save();
+
+        return back();
     }
 
     public function print(Invoice $invoice, ReportExportService $reportExportService)
