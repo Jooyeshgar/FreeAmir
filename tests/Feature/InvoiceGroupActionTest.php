@@ -288,6 +288,9 @@ class InvoiceGroupActionTest extends TestCase
             $this->assertInvoiceStatus($invoice->id, InvoiceStatus::APPROVED);
         }
         $this->assertEqualsWithDelta(30, $product->fresh()->quantity, 0.01);
+        $this->assertEqualsWithDelta(100, $firstBuy->items()->firstOrFail()->cog_after, 0.01);
+        $this->assertEqualsWithDelta(150, $secondBuy->items()->firstOrFail()->cog_after, 0.01);
+        $this->assertEqualsWithDelta(200, $thirdBuy->items()->firstOrFail()->cog_after, 0.01);
         $this->assertEqualsWithDelta(200, $product->fresh()->average_cost, 0.01);
     }
 

@@ -367,6 +367,7 @@ class InvoiceService
             return;
         }
 
+        $invoice->load('items.itemable');
         $invoiceItems = $invoice->items;
 
         if ($invoiceItems->isEmpty()) {
