@@ -18,6 +18,7 @@
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-2">
+                    <x-invoice-bookmark :invoice="$invoice" />
                     <span class="badge badge-lg badge-primary">{{ $invoice->status->label() }}</span>
                     @if ($invoice->warehouse)
                         <a class="badge badge-lg badge-secondary link"

@@ -6,6 +6,14 @@
     @endcan
 </div>
 
+@include('invoices.index.partials.search-form', [
+    'invoiceType' => 'beginning_inventory',
+    'isSellWorkflow' => false,
+    'showServiceBuy' => false,
+    'showMoadian' => false,
+    'showVoided' => false,
+])
+
 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 my-6">
     <x-stat-card :title="__('Total Quantity')" :value="formatNumber($invoices->totalProductsQuantity)" />
     <x-stat-card :title="__('Total Value')" :value="formatNumber($invoices->totalAmount)" />
@@ -15,6 +23,7 @@
     <table class="table">
         <thead>
             <tr>
+                <th>{{ __('Bookmark') }}</th>
                 <th>{{ __('Invoice Number') }}</th>
                 <th>{{ __('Document') }}</th>
                 <th>{{ __('Title') }}</th>
@@ -29,6 +38,7 @@
             @forelse ($invoices as $invoice)
                 @php $fiscalYearClosed = $invoice->fiscalYear?->isClosed() ?? false; @endphp
                 <tr>
+                    <td><x-invoice-bookmark :invoice="$invoice" /></td>
                     <td>{{ formatDocumentNumber($invoice->number) }}</td>
                 <td>
                     @if ($invoice->document_id)
@@ -88,7 +98,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="7" class="text-center">{{ __('No beginning inventory records found.') }}</td>
+                    <td colspan="9" class="text-center">{{ __('No beginning inventory records found.') }}</td>
                 </tr>
             @endforelse
         </tbody>

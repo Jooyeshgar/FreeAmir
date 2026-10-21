@@ -43,6 +43,7 @@ class Invoice extends Model
         'date' => 'date',
         'ship_date' => 'date',
         'active' => 'boolean',
+        'is_bookmarked' => 'boolean',
     ];
 
     public static function booted(): void

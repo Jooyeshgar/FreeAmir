@@ -3559,5 +3559,9 @@
     "Enter a bank service fee greater than zero.": "کارمزد بانک باید بیشتر از صفر باشد.",
     "Edit Payment": "ویرایش پرداخت",
     "Payment updated successfully.": "پرداخت با موفقیت ویرایش شد.",
-    "Invoice and settlement operations are read-only.": "عملیات فاکتور و تسویه فقط به‌صورت خواندنی در دسترس است."
+    "Invoice and settlement operations are read-only.": "عملیات فاکتور و تسویه فقط به‌صورت خواندنی در دسترس است.",
+    "Bookmark": "نشان‌گذاری",
+    "Bookmark invoice": "نشان‌گذاری فاکتور",
+    "Remove invoice bookmark": "حذف نشان فاکتور",
+    "Bookmarked invoices only": "فقط فاکتورهای نشان‌گذاری‌شده"
 }
