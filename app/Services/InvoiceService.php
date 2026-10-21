@@ -7,6 +7,7 @@ use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
 use App\Models\Cheque;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -74,6 +75,7 @@ class InvoiceService
             ];
 
             DB::transaction(function () use ($documentData, $user, $transactions, $invoiceData, $items, &$createdDocument, &$createdInvoice) {
+                self::assertBeginningInventoryOrder($createdInvoice, InvoiceStatus::APPROVED);
                 $createdDocument = DocumentService::createDocument($user, $documentData, $transactions);
                 DocumentService::changeDocumentStatus($createdDocument, $user, 'approved');
 
@@ -195,6 +197,12 @@ class InvoiceService
         if ($approved && $wasApproved) {
             $handledApprovedEdit = true;
             DB::transaction(function () use ($invoice, $invoiceData, $items, $buildResult, $oldItems, &$createdDocument) {
+                $replacement = clone $invoice;
+                $replacement->fill($invoiceData);
+                $replacement->setRelation('items', collect($items)->map(fn ($item) => new InvoiceItem([
+                    'itemable_type' => $item['itemable_type'] === 'product' ? Product::class : Service::class,
+                ])));
+                self::assertBeginningInventoryOrder($replacement, InvoiceStatus::APPROVED);
                 ProductService::subProductsQuantities($oldItems, $invoice->invoice_type);
 
                 $invoice->status = InvoiceStatus::UNAPPROVED;
@@ -222,6 +230,7 @@ class InvoiceService
                 ]);
 
                 ProductService::addProductsQuantities($items, $invoice->invoice_type);
+                self::syncInvoiceItems($invoice, $items);
                 $invoice->refresh();
                 CostOfGoodsService::updateProductsAverageCost($invoice);
                 ProductService::updateWarehouseAverageCosts($invoice);
@@ -250,6 +259,7 @@ class InvoiceService
             }
 
             DB::transaction(function () use ($invoice, $invoiceData, $items, &$createdDocument) {
+                self::assertBeginningInventoryOrder($invoice, InvoiceStatus::APPROVED);
                 $createdDocument = self::createDocumentFromInvoiceItems(auth()->user(), $invoice);
 
                 $invoiceData['status'] = InvoiceStatus::APPROVED;
@@ -280,6 +290,14 @@ class InvoiceService
     private static function updateInvoiceWithoutApproval(Invoice $invoice, array $invoiceData, array $items, array $buildResult, bool $approved = false)
     {
         DB::transaction(function () use ($invoice, $invoiceData, $items, $buildResult) {
+            if ($invoice->status->isApprovedOrSettled()) {
+                $replacement = clone $invoice;
+                $replacement->fill($invoiceData);
+                $replacement->setRelation('items', collect($items)->map(fn ($item) => new InvoiceItem([
+                    'itemable_type' => $item['itemable_type'] === 'product' ? Product::class : Service::class,
+                ])));
+                self::assertBeginningInventoryOrder($replacement, InvoiceStatus::APPROVED);
+            }
             $invoiceData['vat'] = $buildResult['totalVat'];
             $invoiceData['amount'] = $buildResult['totalAmount'];
             $invoiceData['title'] = $invoiceData['title'] ?? (__('Invoice #').($invoiceData['number'] ?? ''));
@@ -311,6 +329,7 @@ class InvoiceService
 
             $wasApproved = $invoice->status->isApprovedOrSettled();
             if ($wasApproved) {
+                self::assertBeginningInventoryOrder($invoice, InvoiceStatus::UNAPPROVED);
                 ProductService::subProductsQuantities($invoice->items->toArray(), $invoice->invoice_type);
                 $invoice->status = InvoiceStatus::UNAPPROVED;
                 CostOfGoodsService::updateProductsAverageCost($invoice);
@@ -570,12 +589,15 @@ class InvoiceService
      */
     private function approveInvoice(Invoice $invoice): void
     {
+        self::assertBeginningInventoryOrder($invoice, InvoiceStatus::APPROVED);
+
         $invoice->status = InvoiceStatus::APPROVED;
         $createdDocument = self::createDocumentFromInvoiceItems(auth()->user(), $invoice);
         $invoice->document_id = $createdDocument->id;
         $invoice->update();
         ProductService::addProductsQuantities($invoice->items->toArray(), $invoice->invoice_type);
         self::syncInvoiceItems($invoice, self::itemsFormatterForSyncingInvoiceItems($invoice));
+        $invoice->load('items.itemable');
         CostOfGoodsService::updateProductsAverageCost($invoice);
         ProductService::updateWarehouseAverageCosts($invoice);
         self::syncCOGAfterForInvoiceItems($invoice);
@@ -586,6 +608,7 @@ class InvoiceService
      */
     private function unapproveInvoice(Invoice $invoice): void
     {
+        self::assertBeginningInventoryOrder($invoice, InvoiceStatus::UNAPPROVED);
         $invoice->status = InvoiceStatus::UNAPPROVED;
 
         foreach ($invoice->payments()->whereNotNull('document_id')->get() as $payment) {
@@ -706,6 +729,71 @@ class InvoiceService
         return $productIds;
     }
 
+    private static function assertBeginningInventoryOrder(Invoice $invoice, InvoiceStatus $nextStatus): void
+    {
+        // Serialize opening changes and ordinary posting in the same fiscal year.
+        FiscalYear::whereKey($invoice->fiscal_year_id)->lockForUpdate()->firstOrFail();
+        $decision = new InvoiceStatusDecision;
+        self::checkBeginningInventoryOrder($invoice, $nextStatus, $decision);
+
+        if ($decision->hasErrors()) {
+            throw ValidationException::withMessages([
+                'beginning_inventory' => $decision->messages->pluck('text')->all(),
+            ]);
+        }
+    }
+
+    private static function checkBeginningInventoryOrder(Invoice $invoice, InvoiceStatus $nextStatus, InvoiceStatusDecision $decision): void
+    {
+        if ($invoice->invoice_type->isBeginningInventory()) {
+            // Product average cost is shared across warehouses. Even unrelated
+            // products' movements must be inactive for this conservative rule.
+            $posted = Invoice::normalInventoryMovements()
+                ->whereIn('status', InvoiceStatus::approvedOrSettled())->get();
+
+            if ($posted->isNotEmpty()) {
+                $decision->addMessage('error', __('invoices.status_change.opening_requires_inactive_movements'));
+                $posted->each(fn ($conflict) => $decision->addConflict($conflict));
+            }
+
+            if ($nextStatus->isApproved()) {
+                // Strictly earlier dates also protect reactivation of purchases
+                // created before the opening, including on the same day.
+                $earlierMovements = Invoice::normalInventoryMovements()
+                    ->whereIn('status', [...InvoiceStatus::approvedOrSettled(), InvoiceStatus::APPROVED_INACTIVE])
+                    ->whereDate('date', '<=', $invoice->date->toDateString())->get();
+
+                if ($earlierMovements->isNotEmpty()) {
+                    $decision->addMessage('error', __('invoices.status_change.opening_date_must_precede_movements'));
+                    $earlierMovements->each(fn ($conflict) => $decision->addConflict($conflict));
+                }
+            }
+
+            // Other warehouses' openings still have to be undone in reverse
+            // date/ID order when they contribute to the same product average.
+            $laterOpenings = self::findConflictingInvoices($invoice, self::getProductIdsFromInvoice($invoice), $nextStatus, [InvoiceType::BEGINNING_INVENTORY]);
+            if ($laterOpenings->isNotEmpty()) {
+                $decision->addMessage('error', __('invoices.status_change.blocked_by_subsequent'));
+                $laterOpenings->each(fn ($conflict) => $decision->addConflict($conflict));
+            }
+
+            return;
+        }
+
+        if (! $nextStatus->isApproved() || $invoice->items->where('itemable_type', Product::class)->isEmpty()) {
+            return;
+        }
+
+        $openings = Invoice::where('invoice_type', InvoiceType::BEGINNING_INVENTORY)
+            ->whereIn('status', InvoiceStatus::approvedOrSettled())
+            ->whereDate('date', '>=', $invoice->date->toDateString())->get();
+
+        if ($openings->isNotEmpty()) {
+            $decision->addMessage('error', __('invoices.status_change.movement_date_must_follow_opening'));
+            $openings->each(fn ($conflict) => $decision->addConflict($conflict));
+        }
+    }
+
     /**
      * Validate that related invoices have the correct status before changing an invoice's status.
      */
@@ -813,6 +901,12 @@ class InvoiceService
     public static function decideInvoiceStatusChange(Invoice $invoice, array $productIds, $nextStatus): InvoiceStatusDecision
     {
         $decision = new InvoiceStatusDecision;
+
+        self::checkBeginningInventoryOrder($invoice, $nextStatus, $decision);
+
+        if ($invoice->invoice_type->isBeginningInventory()) {
+            return $decision;
+        }
 
         self::checkReturnInvoiceRelationForStatusChange($invoice, $nextStatus, $decision);
 
@@ -1115,7 +1209,7 @@ class InvoiceService
                 $q->whereIn('product_id', $productIds);
             })->whereHas('invoice', function ($q) use ($invoice) {
                 $q->where('date', '<', $invoice->date)->orWhere(function ($sub) use ($invoice) {
-                    $sub->where('date', $invoice->date)->where('number', '<', $invoice->number);
+                    $sub->where('date', $invoice->date)->where('id', '<', $invoice->id);
                 });
             })->get();
     }
@@ -1128,7 +1222,7 @@ class InvoiceService
                 $q->whereIn('product_id', $productIds);
             })->whereHas('invoice', function ($q) use ($invoice) {
                 $q->where('date', '<', $invoice->date)->orWhere(function ($sub) use ($invoice) {
-                    $sub->where('date', $invoice->date)->where('number', '<', $invoice->number);
+                    $sub->where('date', $invoice->date)->where('id', '<', $invoice->id);
                 });
             })->get(['id', 'invoice_id', 'status', 'type']);
     }
@@ -1141,7 +1235,7 @@ class InvoiceService
                 $q->whereIn('product_id', $productIds);
             })->whereHas('invoice', function ($q) use ($invoice) {
                 $q->where('date', '>', $invoice->date)->orWhere(function ($sub) use ($invoice) {
-                    $sub->where('date', $invoice->date)->where('number', '>', $invoice->number);
+                    $sub->where('date', $invoice->date)->where('id', '>', $invoice->id);
                 });
             })->get(['id', 'invoice_id', 'status', 'type']);
     }

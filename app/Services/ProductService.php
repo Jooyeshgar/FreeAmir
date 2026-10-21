@@ -312,7 +312,6 @@ class ProductService
                     $query->where('itemable_type', Product::class)->where('itemable_id', $product->id);
                 }])
                 ->orderBy('date')
-                ->orderBy('number')
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->get();
