@@ -55,7 +55,7 @@ class BeginningInventoryTest extends TestCase
         config(['active-fiscal-year-id' => $this->fiscalYear->id]);
         $this->actingAs($this->user);
 
-        foreach (['create', 'edit', 'index', 'show', 'store', 'update', 'destroy', 'approve', 'change-status'] as $ability) {
+        foreach (['create', 'edit', 'index', 'show', 'store', 'update', 'destroy', 'approve', 'change-status', 'conflicts', 'conflicts.more'] as $ability) {
             $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'invoices.'.$ability]));
         }
 
@@ -634,6 +634,60 @@ class BeginningInventoryTest extends TestCase
         $buy->update(['status' => InvoiceStatus::APPROVED_INACTIVE]);
         $this->expectException(ValidationException::class);
         app(GroupActionService::class)->approveInactiveInvoices();
+    }
+
+    public function test_backdated_movement_conflict_pages_render_customerless_opening(): void
+    {
+        [$opening, $buy, $product] = $this->openingThenBuy(1, 2);
+        (new InvoiceService)->changeInvoiceStatus($buy->fresh(), 'unapproved');
+        InvoiceService::updateInvoice($buy->id, [
+            'title' => 'Backdated buy', 'date' => '2026-01-01', 'invoice_type' => InvoiceType::BUY,
+            'customer_id' => $buy->customer_id, 'warehouse_id' => $buy->warehouse_id, 'number' => $buy->number,
+        ], [$this->item($product, 5, 200)]);
+
+        $this->assertNull($opening->customer_id);
+        foreach ([
+            route('invoices.conflicts', $buy),
+            route('invoices.conflicts.more', [$buy, 'invoices']),
+        ] as $url) {
+            $this->get($url)
+                ->assertOk()
+                ->assertSee(route('invoices.show', $opening), false)
+                ->assertSee(InvoiceType::BEGINNING_INVENTORY->label());
+        }
+    }
+
+    public function test_opening_conflict_pages_render_later_customerless_opening(): void
+    {
+        $opening = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 100, true, 1, '2026-01-01');
+        $laterOpening = $this->createBeginningInventory($this->product, 5, $this->otherWarehouse, 200, true, 2, '2026-01-02');
+
+        $this->assertNull($laterOpening->customer_id);
+        foreach ([
+            route('invoices.conflicts', $opening),
+            route('invoices.conflicts.more', [$opening, 'invoices']),
+        ] as $url) {
+            $this->get($url)
+                ->assertOk()
+                ->assertSee(route('invoices.show', $laterOpening), false)
+                ->assertDontSee('/customers/', false);
+        }
+    }
+
+    public function test_opening_conflict_pages_keep_customer_links_for_ordinary_movements(): void
+    {
+        [$opening, $buy] = $this->openingThenBuy(1, 2);
+
+        foreach ([
+            route('invoices.conflicts', $opening),
+            route('invoices.conflicts.more', [$opening, 'invoices']),
+        ] as $url) {
+            $this->get($url)
+                ->assertOk()
+                ->assertSee(route('invoices.show', $buy), false)
+                ->assertSee(route('customers.show', $buy->customer), false)
+                ->assertSee($buy->customer->name);
+        }
     }
 
     public function test_other_fiscal_years_do_not_block_opening_inventory(): void
