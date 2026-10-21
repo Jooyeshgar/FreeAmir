@@ -757,6 +757,11 @@
                                         <td class="px-4 py-3">{{ $payment->description ?? '—' }}</td>
                                         <td class="px-4 py-3">
                                             <div class="flex flex-wrap gap-2 items-center">
+                                                @if (!$payment->cheque_id)
+                                                    @can('invoices.payments.edit')
+                                                        <a href="{{ route('invoices.payments.edit', [$invoice, $payment]) }}" class="btn btn-xs btn-outline">{{ __('Edit') }}</a>
+                                                    @endcan
+                                                @endif
                                                 @if ($payment->document && !$payment->cheque_id)
                                                     @can('invoices.payments.destroy-document')
                                                         <form class="m-0" method="POST"

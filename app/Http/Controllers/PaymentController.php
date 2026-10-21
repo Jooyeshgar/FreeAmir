@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\ChequeType;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\Subject;
 use App\Services\ChequeService;
 use App\Services\PaymentService;
 use Illuminate\Http\Request;
@@ -56,6 +57,45 @@ class PaymentController extends Controller
         }
 
         return redirect()->route('invoices.show', $invoice)->with('success', __('Payment recorded successfully.'));
+    }
+
+    public function edit(Invoice $invoice, Payment $payment)
+    {
+        abort_unless($payment->invoice_id === $invoice->id && ! $payment->cheque_id, 404);
+
+        return view('payments.edit', [
+            'invoice' => $invoice,
+            'payment' => $payment,
+            'settlementSubjects' => $this->paymentService->settlementSubjects(),
+            'selectedSubject' => Subject::find(old('subject_id', $payment->settlementSubject()?->id)),
+            'remainingAmount' => $this->paymentService->remainingAmount($invoice, $payment),
+        ]);
+    }
+
+    public function update(Request $request, Invoice $invoice, Payment $payment)
+    {
+        abort_unless($payment->invoice_id === $invoice->id && ! $payment->cheque_id, 404);
+
+        $normalized = array_replace($request->all(), [
+            'amount' => convertToFloat($request->input('amount', 0)),
+            'bank_service_fee' => $this->normalizeBankServiceFee($request),
+            'date' => $request->input('date') ? jalaliInputToGregorian($request->input('date'), 'date') : null,
+        ]);
+        $validated = Validator::make($normalized, [
+            'amount' => ['required', 'numeric', 'gt:0'],
+            'bank_service_fee' => ['required', 'numeric', 'min:0'],
+            'subject_id' => ['required', 'integer', Rule::exists('subjects', 'id')->where('fiscal_year_id', getActiveFiscalYear())],
+            'date' => ['nullable', 'date'],
+            'description' => ['nullable', 'string', 'max:1000'],
+            'reference_number' => ['nullable', 'string', 'max:20'],
+        ])->validate();
+
+        $decision = $this->paymentService->updatePayment($request->user(), $payment, $validated);
+        if ($decision->hasErrors()) {
+            return back()->withInput()->with('error', $decision->messages->pluck('text')->all());
+        }
+
+        return redirect()->route('invoices.show', $invoice)->with('success', __('Payment updated successfully.'));
     }
 
     public function storeCheque(Request $request, Invoice $invoice)

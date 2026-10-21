@@ -3555,5 +3555,7 @@
     "Configure a bank service fee expense account for the active fiscal year.": "Configure a bank service fee expense account for the active fiscal year.",
     "Enter only the fee charged at this stage. Leave zero if no fee was charged.": "Enter only the fee charged at this stage. Leave zero if no fee was charged.",
     "Record bank service fee": "Record bank service fee",
-    "Enter a bank service fee greater than zero.": "Enter a bank service fee greater than zero."
+    "Enter a bank service fee greater than zero.": "Enter a bank service fee greater than zero.",
+    "Edit Payment": "Edit Payment",
+    "Payment updated successfully.": "Payment updated successfully."
 }
