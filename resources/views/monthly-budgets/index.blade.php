@@ -289,6 +289,97 @@
             <x-metric-card :class="$hasDocuments ? '' : 'opacity-50 saturate-50'" :card="['title' => __('Actual Expense'), 'value' => $actualExpense ?? '—', 'suffix' => $hasDocuments ? $currency : null, 'detail' => $hasDocuments ? __('Expense utilization').': '.localizeNumber(number_format($expenseUtilization, 0)).'%' : __('No accounting document exists for calculating actual income and expense.'), 'tone' => $hasDocuments && $expenseVariance >= 0 ? 'success' : 'error', 'icon' => 'cost']" />
         </section>
 
+        <section class="space-y-3">
+            <div class="flex flex-wrap items-end justify-between gap-2">
+                <div>
+                    <h2 class="text-lg font-bold">{{ __('Actual Profitability') }}</h2>
+                    <p class="text-xs text-base-content/55">{{ __('Based on approved invoices and stored sale cost snapshots. Sales and purchases exclude VAT and include line discounts, returns, and voids.') }} {{ $profitability['isComplete'] ? __('Completed month') : __('Month to date') }}</p>
+                </div>
+                <span class="badge badge-outline">{{ $selectedMonthLabel }} · {{ localizeNumber(config('active-company-fiscal-year')) }} · {{ $currency }}</span>
+            </div>
+            @if ($profitability['comparisonUnavailable'])
+                <p class="text-xs text-base-content/55">{{ __('Previous month comparison is unavailable for the first month of the fiscal year.') }}</p>
+            @endif
+            <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                @foreach (['income' => __('Actual Income Breakdown'), 'expense' => __('Actual Cost Breakdown')] as $type => $title)
+                    <article class="card border border-base-300 bg-base-100 shadow-sm">
+                        <div class="card-body p-4 sm:p-5">
+                            <h3 class="card-title text-base">{{ $title }}</h3>
+                            <div class="overflow-x-auto">
+                                <table class="table table-sm">
+                                    <thead><tr><th>{{ __('Subject') }}</th><th class="text-end">{{ __('Actual') }}</th><th class="text-end">{{ __('Share') }}</th><th class="text-end">{{ __('Previous month') }}</th><th class="text-end">{{ __('Change') }}</th></tr></thead>
+                                    <tbody>
+                                        @forelse ($categoryDrivers[$type] as $driver)
+                                            <tr>
+                                                <td>@can('subjects.show')<a class="link link-hover" href="{{ route('subjects.show', $driver['subject']) }}">{{ formatCode($driver['subject']->code) }} {{ $driver['subject']->name }}</a>@else{{ formatCode($driver['subject']->code) }} {{ $driver['subject']->name }}@endcan</td>
+                                                <td class="text-end">{{ localizeNumber(number_format($driver['amount'], 0)) }}</td>
+                                                <td class="text-end">{{ is_null($driver['share']) ? '—' : localizeNumber(number_format($driver['share'], 1)).'%' }}</td>
+                                                <td class="text-end">{{ is_null($driver['previous']) ? '—' : localizeNumber(number_format($driver['previous'], 0)) }}</td>
+                                                <td class="text-end">{{ is_null($driver['change']) ? '—' : localizeNumber(number_format($driver['change'], 0)) }}</td>
+                                            </tr>
+                                        @empty
+                                            <tr><td colspan="5" class="text-center text-base-content/50">{{ __('No actual accounting categories are available.') }}</td></tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+                @foreach ([
+                    [__('Net Product Sales'), $profitability['sales'], 'sales'],
+                    [__('Net Purchases'), $profitability['purchases'], 'purchases'],
+                    [__('Cost of Goods Sold'), $profitability['cogs'], 'cogs'],
+                    [__('Gross Profit'), $profitability['grossProfit'], 'grossProfit'],
+                    [__('Accounting Net Profit or Loss'), $profitability['accountingNet'], 'accountingNet'],
+                ] as [$title, $value, $key])
+                    <article class="card border border-base-300 bg-base-100 shadow-sm">
+                        <div class="card-body gap-1 p-4">
+                            <h3 class="text-xs text-base-content/55">{{ $title }}</h3>
+                            <div class="text-lg font-bold tabular-nums">{{ is_null($value) ? '—' : localizeNumber(number_format($value, 0)) }} @if (! is_null($value)) <span class="text-xs font-normal">{{ $currency }}</span> @endif</div>
+                            @if ($key === 'grossProfit')
+                                <div class="text-xs text-base-content/55">{{ __('Gross margin') }}: {{ is_null($profitability['grossMargin']) ? '—' : localizeNumber(number_format($profitability['grossMargin'], 1)).'%' }}</div>
+                                @if (! is_null($profitability['comparisons']['grossMargin']['change'])) <div class="text-[11px] text-base-content/50">{{ __('Margin change') }}: {{ localizeNumber(number_format($profitability['comparisons']['grossMargin']['change'], 1)) }} {{ __('percentage points') }}</div> @endif
+                            @elseif ($key === 'accountingNet')
+                                <div class="text-xs text-base-content/55">{{ __('Net margin') }}: {{ is_null($profitability['accountingMargin']) ? '—' : localizeNumber(number_format($profitability['accountingMargin'], 1)).'%' }}</div>
+                                @if (! is_null($profitability['accountingComparisons']['accountingMargin']['change'])) <div class="text-[11px] text-base-content/50">{{ __('Margin change') }}: {{ localizeNumber(number_format($profitability['accountingComparisons']['accountingMargin']['change'], 1)) }} {{ __('percentage points') }}</div> @endif
+                            @endif
+                            @if (isset($profitability['comparisons'][$key]) || isset($profitability['accountingComparisons'][$key]))
+                                @php($comparison = $profitability['comparisons'][$key] ?? $profitability['accountingComparisons'][$key])
+                                <div class="mt-1 border-t border-base-200 pt-1 text-[11px] text-base-content/55">{{ __('Previous month') }}: {{ is_null($comparison['previous']) ? '—' : localizeNumber(number_format($comparison['previous'], 0)) }} · {{ __('Change') }}: {{ is_null($comparison['change']) ? '—' : localizeNumber(number_format($comparison['change'], 0)) }} @if (! is_null($comparison['percent'])) ({{ localizeNumber(number_format($comparison['percent'], 1)) }}%) @endif</div>
+                            @endif
+                        </div>
+                    </article>
+                @endforeach
+            </div>
+            @if ($profitability['products']->isNotEmpty())
+                <article class="card border border-base-300 bg-base-100 shadow-sm">
+                    <div class="card-body p-4 sm:p-5">
+                        <h3 class="card-title text-base">{{ __('Product Profitability') }}</h3>
+                        <div class="overflow-x-auto">
+                            <table class="table table-sm">
+                                <thead><tr><th>{{ __('Product') }}</th><th>{{ __('Product Group') }}</th><th class="text-end">{{ __('Net Product Sales') }}</th><th class="text-end">{{ __('Cost of Goods Sold') }}</th><th class="text-end">{{ __('Gross Profit') }}</th><th class="text-end">{{ __('Gross margin') }}</th></tr></thead>
+                                <tbody>
+                                    @foreach ($profitability['products'] as $product)
+                                        <tr>
+                                            <td>@can('products.show')<a class="link link-hover" href="{{ route('products.show', $product['id']) }}">{{ $product['name'] }}</a>@else{{ $product['name'] }}@endcan @if ($product['missingCost']) <span class="badge badge-warning badge-xs">{{ __('Cost unavailable') }}</span> @endif</td>
+                                            <td>{{ $product['group'] ?? '—' }}</td>
+                                            <td class="text-end">{{ localizeNumber(number_format($product['sales'], 0)) }}</td>
+                                            <td class="text-end">{{ localizeNumber(number_format($product['cogs'], 0)) }}</td>
+                                            <td class="text-end">{{ localizeNumber(number_format($product['grossProfit'], 0)) }}</td>
+                                            <td class="text-end">{{ is_null($product['grossMargin']) ? '—' : localizeNumber(number_format($product['grossMargin'], 1)).'%' }}</td>
+                                        </tr>
+                                    @endforeach
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </article>
+            @endif
+        </section>
+
         <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             @foreach ([
                 [__('Forecast Income Breakdown'), __('Forecast values for the five largest items.'), 'monthlyIncomeForecastItemsChart', $incomeItemDatasets[0] ?? null],

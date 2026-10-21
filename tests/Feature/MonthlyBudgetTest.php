@@ -4,9 +4,13 @@ namespace Tests\Feature;
 
 use App\Enums\FiscalYearSection;
 use App\Enums\SubjectType;
+use App\Models\Customer;
 use App\Models\Document;
 use App\Models\FiscalYear;
+use App\Models\Invoice;
+use App\Models\InvoiceItem;
 use App\Models\MonthlyBudget;
+use App\Models\Product;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
@@ -207,6 +211,61 @@ class MonthlyBudgetTest extends TestCase
             ->assertDontSee('-۸۰۰', false)->assertDontSee('-۷۰۰', false);
 
         $this->assertSame(4, substr_count($response->getContent(), "type: 'pie'"));
+    }
+
+    public function test_monthly_profitability_uses_approved_invoice_cost_snapshots_and_reverses_returns(): void
+    {
+        $product = Product::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'name' => 'Profit product']);
+        $makeInvoice = function (int $type, int $month, float $price, float $discount, float $cost) use ($product): void {
+            $document = Document::create([
+                'number' => Document::withoutGlobalScopes()->max('number') + 1,
+                'date' => jalali_to_gregorian(1405, $month, 10, '-'),
+                'creator_id' => $this->user->id,
+                'approver_id' => $this->user->id,
+                'approved_at' => now(),
+                'title' => 'Monthly profitability test',
+                'fiscal_year_id' => $this->fiscalYear->id,
+            ]);
+            $invoice = Invoice::create([
+                'number' => random_int(100000, 999999),
+                'date' => $document->date,
+                'document_id' => $document->id,
+                'customer_id' => Customer::factory()->create(['fiscal_year_id' => $this->fiscalYear->id])->id,
+                'creator_id' => $this->user->id,
+                'invoice_type' => $type,
+                'status' => 3,
+                'vat' => 0,
+                'subtraction' => 0,
+                'amount' => $price - $discount,
+            ]);
+            InvoiceItem::create([
+                'invoice_id' => $invoice->id,
+                'itemable_type' => Product::class,
+                'itemable_id' => $product->id,
+                'quantity' => 1,
+                'unit_price' => $price,
+                'unit_discount' => $discount,
+                'vat' => 0,
+                'amount' => $price - $discount,
+                'cog_after' => $cost,
+            ]);
+        };
+
+        $makeInvoice(2, 4, 1000, 100, 400);
+        $makeInvoice(2, 5, 1500, 100, 500);
+        $makeInvoice(4, 5, 200, 0, 100);
+        $makeInvoice(2, 5, 9999, 0, 1);
+        Invoice::query()->latest('id')->firstOrFail()->document()->update(['approved_at' => null]);
+
+        $analysis = $this->service->profitabilityAnalysis(5);
+
+        $this->assertSame(1200.0, $analysis['sales']);
+        $this->assertSame(400.0, $analysis['cogs']);
+        $this->assertSame(800.0, $analysis['grossProfit']);
+        $this->assertSame(900.0, $analysis['comparisons']['sales']['previous']);
+        $this->assertSame(300.0, $analysis['comparisons']['sales']['change']);
+        $this->assertSame(66.66666666666666, $analysis['products'][0]['grossMargin']);
+        $this->assertSame('Profit product', $analysis['products'][0]['name']);
     }
 
     /**

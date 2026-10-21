@@ -2,11 +2,15 @@
 
 namespace App\Services;
 
+use App\Enums\InvoiceStatus;
+use App\Enums\InvoiceType;
 use App\Enums\SubjectType;
 use App\Models\Company;
 use App\Models\Document;
 use App\Models\FiscalYear;
+use App\Models\Invoice;
 use App\Models\MonthlyBudget;
+use App\Models\Product;
 use App\Models\Subject;
 use App\Models\Transaction;
 use Illuminate\Support\Collection;
@@ -362,6 +366,116 @@ class MonthlyBudgetService
             'hasOverlappingForecasts' => $hasOverlappingForecasts,
             'hasPreviousForecast' => $selectedMonth > 1 && MonthlyBudget::query()->where('month', $selectedMonth - 1)->exists(),
         ];
+    }
+
+    /** Invoice movement metrics use approved accounting documents and line snapshots, never today's product cost. */
+    public function profitabilityAnalysis(int $month): array
+    {
+        $fiscalYear = (int) FiscalYear::query()->findOrFail(getActiveFiscalYear())->year;
+        $currentYear = (int) toEnglish(jdate('Y'));
+        $currentMonth = (int) toEnglish(jdate('n'));
+        $currentDay = (int) toEnglish(jdate('j'));
+        $isCurrentMonth = $fiscalYear === $currentYear && $month === $currentMonth;
+        $current = $this->invoiceMetricsForMonth($month, $isCurrentMonth ? $currentDay : null);
+        $previous = $month > 1 ? $this->invoiceMetricsForMonth($month - 1, $isCurrentMonth ? $currentDay : null) : null;
+        $comparisons = [];
+
+        foreach (['sales', 'purchases', 'cogs'] as $metric) {
+            $value = $current[$metric];
+            $prior = $previous[$metric] ?? null;
+            $comparisons[$metric] = [
+                'previous' => $prior,
+                'change' => is_null($prior) ? null : $value - $prior,
+                'percent' => is_null($prior) || $prior <= 0 ? null : (($value - $prior) / $prior) * 100,
+            ];
+        }
+
+        $previousGrossProfit = is_null($previous) ? null : $previous['sales'] - $previous['cogs'];
+        $previousGrossMargin = is_null($previous) || $previous['sales'] == 0 ? null : $previousGrossProfit / $previous['sales'] * 100;
+
+        $current['grossProfit'] = $current['sales'] - $current['cogs'];
+        $current['grossMargin'] = $current['sales'] != 0 ? $current['grossProfit'] / $current['sales'] * 100 : null;
+        $current['previousMonth'] = $previous;
+        $current['comparisons'] = $comparisons;
+        $current['comparisons']['grossMargin'] = [
+            'previous' => $previousGrossMargin,
+            'change' => is_null($previousGrossMargin) || is_null($current['grossMargin']) ? null : $current['grossMargin'] - $previousGrossMargin,
+            'percent' => null,
+        ];
+        $current['isComplete'] = $fiscalYear < $currentYear || ($fiscalYear === $currentYear && $month < $currentMonth);
+        $current['comparisonUnavailable'] = $month === 1;
+        $current['products'] = collect($current['products'])->sortByDesc('grossProfit')->take(10)->values();
+
+        return $current;
+    }
+
+    private function invoiceMetricsForMonth(int $month, ?int $dayLimit = null): array
+    {
+        [$startDate, $endDate] = $this->monthDateRange($month);
+        if ($dayLimit !== null) {
+            $lastDay = min($dayLimit, $month <= 6 ? 31 : ($month <= 11 ? 30 : (jcheckdate(12, 30, (int) FiscalYear::query()->findOrFail(getActiveFiscalYear())->year) ? 30 : 29)));
+            $endDate = jalali_to_gregorian((int) FiscalYear::query()->findOrFail(getActiveFiscalYear())->year, $month, $lastDay, '-');
+        }
+        $invoices = Invoice::query()->with(['voidedInvoice', 'items' => fn ($query) => $query->where('itemable_type', Product::class)->with('itemable.productGroup')])
+            ->whereHas('document', fn ($query) => $query->whereNotNull('approved_at')->whereBetween('date', [$startDate, $endDate]))
+            ->whereIn('status', InvoiceStatus::approvedOrSettled())
+            ->whereIn('invoice_type', [InvoiceType::SELL, InvoiceType::RETURN_SELL, InvoiceType::BUY, InvoiceType::RETURN_BUY, InvoiceType::VOID])
+            ->get();
+        $totals = ['sales' => 0.0, 'purchases' => 0.0, 'cogs' => 0.0];
+        $products = [];
+
+        foreach ($invoices as $invoice) {
+            $originalType = $invoice->invoice_type;
+            $sign = match ($originalType) {
+                InvoiceType::SELL, InvoiceType::BUY => 1,
+                InvoiceType::RETURN_SELL, InvoiceType::RETURN_BUY => -1,
+                InvoiceType::VOID => -1,
+                default => 0,
+            };
+            $reversedType = $originalType;
+            if ($originalType === InvoiceType::VOID) {
+                $reversedType = $invoice->voidedInvoice?->invoice_type;
+            }
+
+            foreach ($invoice->items as $item) {
+                $product = $item->itemable;
+                if (! $product) {
+                    continue;
+                }
+                $itemSales = ((float) $item->unit_price * (float) $item->quantity) - (float) $item->unit_discount;
+                $itemCogs = (float) $item->cog_after * (float) $item->quantity;
+                $salesSign = $reversedType === InvoiceType::SELL ? $sign : ($reversedType === InvoiceType::RETURN_SELL ? -$sign : 0);
+                $purchaseSign = $reversedType === InvoiceType::BUY ? $sign : ($reversedType === InvoiceType::RETURN_BUY ? -$sign : 0);
+                $cogsSign = $salesSign;
+                $totals['sales'] += $itemSales * $salesSign;
+                $totals['purchases'] += $itemSales * $purchaseSign;
+                $totals['cogs'] += $itemCogs * $cogsSign;
+
+                if ($salesSign !== 0) {
+                    $productId = (int) $product->id;
+                    $products[$productId] ??= [
+                        'id' => $productId,
+                        'name' => $product->name,
+                        'group' => $product->productGroup?->name,
+                        'sales' => 0.0,
+                        'cogs' => 0.0,
+                        'grossProfit' => 0.0,
+                        'missingCost' => false,
+                    ];
+                    $products[$productId]['sales'] += $itemSales * $salesSign;
+                    $products[$productId]['cogs'] += $itemCogs * $cogsSign;
+                    $products[$productId]['missingCost'] = $products[$productId]['missingCost'] || $item->cog_after <= 0;
+                }
+            }
+        }
+
+        foreach ($products as &$product) {
+            $product['grossProfit'] = $product['sales'] - $product['cogs'];
+            $product['grossMargin'] = $product['sales'] != 0 ? $product['grossProfit'] / $product['sales'] * 100 : null;
+        }
+        unset($product);
+
+        return [...$totals, 'products' => array_values($products)];
     }
 
     public function fullYearAnalysis(): array
