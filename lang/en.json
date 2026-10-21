@@ -1385,6 +1385,7 @@
     "Invoice": "Invoice",
     "Invoice #": "Invoice #",
     "Invoice #:invoice_number: Ancillary Cost #:id cannot be approved due to: :reason": "Invoice #:invoice_number: Ancillary Cost #:id cannot be approved due to: :reason",
+    "Invoice #:invoice_number: Payment #:id cannot be restored due to: :reason": "Invoice #:invoice_number: Payment #:id cannot be restored due to: :reason",
     "Invoice #:number": "Invoice #:number",
     "Invoice #:number cannot be approved because it has conflicts with: :conflicts": "Invoice #:number cannot be approved because it has conflicts with: :conflicts",
     "Invoice Buy List": "Invoice Buy List",

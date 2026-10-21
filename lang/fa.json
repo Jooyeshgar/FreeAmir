@@ -1381,6 +1381,7 @@
     "Invoice": "فاکتور",
     "Invoice #": "فاکتور #",
     "Invoice #:invoice_number: Ancillary Cost #:id cannot be approved due to: :reason": "فاکتور #:invoice_number: هزینه جانبی #:id نمی تواند تایید شود به دلیل: :reason",
+    "Invoice #:invoice_number: Payment #:id cannot be restored due to: :reason": "فاکتور #:invoice_number: پرداخت #:id قابل بازیابی نیست به دلیل: :reason",
     "Invoice #:number": "فاکتور #:number",
     "Invoice #:number cannot be approved because it has conflicts with: :conflicts": "فاکتور #:number نمی تواند تایید شود زیرا با موارد زیر در تعارض است: :conflicts",
     "Invoice Buy List": "فاکتورهای خرید",
