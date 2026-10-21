@@ -342,6 +342,64 @@ class BeginningInventoryTest extends TestCase
             ->assertSee(__('Unapprove'));
     }
 
+    public function test_beginning_inventory_status_controls_are_disabled_only_after_closure(): void
+    {
+        $invoice = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900, false);
+        $urls = [
+            route('invoices.index', ['invoice_type' => 'beginning_inventory']),
+            route('invoices.show', $invoice),
+        ];
+
+        foreach ([false, true] as $approved) {
+            if ($approved) {
+                (new InvoiceService)->changeInvoiceStatus($invoice, 'approved');
+            }
+
+            foreach ([false, true] as $closed) {
+                $this->fiscalYear->update(['closed_at' => $closed ? now() : null]);
+                foreach ($urls as $url) {
+                    $xpath = $this->pageXPath($url);
+                    $label = $approved ? __('Unapprove') : __('Approve');
+                    $buttons = $xpath->query('//button[normalize-space(.)="'.$label.'"]');
+                    $this->assertSame(1, $buttons->length);
+                    $button = $buttons->item(0);
+                    $classes = preg_split('/\s+/', trim($button->getAttribute('class')));
+                    $this->assertSame($closed, $button->hasAttribute('disabled'));
+                    $this->assertSame($closed, in_array('btn-disabled', $classes, true));
+                    $this->assertSame($closed, in_array('cursor-not-allowed', $classes, true));
+                    $this->assertContains($approved ? 'btn-warning' : 'btn-success', $classes);
+                    $this->assertSame($closed ? __('This fiscal year is already closed.') : '', $button->getAttribute('title'));
+                }
+            }
+            $this->fiscalYear->update(['closed_at' => null]);
+        }
+    }
+
+    public function test_closed_beginning_inventory_retains_disabled_edit_control(): void
+    {
+        $invoice = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900, false);
+        $url = route('invoices.show', $invoice);
+        $xpath = $this->pageXPath($url);
+        $this->assertSame(1, $xpath->query('//a[@href="'.route('invoices.edit', $invoice).'"]')->length);
+
+        $this->fiscalYear->update(['closed_at' => now()]);
+        $xpath = $this->pageXPath($url);
+        $this->assertSame(0, $xpath->query('//a[@href="'.route('invoices.edit', $invoice).'"]')->length);
+        $buttons = $xpath->query('//button[normalize-space(.)="'.__('Edit invoice').'"]');
+        $this->assertSame(1, $buttons->length);
+        $this->assertTrue($buttons->item(0)->hasAttribute('disabled'));
+        $this->assertSame(__('This fiscal year is already closed.'), $buttons->item(0)->getAttribute('title'));
+    }
+
+    private function pageXPath(string $url): \DOMXPath
+    {
+        $response = $this->get($url)->assertOk();
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="UTF-8">'.$response->getContent());
+
+        return new \DOMXPath($dom);
+    }
+
     public function test_approved_beginning_inventory_cannot_be_deleted(): void
     {
         $invoice = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900, true);
