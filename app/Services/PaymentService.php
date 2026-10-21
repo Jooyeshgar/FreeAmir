@@ -114,6 +114,45 @@ class PaymentService
         });
     }
 
+    public function updatePayment(User $user, Payment $payment, array $data): InvoiceStatusDecision
+    {
+        return DB::transaction(function () use ($user, $payment, $data) {
+            $payment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
+            $invoice = Invoice::query()->lockForUpdate()->findOrFail($payment->invoice_id);
+            app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
+
+            if ($payment->cheque_id) {
+                throw ValidationException::withMessages([
+                    'payment' => __('A cheque payment document is managed through the cheque lifecycle.'),
+                ]);
+            }
+
+            $decision = $this->validateInvoicePayment($invoice, $data, $payment);
+            if ($decision->hasErrors()) {
+                return $decision;
+            }
+
+            $payment->update([
+                'amount' => $data['amount'],
+                'bank_service_fee' => round((float) ($data['bank_service_fee'] ?? 0), 2),
+                'settlement_subject_id' => (int) $data['subject_id'],
+                'date' => $data['date'] ?? $payment->date?->toDateString() ?? now()->toDateString(),
+                'description' => $data['description'] ?? null,
+                'reference_number' => $data['reference_number'] ?? null,
+            ]);
+
+            if ($payment->document_id) {
+                $this->paymentDocument($user, $invoice, $payment->settlement_subject_id,
+                    (float) $payment->amount, $payment->date->toDateString(),
+                    (float) $payment->bank_service_fee, $payment->document);
+            }
+
+            $this->syncInvoiceStatus($invoice);
+
+            return $decision;
+        });
+    }
+
     public function saveChequePayment(User $user, ?Invoice $invoice, Cheque $cheque, Document $document, int $settlementSubjectId, ?Payment $payment = null, float $fee = 0): Payment
     {
         if ($invoice) {
@@ -204,7 +243,7 @@ class PaymentService
         ];
     }
 
-    private function paymentDocument(User $user, Invoice $invoice, int $settlementSubjectId, float $amount, ?string $date = null, float $fee = 0)
+    private function paymentDocument(User $user, Invoice $invoice, int $settlementSubjectId, float $amount, ?string $date = null, float $fee = 0, ?Document $document = null)
     {
         $customerSubjectId = $invoice->customer->subject?->id ?? $invoice->customer->subject_id;
         $customerSign = in_array($invoice->invoice_type, [InvoiceType::SELL, InvoiceType::RETURN_BUY]) ? 1 : -1;
@@ -229,6 +268,19 @@ class PaymentService
             'title' => __('Payment of').' '.(__('Invoice #').localizeNumber($invoice->number ?? $invoice->id)),
             'number' => null,
         ];
+        if ($document) {
+            DocumentService::updateDocument($document, [
+                'date' => $documentData['date'],
+                'documentable' => $document->documentable,
+            ]);
+            app(ActivityLogService::class)->deleteModels($document->transactions()->getQuery());
+            foreach ($transactions as $transactionData) {
+                DocumentService::createTransaction($document, $transactionData);
+            }
+
+            return $document;
+        }
+
         $document = DocumentService::createDocument($user, $documentData, $transactions);
         DocumentService::changeDocumentStatus($document, $user, 'approved');
 

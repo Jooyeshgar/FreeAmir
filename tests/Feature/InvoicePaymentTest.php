@@ -20,6 +20,7 @@ use App\Models\ProductGroup;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\ActivityLogService;
 use App\Services\AncillaryCostService;
 use App\Services\FiscalYearService;
 use App\Services\PaymentService;
@@ -27,7 +28,9 @@ use App\Services\ProductService;
 use Cookie;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\Helpers\InvoiceTestHelper;
 use Tests\Helpers\SeederHelper;
@@ -771,5 +774,201 @@ class InvoicePaymentTest extends TestCase
         $this->assertTrue($decision->hasErrors());
         $this->assertNull($original->fresh()->document_id);
         $this->assertEquals(100, $this->paymentService->paidAmount($invoice));
+    }
+
+    public function test_edit_payment_syncs_existing_document_and_invoice_status(): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+        $expense = $this->feeSubjectId();
+        $invoice = $this->approvedSell(100, 1);
+        $payment = $this->recordPayment($invoice, [
+            'amount' => 100, 'bank_service_fee' => 2, 'subject_id' => $this->cashSubjectId(),
+        ]);
+        $document = $payment->document;
+        $bank = $this->bankAccountSubjectId();
+        $before = Document::count();
+        $this->user->givePermissionTo(Permission::findOrCreate('invoices.payments.update'));
+
+        $this->get(route('invoices.show', $invoice))->assertOk()
+            ->assertSee('<button type="button" x-data="{}" class="btn btn-xs btn-outline" data-payment-id="'.$payment->id.'"', false)
+            ->assertSee('data-payment-id="'.$payment->id.'"', false)
+            ->assertSee('id="payment_modal"', false)
+            ->assertSee('name="bank_service_fee"', false)
+            ->assertSee('name="subject_id"', false);
+        $this->put(route('invoices.payments.update', [$invoice, $payment]), [
+            'amount' => '۶۰', 'bank_service_fee' => '۳٫۵۰', 'subject_id' => $bank,
+            'date' => '1405/07/01', 'description' => 'اصلاح پرداخت', 'reference_number' => 'new-ref',
+        ])->assertSessionHasNoErrors()->assertRedirect(route('invoices.show', $invoice));
+
+        $payment->refresh();
+        $this->assertSame($document->id, $payment->document_id);
+        $this->assertSame($before, Document::count());
+        $this->assertSame('60.00', $payment->amount);
+        $this->assertSame('3.50', $payment->bank_service_fee);
+        $this->assertSame($bank, $payment->settlement_subject_id);
+        $this->assertSame('اصلاح پرداخت', $payment->description);
+        $this->assertSame('new-ref', $payment->reference_number);
+        $document->refresh();
+        $this->assertSame($payment->date->toDateString(), $document->date->toDateString());
+        $this->assertSame($payment->id, $document->documentable_id);
+        $this->assertSame($payment->getMorphClass(), $document->documentable_type);
+        $this->assertNotNull($document->approved_at);
+        $transactions = $document->transactions;
+        $this->assertCount(4, $transactions);
+        $this->assertEquals(0, $transactions->sum('value'));
+        $this->assertEquals(-3.5, $transactions->where('subject_id', $expense)->sum('value'));
+        $this->assertEquals(-56.5, $transactions->where('subject_id', $bank)->sum('value'));
+        $this->assertCount(0, $transactions->where('subject_id', $this->cashSubjectId()));
+        $this->assertTrue($invoice->fresh()->status->isPartiallyPaid());
+
+        $this->paymentService->updatePayment($this->user, $payment, [
+            'amount' => 100, 'bank_service_fee' => 0, 'subject_id' => $bank,
+        ]);
+        $this->assertCount(2, $document->fresh()->transactions);
+        $this->assertTrue($invoice->fresh()->status->isPaid());
+    }
+
+    public function test_edit_adds_fee_rows_and_preserves_document_number(): void
+    {
+        $expense = $this->feeSubjectId();
+        foreach ([InvoiceType::BUY, InvoiceType::SELL, InvoiceType::RETURN_BUY, InvoiceType::RETURN_SELL] as $type) {
+            $invoice = Invoice::create([
+                'number' => ++$this->nextInvoiceNumber, 'date' => now()->toDateString(),
+                'creator_id' => $this->user->id, 'customer_id' => $this->customer->id,
+                'amount' => 100, 'subtraction' => 0, 'vat' => 0,
+                'invoice_type' => $type, 'status' => InvoiceStatus::APPROVED,
+            ]);
+            $payment = $this->recordPayment($invoice, ['amount' => 50, 'subject_id' => $this->cashSubjectId()]);
+            $number = $payment->document->number;
+            $this->assertFalse($this->paymentService->updatePayment($this->user, $payment, [
+                'amount' => 75, 'bank_service_fee' => 5, 'subject_id' => $this->cashSubjectId(),
+            ])->hasErrors());
+            $transactions = $payment->fresh()->document->transactions;
+            $sign = in_array($type, [InvoiceType::SELL, InvoiceType::RETURN_BUY]) ? 1 : -1;
+            $this->assertEquals($sign * 75, $transactions->where('subject_id', $invoice->customer->subject_id)->sum('value'));
+            $this->assertEquals(-5, $transactions->where('subject_id', $expense)->sum('value'));
+            $this->assertEquals(0, $transactions->sum('value'));
+            $this->assertEquals($number, $payment->fresh()->document->number);
+        }
+    }
+
+    public function test_edit_rejects_overpayment_and_invalid_subject_without_changing_records(): void
+    {
+        $invoice = $this->approvedSell(100, 1);
+        $payment = $this->recordPayment($invoice, ['amount' => 40, 'subject_id' => $this->cashSubjectId()]);
+        $this->recordPayment($invoice->fresh(), ['amount' => 60, 'subject_id' => $this->cashSubjectId()]);
+        $before = $payment->document->transactions->toArray();
+        $otherYear = FiscalYear::factory()->create(['year' => 1406]);
+        $otherSubject = Subject::factory()->create(['fiscal_year_id' => $otherYear->id]);
+        foreach ([
+            ['amount' => 41],
+            ['subject_id' => $otherSubject->id],
+            ['bank_service_fee' => -1],
+            ['bank_service_fee' => 2], // No expense account configured.
+        ] as $invalid) {
+            $decision = $this->paymentService->updatePayment($this->user, $payment, array_replace([
+                'amount' => 40, 'subject_id' => $this->cashSubjectId(), 'bank_service_fee' => 0,
+            ], $invalid));
+            $this->assertTrue($decision->hasErrors());
+            $this->assertSame('40.00', $payment->fresh()->amount);
+            $this->assertSame($before, $payment->fresh()->document->transactions->toArray());
+        }
+    }
+
+    public function test_edit_without_document_keeps_payment_unposted(): void
+    {
+        $invoice = $this->approvedSell(100, 1);
+        $payment = $this->recordPayment($invoice, ['amount' => 100, 'subject_id' => $this->cashSubjectId()]);
+        $this->paymentService->removePaymentDocument($payment);
+        $this->assertFalse($this->paymentService->updatePayment($this->user, $payment, [
+            'amount' => 60, 'subject_id' => $this->cashSubjectId(),
+        ])->hasErrors());
+        $this->assertNull($payment->fresh()->document_id);
+        $this->assertEquals(0, $this->paymentService->paidAmount($invoice));
+        $this->assertTrue($invoice->fresh()->status->isApproved());
+    }
+
+    public function test_edit_routes_reject_payment_from_another_invoice(): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+        $invoice = $this->approvedSell(100, 1);
+        $other = $this->approvedSell(100, 1);
+        $payment = $this->recordPayment($other, ['amount' => 40, 'subject_id' => $this->cashSubjectId()]);
+        $this->user->givePermissionTo(Permission::findOrCreate('invoices.payments.update'));
+        $this->get(route('invoices.show', $invoice))->assertOk()
+            ->assertDontSee('data-payment-id="'.$payment->id.'"', false);
+        $this->put(route('invoices.payments.update', [$invoice, $payment]), [
+            'amount' => 10, 'subject_id' => $this->cashSubjectId(),
+        ])->assertNotFound();
+        $this->assertSame('40.00', $payment->fresh()->amount);
+    }
+
+    public function test_payment_edit_requires_its_own_permissions(): void
+    {
+        $this->user->givePermissionTo(Permission::findOrCreate('invoices.show'));
+        $invoice = $this->approvedSell(100, 1);
+        $payment = $this->recordPayment($invoice, ['amount' => 100, 'subject_id' => $this->cashSubjectId()]);
+        $this->get(route('invoices.show', $invoice))->assertOk()
+            ->assertDontSee('data-payment-id="'.$payment->id.'"', false);
+        $data = ['amount' => 60, 'subject_id' => $this->cashSubjectId()];
+        $this->put(route('invoices.payments.update', [$invoice, $payment]), $data)->assertForbidden();
+        $this->user->givePermissionTo([
+            Permission::findOrCreate('invoices.payments.update'),
+            Permission::findOrCreate('invoices.payments.update'),
+        ]);
+        $this->get(route('invoices.show', $invoice))->assertOk()
+            ->assertSee('data-payment-id="'.$payment->id.'"', false);
+        $this->put(route('invoices.payments.update', [$invoice, $payment]), $data)
+            ->assertSessionHasNoErrors()->assertRedirect(route('invoices.show', $invoice));
+        $this->assertSame('60.00', $payment->fresh()->amount);
+    }
+
+    public function test_payment_edit_is_rejected_for_a_closed_fiscal_year(): void
+    {
+        $invoice = $this->approvedSell(100, 1);
+        $payment = $this->recordPayment($invoice, ['amount' => 100, 'subject_id' => $this->cashSubjectId()]);
+        FiscalYear::findOrFail($this->fiscalYearId)->update(['closed_at' => now()]);
+        try {
+            $this->paymentService->updatePayment($this->user, $payment, ['amount' => 60, 'subject_id' => $this->cashSubjectId()]);
+            $this->fail('Expected closed fiscal year rejection.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('fiscal_year', $exception->errors());
+        }
+        $this->assertSame('100.00', $payment->fresh()->amount);
+        $this->assertTrue($invoice->fresh()->status->isPaid());
+    }
+
+    public function test_edit_payment_rolls_back_when_document_update_fails(): void
+    {
+        $invoice = $this->approvedSell(100, 1);
+        $payment = $this->recordPayment($invoice, ['amount' => 100, 'subject_id' => $this->cashSubjectId()]);
+        $transactions = $payment->document->transactions->toArray();
+        $activityLog = $this->mock(ActivityLogService::class);
+        $activityLog->shouldReceive('recordModelEvent')->andReturnNull();
+        $activityLog->shouldReceive('deleteModels')->once()->andThrow(new \RuntimeException('Posting failed'));
+        try {
+            $this->paymentService->updatePayment($this->user, $payment, ['amount' => 60, 'subject_id' => $this->cashSubjectId()]);
+            $this->fail('Expected posting failure.');
+        } catch (\RuntimeException $exception) {
+            $this->assertSame('Posting failed', $exception->getMessage());
+        }
+        $this->assertSame('100.00', $payment->fresh()->amount);
+        $this->assertSame($transactions, $payment->fresh()->document->transactions->toArray());
+        $this->assertTrue($invoice->fresh()->status->isPaid());
+    }
+
+    public function test_payment_edit_permission_migration_preserves_access_for_existing_roles_and_users(): void
+    {
+        $store = Permission::findOrCreate('invoices.payments.store');
+        $role = Role::create(['name' => 'Payment recorder']);
+        $role->givePermissionTo($store);
+        $this->user->givePermissionTo($store);
+        $migration = require database_path('migrations/2026_10_21_070000_add_invoice_payment_edit_permissions.php');
+        $migration->up();
+        $migration->up();
+        foreach (['invoices.payments.update', 'invoices.payments.update'] as $name) {
+            $this->assertTrue($role->fresh()->hasPermissionTo($name));
+            $this->assertTrue($this->user->fresh()->hasPermissionTo($name));
+        }
     }
 }
