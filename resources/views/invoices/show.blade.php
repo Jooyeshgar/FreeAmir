@@ -15,7 +15,7 @@
                     {{ __('Issued on :date', ['date' => $invoice->date ? formatDate($invoice->date) : __('Unknown')]) }}
                 </p>
             </div>
-            <div class="flex flex-wrap gap-2 mt-2">
+            <div class="flex flex-wrap items-center gap-2 mt-2">
                 <x-invoice-bookmark :invoice="$invoice" />
                 <span class="badge badge-sm md:badge-md lg:badge-lg h-auto max-w-full whitespace-normal break-words py-1 badge-primary gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24"
