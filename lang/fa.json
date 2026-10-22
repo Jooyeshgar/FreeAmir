@@ -3628,5 +3628,17 @@
     "Loss-making products only": "فقط کالاهای زیان‌ده",
     "No products match these filters.": "کالایی با این فیلترها یافت نشد.",
     "No manual forecast is set. Completed months use actuals as the system forecast; other months inherit the previous forecast.": "پیش‌بینی دستی ثبت نشده است. پیش‌بینی سیستمی ماه‌های کامل‌شده برابر عملکرد واقعی است؛ سایر ماه‌ها پیش‌بینی ماه قبل را به ارث می‌برند.",
-    "Unchanged": "بدون تغییر"
+    "Unchanged": "بدون تغییر",
+    "Top five second-level accounts (Moein), ranked by their actual balance including all descendants, independently of forecasts.": "پنج سرفصل معین با بیشترین مانده واقعی، شامل جمع تمام زیرمجموعه‌ها و مستقل از پیش‌بینی.",
+    "Top five Moein accounts": "پنج سرفصل معین با بیشترین مبلغ",
+    "No actual second-level account activity is available.": "گردش واقعی برای سرفصل‌های معین موجود نیست.",
+    "Module share of total expenses": "سهم ماژول‌ها از کل هزینه‌ها",
+    "Each amount is compared with total accounting expenses for the selected period.": "هر مبلغ با کل هزینه‌های حسابداری دوره انتخاب‌شده مقایسه می‌شود.",
+    "Purchased services": "خرید خدمات",
+    "Approved and paid payslips: gross earnings plus employer insurance.": "فیش‌های تأییدشده و پرداخت‌شده: حقوق ناخالص به‌علاوه بیمه سهم کارفرما.",
+    "Net approved accounting balance, including returns and adjustments.": "مانده خالص اسناد حسابداری تأییدشده، شامل برگشت‌ها و تعدیلات.",
+    "No cost accounts are configured for this module.": "سرفصل هزینه‌ای برای این ماژول تنظیم نشده است.",
+    "This module exceeds recorded total expenses; check that its costs are posted in the same period.": "هزینه این ماژول از کل هزینه‌های ثبت‌شده بیشتر است؛ ثبت هزینه‌های آن در همین دوره را بررسی کنید.",
+    "Payroll uses the payslip month; the current month includes payslips issued through today. Payroll amounts may differ from posted expenses. Module percentages are independent and are not added together.": "حقوق و دستمزد بر اساس ماه فیش است؛ در ماه جاری، فیش‌های صادرشده تا امروز محاسبه می‌شوند. مبلغ فیش‌ها ممکن است با هزینه‌های ثبت‌شده در حسابداری متفاوت باشد. درصد هر ماژول مستقل است و درصدها با هم جمع نمی‌شوند.",
+    "Cost shares are unavailable until positive total expenses are recorded.": "تا زمانی که کل هزینه‌های ثبت‌شده مثبت نباشد، سهم هزینه‌ها قابل محاسبه نیست."
 }

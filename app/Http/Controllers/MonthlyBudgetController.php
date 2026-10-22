@@ -35,13 +35,14 @@ class MonthlyBudgetController extends Controller
                 ? $this->service->analysisThroughDay($selectedMonth - 1, $profitability['elapsedDay'])
                 : $this->service->analysis($selectedMonth - 1))
             : null;
-        $categoryLines = $this->service->categoryActuals($analysis);
-        $previousLines = $previousAccounting === null ? collect() : $this->service->categoryActuals($previousAccounting)->keyBy(fn (array $line) => (int) $line['subject']->id);
+        $dayLimit = $profitability['isCurrentMonth'] ? $profitability['elapsedDay'] : null;
+        $categoryLines = $this->service->driverActuals($selectedMonth, $dayLimit);
+        $previousLines = $previousAccounting === null ? collect() : $this->service->driverActuals($selectedMonth - 1, $dayLimit)->keyBy(fn (array $line) => (int) $line['subject']->id);
         $categoryDrivers = [];
         foreach (['income', 'expense'] as $type) {
             $total = abs((float) ($type === 'income' ? ($analysis['actualIncome'] ?? 0) : ($analysis['actualExpense'] ?? 0)));
             $categoryDrivers[$type] = $categoryLines
-                ->filter(fn (array $line) => $line['type'] === $type && $line['includedInSummary'] && ! is_null($line['actual']))
+                ->filter(fn (array $line) => $line['type'] === $type && $line['actual'] != 0)
                 ->sortByDesc(fn (array $line) => abs((float) $line['actual']))
                 ->take(5)
                 ->map(function (array $line) use ($previousLines, $total) {
@@ -119,6 +120,7 @@ class MonthlyBudgetController extends Controller
                 'comparisonDatasets' => $comparisonDatasets,
                 'profitability' => $profitability,
                 'categoryDrivers' => $categoryDrivers,
+                'moduleCostShares' => $this->service->moduleCostShares($selectedMonth, $analysis['actualExpense'], $dayLimit),
             ],
             $analysis
         ));
