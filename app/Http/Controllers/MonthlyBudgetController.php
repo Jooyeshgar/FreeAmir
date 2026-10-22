@@ -7,7 +7,6 @@ use App\Models\Subject;
 use App\Services\MonthlyBudgetService;
 use App\Services\SubjectService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -27,14 +26,21 @@ class MonthlyBudgetController extends Controller
         $subjects = $this->subjectService->buildSubjectTreeFromCollection($this->service->selectableSubjects($subjectRestrictions));
         $oldSubjectId = (int) $request->old('subject_id');
         $selectedSubject = $oldSubjectId && ! in_array($oldSubjectId, $subjectRestrictions, true) ? Subject::query()->where('is_permanent', false)->find($oldSubjectId) : null;
-        $analysis = $this->service->analysis($selectedMonth);
         $profitability = $this->service->profitabilityAnalysis($selectedMonth);
-        $previousAccounting = $selectedMonth > 1 ? $this->service->analysis($selectedMonth - 1) : null;
+        $analysis = $profitability['isCurrentMonth']
+            ? $this->service->analysisThroughDay($selectedMonth, $profitability['elapsedDay'])
+            : $this->service->analysis($selectedMonth);
+        $previousAccounting = $selectedMonth > 1
+            ? ($profitability['isCurrentMonth']
+                ? $this->service->analysisThroughDay($selectedMonth - 1, $profitability['elapsedDay'])
+                : $this->service->analysis($selectedMonth - 1))
+            : null;
+        $categoryLines = $this->service->categoryActuals($analysis);
+        $previousLines = $previousAccounting === null ? collect() : $this->service->categoryActuals($previousAccounting)->keyBy(fn (array $line) => (int) $line['subject']->id);
         $categoryDrivers = [];
         foreach (['income', 'expense'] as $type) {
             $total = abs((float) ($type === 'income' ? ($analysis['actualIncome'] ?? 0) : ($analysis['actualExpense'] ?? 0)));
-            $previousLines = collect($previousAccounting['budgetLines'] ?? [])->keyBy(fn (array $line) => (int) $line['subject']->id);
-            $categoryDrivers[$type] = $analysis['budgetLines']
+            $categoryDrivers[$type] = $categoryLines
                 ->filter(fn (array $line) => $line['type'] === $type && $line['includedInSummary'] && ! is_null($line['actual']))
                 ->sortByDesc(fn (array $line) => abs((float) $line['actual']))
                 ->take(5)
@@ -49,6 +55,7 @@ class MonthlyBudgetController extends Controller
                         'share' => $total > 0 ? ($amount / $total) * 100 : null,
                         'previous' => $prior,
                         'change' => is_null($prior) ? null : $amount - $prior,
+                        'percent' => is_null($prior) || $prior <= 0 ? null : (($amount - $prior) / $prior) * 100,
                     ];
                 })->values();
         }
@@ -86,12 +93,6 @@ class MonthlyBudgetController extends Controller
             'percent' => is_null($previousNet) || is_null($profitability['accountingNet']) || $previousNet <= 0 ? null : (($profitability['accountingNet'] - $previousNet) / $previousNet) * 100,
         ];
         $currency = config('amir.currency') ?? __('Rial');
-        $allBudgetLinesByForecast = $analysis['budgetLines'];
-        $displayBudgetLines = $allBudgetLinesByForecast->take(5);
-        $incomeLines = $allBudgetLinesByForecast->where('type', 'income');
-        $expenseLines = $allBudgetLinesByForecast->where('type', 'expense');
-        $incomeLinesCount = $incomeLines->count();
-        $expenseLinesCount = $expenseLines->count();
         $incomeAchievement = $analysis['actualsCalculated'] && $analysis['forecastIncome'] > 0 ? max(0, ($analysis['actualIncome'] / $analysis['forecastIncome']) * 100) : 0;
         $expenseUtilization = $analysis['actualsCalculated'] && $analysis['forecastExpense'] < 0 ? max(0, ($analysis['actualExpense'] / $analysis['forecastExpense']) * 100) : 0;
         $comparisonDatasets = [[
@@ -108,34 +109,14 @@ class MonthlyBudgetController extends Controller
             ];
         }
 
-        $incomeItemDatasets = $this->itemComparisonDatasets(
-            $incomeLines->where('includedInSummary', true),
-            $analysis['actualsCalculated'],
-            '#2563eb',
-            '#16a34a'
-        );
-        $expenseItemDatasets = $this->itemComparisonDatasets(
-            $expenseLines->where('includedInSummary', true),
-            $analysis['actualsCalculated'],
-            '#f59e0b',
-            '#dc2626'
-        );
-
         return view('monthly-budgets.index', array_merge(
             [
                 'subjects' => $subjects,
                 'selectedSubject' => $selectedSubject,
                 'currency' => $currency,
-                'incomeLinesCount' => $incomeLinesCount,
-                'expenseLinesCount' => $expenseLinesCount,
-                'allBudgetLinesByForecast' => $allBudgetLinesByForecast,
-                'displayBudgetLines' => $displayBudgetLines,
-                'hasMoreBudgetLines' => $allBudgetLinesByForecast->count() > 5,
                 'incomeAchievement' => $incomeAchievement,
                 'expenseUtilization' => $expenseUtilization,
                 'comparisonDatasets' => $comparisonDatasets,
-                'incomeItemDatasets' => $incomeItemDatasets,
-                'expenseItemDatasets' => $expenseItemDatasets,
                 'profitability' => $profitability,
                 'categoryDrivers' => $categoryDrivers,
             ],
@@ -172,7 +153,7 @@ class MonthlyBudgetController extends Controller
             'subject_id' => [
                 'required',
                 'integer',
-                Rule::exists('subjects', 'id')->where('fiscal_year_id', getActiveFiscalYear())->where('is_permanent', false),
+                Rule::exists('subjects', 'id')->where('fiscal_year_id', getActiveFiscalYear())->where('is_permanent', 0),
             ],
             'forecast_amount' => ['required', 'numeric', 'regex:/^-?\d+(\.\d{1,2})?$/', 'not_in:0', 'between:-9999999999999999.99,9999999999999999.99'],
             'source' => ['nullable', Rule::in(['cost-income'])],
@@ -216,30 +197,5 @@ class MonthlyBudgetController extends Controller
         $monthlyBudget->delete();
 
         return redirect()->route('budgets.index', ['month' => $month])->with('success', __('Forecast deleted successfully.'));
-    }
-
-    private function itemComparisonDatasets(Collection $lines, bool $includeActuals, string $forecastColor, string $actualColor): array
-    {
-        $forecastTop = $lines->sortByDesc(fn (array $line) => abs((float) $line['forecast']))->take(5);
-        $actualTop = $includeActuals
-            ? $lines->sortByDesc(fn (array $line) => abs((float) ($line['actual'] ?? 0)))->take(5)
-            : collect();
-        $topLines = $forecastTop->merge($actualTop)->unique(fn (array $line) => (int) $line['subject']->id);
-        $dataset = fn (string $label, string $key, string $color) => [
-            'label' => __($label),
-            'data' => $topLines->mapWithKeys(function (array $line) use ($key) {
-                $value = (float) $line[$key];
-
-                return [formatCode($line['subject']->code).' '.$line['subject']->name => abs($value)];
-            })->all(),
-            'backgroundColor' => $color.'cc',
-            'borderColor' => $color,
-            'borderRadius' => 5,
-        ];
-
-        return array_values(array_filter([
-            $dataset('Forecast', 'forecast', $forecastColor),
-            $includeActuals ? $dataset('Actual', 'actual', $actualColor) : null,
-        ]));
     }
 }

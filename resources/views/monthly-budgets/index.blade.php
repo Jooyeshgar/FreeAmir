@@ -1,526 +1,145 @@
 <x-app-layout :title="__('Monthly Income and Expense Workbench')">
     <x-show-message-bags />
 
-    <main class="mx-auto mt-4 w-full max-w-[1430px] space-y-4 px-2 sm:mt-6 sm:space-y-5 sm:px-4 lg:px-6">
-        <section class="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/10 via-base-100 to-secondary/10 shadow-sm">
-            <div class="relative flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between lg:p-6">
-                <div class="flex min-w-0 items-start gap-3 sm:gap-4">
-                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-content shadow-lg shadow-primary/20 sm:h-12 sm:w-12 sm:rounded-2xl">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 19V5m0 14h16M8 15l3-3 3 2 5-7m0 0h-4m4 0v4" />
-                        </svg>
-                    </span>
-                    <div class="min-w-0">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <h1 class="break-words text-xl font-bold text-base-content sm:text-2xl">{{ __('Monthly Income and Expense Workbench') }}</h1>
-                            <x-user-guide-link source="reports/budgets/budgets.md" />
-                            <span class="badge badge-primary badge-outline">{{ $selectedMonthLabel }}</span>
-                            @if (! $hasDocuments)
-                                <span class="inline-flex max-w-full rounded-lg border border-warning px-2 py-1 text-xs leading-5 text-warning">
-                                    {{ __('No accounting document exists for calculating actual income and expense.') }}
-                                </span>
-                            @endif
-                        </div>
-                        <p class="mt-1.5 max-w-2xl text-sm leading-6 text-base-content/60">
-                            {{ __("Manual forecasts take priority. Completed months otherwise use actual values; current and future months inherit the previous month's applied forecast.") }}
-                        </p>
-                    </div>
-                </div>
+    @php
+        $previousMonthLabel = $months[$selectedMonth - 1] ?? null;
+        $fiscalYearLabel = localizeNumber(config('active-company-fiscal-year'));
+    @endphp
 
-                <form method="GET" action="{{ route('budgets.index') }}" class="w-full sm:w-auto lg:shrink-0">
-                    <label class="form-control">
-                        <span class="mb-1 text-xs font-medium text-base-content/55">{{ __('Month') }}</span>
-                        <select name="month" class="select select-bordered select-sm w-1/2 bg-base-100/90 sm:min-w-40" onchange="this.form.submit()">
-                            @foreach ($months as $monthNumber => $monthName)
-                                <option value="{{ $monthNumber }}" @selected($selectedMonth === $monthNumber)>{{ $monthName }}</option>
-                            @endforeach
-                        </select>
-                    </label>
-                </form>
-            </div>
-
-            <div class="relative flex flex-col items-stretch gap-3 border-t border-primary/10 bg-base-100/45 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-5 lg:px-6">
-                <div class="flex min-w-0 flex-wrap items-center gap-2 text-xs text-base-content/55">
-                    <span class="badge badge-ghost gap-1"><span class="h-1.5 w-1.5 rounded-full bg-success"></span>{{ trans_choice(':count income lines', $incomeLinesCount, ['count' => localizeNumber($incomeLinesCount)]) }}</span>
-                    <span class="badge badge-ghost gap-1"><span class="h-1.5 w-1.5 rounded-full bg-error"></span>{{ trans_choice(':count expense lines', $expenseLinesCount, ['count' => localizeNumber($expenseLinesCount)]) }}</span>
-                    @if ($hasDocuments)
-                        <span class="badge badge-success badge-outline">{{ trans_choice(':count accounting documents', $documentCount, ['count' => localizeNumber($documentCount)]) }}</span>
-                    @endif
-                </div>
-
-                @can('budgets.rollover')
-                    <form method="POST" action="{{ route('budgets.rollover') }}" class="w-full sm:w-auto"
-                        onsubmit="return confirm('{{ __('Copy the previous month forecast into :month. Existing values for this month will be replaced.', ['month' => $selectedMonthLabel]) }}')">
-                        @csrf
-                        <x-input name="month" value="{{ $selectedMonth }}" hidden />
-                        <button type="submit" class="btn btn-ghost btn-sm w-full sm:w-auto" @disabled(! $hasPreviousForecast)
-                            title="{{ ! $hasPreviousForecast ? __('No forecast exists for the previous month.') : '' }}">
-                            {{ __('Copy Previous Month') }}
-                        </button>
-                    </form>
+    <div dir="{{ app()->isLocale('fa') ? 'rtl' : 'ltr' }}" class="budget-workbench mx-auto w-full max-w-[1430px] space-y-6 px-3 sm:px-6">
+        <header class="budget-header">
+            <div>
+                @can('reports.cost-income')
+                    <a class="budget-back" href="{{ route('reports.cost-income') }}">{{ __('Annual income and expense report') }} <span aria-hidden="true">↗</span></a>
                 @endcan
+                <div class="mt-2 flex items-center gap-2">
+                    <h1 class="text-xl font-bold sm:text-2xl">{{ __('Monthly Income and Expense Workbench') }}</h1>
+                    <x-user-guide-link source="reports/budgets/budgets.md" />
+                </div>
+                <p class="mt-2 text-sm text-base-content/65">{{ __('Understand this month, compare performance, and plan the next step.') }}</p>
             </div>
-        </section>
-
-        <section class="space-y-4">
-            @if ((auth()->user()->can('budgets.store') && auth()->user()->can('budgets.search-subjects')) || $hasOverlappingForecasts)
-                <div role="alert" class="alert alert-warning grid grid-cols-[auto_minmax(0,1fr)] items-start border border-warning/30 bg-warning/10 px-3 text-sm text-amber-900 sm:px-4 dark:text-slate-100">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.3 3.6 2.7 17.2A2 2 0 0 0 4.4 20h15.2a2 2 0 0 0 1.7-2.8L13.7 3.6a2 2 0 0 0-3.4 0Z" />
-                    </svg>
-                    <span>{{ __('Forecasts for lower-level subjects shown below a manually forecast root are details only and are already included in the root total.') }}</span>
-                </div>
-            @endif
-
-            @if (auth()->user()->can('budgets.store') && auth()->user()->can('budgets.search-subjects'))
-                <article class="card overflow-visible border border-base-300 bg-base-100 shadow-sm">
-                    <div class="flex items-center gap-3 border-b border-base-300 px-4 py-4 sm:px-5">
-                        <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.9">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-7-7h14" />
-                            </svg>
-                        </span>
-                        <div>
-                            <h2 class="font-bold text-base-content">{{ __('New Forecast') }}</h2>
-                            <p class="text-xs text-base-content/50">{{ __('Only root subjects and their immediate lower-level subjects can be selected.') }}</p>
-                        </div>
-                    </div>
-
-                    <form method="POST" action="{{ route('budgets.store') }}" class="p-4 sm:p-5">
-                        @csrf
-                        @method('PUT')
-                        <x-input name="month" value="{{ $selectedMonth }}" hidden />
-
-                        <div class="grid grid-cols-1 items-end gap-4 md:grid-cols-[minmax(0,3fr)_minmax(16rem,2fr)_auto]">
-                            <fieldset class="form-control min-w-0" x-data="{
-                                selectedName: @js($selectedSubject?->name ?? ''),
-                                selectedCode: @js($selectedSubject?->code ?? ''),
-                                selectedId: @js($selectedSubject?->id),
-                            }">
-                                <x-subject-select class="w-full" :subjects="$subjects" :url="route('budgets.search-subjects', ['month' => $selectedMonth])"
-                                    title="{{ __('Subject') }}" placeholder="{{ __('Select Subject') }}"
-                                    @selected="selectedName = $event.detail.name; selectedCode = $event.detail.code; selectedId = $event.detail.id" />
-                                <x-input name="subject_id" x-bind:value="selectedId" hidden />
-                            </fieldset>
-
-                            <fieldset class="form-control min-w-0">
-                                <label for="forecast_amount_display" class="label py-1 text-xs font-medium">
-                                    <span class="tooltip hidden text-base-content/50 md:inline-flex lg:hidden"
-                                        data-tip="{{ __('Enter income as a positive amount and expense as a negative amount; the sign must match the subject type.') }}">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mb-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 17v-6m0-4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                        </svg>
-                                        <span class="sr-only">{{ __('Enter income as a positive amount and expense as a negative amount; the sign must match the subject type.') }}</span>
-                                    </span>
-                                    {{ __('Forecast Amount') }} ({{ $currency }})
-                                </label>
-                                <span class="mt-0.5 font-normal text-xs text-base-content/50 md:hidden lg:block">{{ __('Enter income as a positive amount and expense as a negative amount; the sign must match the subject type.') }}</span>
-                                <div x-data="{ forecastAmount: @js(old('forecast_amount', '')) }">
-                                    <x-input name="forecast_amount" x-bind:value="forecastAmount" hidden />
-                                    <x-text-input id="forecast_amount_display" required placeholder="{{ localizeNumber('0') }}"
-                                        input_class="grow bg-transparent tabular-nums outline-none" x-bind:value="forecastAmount"
-                                        x-on:input="forecastAmount = $store.utils.convertToEnglish($event.target.value)"
-                                        x-effect="$el.value = forecastAmount ? $store.utils.localizeNumber($store.utils.formatNumber(forecastAmount)) : ''" />
-                                </div>
-                            </fieldset>
-
-                            <div class="w-full justify-self-start sm:w-auto">
-                                <button type="submit" class="btn btn-primary btn-sm h-10 w-full gap-1.5 whitespace-nowrap px-3 sm:w-auto" title="{{ __('Save Forecast Line') }}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-7-7h14" />
-                                    </svg>
-                                    <span>{{ __('Save Forecast') }}</span>
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </article>
-            @endif
-
-            @foreach ([[$displayBudgetLines, false], ...($hasMoreBudgetLines ? [[$allBudgetLinesByForecast, true]] : [])] as [$tableLines, $isModal])
-                @if ($isModal)
-                    <dialog id="all-monthly-forecasts-modal" class="modal">
-                        <div class="modal-box max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-6xl p-0 sm:max-h-[calc(100dvh-2rem)] sm:w-11/12">
-                            <div class="flex items-center justify-between border-b border-base-300 px-4 py-3 sm:px-5 sm:py-4">
-                                <div>
-                                    <h3 class="text-lg font-bold">{{ __('Forecasts') }}</h3>
-                                    <p class="mt-1 text-xs text-base-content/50">{{ $selectedMonthLabel }}
-                                        <span class="badge badge-neutral badge-sm">{{ localizeNumber($budgetLines->count()) }}</span>
-                                    </p>
-                                </div>
-                                <form method="dialog"><button class="btn btn-circle btn-ghost btn-sm" aria-label="{{ __('Close') }}">✕</button></form>
-                            </div>
-                @else
-                    <article class="card overflow-hidden border border-base-300 bg-base-100 shadow-sm">
-                        <div class="flex flex-wrap items-center gap-3 border-b border-base-300 px-4 py-4 sm:px-5">
-                            <div class="w-full">
-                                <div class="flex flex-col items-stretch gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-                                    <div class="flex flex-wrap items-center gap-2">
-                                        <h2 class="font-bold text-base-content">{{ __('Forecasts') }}</h2>
-                                        <span class="badge badge-neutral badge-sm">{{ localizeNumber($budgetLines->count()) }}</span>
-                                        <span class="badge badge-primary badge-outline badge-sm">{{ trans_choice(':count manual forecasts', $manualForecastsCount, ['count' => localizeNumber($manualForecastsCount)]) }}</span>
-                                    </div>
-                                    @if ($hasMoreBudgetLines)
-                                        <button type="button" class="btn btn-outline btn-primary btn-sm w-full sm:w-auto" onclick="document.getElementById('all-monthly-forecasts-modal').showModal()">{{ __('Show all') }}</button>
-                                    @endif
-                                </div>
-                                <div class="mt-3 grid w-full grid-cols-1 gap-x-4 gap-y-2 text-[11px] text-base-content/55 sm:grid-cols-2 xl:grid-cols-4">
-                                    <span class="flex items-start gap-1.5">
-                                        <span class="shrink-0 font-semibold text-primary">{{ __('Manual Forecast') }}:</span>
-                                        <span>{{ __('Entered by the user.') }}</span>
-                                    </span>
-                                    <span class="flex items-start gap-1.5">
-                                        <span class="shrink-0 font-semibold text-base-content/70">{{ __('System forecast') }}:</span>
-                                        <span>{{ __("Calculated automatically from the actual value or the previous month's applied forecast.") }}</span>
-                                    </span>
-                                    <span class="flex items-start gap-1.5">
-                                        <span class="shrink-0 font-semibold text-success">{{ __('Actual') }}:</span>
-                                        <span>{{ __('Actual values include transactions on the selected subject and all its descendants in documents dated within this month.') }}</span>
-                                    </span>
-                                    <span class="flex items-start gap-1.5">
-                                        <span class="shrink-0 font-semibold text-warning">{{ __('Variance') }}:</span>
-                                        <span>{{ __('Positive variance is favorable; negative variance is unfavorable.') }}</span>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
+            <form method="GET" action="{{ route('budgets.index') }}" class="budget-month-picker">
+                @if ($selectedMonth > 1)
+                    <a class="btn btn-ghost btn-square btn-sm" href="{{ route('budgets.index', ['month' => $selectedMonth - 1]) }}" aria-label="{{ __('Previous month') }}"><span class="budget-prev" aria-hidden="true">‹</span></a>
                 @endif
-
-                <div @class(['max-h-[70vh] overflow-auto' => $isModal, 'overflow-x-auto' => ! $isModal])>
-                    <table class="table">
-                        <thead @class(['text-xs uppercase text-base-content/55', 'sticky top-0 z-10 bg-base-200' => $isModal, 'bg-base-200/60' => ! $isModal])>
-                            <tr>
-                                <th>{{ __('Subject') }}</th>
-                                <th>{{ __('Type') }}</th>
-                                <th class="text-end">{{ __('Applied Forecast') }}</th>
-                                <th class="text-end">{{ __('Actual') }}</th>
-                                <th class="text-end">{{ __('Variance') }}</th>
-                                <th class="w-12"></th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-base-200">
-                            @forelse ($tableLines as $line)
-                                <tr class="group hover:bg-base-200/40">
-                                    <td>
-                                        <div @class(['min-w-56', 'ps-6' => $line['isChild']])>
-                                            <div class="flex items-center gap-1.5 font-medium text-base-content">
-                                                @if ($line['isChild'])<span class="text-base-content/35">↳</span>@endif
-                                                <span>{{ $line['subject']->name }}</span>
-                                                @if ($line['isRemainder'])
-                                                    <span class="badge badge-ghost badge-xs">{{ __('Remainder excluding lower-level forecasts') }}</span>
-                                                @elseif (! $line['includedInSummary'])
-                                                    <span class="badge badge-info badge-outline badge-xs">{{ __('Included in parent total') }}</span>
-                                                @endif
-                                            </div>
-                                            <div class="mt-0.5 font-mono text-[11px] text-base-content/45">{{ formatCode($line['subject']->code) }}</div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge {{ $line['type'] === 'income' ? 'badge-success' : 'badge-error' }} badge-outline badge-sm">
-                                            {{ $line['type'] === 'income' ? __('Income') : __('Expense') }}
-                                        </span>
-                                    </td>
-                                    <td class="text-end tabular-nums">
-                                        <div class="flex flex-wrap items-center justify-end gap-1.5 font-semibold">
-                                            <span>{{ formatNumber($line['forecast']) }}</span>
-                                            <span @class(['badge badge-xs', 'badge-primary' => $line['source'] === 'manual', 'badge-ghost' => $line['source'] === 'system'])>
-                                                {{ $line['source'] === 'manual' ? __('Manual Forecast') : __('System forecast') }}
-                                            </span>
-                                        </div>
-                                        @if ($line['source'] === 'manual')
-                                            <div class="mt-1 text-[11px] text-base-content/50">{{ __('System forecast') }}: {{ formatNumber($line['systemForecast']) }}</div>
-                                        @endif
-                                    </td>
-                                    <td class="text-end tabular-nums">
-                                        @if (is_null($line['actual']))
-                                            <span class="badge badge-warning badge-outline badge-sm">{{ __('No document') }}</span>
-                                        @else
-                                            {{ formatNumber($line['actual']) }}
-                                        @endif
-                                    </td>
-                                    <td class="text-end">
-                                        @if (is_null($line['variance']))
-                                            <span class="text-base-content/35">—</span>
-                                        @else
-                                            <div class="font-semibold tabular-nums {{ $line['variance'] >= 0 ? 'text-success' : 'text-error' }}">{{ formatNumber($line['variance']) }}</div>
-                                            <div class="text-[11px] text-base-content/45">{{ localizeNumber(number_format($line['variancePercent'], 1)) }}%</div>
-                                        @endif
-                                    </td>
-                                    <td>
-                                        @if ($line['budget'])
-                                            @can('budgets.destroy')
-                                                <form method="POST" action="{{ route('budgets.destroy', $line['budget']) }}" onsubmit="return confirm('{{ __('Are you sure?') }}')">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="submit" class="btn btn-square btn-ghost btn-xs text-base-content/35 hover:text-error" title="{{ __('Delete') }}">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16m-10 4v6m4-6v6M9 7l1-3h4l1 3m-9 0 1 14h10l1-14" />
-                                                        </svg>
-                                                    </button>
-                                                </form>
-                                            @endcan
-                                        @endif
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr><td colspan="6" class="py-12 text-center text-base-content/50">{{ __('No temporary income or expense subjects are available.') }}</td></tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-
-                @if ($isModal)
-                            <div class="modal-action m-0 border-t border-base-300 px-5 py-3">
-                                <form method="dialog"><button class="btn btn-sm">{{ __('Close') }}</button></form>
-                            </div>
-                        </div>
-                        <form method="dialog" class="modal-backdrop"><button aria-label="{{ __('Close') }}"></button></form>
-                    </dialog>
-                @else
-                    </article>
-                @endif
-            @endforeach
-        </section>
-
-        <section class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <x-metric-card :card="['title' => __('Forecast Income'), 'value' => $forecastIncome, 'suffix' => $currency, 'detail' => trans_choice(':count income lines', $incomeLinesCount, ['count' => localizeNumber($incomeLinesCount)]), 'tone' => 'primary', 'icon' => 'income']" />
-            <x-metric-card :class="$hasDocuments ? '' : 'opacity-50 saturate-50'" :card="['title' => __('Actual Income'), 'value' => $actualIncome ?? '—', 'suffix' => $hasDocuments ? $currency : null, 'detail' => $hasDocuments ? __('Income achievement').': '.localizeNumber(number_format($incomeAchievement, 0)).'%' : __('No accounting document exists for calculating actual income and expense.'), 'tone' => $hasDocuments && $incomeVariance < 0 ? 'warning' : 'success', 'icon' => 'income']" />
-            <x-metric-card :card="['title' => __('Forecast Expense'), 'value' => $forecastExpense, 'suffix' => $currency, 'detail' => trans_choice(':count expense lines', $expenseLinesCount, ['count' => localizeNumber($expenseLinesCount)]), 'tone' => 'primary', 'icon' => 'cost']" />
-            <x-metric-card :class="$hasDocuments ? '' : 'opacity-50 saturate-50'" :card="['title' => __('Actual Expense'), 'value' => $actualExpense ?? '—', 'suffix' => $hasDocuments ? $currency : null, 'detail' => $hasDocuments ? __('Expense utilization').': '.localizeNumber(number_format($expenseUtilization, 0)).'%' : __('No accounting document exists for calculating actual income and expense.'), 'tone' => $hasDocuments && $expenseVariance >= 0 ? 'success' : 'error', 'icon' => 'cost']" />
-        </section>
-
-        <section class="space-y-3">
-            <div class="flex flex-wrap items-end justify-between gap-2">
                 <div>
-                    <h2 class="text-lg font-bold">{{ __('Actual Profitability') }}</h2>
-                    <p class="text-xs text-base-content/55">{{ __('Based on approved invoices and stored sale cost snapshots. Sales and purchases exclude VAT and include line discounts, returns, and voids.') }} {{ $profitability['isComplete'] ? __('Completed month') : __('Month to date') }}</p>
+                    <label for="budget-month" class="block text-xs text-base-content/60">{{ __('Month') }} · {{ $fiscalYearLabel }}</label>
+                    <select id="budget-month" name="month" class="select select-ghost select-sm w-36 font-bold" onchange="this.form.submit()">
+                        @foreach ($months as $monthNumber => $monthName)
+                            <option value="{{ $monthNumber }}" @selected($selectedMonth === $monthNumber)>{{ $monthName }}</option>
+                        @endforeach
+                    </select>
                 </div>
-                <span class="badge badge-outline">{{ $selectedMonthLabel }} · {{ localizeNumber(config('active-company-fiscal-year')) }} · {{ $currency }}</span>
+                <button class="btn btn-sm btn-ghost" type="submit">{{ __('View') }}</button>
+                @if ($selectedMonth < 12)
+                    <a class="btn btn-ghost btn-square btn-sm" href="{{ route('budgets.index', ['month' => $selectedMonth + 1]) }}" aria-label="{{ __('Next month') }}"><span class="budget-next" aria-hidden="true">›</span></a>
+                @endif
+            </form>
+        </header>
+
+        <nav class="budget-navigation" aria-label="{{ __('Monthly report sections') }}">
+            <a href="#monthly-overview">{{ __('Monthly overview') }}</a>
+            <a href="#monthly-drivers">{{ __('Income and expense drivers') }}</a>
+            <a href="#monthly-products">{{ __('Product Profitability') }}</a>
+            <a href="#monthly-forecasts">{{ __('Forecasts') }} <span class="badge badge-sm badge-ghost">{{ localizeNumber($manualForecastsCount) }}</span></a>
+        </nav>
+
+        <section id="monthly-overview" class="scroll-mt-4 space-y-4" aria-labelledby="monthly-overview-title">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h2 id="monthly-overview-title" class="budget-section-title">{{ __('Monthly overview') }} <span class="text-base-content/50">/ {{ $selectedMonthLabel }} {{ $fiscalYearLabel }}</span></h2>
+                    <p class="budget-caption">{{ __('All amounts in :currency', ['currency' => $currency]) }} · {{ $profitability['isFuture'] ? __('Upcoming month') : ($profitability['isComplete'] ? __('Completed month') : __('Month to date')) }}</p>
+                </div>
+                <span class="budget-status"><span aria-hidden="true"></span>{{ trans_choice(':count accounting documents', $documentCount, ['count' => localizeNumber($documentCount)]) }}</span>
             </div>
+            @if (! $hasDocuments)
+                <div class="budget-notice" role="status">{{ __('No accounting document exists for calculating actual income and expense.') }}</div>
+            @endif
             @if ($profitability['comparisonUnavailable'])
-                <p class="text-xs text-base-content/55">{{ __('Previous month comparison is unavailable for the first month of the fiscal year.') }}</p>
+                <p class="budget-caption">{{ __('Previous month comparison is unavailable for the first month of the fiscal year.') }}</p>
+            @else
+                <p class="budget-caption">{{ __('Changes compared with :month', ['month' => $previousMonthLabel]) }} · {{ $profitability['isCurrentMonth'] ? __('Current month comparisons use the same elapsed days of the previous month.') : __('Full month comparison') }}</p>
             @endif
-            <div class="grid grid-cols-1 gap-3 lg:grid-cols-2">
-                @foreach (['income' => __('Actual Income Breakdown'), 'expense' => __('Actual Cost Breakdown')] as $type => $title)
-                    <article class="card border border-base-300 bg-base-100 shadow-sm">
-                        <div class="card-body p-4 sm:p-5">
-                            <h3 class="card-title text-base">{{ $title }}</h3>
-                            <div class="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-base-content/55" aria-label="{{ __('Change color legend') }}"><span class="text-success">↑ {{ __('Favorable change') }}</span><span class="text-error">↓ {{ __('Unfavorable change') }}</span><span>{{ __('Gray means unavailable or unchanged') }}</span></div>
-                            <div class="overflow-x-auto">
-                                <table class="table table-sm">
-                                    <thead><tr><th>{{ __('Subject') }}</th><th class="text-end">{{ __('Actual') }}</th><th class="text-end">{{ __('Share') }}</th><th class="text-end">{{ __('Previous month') }}</th><th class="text-end">{{ __('Change') }}</th></tr></thead>
-                                    <tbody>
-                                        @forelse ($categoryDrivers[$type] as $driver)
-                                            <tr>
-                                                <td>@can('subjects.show')<a class="link link-hover" href="{{ route('subjects.show', $driver['subject']) }}">{{ formatCode($driver['subject']->code) }} {{ $driver['subject']->name }}</a>@else{{ formatCode($driver['subject']->code) }} {{ $driver['subject']->name }}@endcan</td>
-                                                <td class="text-end">{{ localizeNumber(number_format($driver['amount'], 0)) }}</td>
-                                                <td class="text-end">{{ is_null($driver['share']) ? '—' : localizeNumber(number_format($driver['share'], 1)).'%' }}</td>
-                                                <td class="text-end">{{ is_null($driver['previous']) ? '—' : localizeNumber(number_format($driver['previous'], 0)) }}</td>
-                                                <td class="text-end">
-                                                    @if (is_null($driver['change']))
-                                                        <span class="text-base-content/45">—</span>
-                                                    @else
-                                                        @php($favorable = $type === 'income' ? $driver['change'] >= 0 : $driver['change'] <= 0)
-                                                        <span class="font-medium {{ $driver['change'] == 0 ? 'text-base-content/55' : ($favorable ? 'text-success' : 'text-error') }}">{{ $driver['change'] > 0 ? '↑ ' : ($driver['change'] < 0 ? '↓ ' : '→ ') }}{{ localizeNumber(number_format($driver['change'], 0)) }}</span>
-                                                    @endif
-                                                </td>
-                                            </tr>
-                                        @empty
-                                            <tr><td colspan="5" class="text-center text-base-content/50">{{ __('No actual accounting categories are available.') }}</td></tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </article>
-                @endforeach
-            </div>
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                @foreach ([
-                    [__('Net Product Sales'), $profitability['sales'], 'sales'],
-                    [__('Net Purchases'), $profitability['purchases'], 'purchases'],
-                    [__('Cost of Goods Sold'), $profitability['cogs'], 'cogs'],
-                    [__('Gross Profit'), $profitability['grossProfit'], 'grossProfit'],
-                    [__('Accounting Net Profit or Loss'), $profitability['accountingNet'], 'accountingNet'],
-                ] as [$title, $value, $key])
-                    <article class="card border border-base-300 bg-base-100 shadow-sm">
-                        <div class="card-body gap-1 p-4">
-                            <h3 class="text-xs text-base-content/55">{{ $title }}</h3>
-                            <div class="text-lg font-bold tabular-nums">{{ is_null($value) ? '—' : localizeNumber(number_format($value, 0)) }} @if (! is_null($value)) <span class="text-xs font-normal">{{ $currency }}</span> @endif</div>
-                            @if ($key === 'grossProfit')
-                                <div class="text-xs text-base-content/55">{{ __('Gross margin') }}: {{ is_null($profitability['grossMargin']) ? '—' : localizeNumber(number_format($profitability['grossMargin'], 1)).'%' }}</div>
-                                @if (! is_null($profitability['comparisons']['grossMargin']['change'])) <div class="text-[11px] {{ $profitability['comparisons']['grossMargin']['change'] == 0 ? 'text-base-content/50' : ($profitability['comparisons']['grossMargin']['change'] > 0 ? 'text-success' : 'text-error') }}">{{ __('Margin change') }}: {{ $profitability['comparisons']['grossMargin']['change'] > 0 ? '↑ ' : ($profitability['comparisons']['grossMargin']['change'] < 0 ? '↓ ' : '→ ') }}{{ localizeNumber(number_format($profitability['comparisons']['grossMargin']['change'], 1)) }} {{ __('percentage points') }}</div> @endif
-                            @elseif ($key === 'accountingNet')
-                                <div class="text-xs text-base-content/55">{{ __('Net margin') }}: {{ is_null($profitability['accountingMargin']) ? '—' : localizeNumber(number_format($profitability['accountingMargin'], 1)).'%' }}</div>
-                                @if (! is_null($profitability['accountingComparisons']['accountingMargin']['change'])) <div class="text-[11px] {{ $profitability['accountingComparisons']['accountingMargin']['change'] == 0 ? 'text-base-content/50' : ($profitability['accountingComparisons']['accountingMargin']['change'] > 0 ? 'text-success' : 'text-error') }}">{{ __('Margin change') }}: {{ $profitability['accountingComparisons']['accountingMargin']['change'] > 0 ? '↑ ' : ($profitability['accountingComparisons']['accountingMargin']['change'] < 0 ? '↓ ' : '→ ') }}{{ localizeNumber(number_format($profitability['accountingComparisons']['accountingMargin']['change'], 1)) }} {{ __('percentage points') }}</div> @endif
-                            @endif
-                            @if (isset($profitability['comparisons'][$key]) || isset($profitability['accountingComparisons'][$key]))
-                                @php($comparison = $profitability['comparisons'][$key] ?? $profitability['accountingComparisons'][$key])
-                                @php($favorableIncrease = in_array($key, ['sales', 'grossProfit', 'accountingNet'], true))
-                                @php($neutralChange = $key === 'purchases')
-                                <div class="mt-1 border-t border-base-200 pt-1 text-[11px] text-base-content/55">{{ __('Previous month') }}: {{ is_null($comparison['previous']) ? '—' : localizeNumber(number_format($comparison['previous'], 0)) }} · {{ __('Change') }}: @if (is_null($comparison['change']))<span class="text-base-content/45">—</span>@else <span class="font-medium {{ $comparison['change'] == 0 || $neutralChange ? 'text-base-content/55' : (($comparison['change'] > 0) === $favorableIncrease ? 'text-success' : 'text-error') }}">{{ $comparison['change'] > 0 ? '↑ ' : ($comparison['change'] < 0 ? '↓ ' : '→ ') }}{{ localizeNumber(number_format($comparison['change'], 0)) }}</span>@endif @if (! is_null($comparison['percent'])) ({{ localizeNumber(number_format($comparison['percent'], 1)) }}%) @endif</div>
-                            @endif
-                        </div>
-                    </article>
-                @endforeach
-            </div>
-            @if ($profitability['products']->isNotEmpty())
-                <article class="card border border-base-300 bg-base-100 shadow-sm">
-                    <div class="card-body p-4 sm:p-5">
-                        <h3 class="card-title text-base">{{ __('Product Profitability') }}</h3>
-                        <div class="overflow-x-auto">
-                            <table class="table table-sm">
-                                <thead><tr><th>{{ __('Product') }}</th><th>{{ __('Product Group') }}</th><th class="text-end">{{ __('Net Product Sales') }}</th><th class="text-end">{{ __('Sales change') }}</th><th class="text-end">{{ __('Cost of Goods Sold') }}</th><th class="text-end">{{ __('Gross Profit') }}</th><th class="text-end">{{ __('Profit change') }}</th><th class="text-end">{{ __('Gross margin') }}</th></tr></thead>
-                                <tbody>
-                                    @foreach ($profitability['products'] as $product)
-                                        <tr>
-                                            <td>@can('products.show')<a class="link link-hover" href="{{ route('products.show', $product['id']) }}">{{ $product['name'] }}</a>@else{{ $product['name'] }}@endcan @if ($product['missingCost']) <span class="badge badge-warning badge-xs">{{ __('Cost unavailable') }}</span> @endif</td>
-                                            <td>{{ $product['group'] ?? '—' }}</td>
-                                            <td class="text-end">{{ localizeNumber(number_format($product['sales'], 0)) }}</td>
-                                            <td class="text-end">@if (is_null($product['salesChange']))<span class="text-base-content/45">—</span>@else<span class="font-medium {{ $product['salesChange'] == 0 ? 'text-base-content/55' : ($product['salesChange'] > 0 ? 'text-success' : 'text-error') }}">{{ $product['salesChange'] > 0 ? '↑ ' : ($product['salesChange'] < 0 ? '↓ ' : '→ ') }}{{ localizeNumber(number_format($product['salesChange'], 0)) }}</span>@endif</td>
-                                            <td class="text-end">{{ localizeNumber(number_format($product['cogs'], 0)) }}</td>
-                                            <td class="text-end">{{ localizeNumber(number_format($product['grossProfit'], 0)) }}</td>
-                                            <td class="text-end">@if (is_null($product['grossProfitChange']))<span class="text-base-content/45">—</span>@else<span class="font-medium {{ $product['grossProfitChange'] == 0 ? 'text-base-content/55' : ($product['grossProfitChange'] > 0 ? 'text-success' : 'text-error') }}">{{ $product['grossProfitChange'] > 0 ? '↑ ' : ($product['grossProfitChange'] < 0 ? '↓ ' : '→ ') }}{{ localizeNumber(number_format($product['grossProfitChange'], 0)) }}</span>@endif</td>
-                                            <td class="text-end"><span class="{{ is_null($product['grossMargin']) || $product['grossMargin'] == 0 ? 'text-base-content/55' : ($product['grossMargin'] > 0 ? 'text-success' : 'text-error') }}">{{ is_null($product['grossMargin']) ? '—' : localizeNumber(number_format($product['grossMargin'], 1)).'%' }}</span></td>
-                                        </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </article>
-            @endif
-        </section>
 
-        <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            @foreach ([
-                [__('Forecast Income Breakdown'), __('Forecast values for the five largest items.'), 'monthlyIncomeForecastItemsChart', $incomeItemDatasets[0] ?? null],
-                [__('Actual Income Breakdown'), __('Actual values for the five largest items.'), 'monthlyIncomeActualItemsChart', $incomeItemDatasets[1] ?? null],
-                [__('Forecast Cost Breakdown'), __('Forecast values for the five largest items.'), 'monthlyExpenseForecastItemsChart', $expenseItemDatasets[0] ?? null],
-                [__('Actual Cost Breakdown'), __('Actual values for the five largest items.'), 'monthlyExpenseActualItemsChart', $expenseItemDatasets[1] ?? null],
-            ] as [$title, $description, $chartId, $dataset])
-                <article class="card border border-base-300 bg-base-100 shadow-sm">
-                    <div class="card-body p-4 sm:p-5">
-                        <div>
-                            <h2 class="card-title text-base">{{ $title }}</h2>
-                            <p class="text-xs text-base-content/50">{{ $description }}</p>
-                        </div>
-                        <div class="mt-2">
-                            <x-charts.item-comparison-pie :chart-id="$chartId" height-class="h-56 sm:h-64" :datasets="$dataset ? [$dataset] : []" />
-                        </div>
-                    </div>
-                </article>
-            @endforeach
-        </section>
+            @include('monthly-budgets.partials.overview')
 
-        <article class="card border border-base-300 bg-base-100 shadow-sm">
-            <div class="card-body p-4 sm:p-5">
-                <div>
-                    <h2 class="card-title text-base">{{ __('Actual vs Forecast') }}</h2>
-                    <p class="text-xs text-base-content/50">{{ $hasDocuments ? __('Calculated from accounting documents for :month.', ['month' => $selectedMonthLabel]) : __('No accounting document exists for calculating actual income and expense.') }}</p>
+            <details class="budget-methodology">
+                <summary>{{ __('How these figures are calculated') }}</summary>
+                <div class="grid gap-4 pt-3 text-xs leading-6 text-base-content/65 md:grid-cols-2">
+                    <p><strong class="text-base-content">{{ __('Accounting result') }}.</strong> {{ __('Income and expenses use approved accounting documents. Net result is income minus expenses; cost of goods sold is not deducted again.') }}</p>
+                    <p><strong class="text-base-content">{{ __('Product performance') }}.</strong> {{ __('Based on approved invoices and stored sale cost snapshots. Sales and purchases exclude VAT and include line discounts, returns, and voids.') }} {{ __('Purchases are inventory movements and are shown separately from cost of goods sold.') }}</p>
                 </div>
-                <div class="mt-2 overflow-x-auto"><div class="min-w-[34rem] sm:min-w-0"><x-charts.monthly-budget-comparison chart-id="monthlyBudgetVarianceChart" heightClass="h-64 sm:h-72" :datasets="$comparisonDatasets" /></div></div>
+            </details>
+        </section>
+
+        <section id="monthly-drivers" class="scroll-mt-4 space-y-4" aria-labelledby="monthly-drivers-title">
+            <div>
+                <h2 id="monthly-drivers-title" class="budget-section-title">{{ __('Income and expense drivers') }}</h2>
+                <p class="budget-caption">{{ __('Largest actual categories, ranked independently of forecasts. Parent totals include their details only once.') }}</p>
             </div>
-        </article>
-    </main>
+            <div class="grid gap-4 xl:grid-cols-2">
+                @foreach (['income' => __('Actual Income Breakdown'), 'expense' => __('Actual Cost Breakdown')] as $type => $title)
+                    @include('monthly-budgets.partials.drivers')
+                @endforeach
+            </div>
+        </section>
+
+        @include('monthly-budgets.partials.products')
+        @include('monthly-budgets.partials.forecasts')
+    </div>
 
     @push('footer')
         <style>
-            @media (max-width: 63.999rem) {
-                .monthly-budget-table thead {
-                    display: none;
-                }
-
-                .monthly-budget-table,
-                .monthly-budget-table tbody {
-                    display: block;
-                    width: 100%;
-                }
-
-                .monthly-budget-table tbody {
-                    display: grid;
-                    grid-template-columns: repeat(2, minmax(0, 1fr));
-                    gap: .75rem;
-                    padding: .75rem;
-                }
-
-                .monthly-budget-table tbody tr {
-                    display: grid;
-                    grid-template-columns: repeat(2, minmax(0, 1fr));
-                    gap: .75rem 1rem;
-                    min-width: 0;
-                    padding: 1rem;
-                    border: 1px solid var(--color-base-300);
-                    border-radius: .75rem;
-                    background: var(--color-base-100);
-                }
-
-                .monthly-budget-table tbody td {
-                    display: flex;
-                    min-width: 0;
-                    align-items: center;
-                    justify-content: space-between;
-                    gap: .75rem;
-                    padding: 0;
-                    text-align: end;
-                    white-space: normal;
-                }
-
-                .monthly-budget-table tbody td::before {
-                    content: attr(data-label);
-                    flex: none;
-                    color: color-mix(in oklab, var(--color-base-content) 55%, transparent);
-                    font-size: .7rem;
-                    font-weight: 600;
-                }
-
-                .monthly-budget-table tbody td:first-child {
-                    display: block;
-                    grid-column: 1 / -1;
-                    padding-bottom: .75rem;
-                    border-bottom: 1px solid var(--color-base-200);
-                    text-align: start;
-                }
-
-                .monthly-budget-table tbody td:first-child::before,
-                .monthly-budget-table tbody td.monthly-budget-row-action::before {
-                    display: none;
-                }
-
-                .monthly-budget-table tbody td.monthly-budget-row-action {
-                    grid-column: 1 / -1;
-                    justify-content: end;
-                }
-
-                .monthly-budget-table tbody tr.monthly-budget-empty-row {
-                    display: block;
-                    grid-column: 1 / -1;
-                }
-
-                .monthly-budget-table tbody tr.monthly-budget-empty-row td {
-                    display: block;
-                    padding: 2rem 1rem;
-                    border: 0;
-                    text-align: center;
-                }
-            }
-
-            @media (max-width: 39.999rem) {
-                .monthly-budget-table tbody {
-                    grid-template-columns: minmax(0, 1fr);
-                    padding: .5rem;
-                }
-
-                .monthly-budget-table tbody tr {
-                    grid-template-columns: minmax(0, 1fr);
-                    padding: .875rem;
-                }
-
-                .monthly-budget-table tbody td:first-child,
-                .monthly-budget-table tbody td.monthly-budget-row-action {
-                    grid-column: auto;
-                }
-            }
+            .budget-workbench { --budget-ink: #193d56; --budget-teal: #087f8c; padding-top: .5rem; }
+            .budget-overview-grid, .budget-forecast-summary { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); }
+            @media (min-width: 64rem) { .budget-overview-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); } .budget-forecast-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+            .budget-header { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap; }
+            .budget-back { display: inline-flex; gap: .5rem; font-size: .75rem; color: var(--budget-teal); }
+            .budget-month-picker { display: flex; align-items: center; gap: .25rem; padding: .5rem; background: var(--color-base-100); border: 1px solid var(--color-base-300); border-radius: 1rem; }
+            [dir=rtl] .budget-prev, [dir=rtl] .budget-next { display: inline-block; transform: rotate(180deg); }
+            .budget-navigation { display: flex; flex-wrap: wrap; gap: .35rem 1.2rem; border-bottom: 1px solid var(--color-base-300); padding-bottom: .75rem; }
+            .budget-navigation a { padding: .4rem .15rem; font-size: .8rem; font-weight: 600; color: var(--color-base-content); }
+            .budget-navigation a:hover { color: var(--budget-teal); }
+            .budget-section-title { font-size: 1rem; font-weight: 750; line-height: 1.8; }
+            .budget-caption { margin-top: .25rem; font-size: .75rem; line-height: 1.8; color: color-mix(in oklab, var(--color-base-content) 65%, transparent); }
+            .budget-panel { min-width: 0; border: 1px solid var(--color-base-300); border-radius: 1rem; background: var(--color-base-100); overflow: hidden; }
+            .budget-panel-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; padding: 1.25rem; border-bottom: 1px solid var(--color-base-200); }
+            .budget-status { display: inline-flex; align-items: center; gap: .5rem; font-size: .75rem; color: var(--budget-teal); }
+            .budget-status > span { width: .4rem; height: .4rem; background: currentColor; border-radius: 50%; }
+            .budget-notice { border-inline-start: 3px solid var(--color-warning); background: color-mix(in oklab, var(--color-warning) 9%, var(--color-base-100)); padding: .8rem 1rem; border-radius: .5rem; font-size: .8rem; line-height: 1.8; }
+            .budget-result { color: #f4fbff; background: var(--budget-ink); padding: 1.5rem; border-radius: 1rem; display: flex; flex-direction: column; justify-content: space-between; gap: 1.25rem; min-width: 0; }
+            .budget-result .budget-caption { color: #c5dae7; }
+            .budget-result-value { font-size: clamp(1.6rem, 2.8vw, 2.5rem); font-weight: 800; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; line-height: 1.6; }
+            .budget-result .budget-change { color: #e0f2fe; }
+            .budget-result .budget-change[data-direction=up] { color: #83f0d0; }
+            .budget-result .budget-change[data-direction=down] { color: #ffb8ba; }
+            .budget-metric { min-width: 0; padding: 1.25rem; }
+            .budget-metric-value { font-size: clamp(1.15rem, 2vw, 1.65rem); font-weight: 750; line-height: 1.8; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+            .budget-change { font-size: .75rem; font-variant-numeric: tabular-nums; }
+            .budget-change[data-direction=up] { color: #08785d; }
+            .budget-change[data-direction=down] { color: #be364b; }
+            .budget-metric-label { font-size: .8rem; color: color-mix(in oklab, var(--color-base-content) 70%, transparent); }
+            .budget-methodology { border-bottom: 1px solid var(--color-base-300); padding: .5rem 0 1rem; }
+            .budget-methodology summary { width: fit-content; cursor: pointer; font-size: .75rem; font-weight: 600; }
+            .budget-table { width: 100%; font-size: .8rem; }
+            .budget-table th { background: var(--color-base-200); color: color-mix(in oklab, var(--color-base-content) 65%, transparent); font-weight: 500; white-space: nowrap; }
+            .budget-table :is(th, td) { padding: .85rem 1rem; }
+            .budget-table td:not(:first-child) { font-variant-numeric: tabular-nums; }
+            .budget-table td { border-bottom: 1px solid var(--color-base-200); }
+            .budget-product-scroll { max-height: 34rem; overflow: auto; }
+            .budget-product-scroll thead { position: sticky; top: 0; z-index: 1; }
+            [id^=monthly-] { scroll-margin-top: 5rem; }
+            .budget-share { height: .25rem; border-radius: 1rem; background: var(--color-base-200); overflow: hidden; min-width: 4rem; margin-top: .5rem; }
+            .budget-share > span { display: block; height: 100%; background: var(--budget-teal); border-radius: inherit; }
+            .budget-expense .budget-share > span { background: #b57a35; }
+            .budget-empty { padding: 2rem 1.25rem; text-align: center; color: color-mix(in oklab, var(--color-base-content) 60%, transparent); font-size: .8rem; line-height: 2; }
+            .budget-forecast-entry { border: 1px solid var(--color-base-300); border-radius: .75rem; margin: 1.25rem; }
+            .budget-forecast-entry > summary { padding: 1rem; cursor: pointer; font-weight: 600; font-size: .85rem; }
+            .budget-workbench :is(a, button, input, select, summary):focus-visible { outline: 2px solid var(--budget-teal); outline-offset: 4px; }
+            [data-theme=dark] .budget-workbench { --budget-teal: #5cd1d5; }
+            [data-theme=dark] .budget-change[data-direction=up] { color: #6ee7b7; }
+            [data-theme=dark] .budget-change[data-direction=down] { color: #fda4af; }
+            @media (max-width: 40rem) { .budget-month-picker { width: 100%; justify-content: space-between; } .budget-result { padding: 1.25rem; } .budget-table :is(th, td) { padding: .75rem; } }
         </style>
     @endpush
 </x-app-layout>
