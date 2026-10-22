@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\FiscalYearSection;
+use App\Enums\InvoiceType;
 use App\Enums\SubjectType;
 use App\Models\Customer;
 use App\Models\Document;
@@ -110,6 +111,45 @@ class MonthlyBudgetTest extends TestCase
         ]);
     }
 
+    private function productInvoice(Product $product, InvoiceType $type, int $month, float $price, float $discount, float $cost, ?Invoice $voided = null): Invoice
+    {
+        $document = Document::create([
+            'number' => Document::withoutGlobalScopes()->max('number') + 1,
+            'date' => jalali_to_gregorian(1405, $month, 10, '-'),
+            'creator_id' => $this->user->id,
+            'approver_id' => $this->user->id,
+            'approved_at' => now(),
+            'title' => 'Monthly profitability test',
+            'fiscal_year_id' => $this->fiscalYear->id,
+        ]);
+        $invoice = Invoice::create([
+            'number' => random_int(100000, 999999),
+            'date' => $document->date,
+            'document_id' => $document->id,
+            'customer_id' => Customer::factory()->create(['fiscal_year_id' => $this->fiscalYear->id])->id,
+            'creator_id' => $this->user->id,
+            'invoice_type' => $type,
+            'returned_invoice_id' => $voided?->id,
+            'status' => 3,
+            'vat' => 0,
+            'subtraction' => 0,
+            'amount' => $price - $discount,
+        ]);
+        InvoiceItem::create([
+            'invoice_id' => $invoice->id,
+            'itemable_type' => Product::class,
+            'itemable_id' => $product->id,
+            'quantity' => 1,
+            'unit_price' => $price,
+            'unit_discount' => $discount,
+            'vat' => 0,
+            'amount' => $price - $discount,
+            'cog_after' => $cost,
+        ]);
+
+        return $invoice;
+    }
+
     private function grant(string ...$permissions): void
     {
         $this->user->givePermissionTo(collect($permissions)->map(fn (string $permission) => Permission::firstOrCreate(['name' => $permission]))->all());
@@ -143,18 +183,22 @@ class MonthlyBudgetTest extends TestCase
         $response->assertSee('monthlyBudgetVarianceChart', false);
     }
 
-    public function test_forecast_table_shows_first_five_hierarchical_lines_and_all_lines_in_a_modal(): void
+    public function test_forecasts_are_available_in_one_searchable_table_without_a_modal(): void
     {
         foreach (range(1, 6) as $index) {
-            $subject = $this->temporarySubject('Top forecast '.$index, SubjectType::CREDITOR);
+            $subject = $this->temporarySubject('Forecast '.$index, SubjectType::CREDITOR);
             $this->budget($subject, 'income', $index * 100, 5);
         }
         $this->grant('budgets.index');
 
-        $this->actingAs($this->user)->get(route('budgets.index', ['month' => 5]))->assertOk()
-            ->assertViewHas('displayBudgetLines', fn ($lines) => $lines->count() === 5)
-            ->assertViewHas('allBudgetLinesByForecast', fn ($lines) => $lines->count() === 6)->assertViewHas('hasMoreBudgetLines', true)
-            ->assertSee(__('Show all'))->assertSee('all-monthly-forecasts-modal', false);
+        $response = $this->actingAs($this->user)->get(route('budgets.index', ['month' => 5]));
+        $response->assertOk()->assertViewHas('budgetLines', fn ($lines) => $lines->count() === 6)
+            ->assertSee('forecast-search', false)->assertSee('forecast-type', false)
+            ->assertDontSee('all-monthly-forecasts-modal', false)
+            ->assertSeeInOrder([__('Monthly overview'), __('Income and expense drivers'), __('Product Profitability'), __('Forecasts')]);
+        foreach (range(1, 6) as $index) {
+            $response->assertSee('Forecast '.$index);
+        }
     }
 
     public function test_manual_forecast_groups_come_first_while_parent_and_child_stay_together(): void
@@ -190,71 +234,27 @@ class MonthlyBudgetTest extends TestCase
 
         $response = $this->actingAs($this->user)->get(route('budgets.index', ['month' => 5]));
 
-        $response->assertOk()->assertViewHas('incomeItemDatasets', function (array $datasets) {
-            return count($datasets) === 2
-                && array_values($datasets[0]['data']) === [1000.0]
-                && array_values($datasets[1]['data']) === [1200.0];
-        })->assertViewHas('expenseItemDatasets', function (array $datasets) {
-            return count($datasets) === 2
-                && array_values($datasets[0]['data']) === [800.0]
-                && array_values($datasets[1]['data']) === [700.0];
+        $response->assertOk()->assertViewHas('categoryDrivers', function (array $drivers) {
+            return $drivers['income']->sole()['amount'] === 1200.0
+                && $drivers['expense']->sole()['amount'] === 700.0;
         })->assertViewHas('comparisonDatasets', function (array $datasets) {
             return $datasets[0]['data'][__('Expense')] === 800.0
                 && $datasets[1]['data'][__('Expense')] === 700.0;
-        })->assertSee('monthlyIncomeForecastItemsChart', false)->assertSee('monthlyIncomeActualItemsChart', false)
-            ->assertSee('monthlyExpenseForecastItemsChart', false)->assertSee('monthlyExpenseActualItemsChart', false)
-            ->assertSee('emptySelectionBorderPlugin', false)->assertSee("type: 'pie'", false)
+        })->assertSee('monthlyBudgetVarianceChart', false)
             ->assertSee(__('Manual Forecast'))->assertSee(__('Entered by the user.'))
             ->assertSee(__("Calculated automatically from the actual value or the previous month's applied forecast."))
-            ->assertDontSee('data-tip="'.e(__('Entered by the user.')).'"', false)
             ->assertSee('(۸۰۰)', false)->assertSee('(۷۰۰)', false)
-            ->assertDontSee('-۸۰۰', false)->assertDontSee('-۷۰۰', false);
-
-        $this->assertSame(4, substr_count($response->getContent(), "type: 'pie'"));
+            ->assertDontSee('-۸۰۰', false)->assertDontSee('-۷۰۰', false)
+            ->assertDontSee("type: 'pie'", false);
     }
 
     public function test_monthly_profitability_uses_approved_invoice_cost_snapshots_and_reverses_returns(): void
     {
         $product = Product::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'name' => 'Profit product']);
-        $makeInvoice = function (int $type, int $month, float $price, float $discount, float $cost) use ($product): void {
-            $document = Document::create([
-                'number' => Document::withoutGlobalScopes()->max('number') + 1,
-                'date' => jalali_to_gregorian(1405, $month, 10, '-'),
-                'creator_id' => $this->user->id,
-                'approver_id' => $this->user->id,
-                'approved_at' => now(),
-                'title' => 'Monthly profitability test',
-                'fiscal_year_id' => $this->fiscalYear->id,
-            ]);
-            $invoice = Invoice::create([
-                'number' => random_int(100000, 999999),
-                'date' => $document->date,
-                'document_id' => $document->id,
-                'customer_id' => Customer::factory()->create(['fiscal_year_id' => $this->fiscalYear->id])->id,
-                'creator_id' => $this->user->id,
-                'invoice_type' => $type,
-                'status' => 3,
-                'vat' => 0,
-                'subtraction' => 0,
-                'amount' => $price - $discount,
-            ]);
-            InvoiceItem::create([
-                'invoice_id' => $invoice->id,
-                'itemable_type' => Product::class,
-                'itemable_id' => $product->id,
-                'quantity' => 1,
-                'unit_price' => $price,
-                'unit_discount' => $discount,
-                'vat' => 0,
-                'amount' => $price - $discount,
-                'cog_after' => $cost,
-            ]);
-        };
-
-        $makeInvoice(2, 4, 1000, 100, 400);
-        $makeInvoice(2, 5, 1500, 100, 500);
-        $makeInvoice(4, 5, 200, 0, 100);
-        $makeInvoice(2, 5, 9999, 0, 1);
+        $this->productInvoice($product, InvoiceType::SELL, 4, 1000, 100, 400);
+        $this->productInvoice($product, InvoiceType::SELL, 5, 1500, 100, 500);
+        $this->productInvoice($product, InvoiceType::RETURN_SELL, 5, 200, 0, 100);
+        $this->productInvoice($product, InvoiceType::SELL, 5, 9999, 0, 1);
         Invoice::query()->latest('id')->firstOrFail()->document()->update(['approved_at' => null]);
 
         $analysis = $this->service->profitabilityAnalysis(5);
@@ -262,10 +262,128 @@ class MonthlyBudgetTest extends TestCase
         $this->assertSame(1200.0, $analysis['sales']);
         $this->assertSame(400.0, $analysis['cogs']);
         $this->assertSame(800.0, $analysis['grossProfit']);
+        $this->assertSame(500.0, $analysis['comparisons']['grossProfit']['previous']);
+        $this->assertSame(300.0, $analysis['comparisons']['grossProfit']['change']);
         $this->assertSame(900.0, $analysis['comparisons']['sales']['previous']);
         $this->assertSame(300.0, $analysis['comparisons']['sales']['change']);
         $this->assertSame(66.66666666666666, $analysis['products'][0]['grossMargin']);
         $this->assertSame('Profit product', $analysis['products'][0]['name']);
+    }
+
+    public function test_returns_and_voids_reverse_their_original_product_movement(): void
+    {
+        $product = Product::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
+        $sale = $this->productInvoice($product, InvoiceType::SELL, 5, 1500, 0, 500);
+        $return = $this->productInvoice($product, InvoiceType::RETURN_SELL, 5, 200, 0, 100);
+        $this->productInvoice($product, InvoiceType::VOID, 5, 1500, 0, 500, $sale);
+        $this->productInvoice($product, InvoiceType::VOID, 5, 200, 0, 100, $return);
+        $this->productInvoice($product, InvoiceType::BUY, 5, 1000, 0, 0);
+        $purchaseReturn = $this->productInvoice($product, InvoiceType::RETURN_BUY, 5, 200, 0, 0);
+        $this->productInvoice($product, InvoiceType::VOID, 5, 200, 0, 0, $purchaseReturn);
+
+        $analysis = $this->service->profitabilityAnalysis(5);
+
+        $this->assertSame(0.0, $analysis['sales']);
+        $this->assertSame(0.0, $analysis['cogs']);
+        $this->assertSame(1000.0, $analysis['purchases']);
+        $this->assertSame(0.0, $analysis['grossProfit']);
+        $this->assertNull($analysis['grossMargin']);
+    }
+
+    public function test_current_month_accounting_and_product_comparisons_use_equal_elapsed_days(): void
+    {
+        $this->travelTo(Carbon::parse(jalali_to_gregorian(1405, 5, 15, '-').' 12:00:00', 'Asia/Tehran'));
+        $income = $this->temporarySubject('Elapsed sales', SubjectType::CREDITOR);
+        $expense = $this->temporarySubject('Elapsed costs', SubjectType::DEBTOR);
+        $this->budget($income, 'income', 2000, 5);
+        $this->transaction($income, 1000, 4);
+        $this->transaction($expense, -400, 4);
+        $this->transaction($income, 1500, 5);
+        $this->transaction($expense, -500, 5);
+        foreach ([4, 5] as $month) {
+            $this->transaction($income, 9000, $month);
+            Document::query()->latest('id')->firstOrFail()->update(['date' => jalali_to_gregorian(1405, $month, 25, '-')]);
+        }
+        $product = Product::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
+        $this->productInvoice($product, InvoiceType::SELL, 4, 1000, 0, 400);
+        $this->productInvoice($product, InvoiceType::SELL, 5, 1500, 0, 500);
+        foreach ([4, 5] as $month) {
+            $this->productInvoice($product, InvoiceType::SELL, $month, 9000, 0, 100)->document()->update(['date' => jalali_to_gregorian(1405, $month, 25, '-')]);
+        }
+        $this->grant('budgets.index');
+
+        $response = $this->actingAs($this->user)->get(route('budgets.index', ['month' => 5]));
+        $response->assertOk()->assertViewHas('actualIncome', 1500.0)->assertViewHas('actualExpense', -500.0)
+            ->assertViewHas('forecastIncome', 2000.0)
+            ->assertViewHas('profitability', function (array $metrics) {
+                return $metrics['isCurrentMonth'] && $metrics['sales'] === 1500.0
+                    && $metrics['comparisons']['sales']['previous'] === 1000.0
+                    && $metrics['accountingNet'] === 1000.0
+                    && $metrics['accountingComparisons']['income']['previous'] === 1000.0
+                    && $metrics['accountingComparisons']['accountingNet']['previous'] === 600.0;
+            })->assertViewHas('categoryDrivers', fn (array $drivers) => $drivers['income']->sole()['percent'] === 50.0);
+
+        $this->assertSame(10500.0, $this->service->analysis(5)['actualIncome']);
+    }
+
+    public function test_product_table_keeps_losses_visible_beyond_the_ten_largest_contributors(): void
+    {
+        foreach (range(1, 11) as $index) {
+            $product = Product::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
+            $this->productInvoice($product, InvoiceType::SELL, 5, 1000, 0, 400);
+        }
+        $loss = Product::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'name' => 'Loss-making sale']);
+        $this->productInvoice($loss, InvoiceType::SELL, 5, 100, 0, 200);
+        $this->grant('budgets.index');
+
+        $this->actingAs($this->user)->get(route('budgets.index', ['month' => 5]))->assertOk()
+            ->assertViewHas('profitability', fn (array $metrics) => $metrics['products']->count() === 12 && $metrics['products']->last()['grossProfit'] === -100.0)
+            ->assertSee('Loss-making sale')->assertSee(__('Loss-making products only'));
+    }
+
+    public function test_future_month_is_labeled_as_upcoming_and_first_month_comparison_is_unavailable(): void
+    {
+        $this->travelTo(Carbon::parse(jalali_to_gregorian(1405, 5, 15, '-').' 12:00:00', 'Asia/Tehran'));
+        $this->grant('budgets.index');
+
+        $this->actingAs($this->user)->get(route('budgets.index', ['month' => 6]))->assertOk()
+            ->assertSee(__('Upcoming month'))->assertDontSee(__('Month to date'));
+        $this->actingAs($this->user)->get(route('budgets.index', ['month' => 1]))->assertOk()
+            ->assertSee(__('Previous month comparison is unavailable for the first month of the fiscal year.'));
+    }
+
+    public function test_actual_category_comparison_stays_stable_when_forecast_hierarchy_changes(): void
+    {
+        $root = $this->temporarySubject('Stable income category', SubjectType::CREDITOR);
+        $child = $this->childSubject($root, 'Forecast detail', SubjectType::CREDITOR);
+        $this->budget($child, 'income', 50, 4);
+        $this->budget($root, 'income', 500, 5);
+        $this->transaction($root, 100, 4);
+        $this->transaction($child, 100, 4);
+        $this->transaction($root, 100, 5);
+        $this->transaction($child, 200, 5);
+        $this->grant('budgets.index');
+
+        $this->actingAs($this->user)->get(route('budgets.index', ['month' => 5]))->assertOk()
+            ->assertViewHas('categoryDrivers', function (array $drivers) use ($root) {
+                $category = $drivers['income']->sole();
+
+                return $category['subject']->is($root) && $category['amount'] === 300.0
+                    && $category['previous'] === 200.0 && $category['share'] === 100.0
+                    && $category['change'] === 100.0 && $category['percent'] === 50.0;
+            });
+    }
+
+    public function test_view_only_permission_hides_forecast_mutations(): void
+    {
+        $subject = $this->temporarySubject('Read only forecast', SubjectType::CREDITOR);
+        $this->budget($subject, 'income', 1000, 5);
+        $this->grant('budgets.index');
+
+        $this->actingAs($this->user)->get(route('budgets.index', ['month' => 5]))->assertOk()
+            ->assertSee('Read only forecast')->assertDontSee(__('Save Forecast'))
+            ->assertDontSee(__('Copy Previous Month'))
+            ->assertDontSee(__('Delete forecast for :subject', ['subject' => $subject->name]));
     }
 
     /**

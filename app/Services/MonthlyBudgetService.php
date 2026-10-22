@@ -54,6 +54,47 @@ class MonthlyBudgetService
 
     private ?array $currentJalaliYearMonth = null;
 
+    private array $actualDayLimits = [];
+
+    /** A separate snapshot keeps elapsed-period comparisons from changing full-month forecasts. */
+    public function analysisThroughDay(int $month, int $day): array
+    {
+        $analysis = $this->analysis($month);
+        $snapshot = new self;
+        $snapshot->actualDayLimits[$month] = $day;
+        $actuals = $snapshot->analysis($month);
+        foreach (['actualIncome', 'actualExpense', 'hasDocuments', 'actualsCalculated', 'documentCount'] as $key) {
+            $analysis[$key] = $actuals[$key];
+        }
+        $analysis['incomeVariance'] = is_null($analysis['actualIncome']) ? null : $analysis['actualIncome'] - $analysis['forecastIncome'];
+        $analysis['expenseVariance'] = is_null($analysis['actualExpense']) ? null : $analysis['actualExpense'] - $analysis['forecastExpense'];
+        $actualLines = $actuals['budgetLines']->keyBy(fn (array $line) => (int) $line['subject']->id);
+        $analysis['budgetLines'] = $analysis['budgetLines']->map(function (array $line) use ($actualLines) {
+            $line['actual'] = $actualLines->get((int) $line['subject']->id)['actual'] ?? null;
+            $line['variance'] = is_null($line['actual']) ? null : $line['actual'] - $line['forecast'];
+            $line['variancePercent'] = is_null($line['variance']) || $line['forecast'] == 0 ? null : $line['variance'] / abs($line['forecast']) * 100;
+
+            return $line;
+        });
+
+        return $analysis;
+    }
+
+    /** Keep actual categories stable when manual forecasts split a root into lower-level lines. */
+    public function categoryActuals(array $analysis): Collection
+    {
+        $roots = $analysis['budgetLines']->where('isChild', false)->keyBy(fn (array $line) => (int) $line['subject']->id);
+
+        return $analysis['budgetLines']->where('includedInSummary', true)
+            ->groupBy(fn (array $line) => (int) ($line['subject']->parent_id ?: $line['subject']->id))
+            ->map(function (Collection $lines, int $rootId) use ($roots) {
+                $root = $roots->get($rootId);
+                $root['actual'] = $lines->contains(fn (array $line) => is_null($line['actual'])) ? null : (float) $lines->sum('actual');
+
+                return $root;
+            })->values();
+    }
+
     public function saveForecast(int $month, array $data): MonthlyBudget
     {
         return DB::transaction(function () use ($month, $data) {
@@ -372,15 +413,18 @@ class MonthlyBudgetService
     public function profitabilityAnalysis(int $month): array
     {
         $fiscalYear = (int) FiscalYear::query()->findOrFail(getActiveFiscalYear())->year;
-        $currentYear = (int) toEnglish(jdate('Y'));
-        $currentMonth = (int) toEnglish(jdate('n'));
-        $currentDay = (int) toEnglish(jdate('j'));
+        [$currentYear, $currentMonth, $currentDay] = array_map('intval', explode('-', jdate('Y-n-j', now()->timestamp, '', 'Asia/Tehran', 'en')));
         $isCurrentMonth = $fiscalYear === $currentYear && $month === $currentMonth;
         $current = $this->invoiceMetricsForMonth($month, $isCurrentMonth ? $currentDay : null);
         $previous = $month > 1 ? $this->invoiceMetricsForMonth($month - 1, $isCurrentMonth ? $currentDay : null) : null;
         $comparisons = [];
 
-        foreach (['sales', 'purchases', 'cogs'] as $metric) {
+        $current['grossProfit'] = $current['sales'] - $current['cogs'];
+        if ($previous !== null) {
+            $previous['grossProfit'] = $previous['sales'] - $previous['cogs'];
+        }
+
+        foreach (['sales', 'purchases', 'cogs', 'grossProfit'] as $metric) {
             $value = $current[$metric];
             $prior = $previous[$metric] ?? null;
             $comparisons[$metric] = [
@@ -393,7 +437,6 @@ class MonthlyBudgetService
         $previousGrossProfit = is_null($previous) ? null : $previous['sales'] - $previous['cogs'];
         $previousGrossMargin = is_null($previous) || $previous['sales'] == 0 ? null : $previousGrossProfit / $previous['sales'] * 100;
 
-        $current['grossProfit'] = $current['sales'] - $current['cogs'];
         $current['grossMargin'] = $current['sales'] != 0 ? $current['grossProfit'] / $current['sales'] * 100 : null;
         $current['previousMonth'] = $previous;
         $current['comparisons'] = $comparisons;
@@ -403,8 +446,11 @@ class MonthlyBudgetService
             'percent' => null,
         ];
         $current['isComplete'] = $fiscalYear < $currentYear || ($fiscalYear === $currentYear && $month < $currentMonth);
+        $current['isCurrentMonth'] = $isCurrentMonth;
+        $current['elapsedDay'] = $isCurrentMonth ? $currentDay : null;
+        $current['isFuture'] = $fiscalYear > $currentYear || ($fiscalYear === $currentYear && $month > $currentMonth);
         $current['comparisonUnavailable'] = $month === 1;
-        $current['products'] = collect($current['products'])->sortByDesc('grossProfit')->take(10)->values();
+        $current['products'] = collect($current['products'])->sortByDesc('grossProfit')->values();
         $previousProducts = collect($previous['products'] ?? [])->keyBy('id');
         $current['products'] = $current['products']->map(function (array $product) use ($previousProducts, $month) {
             $prior = $previousProducts->get($product['id']);
@@ -436,16 +482,16 @@ class MonthlyBudgetService
 
         foreach ($invoices as $invoice) {
             $originalType = $invoice->invoice_type;
-            $sign = match ($originalType) {
-                InvoiceType::SELL, InvoiceType::BUY => 1,
-                InvoiceType::RETURN_SELL, InvoiceType::RETURN_BUY => -1,
-                InvoiceType::VOID => -1,
-                default => 0,
-            };
             $reversedType = $originalType;
             if ($originalType === InvoiceType::VOID) {
                 $reversedType = $invoice->voidedInvoice?->invoice_type;
             }
+            $direction = match ($reversedType) {
+                InvoiceType::SELL, InvoiceType::BUY => 1,
+                InvoiceType::RETURN_SELL, InvoiceType::RETURN_BUY => -1,
+                default => 0,
+            };
+            $direction *= $originalType === InvoiceType::VOID ? -1 : 1;
 
             foreach ($invoice->items as $item) {
                 $product = $item->itemable;
@@ -454,8 +500,8 @@ class MonthlyBudgetService
                 }
                 $itemSales = ((float) $item->unit_price * (float) $item->quantity) - (float) $item->unit_discount;
                 $itemCogs = (float) $item->cog_after * (float) $item->quantity;
-                $salesSign = $reversedType === InvoiceType::SELL ? $sign : ($reversedType === InvoiceType::RETURN_SELL ? -$sign : 0);
-                $purchaseSign = $reversedType === InvoiceType::BUY ? $sign : ($reversedType === InvoiceType::RETURN_BUY ? -$sign : 0);
+                $salesSign = $reversedType?->isSell() ? $direction : 0;
+                $purchaseSign = $reversedType?->isBuy() ? $direction : 0;
                 $cogsSign = $salesSign;
                 $totals['sales'] += $itemSales * $salesSign;
                 $totals['purchases'] += $itemSales * $purchaseSign;
@@ -824,6 +870,7 @@ class MonthlyBudgetService
             jcheckdate(12, 30, $fiscalYear) => 30,
             default => 29,
         };
+        $lastDay = min($lastDay, $this->actualDayLimits[$month] ?? $lastDay);
 
         return [
             jalali_to_gregorian($fiscalYear, $month, 1, '-'),
