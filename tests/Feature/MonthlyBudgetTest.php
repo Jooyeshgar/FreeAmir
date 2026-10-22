@@ -4,14 +4,18 @@ namespace Tests\Feature;
 
 use App\Enums\FiscalYearSection;
 use App\Enums\InvoiceType;
+use App\Enums\PayrollStatus;
 use App\Enums\SubjectType;
+use App\Models\Config;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\MonthlyBudget;
+use App\Models\Payroll;
 use App\Models\Product;
+use App\Models\Service;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
@@ -224,8 +228,8 @@ class MonthlyBudgetTest extends TestCase
 
     public function test_income_and_expense_items_compare_forecast_with_actual_values(): void
     {
-        $income = $this->temporarySubject('Itemized income', SubjectType::CREDITOR);
-        $expense = $this->temporarySubject('Itemized expense', SubjectType::DEBTOR);
+        $income = $this->childSubject($this->temporarySubject('Income root', SubjectType::CREDITOR), 'Itemized income', SubjectType::CREDITOR);
+        $expense = $this->childSubject($this->temporarySubject('Expense root', SubjectType::DEBTOR), 'Itemized expense', SubjectType::DEBTOR);
         $this->budget($income, 'income', 1000, 5);
         $this->budget($expense, 'expense', 800, 5);
         $this->transaction($income, 1200, 5);
@@ -246,6 +250,122 @@ class MonthlyBudgetTest extends TestCase
             ->assertSee('(۸۰۰)', false)->assertSee('(۷۰۰)', false)
             ->assertDontSee('-۸۰۰', false)->assertDontSee('-۷۰۰', false)
             ->assertDontSee("type: 'pie'", false);
+    }
+
+    public function test_drivers_rank_five_moein_accounts_by_subtree_balance_without_forecasts(): void
+    {
+        $this->travelTo(Carbon::parse(jalali_to_gregorian(1405, 7, 15, '-').' 12:00:00', 'Asia/Tehran'));
+        $income = $this->temporarySubject('Income root', SubjectType::CREDITOR);
+        $expense = $this->temporarySubject('Expense root', SubjectType::DEBTOR);
+        $expected = [];
+        foreach (range(1, 7) as $index) {
+            $account = $this->childSubject($income, 'Moein '.$index, SubjectType::CREDITOR);
+            $leaf = $this->childSubject($account, 'Detail '.$index, SubjectType::CREDITOR);
+            $leaf->update(['is_permanent' => true]);
+            $this->transaction($account, $index * 100, 6);
+            $this->transaction($leaf, $index * 50, 6);
+            $this->transaction($leaf, 99999, 6, approved: false);
+            $this->transaction($leaf, $index * 50, 5);
+            $expected[$index] = $account->id;
+        }
+        $cost = $this->childSubject($expense, 'Actual expense Moein', SubjectType::DEBTOR);
+        $this->transaction($cost, -500, 6);
+        $this->transaction($income, 10000, 6);
+        $this->budget($income, 'income', 1, 6);
+        $this->grant('budgets.index');
+
+        $this->actingAs($this->user)->get(route('budgets.index', ['month' => 6]))->assertOk()
+            ->assertViewHas('categoryDrivers', function (array $drivers) use ($expected, $cost) {
+                $top = $drivers['income']->first();
+
+                return $drivers['income']->pluck('subject.id')->all() === array_reverse(array_slice($expected, 2))
+                    && $top['amount'] === 1050.0 && $top['previous'] === 350.0
+                    && abs($top['share'] - 1050 / 14200 * 100) < 0.001
+                    && $drivers['expense']->sole()['subject']->is($cost);
+            });
+    }
+
+    public function test_module_shares_use_gross_payroll_and_net_approved_cost_accounts(): void
+    {
+        $this->travelTo(Carbon::parse(jalali_to_gregorian(1405, 7, 15, '-').' 12:00:00', 'Asia/Tehran'));
+        $root = $this->temporarySubject('Expenses', SubjectType::DEBTOR);
+        $cogs = $this->childSubject($root, 'COGS account', SubjectType::DEBTOR);
+        $service = $this->childSubject($root, 'Purchased services', SubjectType::DEBTOR);
+        $salary = $this->childSubject($root, 'Salary posted', SubjectType::DEBTOR);
+        $cogsLeaf = $this->childSubject($cogs, 'Product costs', SubjectType::DEBTOR);
+        $serviceLeaf = $this->childSubject($service, 'Service costs', SubjectType::DEBTOR);
+        $this->transaction($salary, -500, 6);
+        $this->transaction($cogsLeaf, -350, 6);
+        $this->transaction($cogsLeaf, 50, 6);
+        $this->transaction($serviceLeaf, -250, 6);
+        $this->transaction($serviceLeaf, 50, 6);
+        $this->transaction($serviceLeaf, -9999, 6, approved: false);
+        foreach (['cost_of_goods_sold' => $cogs->id, 'cogs_service' => $service->id] as $key => $id) {
+            Config::create(['fiscal_year_id' => $this->fiscalYear->id, 'key' => $key, 'value' => $id, 'type' => 3, 'category' => 1]);
+        }
+        // A configured parent and a module's own leaf account must count only once.
+        Product::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'cogs_subject_id' => $cogsLeaf->id]);
+        Service::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'cogs_subject_id' => $serviceLeaf->id]);
+        $payroll = [
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'year' => 1405, 'month' => 6, 'total_earnings' => 200,
+            'total_deductions' => 50, 'net_payment' => 150, 'employer_insurance' => 50,
+        ];
+        foreach ([PayrollStatus::Approved, PayrollStatus::Paid, PayrollStatus::Draft, PayrollStatus::PendingManagerApproval] as $status) {
+            Payroll::factory()->create([...$payroll, 'status' => $status]);
+        }
+        Payroll::factory()->create([...$payroll, 'status' => PayrollStatus::Approved, 'month' => 5]);
+        Payroll::factory()->create([...$payroll, 'status' => PayrollStatus::Approved, 'year' => 1404]);
+        $other = FiscalYear::factory()->create(['year' => 1405]);
+        Payroll::factory()->create([...$payroll, 'status' => PayrollStatus::Approved, 'fiscal_year_id' => $other->id]);
+        $this->grant('budgets.index');
+
+        $this->actingAs($this->user)->get(route('budgets.index', ['month' => 6]))->assertOk()
+            ->assertViewHas('actualExpense', -1000.0)
+            ->assertViewHas('moduleCostShares', fn (array $shares) => $shares === [
+                'payroll' => ['amount' => 500.0, 'share' => 50.0],
+                'cogs' => ['amount' => 300.0, 'share' => 30.0],
+                'services' => ['amount' => 200.0, 'share' => 20.0],
+            ])->assertSee(__('Module share of total expenses'));
+    }
+
+    public function test_module_shares_handle_missing_expenses_configuration_and_payroll_overposting(): void
+    {
+        config(['amir.cost_of_goods_sold' => null, 'amir.cogs_service' => null]);
+        $shares = $this->service->moduleCostShares(6, null);
+        $this->assertNull($shares['payroll']['share']);
+        $this->assertNull($shares['cogs']['amount']);
+        $this->assertNull($shares['services']['amount']);
+        $this->assertNull($this->service->moduleCostShares(6, 0)['payroll']['share']);
+        $this->assertNull($this->service->moduleCostShares(6, 100)['payroll']['share']);
+
+        Payroll::factory()->create([
+            'fiscal_year_id' => $this->fiscalYear->id, 'year' => 1405, 'month' => 6,
+            'total_earnings' => 200, 'employer_insurance' => 0, 'status' => PayrollStatus::Approved,
+        ]);
+        $this->assertSame(200.0, $this->service->moduleCostShares(6, -100)['payroll']['share']);
+    }
+
+    public function test_current_month_module_costs_and_drivers_respect_elapsed_day_cutoff(): void
+    {
+        $this->travelTo(Carbon::parse(jalali_to_gregorian(1405, 6, 15, '-').' 12:00:00', 'Asia/Tehran'));
+        $root = $this->temporarySubject('Expenses', SubjectType::DEBTOR);
+        $cost = $this->childSubject($root, 'Service cost', SubjectType::DEBTOR);
+        config(['amir.cogs_service' => $cost->id]);
+        foreach ([10, 25] as $day) {
+            $this->transaction($cost, -100, 6);
+            Document::query()->latest('id')->firstOrFail()->update(['date' => jalali_to_gregorian(1405, 6, $day, '-')]);
+            Payroll::factory()->create([
+                'fiscal_year_id' => $this->fiscalYear->id, 'year' => 1405, 'month' => 6,
+                'total_earnings' => 50, 'employer_insurance' => 0, 'status' => PayrollStatus::Approved,
+                'issue_date' => jalali_to_gregorian(1405, 6, $day, '-'),
+            ]);
+        }
+        $shares = $this->service->moduleCostShares(6, -100, 15);
+        $this->assertSame(50.0, $shares['payroll']['amount']);
+        $this->assertSame(100.0, $shares['services']['amount']);
+        $this->assertSame(-100.0, $this->service->driverActuals(6, 15)->sole()['actual']);
+        $this->assertSame(-200.0, $this->service->driverActuals(6)->sole()['actual']);
     }
 
     public function test_monthly_profitability_uses_approved_invoice_cost_snapshots_and_reverses_returns(): void
@@ -293,8 +413,8 @@ class MonthlyBudgetTest extends TestCase
     public function test_current_month_accounting_and_product_comparisons_use_equal_elapsed_days(): void
     {
         $this->travelTo(Carbon::parse(jalali_to_gregorian(1405, 5, 15, '-').' 12:00:00', 'Asia/Tehran'));
-        $income = $this->temporarySubject('Elapsed sales', SubjectType::CREDITOR);
-        $expense = $this->temporarySubject('Elapsed costs', SubjectType::DEBTOR);
+        $income = $this->childSubject($this->temporarySubject('Income root', SubjectType::CREDITOR), 'Elapsed sales', SubjectType::CREDITOR);
+        $expense = $this->childSubject($this->temporarySubject('Expense root', SubjectType::DEBTOR), 'Elapsed costs', SubjectType::DEBTOR);
         $this->budget($income, 'income', 2000, 5);
         $this->transaction($income, 1000, 4);
         $this->transaction($expense, -400, 4);
@@ -365,12 +485,12 @@ class MonthlyBudgetTest extends TestCase
         $this->grant('budgets.index');
 
         $this->actingAs($this->user)->get(route('budgets.index', ['month' => 5]))->assertOk()
-            ->assertViewHas('categoryDrivers', function (array $drivers) use ($root) {
+            ->assertViewHas('categoryDrivers', function (array $drivers) use ($child) {
                 $category = $drivers['income']->sole();
 
-                return $category['subject']->is($root) && $category['amount'] === 300.0
-                    && $category['previous'] === 200.0 && $category['share'] === 100.0
-                    && $category['change'] === 100.0 && $category['percent'] === 50.0;
+                return $category['subject']->is($child) && $category['amount'] === 200.0
+                    && $category['previous'] === 100.0 && abs($category['share'] - 200 / 300 * 100) < 0.001
+                    && $category['change'] === 100.0 && $category['percent'] === 100.0;
             });
     }
 

@@ -40,6 +40,7 @@
         <nav class="budget-navigation" aria-label="{{ __('Monthly report sections') }}">
             <a href="#monthly-overview">{{ __('Monthly overview') }}</a>
             <a href="#monthly-drivers">{{ __('Income and expense drivers') }}</a>
+            <a href="#monthly-module-costs">{{ __('Module share of total expenses') }}</a>
             <a href="#monthly-products">{{ __('Product Profitability') }}</a>
             <a href="#monthly-forecasts">{{ __('Forecasts') }} <span class="badge badge-sm badge-ghost">{{ localizeNumber($manualForecastsCount) }}</span></a>
         </nav>
@@ -75,7 +76,7 @@
         <section id="monthly-drivers" class="scroll-mt-4 space-y-4" aria-labelledby="monthly-drivers-title">
             <div>
                 <h2 id="monthly-drivers-title" class="budget-section-title">{{ __('Income and expense drivers') }}</h2>
-                <p class="budget-caption">{{ __('Largest actual categories, ranked independently of forecasts. Parent totals include their details only once.') }}</p>
+                <p class="budget-caption">{{ __('Top five second-level accounts (Moein), ranked by their actual balance including all descendants, independently of forecasts.') }}</p>
             </div>
             <div class="grid gap-4 xl:grid-cols-2">
                 @foreach (['income' => __('Actual Income Breakdown'), 'expense' => __('Actual Cost Breakdown')] as $type => $title)
@@ -83,6 +84,8 @@
                 @endforeach
             </div>
         </section>
+
+        @include('monthly-budgets.partials.module-costs')
 
         @include('monthly-budgets.partials.products')
         @include('monthly-budgets.partials.forecasts')
@@ -132,6 +135,11 @@
             .budget-share { height: .25rem; border-radius: 1rem; background: var(--color-base-200); overflow: hidden; min-width: 4rem; margin-top: .5rem; }
             .budget-share > span { display: block; height: 100%; background: var(--budget-teal); border-radius: inherit; }
             .budget-expense .budget-share > span { background: #b57a35; }
+            .budget-module-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+            .budget-module { min-width: 0; padding: 1.25rem; }
+            .budget-module + .budget-module { border-inline-start: 1px solid var(--color-base-200); }
+            .budget-module-ratio { font-size: 1.75rem; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--budget-teal); }
+            @media (max-width: 40rem) { .budget-module-grid { grid-template-columns: minmax(0, 1fr); } .budget-module + .budget-module { border-inline-start: 0; border-top: 1px solid var(--color-base-200); } }
             .budget-empty { padding: 2rem 1.25rem; text-align: center; color: color-mix(in oklab, var(--color-base-content) 60%, transparent); font-size: .8rem; line-height: 2; }
             .budget-forecast-entry { border: 1px solid var(--color-base-300); border-radius: .75rem; margin: 1.25rem; }
             .budget-forecast-entry > summary { padding: 1rem; cursor: pointer; font-weight: 600; font-size: .85rem; }

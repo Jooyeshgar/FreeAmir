@@ -4,13 +4,16 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Enums\PayrollStatus;
 use App\Enums\SubjectType;
 use App\Models\Company;
 use App\Models\Document;
 use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\MonthlyBudget;
+use App\Models\Payroll;
 use App\Models\Product;
+use App\Models\Service;
 use App\Models\Subject;
 use App\Models\Transaction;
 use Illuminate\Support\Collection;
@@ -80,19 +83,77 @@ class MonthlyBudgetService
         return $analysis;
     }
 
-    /** Keep actual categories stable when manual forecasts split a root into lower-level lines. */
-    public function categoryActuals(array $analysis): Collection
+    /** Actual second-level accounts include every descendant, independently of forecast rows. */
+    public function driverActuals(int $month, ?int $dayLimit = null): Collection
     {
-        $roots = $analysis['budgetLines']->where('isChild', false)->keyBy(fn (array $line) => (int) $line['subject']->id);
+        if ($dayLimit !== null) {
+            $snapshot = new self;
+            $snapshot->actualDayLimits[$month] = $dayLimit;
 
-        return $analysis['budgetLines']->where('includedInSummary', true)
-            ->groupBy(fn (array $line) => (int) ($line['subject']->parent_id ?: $line['subject']->id))
-            ->map(function (Collection $lines, int $rootId) use ($roots) {
-                $root = $roots->get($rootId);
-                $root['actual'] = $lines->contains(fn (array $line) => is_null($line['actual'])) ? null : (float) $lines->sum('actual');
+            return $snapshot->driverActuals($month);
+        }
 
-                return $root;
-            })->values();
+        if ($this->documentCountForMonth($month) === 0) {
+            return collect();
+        }
+
+        $subjects = $this->allSubjects();
+        $roots = $subjects->where('is_permanent', false)->whereNull('parent_id')->keyBy('id');
+        $accounts = $subjects->filter(fn (Subject $subject) => $roots->has($subject->parent_id));
+        $descendants = $this->descendantIdsBySubject($accounts->pluck('id')->all(), $subjects);
+        $balances = $this->subjectBalancesForMonth($month, $this->balanceSubjectIds());
+
+        return $accounts->map(function (Subject $subject) use ($descendants, $balances) {
+            $ids = $descendants[(int) $subject->id];
+            $actual = (float) collect($ids)->sum(fn (int $id) => (float) ($balances[$id] ?? 0));
+            $historical = (float) collect($ids)->sum(fn (int $id) => (float) ($this->approvedSubjectBalances()[$id] ?? 0));
+
+            return [
+                'subject' => $subject,
+                'actual' => $actual,
+                'type' => $this->subjectDirection($subject, $historical, $actual),
+            ];
+        })->values();
+    }
+
+    /** Module amounts are compared with accounting expenses, never added to them again. */
+    public function moduleCostShares(int $month, ?float $actualExpense, ?int $dayLimit = null): array
+    {
+        $snapshot = new self;
+        if ($dayLimit !== null) {
+            $snapshot->actualDayLimits[$month] = $dayLimit;
+        }
+        $year = (int) FiscalYear::query()->findOrFail(getActiveFiscalYear())->year;
+        $payrolls = Payroll::query()->where('year', $year)->where('month', $month)
+            ->whereIn('status', [PayrollStatus::Approved, PayrollStatus::Paid]);
+        if ($dayLimit !== null) {
+            [, $cutoff] = $snapshot->monthDateRange($month);
+            $payrolls->whereDate('issue_date', '<=', $cutoff);
+        }
+        $payrollCost = (float) $payrolls->sum(DB::raw('total_earnings + COALESCE(employer_insurance, 0)'));
+        $subjects = $snapshot->allSubjects();
+        $balances = $snapshot->subjectBalancesForMonth($month, $snapshot->balanceSubjectIds());
+        $total = is_null($actualExpense) ? null : -$actualExpense;
+        $accountCost = function (Collection $accountIds) use ($snapshot, $subjects, $balances): ?float {
+            $accountIds = $accountIds->filter()->map(fn ($id) => (int) $id)
+                ->intersect($snapshot->balanceSubjectIds())->unique()->values();
+            if ($accountIds->isEmpty()) {
+                return null;
+            }
+            $ids = collect($snapshot->descendantIdsBySubject($accountIds->all(), $subjects))->flatten()->unique();
+
+            return -(float) $ids->sum(fn (int $id) => (float) ($balances[$id] ?? 0));
+        };
+        $amounts = [
+            'payroll' => $payrollCost,
+            'cogs' => $accountCost(Product::query()->pluck('cogs_subject_id')->push(config('amir.cost_of_goods_sold'))),
+            'services' => $accountCost(Service::query()->pluck('cogs_subject_id')->push(config('amir.cogs_service'))),
+        ];
+
+        return collect($amounts)->mapWithKeys(fn (?float $amount, string $key) => [$key => [
+            'amount' => $amount,
+            'share' => ! is_null($amount) && $total > 0 ? $amount / $total * 100 : null,
+        ]])->all();
     }
 
     public function saveForecast(int $month, array $data): MonthlyBudget

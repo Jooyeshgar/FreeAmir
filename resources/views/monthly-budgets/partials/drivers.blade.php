@@ -1,6 +1,6 @@
 <article class="budget-panel {{ $type === 'expense' ? 'budget-expense' : '' }}">
     <div class="budget-panel-heading">
-        <div><h3 class="font-semibold">{{ $title }}</h3><p class="budget-caption">{{ __('Top five categories') }}</p></div>
+        <div><h3 class="font-semibold">{{ $title }}</h3><p class="budget-caption">{{ __('Top five Moein accounts') }}</p></div>
         <div class="text-end"><span class="budget-caption">{{ __('Total') }} · {{ $currency }}</span><div class="font-bold tabular-nums">{{ is_null($type === 'income' ? $actualIncome : $actualExpense) ? '—' : formatNumber($type === 'income' ? $actualIncome : $actualExpense) }}</div></div>
     </div>
     <div class="overflow-x-auto">
@@ -28,7 +28,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="3" class="budget-empty">{{ __('No actual accounting categories are available.') }}</td></tr>
+                    <tr><td colspan="3" class="budget-empty">{{ __('No actual second-level account activity is available.') }}</td></tr>
                 @endforelse
             </tbody>
         </table>
