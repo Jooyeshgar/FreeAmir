@@ -3640,5 +3640,6 @@
     "No cost accounts are configured for this module.": "سرفصل هزینه‌ای برای این ماژول تنظیم نشده است.",
     "This module exceeds recorded total expenses; check that its costs are posted in the same period.": "هزینه این ماژول از کل هزینه‌های ثبت‌شده بیشتر است؛ ثبت هزینه‌های آن در همین دوره را بررسی کنید.",
     "Payroll uses the payslip month; the current month includes payslips issued through today. Payroll amounts may differ from posted expenses. Module percentages are independent and are not added together.": "حقوق و دستمزد بر اساس ماه فیش است؛ در ماه جاری، فیش‌های صادرشده تا امروز محاسبه می‌شوند. مبلغ فیش‌ها ممکن است با هزینه‌های ثبت‌شده در حسابداری متفاوت باشد. درصد هر ماژول مستقل است و درصدها با هم جمع نمی‌شوند.",
-    "Cost shares are unavailable until positive total expenses are recorded.": "تا زمانی که کل هزینه‌های ثبت‌شده مثبت نباشد، سهم هزینه‌ها قابل محاسبه نیست."
+    "Cost shares are unavailable until positive total expenses are recorded.": "تا زمانی که کل هزینه‌های ثبت‌شده مثبت نباشد، سهم هزینه‌ها قابل محاسبه نیست.",
+    "Payroll amounts may differ from posted expenses. Module percentages are independent.": "مبلغ فیش‌های حقوقی ممکن است با هزینه‌های ثبت‌شده متفاوت باشد. درصد هر ماژول مستقل است."
 }

@@ -6,31 +6,31 @@
         $fiscalYearLabel = localizeNumber(config('active-company-fiscal-year'));
     @endphp
 
-    <div dir="{{ app()->isLocale('fa') ? 'rtl' : 'ltr' }}" class="budget-workbench mx-auto w-full max-w-[1430px] space-y-6 px-3 sm:px-6">
+    <div dir="{{ app()->isLocale('fa') ? 'rtl' : 'ltr' }}" class="budget-workbench mx-auto w-full max-w-[1430px] space-y-5 px-3 sm:px-6">
         <header class="budget-header">
-            <div>
+            <div class="budget-header-main">
                 @can('reports.cost-income')
                     <a class="budget-back" href="{{ route('reports.cost-income') }}">{{ __('Annual income and expense report') }} <span aria-hidden="true">↗</span></a>
                 @endcan
-                <div class="mt-2 flex items-center gap-2">
-                    <h1 class="text-xl font-bold sm:text-2xl">{{ __('Monthly Income and Expense Workbench') }}</h1>
+                <div class="flex items-center gap-2">
+                    <h1 class="budget-page-title">{{ __('Monthly Income and Expense Workbench') }}</h1>
                     <x-user-guide-link source="reports/budgets/budgets.md" />
                 </div>
-                <p class="mt-2 text-sm text-base-content/65">{{ __('Understand this month, compare performance, and plan the next step.') }}</p>
             </div>
             <form method="GET" action="{{ route('budgets.index') }}" class="budget-month-picker">
                 @if ($selectedMonth > 1)
                     <a class="btn btn-ghost btn-square btn-sm" href="{{ route('budgets.index', ['month' => $selectedMonth - 1]) }}" aria-label="{{ __('Previous month') }}"><span class="budget-prev" aria-hidden="true">‹</span></a>
                 @endif
-                <div>
-                    <label for="budget-month" class="block text-xs text-base-content/60">{{ __('Month') }} · {{ $fiscalYearLabel }}</label>
-                    <select id="budget-month" name="month" class="select select-ghost select-sm w-36 font-bold" onchange="this.form.submit()">
+                <div class="budget-month-field">
+                    <label for="budget-month" class="sr-only">{{ __('Month') }} · {{ $fiscalYearLabel }}</label>
+                    <select id="budget-month" name="month" class="select select-ghost select-sm w-28 font-bold" onchange="this.form.submit()">
                         @foreach ($months as $monthNumber => $monthName)
                             <option value="{{ $monthNumber }}" @selected($selectedMonth === $monthNumber)>{{ $monthName }}</option>
                         @endforeach
                     </select>
+                    <span class="budget-month-year" aria-hidden="true">{{ $fiscalYearLabel }}</span>
                 </div>
-                <button class="btn btn-sm btn-ghost" type="submit">{{ __('View') }}</button>
+                <noscript><button class="btn btn-sm btn-ghost" type="submit">{{ __('View') }}</button></noscript>
                 @if ($selectedMonth < 12)
                     <a class="btn btn-ghost btn-square btn-sm" href="{{ route('budgets.index', ['month' => $selectedMonth + 1]) }}" aria-label="{{ __('Next month') }}"><span class="budget-next" aria-hidden="true">›</span></a>
                 @endif
@@ -78,14 +78,13 @@
                 <h2 id="monthly-drivers-title" class="budget-section-title">{{ __('Income and expense drivers') }}</h2>
                 <p class="budget-caption">{{ __('Top five second-level accounts (Moein), ranked by their actual balance including all descendants, independently of forecasts.') }}</p>
             </div>
-            <div class="grid gap-4 xl:grid-cols-2">
+            <div class="budget-driver-grid">
                 @foreach (['income' => __('Actual Income Breakdown'), 'expense' => __('Actual Cost Breakdown')] as $type => $title)
                     @include('monthly-budgets.partials.drivers')
                 @endforeach
+                @include('monthly-budgets.partials.module-costs')
             </div>
         </section>
-
-        @include('monthly-budgets.partials.module-costs')
 
         @include('monthly-budgets.partials.products')
         @include('monthly-budgets.partials.forecasts')
@@ -96,12 +95,16 @@
             .budget-workbench { --budget-ink: #193d56; --budget-teal: #087f8c; padding-top: .5rem; }
             .budget-overview-grid, .budget-forecast-summary { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); }
             @media (min-width: 64rem) { .budget-overview-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); } .budget-forecast-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-            .budget-header { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap; }
-            .budget-back { display: inline-flex; gap: .5rem; font-size: .75rem; color: var(--budget-teal); }
-            .budget-month-picker { display: flex; align-items: center; gap: .25rem; padding: .5rem; background: var(--color-base-100); border: 1px solid var(--color-base-300); border-radius: 1rem; }
+            .budget-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; padding-block: .15rem; }
+            .budget-header-main { display: grid; gap: .1rem; min-width: 0; }
+            .budget-page-title { font-size: clamp(1.05rem, 2vw, 1.35rem); font-weight: 750; line-height: 1.5; }
+            .budget-back { display: inline-flex; gap: .5rem; font-size: .68rem; color: var(--budget-teal); }
+            .budget-month-picker { display: flex; align-items: center; gap: .15rem; padding: .25rem; background: var(--color-base-100); border: 1px solid var(--color-base-300); border-radius: .75rem; }
+            .budget-month-field { display: flex; align-items: center; gap: .25rem; }
+            .budget-month-year { padding-inline-end: .4rem; font-size: .75rem; color: color-mix(in oklab, var(--color-base-content) 65%, transparent); }
             [dir=rtl] .budget-prev, [dir=rtl] .budget-next { display: inline-block; transform: rotate(180deg); }
-            .budget-navigation { display: flex; flex-wrap: wrap; gap: .35rem 1.2rem; border-bottom: 1px solid var(--color-base-300); padding-bottom: .75rem; }
-            .budget-navigation a { padding: .4rem .15rem; font-size: .8rem; font-weight: 600; color: var(--color-base-content); }
+            .budget-navigation { display: flex; gap: 1rem; overflow-x: auto; border-bottom: 1px solid var(--color-base-300); padding-bottom: .5rem; scrollbar-width: thin; }
+            .budget-navigation a { flex-shrink: 0; padding: .35rem .15rem; font-size: .8rem; font-weight: 600; white-space: nowrap; color: var(--color-base-content); }
             .budget-navigation a:hover { color: var(--budget-teal); }
             .budget-section-title { font-size: 1rem; font-weight: 750; line-height: 1.8; }
             .budget-caption { margin-top: .25rem; font-size: .75rem; line-height: 1.8; color: color-mix(in oklab, var(--color-base-content) 65%, transparent); }
@@ -135,11 +138,26 @@
             .budget-share { height: .25rem; border-radius: 1rem; background: var(--color-base-200); overflow: hidden; min-width: 4rem; margin-top: .5rem; }
             .budget-share > span { display: block; height: 100%; background: var(--budget-teal); border-radius: inherit; }
             .budget-expense .budget-share > span { background: #b57a35; }
-            .budget-module-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-            .budget-module { min-width: 0; padding: 1.25rem; }
-            .budget-module + .budget-module { border-inline-start: 1px solid var(--color-base-200); }
-            .budget-module-ratio { font-size: 1.75rem; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--budget-teal); }
-            @media (max-width: 40rem) { .budget-module-grid { grid-template-columns: minmax(0, 1fr); } .budget-module + .budget-module { border-inline-start: 0; border-top: 1px solid var(--color-base-200); } }
+            .budget-driver-grid { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1fr); align-items: start; }
+            @media (min-width: 64rem) { .budget-driver-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+            @media (min-width: 80rem) { .budget-driver-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+            #monthly-module-costs .budget-panel-heading { padding: 1.25rem 1.25rem .35rem; border-bottom: 0; font-size: .9rem; }
+            .budget-module-grid { display: grid; gap: .1rem; padding: .7rem 1.25rem .9rem; }
+            .budget-module { min-width: 0; padding: .45rem 0 .55rem; }
+            .budget-module-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+            .budget-module-ratio { font-size: .85rem; font-weight: 750; font-variant-numeric: tabular-nums; color: var(--color-base-content); }
+            .budget-module-name { font-size: .78rem; font-weight: 650; }
+            .budget-module-amount { margin-inline-start: .35rem; font-size: .68rem; font-weight: 400; color: color-mix(in oklab, var(--color-base-content) 55%, transparent); }
+            .budget-module .budget-share { height: .35rem; margin-top: .35rem; }
+            .budget-module[data-module-cost=cogs] .budget-share > span { background: #f59e0b; }
+            .budget-module[data-module-cost=payroll] .budget-share > span { background: #7660ff; }
+            .budget-module[data-module-cost=services] .budget-share > span { background: #f43f5e; }
+            .budget-module-note { margin: .65rem 1.25rem 1.25rem; padding: .7rem .85rem; border-radius: .6rem; background: color-mix(in oklab, #818cf8 12%, var(--color-base-100)); color: color-mix(in oklab, #4f46e5 80%, var(--color-base-content)); font-size: .7rem; line-height: 1.8; }
+            .budget-module-note-icon { display: inline-flex; align-items: center; justify-content: center; width: 1rem; height: 1rem; margin-inline-end: .25rem; border: 1px solid currentColor; border-radius: 999px; font-size: .65rem; font-weight: 700; }
+            .budget-module-details { margin: 0 1.25rem 1rem; font-size: .7rem; line-height: 1.8; color: color-mix(in oklab, var(--color-base-content) 65%, transparent); }
+            .budget-module-details summary { cursor: pointer; width: fit-content; }
+            .budget-module-details p { margin-top: .35rem; }
+            [data-theme=dark] .budget-module-note { color: #c7c9ff; }
             .budget-empty { padding: 2rem 1.25rem; text-align: center; color: color-mix(in oklab, var(--color-base-content) 60%, transparent); font-size: .8rem; line-height: 2; }
             .budget-forecast-entry { border: 1px solid var(--color-base-300); border-radius: .75rem; margin: 1.25rem; }
             .budget-forecast-entry > summary { padding: 1rem; cursor: pointer; font-weight: 600; font-size: .85rem; }
