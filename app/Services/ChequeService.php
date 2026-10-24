@@ -275,12 +275,19 @@ class ChequeService
 
     private function endorse(Cheque $cheque, User $user, array $data): Cheque
     {
-        if (empty($data['customer_id'])) {
-            throw ValidationException::withMessages(['customer_id' => __('Select the vendor receiving the endorsed cheque.')]);
+        if (! empty($data['subject_id'])) {
+            $subject = Subject::where('fiscal_year_id', $cheque->fiscal_year_id)->find($data['subject_id']);
+            if (! $subject) {
+                throw ValidationException::withMessages(['subject_id' => __('The selected Subject does not exist.')]);
+            }
+            $vendorSubject = (int) $subject->id;
+            $vendor = Customer::where('fiscal_year_id', $cheque->fiscal_year_id)->where('subject_id', $vendorSubject)->first();
+        } elseif (! empty($data['customer_id'])) {
+            $vendor = Customer::findOrFail($data['customer_id']);
+            $vendorSubject = $this->customerSubject($vendor, $cheque);
+        } else {
+            throw ValidationException::withMessages(['subject_id' => __('Select a subject')]);
         }
-
-        $vendor = Customer::findOrFail($data['customer_id']);
-        $vendorSubject = $this->customerSubject($vendor, $cheque);
 
         $from = $cheque->status;
         $amount = (float) $cheque->amount;
@@ -288,10 +295,10 @@ class ChequeService
             [$vendorSubject, -$amount],
             [$this->subject(self::DOCUMENTS_RECEIVABLE_CONFIG), $amount],
         ], $data['date'] ?? null);
-        $payment = $this->payment($user, $cheque, $document, $vendorSubject, $data, 'endorse', $vendor->id);
+        $payment = $this->payment($user, $cheque, $document, $vendorSubject, $data, 'endorse', $vendor?->id);
         DocumentService::syncDocumentable($document, $payment);
 
-        $cheque->update(['status' => ChequeType::ENDORSED, 'endorsed_to_id' => $vendor->id]);
+        $cheque->update(['status' => ChequeType::ENDORSED, 'endorsed_to_id' => $vendor?->id]);
         $this->history($cheque, $user, $from, ChequeType::ENDORSED, $document, $payment, $data['description'] ?? null);
 
         return $cheque->fresh();
@@ -493,7 +500,7 @@ class ChequeService
     {
         return Payment::create([
             'cheque_id' => $cheque->id,
-            'payer_id' => $payerId ?? ($cheque->direction === ChequeType::RECEIVABLE ? $cheque->customer_id : null),
+            'payer_id' => $event === 'endorse' ? $payerId : ($payerId ?? ($cheque->direction === ChequeType::RECEIVABLE ? $cheque->customer_id : null)),
             'amount' => $cheque->amount,
             'date' => $data['date'] ?? now()->toDateString(),
             'description' => $data['description'] ?? $this->accountingDescription($event, $cheque),
@@ -524,14 +531,8 @@ class ChequeService
     {
         $fee = $this->validateBankServiceFee($data);
         if ($fee > 0) {
-            if (! $cheque->bankAccount) {
-                throw ValidationException::withMessages(['bank_account_id' => __('A bank account is required.')]);
-            }
-            $bankSubjectId = (int) ($cheque->bankAccount->subject_id ?: $cheque->bankAccount->subject?->id);
-            if (! $bankSubjectId || ! Subject::where('fiscal_year_id', $cheque->fiscal_year_id)->whereKey($bankSubjectId)->exists()) {
-                throw ValidationException::withMessages(['bank_account_id' => __('The bank account has no accounting subject.')]);
-            }
-            $transactions = $this->paymentService->bankServiceFeeTransactions($fee, $bankSubjectId);
+            $customerSubjectId = $this->accountSideSubject($cheque);
+            $transactions = $this->paymentService->bankServiceFeeTransactions($fee, $customerSubjectId);
             $document = $history->document;
             if ($document) {
                 DocumentService::changeDocumentStatus($document, $user, 'unapproved');
