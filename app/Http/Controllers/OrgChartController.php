@@ -53,7 +53,9 @@ class OrgChartController extends Controller
     {
         $roots = OrgChart::getTree();
 
-        return view('org-charts.show', compact('orgChart', 'roots'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('org-charts.show', compact('fiscalYearClosed', 'orgChart', 'roots'));
     }
 
     public function edit(OrgChart $orgChart)

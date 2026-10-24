@@ -303,13 +303,13 @@
                                     @if ($isAdminView ?? false)
                                         @can('attendance.attendance-logs.edit')
                                             <td>
-                                                <a href="{{ route('attendance.attendance-logs.edit', $log) }}" class="btn btn-xs btn-ghost">
+                                                <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('attendance.attendance-logs.edit', $log) }}" class="btn btn-xs btn-ghost">
                                                     {{ __('Edit') }}
-                                                </a>
+                                                </x-closed-year-action-link>
                                                 <form action="{{ route('attendance.attendance-logs.recalculate', $log) }}" method="POST" class="inline-block mb-0"
                                                     onsubmit="return confirm('{{ __('Recalculate this attendance log? Stored values will be overwritten with the computed values.') }}')">
                                                     @csrf
-                                                    <button type="submit" class="btn btn-xs btn-ghost">
+                                                    <button type="submit" @disabled($fiscalYearClosed) class="btn btn-xs btn-ghost" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Recalculate') }}">
                                                         {{ __('Recalculate') }}
                                                     </button>
                                                 </form>

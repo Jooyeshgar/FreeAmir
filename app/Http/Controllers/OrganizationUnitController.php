@@ -62,7 +62,9 @@ class OrganizationUnitController extends Controller
             'employees' => fn ($query) => $query->with('workSite')->orderBy('code'),
         ]);
 
-        return view('organization-units.show', compact('organizationUnit'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('organization-units.show', compact('fiscalYearClosed', 'organizationUnit'));
     }
 
     public function edit(OrganizationUnit $organizationUnit): View

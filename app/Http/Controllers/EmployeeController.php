@@ -118,7 +118,9 @@ class EmployeeController extends Controller
             'payrolls' => fn ($query) => $query->with(['decree', 'monthlyAttendance'])->orderByDesc('year')->orderByDesc('month'),
         ]);
 
-        return view('employees.show', compact('employee'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('employees.show', compact('fiscalYearClosed', 'employee'));
     }
 
     public function edit(Employee $employee): View

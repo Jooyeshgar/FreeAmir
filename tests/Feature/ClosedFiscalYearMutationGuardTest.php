@@ -17,6 +17,8 @@ use App\Models\Employee;
 use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\MonthlyAttendance;
+use App\Models\OrganizationUnit;
+use App\Models\OrgChart;
 use App\Models\Payment;
 use App\Models\Payroll;
 use App\Models\PersonnelRequest;
@@ -37,6 +39,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -373,6 +376,104 @@ class ClosedFiscalYearMutationGuardTest extends TestCase
 
         $this->get(route('salary.payroll-items.edit', $item))->assertOk()
             ->assertViewHas('fiscalYearClosed', false);
+    }
+
+    public function test_historical_detail_mutation_controls_reflect_year_closure(): void
+    {
+        $this->employee->workShift->update(['thursday_status' => ThursdayStatus::FULL_DAY]);
+        foreach (['hr.org-charts.*', 'attendance.attendance-logs.*', 'attendance.monthly-attendances.*'] as $permission) {
+            $this->user->givePermissionTo(Permission::findOrCreate($permission));
+        }
+        $unit = OrganizationUnit::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
+        $root = OrgChart::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
+        $child = OrgChart::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'parent_id' => $root->id]);
+        $attendance = MonthlyAttendance::factory()->create([
+            'fiscal_year_id' => $this->fiscalYear->id, 'employee_id' => $this->employee->id,
+            'start_date' => '2025-01-06', 'duration' => 1,
+        ]);
+        $log = AttendanceLog::factory()->create([
+            'fiscal_year_id' => $this->fiscalYear->id, 'employee_id' => $this->employee->id,
+            'monthly_attendance_id' => $attendance->id, 'log_date' => '2025-01-06',
+        ]);
+        $pages = [
+            [route('hr.employees.show', $this->employee), [route('hr.employees.edit', $this->employee), route('hr.employees.edit', $this->employee)], []],
+            [route('hr.organization-units.show', $unit), [route('hr.organization-units.edit', $unit)], []],
+            [route('hr.org-charts.show', $root), [
+                route('hr.org-charts.create', ['parent_id' => $root->id]), route('hr.org-charts.edit', $root),
+                route('hr.org-charts.create', ['parent_id' => $child->id]), route('hr.org-charts.edit', $child),
+            ], [route('hr.org-charts.destroy', $root), route('hr.org-charts.destroy', $child)]],
+            [route('attendance.monthly-attendances.show', $attendance), [
+                route('attendance.monthly-attendances.edit', $attendance), route('attendance.attendance-logs.edit', $log), route('salary.salary-decrees.create', ['employee' => $this->employee]),
+            ], [route('attendance.attendance-logs.recalculate', $log)]],
+        ];
+
+        foreach ([true, false] as $closed) {
+            $this->fiscalYear->update(['closed_at' => $closed ? now() : null]);
+            foreach ($pages as [$url, $links, $forms]) {
+                $response = $this->get($url)->assertOk()->assertViewHas('fiscalYearClosed', $closed);
+                $document = new \DOMDocument;
+                @$document->loadHTML('<?xml encoding="utf-8" ?>'.$response->getContent());
+                $xpath = new \DOMXPath($document);
+                foreach (array_count_values($links) as $link => $count) {
+                    $this->assertSame($closed ? 0 : $count, $xpath->query('//a[@href="'.$link.'"]')->length, $link);
+                }
+                foreach ($forms as $action) {
+                    $buttons = $xpath->query('//form[@action="'.$action.'"]//button[@type="submit"]');
+                    $this->assertCount(1, $buttons, $action);
+                    $this->assertSame($closed, $buttons->item(0)->hasAttribute('disabled'), $action);
+                    if ($closed) {
+                        $this->assertSame(__('This fiscal year is already closed.'), $buttons->item(0)->getAttribute('title'));
+                    }
+                }
+                $disabledLinks = $xpath->query('//a[@aria-disabled="true"]');
+                $this->assertCount($closed ? count($links) : 0, $disabledLinks, $url);
+                foreach ($disabledLinks as $link) {
+                    $this->assertFalse($link->hasAttribute('href'));
+                    $this->assertSame('-1', $link->getAttribute('tabindex'));
+                    $this->assertSame(__('This fiscal year is already closed.'), $link->getAttribute('title'));
+                }
+            }
+        }
+    }
+
+    public static function nestedPaymentOperations(): array
+    {
+        return [
+            'delete' => ['deletePayment'],
+            'create document' => ['createPaymentDocument'],
+            'remove document' => ['removePaymentDocument'],
+        ];
+    }
+
+    #[DataProvider('nestedPaymentOperations')]
+    public function test_each_payment_operation_rejects_its_closed_owning_year(string $operation): void
+    {
+        $payment = Payment::create([
+            'invoice_id' => $this->invoice->id, 'amount' => 10,
+            'creator_id' => $this->user->id, 'date' => now()->toDateString(),
+        ]);
+        $openYear = FiscalYear::factory()->create(['company_id' => $this->closedYear->company_id, 'year' => $this->closedYear->year + 1]);
+        config(['active-fiscal-year-id' => $openYear->id]);
+        $payment = Payment::findOrFail($payment->id);
+        $this->assertNull($payment->invoice);
+
+        try {
+            $service = app(PaymentService::class);
+            if ($operation === 'createPaymentDocument') {
+                $service->$operation($this->user, $payment);
+            } else {
+                $service->$operation($payment);
+            }
+            $this->fail('Closed-year payment operation unexpectedly completed.');
+        } catch (ValidationException $exception) {
+            $this->assertSame(__('This fiscal year is already closed.'), $exception->errors()['fiscal_year'][0]);
+        }
+        $this->assertDatabaseHas('payments', ['id' => $payment->id, 'invoice_id' => $this->invoice->id, 'document_id' => null]);
+        $this->assertDatabaseCount('documents', 0);
+        $this->assertDatabaseCount('transactions', 0);
+
+        $this->closedYear->update(['closed_at' => null]);
+        $this->assertSame($this->closedYear->id, app(FiscalYearMutationGuard::class)->ensureOpen($payment)->id);
     }
 
     public function test_closed_year_allows_read_only_attendance_import_preview(): void
