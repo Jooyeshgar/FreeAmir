@@ -6,6 +6,7 @@ use App\Models\Document;
 use App\Models\FiscalYear;
 use App\Models\Invoice;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -99,7 +100,8 @@ class FiscalYearMutationGuard
                 continue;
             }
 
-            $parent = $subject->getRelationValue($relation);
+            $relationship = $subject->{$relation}();
+            $parent = $relationship instanceof BelongsTo ? $relationship->withoutGlobalScopes()->first() : $subject->getRelationValue($relation);
             if ($parent instanceof Model) {
                 $fiscalYear = $this->resolveFiscalYear($parent);
                 if ($fiscalYear !== null) {

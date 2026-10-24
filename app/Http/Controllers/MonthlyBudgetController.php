@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FiscalYear;
 use App\Models\MonthlyBudget;
 use App\Models\Subject;
+use App\Services\FiscalYearMutationGuard;
 use App\Services\MonthlyBudgetService;
 use App\Services\SubjectService;
 use Illuminate\Http\Request;
@@ -81,7 +83,7 @@ class MonthlyBudgetController extends Controller
                 'expenseItemDatasets' => $expenseItemDatasets,
             ],
             $analysis
-        ));
+        ))->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function searchSubjects(Request $request, string $month, ?string $scope = null)
@@ -153,6 +155,8 @@ class MonthlyBudgetController extends Controller
 
     public function destroy(MonthlyBudget $monthlyBudget)
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($monthlyBudget);
+
         $month = $monthlyBudget->month;
         $monthlyBudget->delete();
 

@@ -10,6 +10,8 @@ class ServiceService
 
     public function create(array $data): Service
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($data['fiscal_year_id'] ?? getActiveFiscalYear());
+
         $data['fiscal_year_id'] ??= getActiveFiscalYear();
 
         $service = Service::create($data);
@@ -21,6 +23,8 @@ class ServiceService
 
     public function update(Service $service, array $data): Service
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($service, $data['fiscal_year_id'] ?? null);
+
         $service->fill($data);
         $service->save();
 
@@ -31,6 +35,8 @@ class ServiceService
 
     public function delete(Service $service): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($service);
+
         $service->delete();
         $this->deleteSubjects($service);
     }

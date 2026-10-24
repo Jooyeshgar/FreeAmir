@@ -13,6 +13,8 @@ class CustomerService
 
     public function create(array $data): Customer
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($data['fiscal_year_id'] ?? getActiveFiscalYear());
+
         return DB::transaction(function () use ($data) {
             $data['fiscal_year_id'] ??= getActiveFiscalYear();
             $subjectCode = $data['subject_code'] ?? null;
@@ -27,6 +29,8 @@ class CustomerService
 
     public function update(Customer $customer, array $data): Customer
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($customer, $data['fiscal_year_id'] ?? null);
+
         return DB::transaction(function () use ($customer, $data) {
             $subjectCode = $data['subject_code'] ?? null;
             unset($data['subject_code']);
@@ -42,6 +46,8 @@ class CustomerService
 
     public function delete(Customer $customer): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($customer);
+
         DB::transaction(function () use ($customer) {
             app(ActivityLogService::class)->deleteModels($customer->comments()->getQuery());
             $customer->delete();

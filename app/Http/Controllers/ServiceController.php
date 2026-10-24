@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreServiceRequest;
 use App\Http\Requests\UpdateServiceRequest;
+use App\Models\FiscalYear;
 use App\Models\Service;
 use App\Models\ServiceGroup;
 use App\Services\ReportExportService;
@@ -40,7 +41,7 @@ class ServiceController extends Controller
         return view('services.index', [
             'services' => $services,
             'csvColumns' => $this->exportColumnMapping(),
-        ]);
+        ])->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function create()
@@ -63,7 +64,7 @@ class ServiceController extends Controller
     {
         $service->load('serviceGroup', 'subject', 'cogsSubject', 'salesReturnsSubject');
 
-        return view('services.show', compact('service'));
+        return view('services.show', compact('service'))->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function edit(Service $service)

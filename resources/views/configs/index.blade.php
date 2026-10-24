@@ -48,7 +48,7 @@
                                 </td>
                                 <td class="px-4 py-2">
                                     @can('configs.edit')
-                                        <a href="{{ route('configs.edit', strtolower($configTitle['value'])) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                        <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('configs.edit', strtolower($configTitle['value'])) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</x-closed-year-action-link>
                                     @endcan
                                 </td>
                             </tr>

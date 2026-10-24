@@ -12,9 +12,9 @@
         </div>
 
         <div class="flex flex-wrap items-center justify-start gap-2">
-            <a href="{{ route('services.create') }}" class="btn btn-primary btn-sm">{{ __('Create service') }}</a>
+            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('services.create') }}" class="btn btn-primary btn-sm">{{ __('Create service') }}</x-closed-year-action-link>
             <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('service-csv-modal').showModal()">{{ __('Receive Report') }}</button>
-            <a href="{{ route('services.import') }}" class="btn btn-outline btn-sm">{{ __('Import CSV') }}</a>
+            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('services.import') }}" class="btn btn-outline btn-sm">{{ __('Import CSV') }}</x-closed-year-action-link>
         </div>
     </div>
 
@@ -122,14 +122,14 @@
                             </td>
                             <td class="px-4 py-2">
                                 <div class="inline-flex gap-2">
-                                    <a href="{{ route('services.edit', $service) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                    <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('services.edit', $service) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</x-closed-year-action-link>
                                     @if ($service->invoiceItems()->exists())
-                                        <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" title="{{ __('Cannot delete service that is used in invoice items') }}">{{ __('Delete') }}</button>
+                                        <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" disabled title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Cannot delete service that is used in invoice items') }}">{{ __('Delete') }}</button>
                                     @else
                                         <form action="{{ route('services.destroy', $service) }}" method="POST">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                            <button type="submit" class="btn btn-sm btn-error" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ __('Delete') }}</button>
                                         </form>
                                     @endif
                                 </div>

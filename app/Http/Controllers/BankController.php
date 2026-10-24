@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models;
+use App\Models\FiscalYear;
+use App\Services\FiscalYearMutationGuard;
 use Illuminate\Http\Request;
 
 class BankController extends Controller
@@ -13,7 +15,7 @@ class BankController extends Controller
     {
         $banks = Models\Bank::paginate(12);
 
-        return view('banks.index', compact('banks'));
+        return view('banks.index', compact('banks'))->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function create()
@@ -23,6 +25,8 @@ class BankController extends Controller
 
     public function store(Request $request)
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $validatedData = $request->validate([
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
         ]);
@@ -40,6 +44,8 @@ class BankController extends Controller
 
     public function update(Request $request, Models\Bank $bank)
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($bank);
+
         $validatedData = $request->validate([
             'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
         ]);
@@ -51,6 +57,8 @@ class BankController extends Controller
 
     public function destroy(Models\Bank $bank)
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($bank);
+
         $bank->delete();
 
         return redirect()->route('banks.index')->with('success', __('Bank deleted successfully.'));

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreCommentRequest;
 use App\Models\Comment;
 use App\Models\Customer;
+use App\Models\FiscalYear;
 use App\Services\CommentService;
 
 class CommentController extends Controller
@@ -15,7 +16,7 @@ class CommentController extends Controller
     {
         $comments = Comment::where('customer_id', $customer->id)->paginate(25);
 
-        return view('customers.comments.index', compact('comments', 'customer'));
+        return view('customers.comments.index', compact('comments', 'customer'))->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function create(Customer $customer)

@@ -12,7 +12,7 @@
         </div>
 
         <div class="flex flex-wrap items-center justify-start gap-2">
-            <a href="{{ route('product-groups.create') }}" class="btn btn-sm btn-primary">{{ __('Create product group') }}</a>
+            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('product-groups.create') }}" class="btn btn-sm btn-primary">{{ __('Create product group') }}</x-closed-year-action-link>
         </div>
     </div>
 
@@ -72,14 +72,14 @@
                                 <td class="px-4 py-2">
                                     <div class="inline-flex gap-2 whitespace-nowrap">
                                         <a href="{{ route('product-groups.show', $productGroup) }}" class="btn btn-sm btn-info">{{ __('View') }}</a>
-                                        <a href="{{ route('product-groups.edit', $productGroup) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                        <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('product-groups.edit', $productGroup) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</x-closed-year-action-link>
                                         @if ($productGroup->delete_blocking_reason)
-                                            <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed">{{ __('Delete') }}</button>
+                                            <button disabled title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}" class="btn btn-sm btn-error btn-disabled cursor-not-allowed">{{ __('Delete') }}</button>
                                         @else
                                             <form action="{{ route('product-groups.destroy', $productGroup) }}" method="POST">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                                <button type="submit" class="btn btn-sm btn-error" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ __('Delete') }}</button>
                                             </form>
                                         @endif
                                     </div>

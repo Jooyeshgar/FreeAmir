@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Services\CustomerGroupService;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ class CustomerGroupController extends Controller
             ->withCount('customers')
             ->paginate(12);
 
-        return view('customerGroups.index', compact('customerGroups'));
+        return view('customerGroups.index', compact('customerGroups'))->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function create()
@@ -43,7 +44,7 @@ class CustomerGroupController extends Controller
     {
         $stats = $this->service->getStats($customerGroup);
 
-        return view('customerGroups.show', compact('customerGroup', 'stats'));
+        return view('customerGroups.show', compact('customerGroup', 'stats'))->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function edit(CustomerGroup $customerGroup)
