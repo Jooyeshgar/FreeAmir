@@ -289,7 +289,7 @@ class AttendanceService
                     $start = $reqStart;
                     $end = min($reqEnd, $entryTime);
                     if ($start < $end) {
-                        $explicitDelayCoverage += Carbon::parse($start)->diffInMinutes(Carbon::parse($end));
+                        $explicitDelayCoverage += (int) Carbon::parse($start)->diffInMinutes(Carbon::parse($end));
                     }
                 }
 
@@ -298,7 +298,7 @@ class AttendanceService
                     $start = max($reqStart, $exitTime);
                     $end = $reqEnd;
                     if ($start < $end) {
-                        $explicitEarlyLeaveCoverage += Carbon::parse($start)->diffInMinutes(Carbon::parse($end));
+                        $explicitEarlyLeaveCoverage += (int) Carbon::parse($start)->diffInMinutes(Carbon::parse($end));
                     }
                 }
             }
@@ -937,9 +937,9 @@ class AttendanceService
             $uncoveredBeforeCoverage = max(0, (int) $shiftStart->diffInMinutes($coverageStart, false));
             $arrivalDelay = max(0, $lateMinutes);
 
-            // A leave window that starts at (or after) the end of the float already consumes the permitted arrival window.
-            // Extending the shift end by that whole gap would grant the same float twice and inflate automatic overtime by up to one hour.
-            $endExtension = $uncoveredBeforeCoverage < $float ? $uncoveredBeforeCoverage : 0;
+            // Treat the leave start as the effective check-in, including the exact float cutoff.
+            // The same offset must extend the shift end so float is not counted as overtime.
+            $endExtension = min($uncoveredBeforeCoverage, $float);
             $adjustedEnd = $shiftEnd->copy()->addMinutes($endExtension);
         } elseif ($coverageEnd !== null && $coverageEnd->greaterThanOrEqualTo($entry)) {
             // Coverage fills the complete entry gap. Keep the scheduled shift end so any late exit,
