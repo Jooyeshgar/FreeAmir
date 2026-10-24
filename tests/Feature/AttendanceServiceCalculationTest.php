@@ -115,6 +115,31 @@ class AttendanceServiceCalculationTest extends TestCase
         $this->assertSame(540, $this->service->shiftWorkMinutes($shift));
     }
 
+    public function test_hourly_leave_starting_at_float_boundary_does_not_add_float_to_overtime(): void
+    {
+        $shift = new WorkShift([
+            'start_time' => '07:30:00',
+            'end_time' => '15:30:00',
+            'float' => 60,
+            'max_auto_overtime' => 120,
+        ]);
+        $log = new AttendanceLog([
+            'entry_time' => '10:35:00',
+            'exit_time' => '15:30:00',
+            'paid_leave' => 125,
+        ]);
+        $request = new PersonnelRequest([
+            'start_date' => '2025-03-03 08:30:00',
+            'end_date' => '2025-03-03 10:35:00',
+        ]);
+
+        $columns = $this->service->computeLogColumns($log, $shift, false, false, false, null, 125, collect([$request]));
+
+        $this->assertSame(0, $columns['delay']);
+        $this->assertSame(0, $columns['early_leave']);
+        $this->assertSame(0, $columns['auto_overtime']);
+    }
+
     public function test_two_employees_different_shifts_independent_calculations(): void
     {
         $shiftA = $this->makeShift(['start_time' => '07:00:00', 'end_time' => '13:00:00', 'break' => 0]);

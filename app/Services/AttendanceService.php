@@ -936,7 +936,11 @@ class AttendanceService
         if ($coverageStart !== null) {
             $uncoveredBeforeCoverage = max(0, (int) $shiftStart->diffInMinutes($coverageStart, false));
             $arrivalDelay = max(0, $lateMinutes);
-            $adjustedEnd = $shiftEnd->copy()->addMinutes($uncoveredBeforeCoverage);
+
+            // A leave window that starts at (or after) the end of the float already consumes the permitted arrival window.
+            // Extending the shift end by that whole gap would grant the same float twice and inflate automatic overtime by up to one hour.
+            $endExtension = $uncoveredBeforeCoverage < $float ? $uncoveredBeforeCoverage : 0;
+            $adjustedEnd = $shiftEnd->copy()->addMinutes($endExtension);
         } elseif ($coverageEnd !== null && $coverageEnd->greaterThanOrEqualTo($entry)) {
             // Coverage fills the complete entry gap. Keep the scheduled shift end so any late exit,
             // plus attendance that overlaps the end of coverage, remains automatic overtime.
