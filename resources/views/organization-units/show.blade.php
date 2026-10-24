@@ -25,9 +25,9 @@
 
                 <div class="flex gap-2">
                     @can('hr.organization-units.edit')
-                        <a href="{{ route('hr.organization-units.edit', $organizationUnit) }}" class="btn btn-sm btn-info">
+                        <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('hr.organization-units.edit', $organizationUnit) }}" class="btn btn-sm btn-info">
                             {{ __('Edit') }}
-                        </a>
+                        </x-closed-year-action-link>
                     @endcan
                     <a href="{{ route('hr.organization-units.index') }}" class="btn btn-sm btn-ghost">
                         {{ __('Back') }}

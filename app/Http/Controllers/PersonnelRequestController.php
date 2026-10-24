@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\PersonnelRequest;
 use App\Services\AttendanceService;
+use App\Services\FiscalYearMutationGuard;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -64,7 +66,10 @@ class PersonnelRequestController extends Controller
 
         $employees = Employee::orderBy('first_name')->get(['id', 'first_name', 'last_name']);
 
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
         return view('personnel-requests.index', compact(
+            'fiscalYearClosed',
             'personnelRequests',
             'pendingCounts',
             'employees',
@@ -103,8 +108,8 @@ class PersonnelRequestController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        if (isset($request['request_type'], $request['employee_id'])) {
-            $employee = Employee::find($request['employee_id']);
+        if ($request->filled('employee_id') && $request->filled('request_type') && $request->filled('request_date')) {
+            $employee = Employee::query()->find((int) $request->employee_id);
             $this->applyDailyRequestShiftTimes($request, $employee);
         }
 
@@ -116,6 +121,9 @@ class PersonnelRequestController extends Controller
             'end_time' => ['required', 'regex:'.self::FLEXIBLE_TIME_REGEX],
             'reason' => ['nullable', 'string', 'max:1000'],
         ]);
+
+        $employee = Employee::findOrFail($request->integer('employee_id'));
+        app(FiscalYearMutationGuard::class)->ensureOpen($employee);
 
         $request->merge([
             'start_time' => $this->normalizeFlexibleTime($request->start_time, 'start_time'),
@@ -197,6 +205,8 @@ class PersonnelRequestController extends Controller
 
     public function update(Request $request, PersonnelRequest $personnelRequest): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($personnelRequest);
+
         if (! $personnelRequest->status?->isPending()) {
             throw ValidationException::withMessages([
                 __('Only pending requests can be edited.'),
@@ -245,6 +255,8 @@ class PersonnelRequestController extends Controller
 
     public function destroy(Request $request, PersonnelRequest $personnelRequest): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($personnelRequest);
+
         $personnelRequest->delete();
 
         $tab = $request->get('tab', 'leaves');
@@ -255,6 +267,8 @@ class PersonnelRequestController extends Controller
 
     public function approve(PersonnelRequest $personnelRequest): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($personnelRequest);
+
         if ($personnelRequest->status?->isApproved()) {
             return redirect()->back()
                 ->with('info', __('Personnel request is already approved.'));
@@ -273,6 +287,8 @@ class PersonnelRequestController extends Controller
 
     public function reject(PersonnelRequest $personnelRequest): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($personnelRequest);
+
         $wasApproved = $personnelRequest->status?->isApproved();
 
         $personnelRequest->update([

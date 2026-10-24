@@ -25,7 +25,7 @@
                     $canEdit = auth()->user()?->can('hr.org-charts.edit');
                     $canDelete = auth()->user()?->can('hr.org-charts.delete');
 
-                    $renderTreeNode = function ($node, $targetId) use (&$renderTreeNode, $canCreate, $canEdit, $canDelete) {
+                    $renderTreeNode = function ($node, $targetId) use (&$renderTreeNode, $canCreate, $canEdit, $canDelete, $fiscalYearClosed) {
                         $children = $node->children ?? collect();
                         $hasChildren = $children->isNotEmpty();
                         $isActive = $node->id === $targetId;
@@ -42,6 +42,9 @@
                         $addChildLabel = e(__('Add Child'));
                         $editLabel = e(__('Edit'));
                         $removeLabel = e(__('Remove'));
+                        $closedReason = e(__('This fiscal year is already closed.'));
+                        $linkState = $fiscalYearClosed ? ' aria-disabled="true" tabindex="-1"' : '';
+                        $disabledClass = $fiscalYearClosed ? ' cursor-not-allowed opacity-60' : '';
                         $html = '<li class="w-full ps-2 mb-4" x-data="{ open: true }" @toggle-all.window="open = $event.detail.state">';
 
                         $html .= '<div class="flex items-start">';
@@ -70,10 +73,9 @@
                         $html .= '<div class="flex items-center gap-2 shrink-0">';
                         if ($canCreate) {
                             $html .= 
-                                '<a href="' .
-                                $createUrl .
-                                '" class="btn btn-xs btn-primary" title="' .
-                                $addChildLabel .
+                                '<a' . ($fiscalYearClosed ? ' role="link"' : ' href="' . $createUrl . '"') . $linkState .
+                                ' class="btn btn-xs btn-primary' . $disabledClass . '" title="' .
+                                ($fiscalYearClosed ? $closedReason : $addChildLabel) .
                                 '" aria-label="' .
                                 $addChildLabel .
                                 '">';
@@ -83,10 +85,9 @@
                         }
                         if ($canEdit) {
                             $html .=
-                                '<a href="' .
-                                $editUrl .
-                                '" class="btn btn-xs btn-info" title="' .
-                                $editLabel .
+                                '<a' . ($fiscalYearClosed ? ' role="link"' : ' href="' . $editUrl . '"') . $linkState .
+                                ' class="btn btn-xs btn-info' . $disabledClass . '" title="' .
+                                ($fiscalYearClosed ? $closedReason : $editLabel) .
                                 '" aria-label="' .
                                 $editLabel .
                                 '">';
@@ -104,9 +105,9 @@
                             $html .= csrf_field();
                             $html .= method_field('DELETE');
                             $html .=
-                                '<button type="submit" class="btn btn-xs btn-error" title="' .
-                                '<button type="submit" class="btn btn-xs btn-error no-animation transition-none hover:bg-error hover:border-error hover:text-error-content" title="' .
-                                $removeLabel .
+                                '<button type="submit"' . ($fiscalYearClosed ? ' disabled' : '') .
+                                ' class="btn btn-xs btn-error no-animation transition-none hover:bg-error hover:border-error hover:text-error-content' . $disabledClass . '" title="' .
+                                ($fiscalYearClosed ? $closedReason : $removeLabel) .
                                 '" aria-label="' .
                                 $removeLabel .
                                 '">';

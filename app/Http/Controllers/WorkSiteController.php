@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FiscalYear;
 use App\Models\WorkSite;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,7 +21,9 @@ class WorkSiteController extends Controller
             ))
             ->paginate(15);
 
-        return view('work-sites.index', compact('workSites', 'search'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('work-sites.index', compact('fiscalYearClosed', 'workSites', 'search'));
     }
 
     public function create(): View

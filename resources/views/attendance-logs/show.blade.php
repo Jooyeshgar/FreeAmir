@@ -489,18 +489,18 @@
 
                 <div class="flex flex-wrap gap-2">
                     @can('attendance.attendance-logs.edit')
-                        <a href="{{ route('attendance.attendance-logs.edit', $attendanceLog) }}" class="btn btn-primary gap-2">
+                        <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('attendance.attendance-logs.edit', $attendanceLog) }}" class="btn btn-primary gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M15.232 5.232l3.536 3.536M9 13l6.586-6.586a2 2 0 012.828 0l.172.172a2 2 0 010 2.828L12 16H9v-3z" />
                             </svg>
                             {{ __('Edit') }}
-                        </a>
+                        </x-closed-year-action-link>
 
                         <form action="{{ route('attendance.attendance-logs.recalculate', $attendanceLog) }}" method="POST" class="inline-block"
                             onsubmit="return confirm('{{ __('Recalculate this attendance log? Stored values will be overwritten with the computed values.') }}')">
                             @csrf
-                            <button type="submit" class="btn btn-warning gap-2">
+                            <button type="submit" @disabled($fiscalYearClosed) class="btn btn-warning gap-2 {{ $fiscalYearClosed ? 'opacity-60' : '' }}" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Recalculate') }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -515,7 +515,7 @@
                             onsubmit="return confirm('{{ __('Are you sure you want to delete this attendance log?') }}')">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="btn btn-error gap-2">
+                            <button type="submit" @disabled($fiscalYearClosed) class="btn btn-error gap-2 {{ $fiscalYearClosed ? 'opacity-60' : '' }}" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Delete') }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

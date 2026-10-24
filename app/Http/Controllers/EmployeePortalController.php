@@ -7,11 +7,13 @@ use App\Enums\PersonnelRequestType;
 use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\MonthlyAttendance;
 use App\Models\Payroll;
 use App\Models\PersonnelRequest;
 use App\Models\PublicHoliday;
 use App\Services\AttendanceService;
+use App\Services\FiscalYearMutationGuard;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -78,7 +80,9 @@ class EmployeePortalController extends Controller
     {
         $employee = $this->currentEmployee();
 
-        return view('employee-portal.employee', compact('employee'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('employee-portal.employee', compact('fiscalYearClosed', 'employee'));
     }
 
     public function changeEmployeeInformation(): View
@@ -91,6 +95,8 @@ class EmployeePortalController extends Controller
     public function updateEmployeeInformation(Request $request): RedirectResponse
     {
         $employee = $this->currentEmployee();
+
+        app(FiscalYearMutationGuard::class)->ensureOpen($employee);
 
         if ($request->integer('employee_id') != auth()->user()->employee->id) {
             abort(403, __('You do not have access to change this employee information.'));
@@ -240,7 +246,9 @@ class EmployeePortalController extends Controller
             );
         }
 
-        return view('monthly-attendances.show', compact('monthlyAttendance', 'allDays'))
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('monthly-attendances.show', compact('fiscalYearClosed', 'monthlyAttendance', 'allDays'))
             ->with('isAdminView', false)
             ->with('backRoute', route('employee-portal.monthly-attendances'));
     }
@@ -276,7 +284,9 @@ class EmployeePortalController extends Controller
 
         $payroll->load(['employee', 'decree.benefits.element', 'monthlyAttendance', 'items.element']);
 
-        return view('payrolls.show', compact('payroll'))
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('payrolls.show', compact('fiscalYearClosed', 'payroll'))
             ->with('isEmployeeView', true);
     }
 
@@ -319,7 +329,10 @@ class EmployeePortalController extends Controller
                 ->where('status', PersonnelRequestStatus::PENDING)->count(),
         ];
 
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
         return view('employee-portal.personnel-requests.index', compact(
+            'fiscalYearClosed',
             'personnelRequests',
             'pendingCounts',
             'employee',
@@ -366,6 +379,8 @@ class EmployeePortalController extends Controller
     public function storePersonnelRequest(Request $request): RedirectResponse
     {
         $employee = $this->currentEmployee();
+
+        app(FiscalYearMutationGuard::class)->ensureOpen($employee);
 
         $this->applyDailyRequestShiftTimes($request, $employee);
 
@@ -462,6 +477,8 @@ class EmployeePortalController extends Controller
      */
     public function updatePersonnelRequest(Request $request, PersonnelRequest $personnelRequest): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($personnelRequest);
+
         if (! $personnelRequest->status?->isPending()) {
             throw ValidationException::withMessages([
                 'status' => __('Only pending requests can be edited.'),
@@ -515,6 +532,8 @@ class EmployeePortalController extends Controller
 
     public function destroyPersonnelRequest(Request $request, PersonnelRequest $personnelRequest): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($personnelRequest);
+
         if (! $personnelRequest->status?->isPending()) {
             throw ValidationException::withMessages([
                 'status' => __('Only pending requests can be deleted.'),

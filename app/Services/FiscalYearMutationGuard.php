@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Document;
 use App\Models\FiscalYear;
+use App\Models\Invoice;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
 
@@ -76,7 +78,23 @@ class FiscalYearMutationGuard
             return FiscalYear::withoutGlobalScopes()->find((int) $subject->getAttribute('fiscal_year_id'));
         }
 
-        foreach (['fiscalYear', 'invoice', 'document', 'ancillaryCost', 'customer', 'payroll', 'employee', 'monthlyAttendance', 'organizationUnit', 'workSite', 'workSites', 'bankAccount', 'chequebook', 'cheque', 'payment', 'decree', 'element', 'warehouse', 'product', 'comment'] as $relation) {
+        // Child records such as payments inherit their fiscal year through a parent that may be hidden by the currently selected fiscal-year scope.
+        // Resolve those parents without global scopes so closed records remain protected even when another year is active.
+        if ($subject->getAttribute('invoice_id')) {
+            $invoice = Invoice::withoutGlobalScopes()->find((int) $subject->getAttribute('invoice_id'));
+            if ($invoice) {
+                return $this->resolveFiscalYear($invoice);
+            }
+        }
+
+        if ($subject->getAttribute('document_id')) {
+            $document = Document::withoutGlobalScopes()->find((int) $subject->getAttribute('document_id'));
+            if ($document) {
+                return $this->resolveFiscalYear($document);
+            }
+        }
+
+        foreach (['fiscalYear', 'invoice', 'document', 'ancillaryCost', 'customer', 'payroll', 'payrollItem', 'employee', 'monthlyAttendance', 'organizationUnit', 'workSite', 'workSites', 'workSiteContract', 'bankAccount', 'chequebook', 'cheque', 'payment', 'decree', 'salaryDecree', 'element', 'warehouse', 'product', 'comment', 'personnelRequest', 'attendanceLog'] as $relation) {
             if (! method_exists($subject, $relation)) {
                 continue;
             }

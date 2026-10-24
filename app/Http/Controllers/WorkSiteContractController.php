@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FiscalYear;
 use App\Models\WorkSite;
 use App\Models\WorkSiteContract;
 use Illuminate\Http\Request;
@@ -21,7 +22,9 @@ class WorkSiteContractController extends Controller
 
         $contracts = $query->paginate(15);
 
-        return view('work-site-contracts.index', compact('contracts', 'search'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('work-site-contracts.index', compact('fiscalYearClosed', 'contracts', 'search'));
     }
 
     public function create()
