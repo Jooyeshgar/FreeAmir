@@ -91,6 +91,22 @@ class ClosedYearNestedOperationControlsTest extends TestCase
         }
     }
 
+    public function test_moadian_history_index_renders_when_invoice_is_outside_active_fiscal_year(): void
+    {
+        MoadianHistory::create([
+            'invoice_id' => $this->invoice->id,
+            'data' => ['status' => 'SUCCESS', 'uid' => 'scoped-invoice-history'],
+        ]);
+        $otherYear = FiscalYear::factory()->create();
+        $this->invoice->update(['fiscal_year_id' => $otherYear->id]);
+
+        $this->assertNull(MoadianHistory::first()->invoice);
+
+        $this->get(route('invoices.moadian-histories.index'))
+            ->assertOk()
+            ->assertSee('scoped-invoice-history');
+    }
+
     public function test_bulk_and_conflict_pages_disable_closed_year_writes_and_preserve_open_year_actions(): void
     {
         $this->invoice->update(['status' => InvoiceStatus::APPROVED_INACTIVE]);

@@ -64,7 +64,7 @@
                             <tr>
                                 @if(!isset($invoice))
                                 <td class="text-gray-500">
-                                    <a class="link" href="{{ route('invoices.show', $history->invoice_id) }}">{{ formatDocumentNumber($history->invoice?->number) ?? '' }}</a>
+                                    <a class="link" href="{{ route('invoices.show', $history->invoice_id) }}">{{ $history->invoice?->number !== null ? formatDocumentNumber($history->invoice->number) : '' }}</a>
                                 </td>
                                 @endif
                                 <td>
