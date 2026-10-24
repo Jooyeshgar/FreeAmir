@@ -5,7 +5,7 @@
         <div class="card-body">
             <div class="card-actions">
                 @can('salary.tax-slabs.create')
-                    <x-closed-year-action-link href="{{ route('salary.tax-slabs.create') }}" class="btn btn-sm btn-primary">
+                    <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('salary.tax-slabs.create') }}" class="btn btn-sm btn-primary">
                         {{ __('Create Yearly Tax Slab') }}
                     </x-closed-year-action-link>
                 @endcan
@@ -35,7 +35,7 @@
                                 <td>
                                     <div class="inline-flex gap-2">
                                         @can('salary.tax-slabs.edit')
-                                            <x-closed-year-action-link href="{{ route('salary.tax-slabs.edit', $taxSlab) }}" class="btn btn-sm btn-info">
+                                            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('salary.tax-slabs.edit', $taxSlab) }}" class="btn btn-sm btn-info">
                                                 {{ __('Edit') }}
                                             </x-closed-year-action-link>
                                         @endcan
@@ -44,7 +44,7 @@
                                                 onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" @disabled(activeFiscalYearIsClosed()) class="btn btn-sm btn-error {{ activeFiscalYearIsClosed() ? 'opacity-60' : '' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Delete') }}">
+                                                <button type="submit" @disabled($fiscalYearClosed) class="btn btn-sm btn-error {{ $fiscalYearClosed ? 'opacity-60' : '' }}" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Delete') }}">
                                                     {{ __('Delete') }}
                                                 </button>
                                             </form>

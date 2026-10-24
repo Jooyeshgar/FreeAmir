@@ -34,7 +34,7 @@
                 <div class="flex gap-2 flex-wrap">
                     @if ($isAdminView ?? false)
                         @can('attendance.monthly-attendances.edit')
-                            <x-closed-year-action-link href="{{ route('attendance.monthly-attendances.edit', $monthlyAttendance) }}" class="btn btn-sm btn-warning">
+                            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('attendance.monthly-attendances.edit', $monthlyAttendance) }}" class="btn btn-sm btn-warning">
                                 {{ __('Edit') }}
                             </x-closed-year-action-link>
                         @endcan
@@ -43,7 +43,7 @@
                                 onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" @disabled(activeFiscalYearIsClosed()) class="btn btn-sm btn-error {{ activeFiscalYearIsClosed() ? 'opacity-60' : '' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Delete') }}">
+                                <button type="submit" @disabled($fiscalYearClosed) class="btn btn-sm btn-error {{ $fiscalYearClosed ? 'opacity-60' : '' }}" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Delete') }}">
                                     {{ __('Delete') }}
                                 </button>
                             </form>
@@ -113,7 +113,7 @@
                         <div class="w-44">
                             <x-input name="duration" id="duration" type="number" title="{{ __('Duration (days)') }}" :value="old('duration') ?? $monthlyAttendance->duration" required />
                         </div>
-                        <button type="submit" @disabled(activeFiscalYearIsClosed()) class="btn btn-sm btn-accent self-end {{ activeFiscalYearIsClosed() ? 'opacity-60' : '' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Recalculate') }}">
+                        <button type="submit" @disabled($fiscalYearClosed) class="btn btn-sm btn-accent self-end {{ $fiscalYearClosed ? 'opacity-60' : '' }}" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Recalculate') }}">
                             {{ __('Recalculate') }}
                         </button>
                     </form>
@@ -163,7 +163,7 @@
                     @can('attendance.monthly-attendances.payroll.store')
                         @if ($decrees->isEmpty())
                             <p class="text-sm text-warning">{{ __('No active salary decrees found for this employee. Please create one first.') }}</p>
-                            <x-closed-year-action-link href="{{ route('salary.salary-decrees.create', ['employee' => $monthlyAttendance->employee]) }}" class="btn btn-sm btn-warning">
+                            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('salary.salary-decrees.create', ['employee' => $monthlyAttendance->employee]) }}" class="btn btn-sm btn-warning">
                                 {{ __('Create Decree') }}
                             </x-closed-year-action-link>
                         @else
@@ -178,7 +178,7 @@
                                 <div class="w-64">
                                     <x-select name="decree_id" id="decree_id" title="" :options="$decreeOptions" required />
                                 </div>
-                                <button type="submit" @disabled(activeFiscalYearIsClosed()) class="btn btn-sm btn-success self-end {{ activeFiscalYearIsClosed() ? 'opacity-60' : '' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Create Payroll') }}">
+                                <button type="submit" @disabled($fiscalYearClosed) class="btn btn-sm btn-success self-end {{ $fiscalYearClosed ? 'opacity-60' : '' }}" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Create Payroll') }}">
                                     {{ __('Create Payroll') }}
                                 </button>
                             </form>
@@ -208,7 +208,7 @@
                                         <form action="{{ route('attendance.attendance-logs.recalculate-all', $monthlyAttendance) }}" method="POST" class="inline-block mb-0"
                                             onsubmit="return confirm('{{ __('Recalculate all attendance logs? Stored values will be overwritten with the computed values.') }}')">
                                             @csrf
-                                            <button type="submit" @disabled(activeFiscalYearIsClosed()) class="btn btn-xs btn-primary {{ activeFiscalYearIsClosed() ? 'opacity-60' : '' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Recalculate All') }}">{{ __('Recalculate All') }}</button>
+                                            <button type="submit" @disabled($fiscalYearClosed) class="btn btn-xs btn-primary {{ $fiscalYearClosed ? 'opacity-60' : '' }}" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Recalculate All') }}">{{ __('Recalculate All') }}</button>
                                         </form>
                                     </th>
                                 @endcan

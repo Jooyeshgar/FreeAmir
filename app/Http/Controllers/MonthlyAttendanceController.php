@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\ThursdayStatus;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\MonthlyAttendance;
 use App\Models\PublicHoliday;
 use App\Models\SalaryDecree;
@@ -34,7 +35,9 @@ class MonthlyAttendanceController extends Controller
         $monthlyAttendances = $query->paginate(15);
         $employees = Employee::orderBy('first_name')->get();
 
-        return view('monthly-attendances.index', compact('monthlyAttendances', 'employees'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('monthly-attendances.index', compact('fiscalYearClosed', 'monthlyAttendances', 'employees'));
     }
 
     public function create(): View
@@ -159,7 +162,9 @@ class MonthlyAttendanceController extends Controller
             );
         }
 
-        return view('monthly-attendances.show', compact('monthlyAttendance', 'decrees', 'allDays'))
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('monthly-attendances.show', compact('fiscalYearClosed', 'monthlyAttendance', 'decrees', 'allDays'))
             ->with('isAdminView', true)
             ->with('backRoute', route('attendance.monthly-attendances.index'));
     }

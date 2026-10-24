@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FiscalYear;
 use App\Models\PublicHoliday;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,7 +20,9 @@ class PublicHolidayController extends Controller
 
         $publicHolidays = $query->paginate(15);
 
-        return view('public-holidays.index', compact('publicHolidays'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('public-holidays.index', compact('fiscalYearClosed', 'publicHolidays'));
     }
 
     public function create(): View

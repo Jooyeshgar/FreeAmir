@@ -12,6 +12,7 @@ use App\Enums\EmployeeNationality;
 use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\OrganizationUnit;
 use App\Models\OrgChart;
 use App\Models\WorkShift;
@@ -56,7 +57,10 @@ class EmployeeController extends Controller
         $newHiresCount = (int) $stats->new_hires_count;
         $withoutSalaryDecreeCount = Employee::doesntHave('salaryDecrees')->count();
 
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
         return view('employees.index', compact(
+            'fiscalYearClosed',
             'employees',
             'totalCount',
             'activeCount',

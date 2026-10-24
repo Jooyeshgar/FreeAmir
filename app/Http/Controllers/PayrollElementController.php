@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\PayrollElementCalcType;
 use App\Enums\PayrollElementCategory;
 use App\Enums\PayrollElementSystemCode;
+use App\Models\FiscalYear;
 use App\Models\PayrollElement;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,7 +32,9 @@ class PayrollElementController extends Controller
 
         $payrollElements = $query->paginate(15);
 
-        return view('payroll-elements.index', compact('payrollElements'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('payroll-elements.index', compact('fiscalYearClosed', 'payrollElements'));
     }
 
     public function create(): View

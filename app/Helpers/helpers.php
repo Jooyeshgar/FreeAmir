@@ -28,29 +28,6 @@ function getActiveFiscalYear(): int
     }
 }
 
-function activeFiscalYearIsClosed(): bool
-{
-    $fiscalYearId = getActiveFiscalYear();
-    $request = request();
-    $cacheKey = 'active-fiscal-year-closed';
-    $closedFiscalYears = $request->attributes->get($cacheKey, []);
-
-    if (array_key_exists($fiscalYearId, $closedFiscalYears)) {
-        return $closedFiscalYears[$fiscalYearId];
-    }
-
-    try {
-        $isClosed = FiscalYear::withoutGlobalScopes()->whereKey($fiscalYearId)->whereNotNull('closed_at')->exists();
-    } catch (Throwable) {
-        $isClosed = false;
-    }
-
-    $closedFiscalYears[$fiscalYearId] = $isClosed;
-    $request->attributes->set($cacheKey, $closedFiscalYears);
-
-    return $isClosed;
-}
-
 /**
  * Format a number with separators, parentheses for negatives,
  * and optionally convert to Farsi if the locale is Persian.

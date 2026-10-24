@@ -55,7 +55,7 @@
             {{-- Table header row --}}
             <div class="flex items-center justify-end gap-2">
                 @can('attendance.attendance-logs.bulk-create')
-                    <x-closed-year-action-link href="{{ route('attendance.attendance-logs.bulk-create') }}" class="btn btn-sm btn-outline btn-accent">
+                    <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('attendance.attendance-logs.bulk-create') }}" class="btn btn-sm btn-outline btn-accent">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
@@ -63,13 +63,13 @@
                     </x-closed-year-action-link>
                 @endcan
                 @can('attendance.attendance-logs.create')
-                    <x-closed-year-action-link href="{{ route('attendance.attendance-logs.import') }}" class="btn btn-sm btn-outline btn-secondary">
+                    <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('attendance.attendance-logs.import') }}" class="btn btn-sm btn-outline btn-secondary">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
                         </svg>
                         {{ __('Import') }}
                     </x-closed-year-action-link>
-                    <x-closed-year-action-link href="{{ route('attendance.attendance-logs.create') }}" class="btn btn-primary btn-circle">
+                    <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('attendance.attendance-logs.create') }}" class="btn btn-primary btn-circle">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                         </svg>
@@ -120,7 +120,7 @@
                                             {{ __('Show') }}
                                         </a>
                                         @can('attendance.attendance-logs.edit')
-                                            <x-closed-year-action-link href="{{ route('attendance.attendance-logs.edit', $log) }}" class="btn btn-sm btn-info">
+                                            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('attendance.attendance-logs.edit', $log) }}" class="btn btn-sm btn-info">
                                                 {{ __('Edit') }}
                                             </x-closed-year-action-link>
                                         @endcan
@@ -128,7 +128,7 @@
                                             <form action="{{ route('attendance.attendance-logs.recalculate', $log) }}" method="POST" class="inline-block"
                                                 onsubmit="return confirm('{{ __('Recalculate this log?') }}')">
                                                 @csrf
-                                                <button type="submit" @disabled(activeFiscalYearIsClosed()) class="btn btn-sm btn-warning {{ activeFiscalYearIsClosed() ? 'opacity-60' : '' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Recalculate') }}">
+                                                <button type="submit" @disabled($fiscalYearClosed) class="btn btn-sm btn-warning {{ $fiscalYearClosed ? 'opacity-60' : '' }}" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Recalculate') }}">
                                                     {{ __('Recalculate') }}
                                                 </button>
                                             </form>
@@ -138,7 +138,7 @@
                                                 onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" @disabled(activeFiscalYearIsClosed()) class="btn btn-sm btn-error {{ activeFiscalYearIsClosed() ? 'opacity-60' : '' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Delete') }}">
+                                                <button type="submit" @disabled($fiscalYearClosed) class="btn btn-sm btn-error {{ $fiscalYearClosed ? 'opacity-60' : '' }}" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Delete') }}">
                                                     {{ __('Delete') }}
                                                 </button>
                                             </form>

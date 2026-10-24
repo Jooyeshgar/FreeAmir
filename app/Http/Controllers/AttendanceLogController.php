@@ -6,6 +6,7 @@ use App\Enums\AttendanceImportType;
 use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\MonthlyAttendance;
 use App\Models\PersonnelRequest;
 use App\Models\PublicHoliday;
@@ -49,7 +50,9 @@ class AttendanceLogController extends Controller
         $attendanceLogs = $query->paginate(15);
         $employees = Employee::orderBy('first_name')->get();
 
-        return view('attendance-logs.index', compact('attendanceLogs', 'employees'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('attendance-logs.index', compact('fiscalYearClosed', 'attendanceLogs', 'employees'));
     }
 
     public function create(): View
@@ -245,7 +248,10 @@ class AttendanceLogController extends Controller
             }
         }
 
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
         return view('attendance-logs.show', compact(
+            'fiscalYearClosed',
             'attendanceLog',
             'employee',
             'workShift',

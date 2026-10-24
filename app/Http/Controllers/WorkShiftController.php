@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ThursdayStatus;
+use App\Models\FiscalYear;
 use App\Models\WorkShift;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,9 @@ class WorkShiftController extends Controller
             ->when($search, fn ($q) => $q->where('name', 'like', "%{$search}%"))
             ->paginate(15);
 
-        return view('work-shifts.index', compact('workShifts', 'search'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('work-shifts.index', compact('fiscalYearClosed', 'workShifts', 'search'));
     }
 
     public function create(): View

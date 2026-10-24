@@ -4,7 +4,9 @@ namespace Tests\Feature;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Enums\PayrollStatus;
 use App\Enums\PersonnelRequestType;
+use App\Enums\ThursdayStatus;
 use App\Models\AncillaryCost;
 use App\Models\AttendanceLog;
 use App\Models\Cheque;
@@ -30,12 +32,9 @@ use App\Services\InvoiceService;
 use App\Services\MoadianService;
 use App\Services\PaymentService;
 use App\Services\PayrollService;
-use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
@@ -290,40 +289,90 @@ class ClosedFiscalYearMutationGuardTest extends TestCase
             ->assertSee(__('This fiscal year is already closed.'));
     }
 
-    public function test_active_fiscal_year_closed_state_is_cached_per_request_and_fiscal_year(): void
+    public function test_list_controllers_supply_the_active_year_closure_state(): void
     {
-        $openYear = FiscalYear::factory()->create([
-            'company_id' => $this->fiscalYear->company_id,
-            'year' => $this->fiscalYear->year + 1,
-            'closed_at' => null,
-        ]);
-        $request = request();
-        $request->attributes->remove('active-fiscal-year-closed');
-        $closedYearQueries = 0;
+        // Explicitly set the enum because the legacy schema default is still a name.
+        $this->employee->workShift->update(['thursday_status' => ThursdayStatus::FULL_DAY]);
+        $routes = [
+            'hr.employees.index', 'hr.organization-units.index', 'hr.org-charts.index',
+            'hr.personnel-requests.index', 'attendance.attendance-logs.index',
+            'attendance.monthly-attendances.index', 'attendance.work-shifts.index',
+            'salary.salary-decrees.index', 'salary.payroll-elements.index',
+            'salary.tax-slabs.index', 'salary.public-holidays.index',
+            'salary.work-sites.index', 'salary.work-site-contracts.index',
+        ];
 
-        DB::listen(function (QueryExecuted $query) use (&$closedYearQueries): void {
-            if (str_contains($query->sql, 'fiscal_years') && str_contains($query->sql, 'closed_at')) {
-                $closedYearQueries++;
+        foreach ($routes as $route) {
+            $this->user->givePermissionTo(Permission::findOrCreate(preg_replace('/\.[^.]+$/', '.*', $route)));
+        }
+
+        foreach ([true, false] as $closed) {
+            $this->fiscalYear->update(['closed_at' => $closed ? now() : null]);
+
+            foreach ($routes as $route) {
+                $response = $this->get(route($route))->assertOk()
+                    ->assertViewHas('fiscalYearClosed', $closed);
+
+                if ($closed) {
+                    $response->assertSee(__('This fiscal year is already closed.'));
+                } else {
+                    $response->assertDontSee('aria-disabled="true"', false);
+                }
             }
-        });
+        }
+    }
 
-        config(['active-fiscal-year-id' => $this->fiscalYear->id]);
-        $this->assertTrue(activeFiscalYearIsClosed());
-        $this->assertTrue(activeFiscalYearIsClosed());
-        $this->assertSame(1, $closedYearQueries);
+    public function test_detail_and_portal_controllers_supply_the_active_year_closure_state(): void
+    {
+        $this->employee->workShift->update(['thursday_status' => ThursdayStatus::FULL_DAY]);
+        $this->employee->update(['user_id' => $this->user->id]);
+        $this->user->unsetRelation('employee');
+        foreach (['attendance.attendance-logs.*', 'attendance.monthly-attendances.*', 'salary.payrolls.*', 'salary.payroll-items.*', 'employee-portal.*'] as $permission) {
+            $this->user->givePermissionTo(Permission::findOrCreate($permission));
+        }
 
-        config(['active-fiscal-year-id' => $openYear->id]);
-        $this->assertFalse(activeFiscalYearIsClosed());
-        $this->assertFalse(activeFiscalYearIsClosed());
-        $this->assertSame(2, $closedYearQueries);
+        $attendance = MonthlyAttendance::factory()->create([
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'employee_id' => $this->employee->id,
+            'duration' => 30,
+        ]);
+        $log = AttendanceLog::factory()->create([
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'employee_id' => $this->employee->id,
+            'monthly_attendance_id' => $attendance->id,
+        ]);
+        $decree = SalaryDecree::factory()->create([
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'employee_id' => $this->employee->id,
+        ]);
+        $payroll = Payroll::factory()->create([
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'employee_id' => $this->employee->id,
+            'monthly_attendance_id' => $attendance->id,
+            'decree_id' => $decree->id,
+            'status' => PayrollStatus::Draft,
+        ]);
+        $item = $payroll->items()->create(['calculated_amount' => 100, 'description' => 'Test item']);
+        $pages = [
+            route('attendance.attendance-logs.show', $log),
+            route('attendance.monthly-attendances.show', $attendance),
+            route('salary.payrolls.show', $payroll),
+            route('employee-portal.employee.show'),
+            route('employee-portal.personnel-requests.index'),
+            route('employee-portal.monthly-attendances.show', $attendance),
+            route('employee-portal.payrolls.show', $payroll),
+        ];
 
-        $this->fiscalYear->update(['closed_at' => null]);
-        $queryCountBeforeNextRequest = $closedYearQueries;
-        $this->app->instance('request', Request::create('/'));
+        foreach ([true, false] as $closed) {
+            $this->fiscalYear->update(['closed_at' => $closed ? now() : null]);
 
-        config(['active-fiscal-year-id' => $this->fiscalYear->id]);
-        $this->assertFalse(activeFiscalYearIsClosed());
-        $this->assertSame($queryCountBeforeNextRequest + 1, $closedYearQueries);
+            foreach ($pages as $page) {
+                $this->get($page)->assertOk()->assertViewHas('fiscalYearClosed', $closed);
+            }
+        }
+
+        $this->get(route('salary.payroll-items.edit', $item))->assertOk()
+            ->assertViewHas('fiscalYearClosed', false);
     }
 
     public function test_closed_year_allows_read_only_attendance_import_preview(): void

@@ -7,6 +7,7 @@ use App\Enums\PersonnelRequestType;
 use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\MonthlyAttendance;
 use App\Models\Payroll;
 use App\Models\PersonnelRequest;
@@ -79,7 +80,9 @@ class EmployeePortalController extends Controller
     {
         $employee = $this->currentEmployee();
 
-        return view('employee-portal.employee', compact('employee'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('employee-portal.employee', compact('fiscalYearClosed', 'employee'));
     }
 
     public function changeEmployeeInformation(): View
@@ -243,7 +246,9 @@ class EmployeePortalController extends Controller
             );
         }
 
-        return view('monthly-attendances.show', compact('monthlyAttendance', 'allDays'))
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('monthly-attendances.show', compact('fiscalYearClosed', 'monthlyAttendance', 'allDays'))
             ->with('isAdminView', false)
             ->with('backRoute', route('employee-portal.monthly-attendances'));
     }
@@ -279,7 +284,9 @@ class EmployeePortalController extends Controller
 
         $payroll->load(['employee', 'decree.benefits.element', 'monthlyAttendance', 'items.element']);
 
-        return view('payrolls.show', compact('payroll'))
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('payrolls.show', compact('fiscalYearClosed', 'payroll'))
             ->with('isEmployeeView', true);
     }
 
@@ -322,7 +329,10 @@ class EmployeePortalController extends Controller
                 ->where('status', PersonnelRequestStatus::PENDING)->count(),
         ];
 
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
         return view('employee-portal.personnel-requests.index', compact(
+            'fiscalYearClosed',
             'personnelRequests',
             'pendingCounts',
             'employee',

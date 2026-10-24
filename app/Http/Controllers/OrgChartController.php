@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FiscalYear;
 use App\Models\OrgChart;
 use Illuminate\Http\Request;
 
@@ -19,7 +20,9 @@ class OrgChartController extends Controller
 
         $orgCharts = $query->paginate(15);
 
-        return view('org-charts.index', compact('orgCharts', 'search'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('org-charts.index', compact('fiscalYearClosed', 'orgCharts', 'search'));
     }
 
     public function create()

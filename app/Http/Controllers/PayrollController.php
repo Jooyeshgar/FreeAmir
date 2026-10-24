@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\PayrollStatus;
 use App\Enums\PersonnelRequestStatus;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\MonthlyAttendance;
 use App\Models\OrganizationUnit;
 use App\Models\Payroll;
@@ -36,7 +37,9 @@ class PayrollController extends Controller
     {
         $payroll->load(['employee', 'decree.benefits.element', 'monthlyAttendance', 'items.element', 'statusHistories.user']);
 
-        return view('payrolls.show', compact('payroll'))
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('payrolls.show', compact('fiscalYearClosed', 'payroll'))
             ->with('isEmployeeView', false);
     }
 
@@ -240,7 +243,9 @@ class PayrollController extends Controller
     {
         $payrollItem->load(['element', 'payroll']);
 
-        return view('payrolls.edit-item', compact('payrollItem'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('payrolls.edit-item', compact('fiscalYearClosed', 'payrollItem'));
     }
 
     /**

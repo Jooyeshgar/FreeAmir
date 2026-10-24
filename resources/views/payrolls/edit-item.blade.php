@@ -41,7 +41,7 @@
 
                 <div class="flex gap-2 justify-end">
                     <a href="{{ route('salary.payrolls.show', $payrollItem->payroll_id) }}" class="btn btn-ghost btn-sm">{{ __('Cancel') }}</a>
-                    <button type="submit" @disabled(activeFiscalYearIsClosed()) class="btn btn-primary btn-sm {{ activeFiscalYearIsClosed() ? 'opacity-60' : '' }}" title="{{ activeFiscalYearIsClosed() ? __('This fiscal year is already closed.') : __('Save') }}">{{ __('Save') }}</button>
+                    <button type="submit" @disabled($fiscalYearClosed) class="btn btn-primary btn-sm {{ $fiscalYearClosed ? 'opacity-60' : '' }}" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Save') }}">{{ __('Save') }}</button>
                 </div>
             </form>
         </div>

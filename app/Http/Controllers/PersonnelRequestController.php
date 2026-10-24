@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\PersonnelRequest;
 use App\Services\AttendanceService;
 use App\Services\FiscalYearMutationGuard;
@@ -65,7 +66,10 @@ class PersonnelRequestController extends Controller
 
         $employees = Employee::orderBy('first_name')->get(['id', 'first_name', 'last_name']);
 
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
         return view('personnel-requests.index', compact(
+            'fiscalYearClosed',
             'personnelRequests',
             'pendingCounts',
             'employees',
