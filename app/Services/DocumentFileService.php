@@ -20,7 +20,8 @@ class DocumentFileService
     public function create(array $data): DocumentFile
     {
         $documentId = $data['document_id'] ?? null;
-        $this->fiscalYearMutationGuard->ensureOpen($documentId ? Document::find($documentId) : getActiveFiscalYear());
+        $document = $documentId ? Document::withoutGlobalScopes()->findOrFail($documentId) : null;
+        $this->fiscalYearMutationGuard->ensureOpen($document ?? getActiveFiscalYear());
 
         return DB::transaction(function () use ($data): DocumentFile {
             if (isset($data['file'])) {
