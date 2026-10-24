@@ -72,10 +72,13 @@ class UserEmployeeLinkTest extends TestCase
     {
         $response = $this->post(route('users.create-employee', $this->user));
 
+        $response->assertSessionHasNoErrors();
+
         $employee = Employee::withoutGlobalScopes()
             ->where('user_id', $this->user->id)
             ->first();
 
+        $this->assertNotNull($employee);
         $response->assertRedirect(route('hr.employees.show', $employee));
 
         $this->assertDatabaseHas('employees', [
@@ -84,5 +87,16 @@ class UserEmployeeLinkTest extends TestCase
             'first_name' => $employee->first_name,
             'last_name' => $employee->last_name,
         ]);
+    }
+
+    public function test_cannot_create_employee_from_user_in_closed_fiscal_year(): void
+    {
+        $this->fiscalYear->update(['closed_at' => now()]);
+
+        $this->postJson(route('users.create-employee', $this->user))
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('fiscal_year');
+
+        $this->assertDatabaseMissing('employees', ['user_id' => $this->user->id]);
     }
 }

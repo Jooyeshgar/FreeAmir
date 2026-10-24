@@ -31,6 +31,11 @@ class EnsureFiscalYearOpen
 
         // Nested records can have a different owner from the first route parameter.
         foreach ($request->route()?->parameters() ?? [] as $parameter) {
+            // The user is only the account to link; the active year owns the new employee.
+            if ($request->routeIs('users.create-employee') && $parameter === $request->route('user')) {
+                continue;
+            }
+
             if ($parameter instanceof EloquentModel && $parameter !== $subject) {
                 $this->fiscalYearMutationGuard->ensureOpen($parameter);
             }
