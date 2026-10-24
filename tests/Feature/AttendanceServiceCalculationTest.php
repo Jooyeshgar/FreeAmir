@@ -14,6 +14,7 @@ use App\Models\WorkSite;
 use App\Services\AttendanceService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -125,7 +126,7 @@ class AttendanceServiceCalculationTest extends TestCase
         ]);
         $log = new AttendanceLog([
             'entry_time' => '10:35:00',
-            'exit_time' => '15:30:00',
+            'exit_time' => '16:30:00',
             'paid_leave' => 125,
         ]);
         $request = new PersonnelRequest([
@@ -133,11 +134,93 @@ class AttendanceServiceCalculationTest extends TestCase
             'end_date' => '2025-03-03 10:35:00',
         ]);
 
-        $columns = $this->service->computeLogColumns($log, $shift, false, false, false, null, 125, collect([$request]));
+        $columns = $this->service->computeLogColumns($log, $shift, false, false, false, null, 0, collect([$request]));
 
         $this->assertSame(0, $columns['delay']);
         $this->assertSame(0, $columns['early_leave']);
         $this->assertSame(0, $columns['auto_overtime']);
+    }
+
+    public static function hourlyLeaveFloatCases(): array
+    {
+        // Shift 07:30–15:30, float 60 minutes, leave ends at physical entry (10:35).
+        // Expected values are minutes: delay, early leave, automatic overtime.
+        return [
+            'before cutoff, float made up' => ['08:29:00', '16:29:00', 0, 0, 0],
+            'before cutoff, one minute short' => ['08:29:00', '16:28:00', 0, 1, 0],
+            'before cutoff, seven minutes overtime' => ['08:29:00', '16:36:00', 0, 0, 7],
+            'at cutoff, required end is shifted by float' => ['08:30:00', '15:30:00', 0, 60, 0],
+            'at cutoff, one minute before shifted end' => ['08:30:00', '16:29:00', 0, 1, 0],
+            'at cutoff, seven minutes overtime' => ['08:30:00', '16:37:00', 0, 0, 7],
+            'at cutoff, no overtime at shifted end' => ['08:30:00', '16:30:00', 0, 0, 0],
+            'at cutoff, overtime capped at two hours' => ['08:30:00', '18:30:00', 0, 0, 120],
+            'after cutoff, one minute delay' => ['08:31:00', '16:30:00', 1, 0, 0],
+            'after cutoff, real delay and overtime' => ['08:31:00', '16:37:00', 1, 0, 7],
+        ];
+    }
+
+    #[DataProvider('hourlyLeaveFloatCases')]
+    public function test_compute_log_columns_with_hourly_leave_around_float_cutoff(
+        string $leaveStart, string $exitTime, int $delay, int $earlyLeave, int $autoOvertime
+    ): void {
+        $shift = new WorkShift([
+            'start_time' => '07:30:00', 'end_time' => '15:30:00',
+            'float' => 60, 'max_auto_overtime' => 120,
+        ]);
+        $leaveMinutes = (int) Carbon::parse($leaveStart)->diffInMinutes(Carbon::parse('10:35:00'));
+        $log = new AttendanceLog([
+            'entry_time' => '10:35:00', 'exit_time' => $exitTime, 'paid_leave' => $leaveMinutes,
+        ]);
+        $request = new PersonnelRequest([
+            'request_type' => PersonnelRequestType::LEAVE_HOURLY,
+            'start_date' => '2025-03-03 '.$leaveStart,
+            'end_date' => '2025-03-03 10:35:00',
+        ]);
+
+        // Leave ends at entry, so none of it overlaps physical attendance.
+        $columns = $this->service->computeLogColumns(
+            $log, $shift, midShiftCoverage: 0, hourlyCoverageRequests: collect([$request])
+        );
+
+        $this->assertSame($delay, $columns['delay']);
+        $this->assertSame($earlyLeave, $columns['early_leave']);
+        $this->assertSame(0, $columns['overtime']);
+        $this->assertSame($autoOvertime, $columns['auto_overtime']);
+        $this->assertSame((int) Carbon::parse('10:35:00')->diffInMinutes(Carbon::parse($exitTime)), $columns['worked']);
+    }
+
+    #[DataProvider('hourlyLeaveFloatCases')]
+    public function test_recalculate_log_with_hourly_leave_around_float_cutoff(
+        string $leaveStart, string $exitTime, int $delay, int $earlyLeave, int $autoOvertime
+    ): void {
+        $shift = $this->makeShift([
+            'start_time' => '07:30:00', 'end_time' => '15:30:00',
+            'float' => 60, 'max_auto_overtime' => 120,
+        ]);
+        $employee = $this->makeEmployee($shift);
+        PersonnelRequest::factory()->approved()->create([
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'employee_id' => $employee->id,
+            'request_type' => PersonnelRequestType::LEAVE_HOURLY,
+            'start_date' => '2025-03-03 '.$leaveStart,
+            'end_date' => '2025-03-03 10:35:00',
+        ]);
+        // Start with stale cached values to verify recalculation rebuilds them.
+        $log = $this->insertLog($employee, '2025-03-03', [
+            'entry_time' => '10:35:00', 'exit_time' => $exitTime,
+            'paid_leave' => 0, 'delay' => 125, 'early_leave' => 60, 'auto_overtime' => 120,
+        ], false);
+
+        for ($pass = 0; $pass < 2; $pass++) {
+            $log = $this->service->recalculateLog($log);
+
+            $this->assertSame((int) Carbon::parse($leaveStart)->diffInMinutes(Carbon::parse('10:35:00')), $log->paid_leave);
+            $this->assertSame($delay, $log->delay);
+            $this->assertSame($earlyLeave, $log->early_leave);
+            $this->assertSame(0, $log->overtime);
+            $this->assertSame($autoOvertime, $log->auto_overtime);
+            $this->assertSame((int) Carbon::parse('10:35:00')->diffInMinutes(Carbon::parse($exitTime)), $log->worked);
+        }
     }
 
     public function test_two_employees_different_shifts_independent_calculations(): void
