@@ -61,6 +61,36 @@ class ReportEmailTest extends TestCase
         );
     }
 
+    public function test_user_can_download_and_email_the_warehouse_pdf(): void
+    {
+        Notification::fake();
+        $this->user->givePermissionTo([
+            Permission::firstOrCreate(['name' => 'report']),
+            Permission::firstOrCreate(['name' => 'products.report']),
+        ]);
+
+        $response = $this->actingAs($this->user)->post(route('report'), [
+            'export' => 'warehouse_pdf',
+            'delivery' => 'download',
+        ]);
+
+        $response->assertOk()->assertDownload('warehouse-report.pdf');
+        $response->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $response->streamedContent());
+
+        $this->post(route('report'), [
+            'export' => 'warehouse_pdf',
+            'delivery' => 'email',
+            'email' => $this->user->email,
+        ])->assertRedirect()->assertSessionHas('success');
+
+        Notification::assertSentTo($this->user, ReportExportNotification::class,
+            fn (ReportExportNotification $notification): bool => $notification->filename === 'warehouse-report.pdf'
+                && $notification->mime === 'application/pdf'
+                && str_starts_with($notification->content, '%PDF-')
+        );
+    }
+
     public function test_delivery_dialog_prefills_the_authenticated_users_email(): void
     {
         $this->actingAs($this->user);

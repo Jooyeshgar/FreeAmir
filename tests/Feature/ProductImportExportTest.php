@@ -84,6 +84,13 @@ class ProductImportExportTest extends TestCase
         $this->actingAs($this->user)->get(route('products.report', ['min_quantity' => 'not-a-number']))->assertSessionHasErrors('min_quantity');
     }
 
+    public function test_warehouse_pdf_report_renders_with_the_active_company(): void
+    {
+        $response = $this->actingAs($this->user)->get(route('products.report'));
+
+        $response->assertOk()->assertHeader('Content-Type', 'application/pdf');
+    }
+
     public function test_export_returns_csv_with_products(): void
     {
         $product = Product::factory()->withGroup($this->productGroup)->create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Widget', 'code' => '5001']);

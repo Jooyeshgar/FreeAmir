@@ -750,6 +750,8 @@ class WarehouseDashboardService
             return $row;
         })->values();
 
+        $fiscalYear = FiscalYear::find(getActiveFiscalYear());
+
         $data = [
             'columns' => $columns,
             'columnLabels' => [
@@ -758,7 +760,8 @@ class WarehouseDashboardService
             ],
             'rows' => $rows,
             'filterSummary' => $this->reportFilterSummary($name, $groupName, $minQuantity, $needOrder, $fyStart, $now),
-            'fiscalYear' => FiscalYear::find(getActiveFiscalYear()),
+            'fiscalYear' => $fiscalYear,
+            'company' => $fiscalYear?->company,
             'logo' => $this->reportLogo(),
             'generatedAtDate' => toEnglish(jdate('Y/m/d', $now->timestamp)),
             'generatedAtTime' => toEnglish(jdate('H:i', $now->timestamp)),
