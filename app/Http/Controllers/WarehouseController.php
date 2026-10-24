@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FiscalYear;
 use App\Models\Product;
 use App\Models\Warehouse;
 use App\Models\WarehouseTransfer;
+use App\Services\FiscalYearMutationGuard;
 use App\Services\WarehouseService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,7 +38,7 @@ class WarehouseController extends Controller
 
         $warehouses = $query->paginate(20)->withQueryString();
 
-        return view('warehouses.index', compact('warehouses', 'warehouseCount'));
+        return view('warehouses.index', compact('warehouses', 'warehouseCount'))->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function create()
@@ -49,7 +51,7 @@ class WarehouseController extends Controller
         $warehouseCount = Warehouse::count();
         $stocks = $warehouse->stocks()->with('product.productGroup')->whereHas('product')->orderByDesc('quantity')->paginate(20);
 
-        return view('warehouses.show', compact('warehouse', 'stocks', 'warehouseCount'));
+        return view('warehouses.show', compact('warehouse', 'stocks', 'warehouseCount'))->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function store(Request $request): RedirectResponse
@@ -73,6 +75,8 @@ class WarehouseController extends Controller
 
     public function destroy(Warehouse $warehouse): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($warehouse);
+
         if (Warehouse::count() <= 1) {
             return back()->with('error', __('At least one warehouse must remain.'));
         }
@@ -168,7 +172,7 @@ class WarehouseController extends Controller
         return view('warehouses.transfer-history', [
             'transfers' => $transfers,
             'warehouses' => Warehouse::orderBy('name')->get(),
-        ]);
+        ])->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function transfer(Request $request): RedirectResponse

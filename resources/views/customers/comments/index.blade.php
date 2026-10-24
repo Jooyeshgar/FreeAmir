@@ -3,8 +3,8 @@
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <div class="card-actions flex justify-between gap-4 ">
-                <a href="{{ route('comments.create', $customer->id) }}"
-                    class="btn btn-primary ">{{ __('Add Comment') }}</a>
+                <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('comments.create', $customer->id) }}"
+                    class="btn btn-primary ">{{ __('Add Comment') }}</x-closed-year-action-link>
             </div>
 
             <div class="mt-4 overflow-x-auto">
@@ -43,11 +43,11 @@
                                 </td>
                                 <td class="px-4 py-2">
                                     <div class="inline-flex gap-2">
-                                        <a href="{{ route('comments.edit', [$comment->customer_id, $comment]) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                        <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('comments.edit', [$comment->customer_id, $comment]) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</x-closed-year-action-link>
                                         <form action="{{ route('comments.destroy', [$comment->customer_id, $comment]) }}" method="POST">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                            <button type="submit" class="btn btn-sm btn-error" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ __('Delete') }}</button>
                                         </form>
                                     </div>
                                 </td>

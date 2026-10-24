@@ -13,11 +13,15 @@ class WarehouseService
 {
     public function create(array $data): Warehouse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($data['fiscal_year_id'] ?? getActiveFiscalYear());
+
         return Warehouse::create($data);
     }
 
     public function update(Warehouse $warehouse, array $data): Warehouse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($warehouse, $data['fiscal_year_id'] ?? null);
+
         $warehouse->update($data);
 
         return $warehouse;
@@ -25,6 +29,11 @@ class WarehouseService
 
     public function transfer(Product $product, Warehouse $from, Warehouse $to, float $quantity, ?string $description = null): WarehouseTransfer
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($product);
+
+        app(FiscalYearMutationGuard::class)->ensureOpen($from);
+        app(FiscalYearMutationGuard::class)->ensureOpen($to);
+
         if ((int) $product->fiscal_year_id !== (int) $from->fiscal_year_id || (int) $from->fiscal_year_id !== (int) $to->fiscal_year_id) {
             throw ValidationException::withMessages(['from_warehouse_id' => __('The product and warehouses must belong to the same company.')]);
         }

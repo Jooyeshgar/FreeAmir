@@ -75,20 +75,20 @@
                         </div>
 
                         @if ($cheque->histories->whereNotNull('from_status')->isEmpty())
-                            <a class="btn btn-primary btn-sm gap-1.5" href="{{ route('cheques.edit', $cheque) }}">
+                            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" class="btn btn-primary btn-sm gap-1.5" href="{{ route('cheques.edit', $cheque) }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L8.582 18.07a4.5 4.5 0 0 1-1.897 1.13L3 20.25l1.05-3.685a4.5 4.5 0 0 1 1.13-1.897l11.682-11.681Z" />
                                 </svg>
                                 {{ __('Edit') }}
-                            </a>
+                            </x-closed-year-action-link>
                         @endif
                         <form method="POST" action="{{ route('cheques.destroy', $cheque) }}">
                             @csrf
                             @method('DELETE')
                             <button class="btn btn-error btn-outline btn-sm gap-1.5"
-                                onclick="return confirm('{{ __('Delete this cheque and all of its accounting entries and payments?') }}')">
+                                onclick="return confirm('{{ __('Delete this cheque and all of its accounting entries and payments?') }}')" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -222,7 +222,7 @@
                                 </div>
                                 <div class="mt-3 flex justify-end">
                                     <button class="btn btn-primary btn-sm"
-                                        onclick="return confirm('{{ __('Continue with this action?') }}')">
+                                        onclick="return confirm('{{ __('Continue with this action?') }}')" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">
                                         {{ $actionLabels[$action] }}
                                     </button>
                                 </div>

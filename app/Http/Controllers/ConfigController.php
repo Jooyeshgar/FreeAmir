@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Enums\ConfigTitle;
 use App\Models\Config;
+use App\Models\FiscalYear;
 use App\Models\Subject;
+use App\Services\FiscalYearMutationGuard;
 use App\Services\SubjectService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -22,11 +24,13 @@ class ConfigController extends Controller
         $configs = Config::all();
         $subjects = Subject::all();
 
-        return view('configs.index', compact('subjects', 'configs', 'configsTitle'));
+        return view('configs.index', compact('subjects', 'configs', 'configsTitle'))->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function edit($key)
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $configTitle = ConfigTitle::tryFrom(strtoupper($key));
         abort_unless($configTitle, 404);
         $key = strtolower($configTitle->value);
@@ -54,6 +58,8 @@ class ConfigController extends Controller
 
     public function update(Request $request)
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $validatedData = $request->validate([
             'code' => 'required|exists:subjects,code|numeric',
             'key' => ['required', 'string', Rule::in($this->supportedKeys())],

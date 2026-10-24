@@ -20,6 +20,8 @@ class ProductService
 
     public function create(array $data): Product
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($data['fiscal_year_id'] ?? getActiveFiscalYear());
+
         $websites = $data['websites'] ?? [];
         unset($data['websites']);
 
@@ -35,6 +37,8 @@ class ProductService
 
     public function update(Product $product, array $data): Product
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($product, $data['fiscal_year_id'] ?? null);
+
         $websites = $data['websites'] ?? null;
         unset($data['websites']);
 
@@ -52,6 +56,8 @@ class ProductService
 
     public function delete(Product $product): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($product);
+
         $product->productWebsites()->delete();
         $product->delete();
         $this->deleteSubjects($product);
@@ -289,6 +295,8 @@ class ProductService
 
     public static function recalculateQuantity(Product $product): float
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($product);
+
         return DB::transaction(function () use ($product): float {
             $stocks = WarehouseProductStock::query()
                 ->where('product_id', $product->id)

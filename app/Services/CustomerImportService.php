@@ -78,6 +78,8 @@ class CustomerImportService
      */
     public function import(UploadedFile|string $file, int $fiscalYearId): array
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($fiscalYearId);
+
         $rows = $this->parse($file);
 
         if (empty($rows)) {

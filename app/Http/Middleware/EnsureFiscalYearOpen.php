@@ -29,6 +29,13 @@ class EnsureFiscalYearOpen
 
         $this->fiscalYearMutationGuard->ensureOpen($subject, $destination);
 
+        // Nested records can have a different owner from the first route parameter.
+        foreach ($request->route()?->parameters() ?? [] as $parameter) {
+            if ($parameter instanceof EloquentModel && $parameter !== $subject) {
+                $this->fiscalYearMutationGuard->ensureOpen($parameter);
+            }
+        }
+
         return $next($request);
     }
 
@@ -37,7 +44,12 @@ class EnsureFiscalYearOpen
         if ($request->isMethod('GET') && $request->routeIs([
             'fiscal-years.edit',
             'subjects.edit',
+            'product-groups.edit',
+            'service-groups.edit',
+            'comments.edit',
+            'configs.edit',
             'documents.edit',
+            'documents.files.edit',
             'products.edit',
             'warehouses.edit',
             'services.edit',
@@ -70,7 +82,26 @@ class EnsureFiscalYearOpen
 
         if ($request->isMethod('GET')) {
             return ! $request->routeIs([
+                'subjects.create',
+                'products.create',
+                'products.import',
+                'product-groups.create',
+                'services.create',
+                'services.import',
+                'service-groups.create',
+                'customers.create',
+                'customers.import',
+                'customer-groups.create',
+                'warehouses.create',
+                'warehouses.transfer',
+                'banks.create',
+                'bank-accounts.create',
+                'chequebooks.create',
+                'cheques.create',
+                'comments.create',
                 'documents.create',
+                'documents.files.create',
+                'documents.import',
                 'documents.duplicate',
                 'invoices.create',
                 'invoices.void-form',
@@ -117,6 +148,7 @@ class EnsureFiscalYearOpen
             'backups.import',
             'documents.export.download',
             'invoices.export',
+            'reports.documents.export',
             'attendance.attendance-logs.import.preview',
             'commercial-ledgers.store',
             'commercial-ledgers.destroy',

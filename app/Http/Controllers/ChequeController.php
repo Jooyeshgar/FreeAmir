@@ -7,6 +7,7 @@ use App\Models\BankAccount;
 use App\Models\Cheque;
 use App\Models\Chequebook;
 use App\Models\Customer;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Services\ChequeService;
 use App\Services\SubjectService;
@@ -33,7 +34,7 @@ class ChequeController extends Controller
             'directions' => ChequeType::directions(),
             'purposes' => ChequeType::purposes(),
             'accountSides' => Customer::with('group')->get(['id', 'name', 'group_id']),
-        ]);
+        ])->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function create(Request $request)
@@ -63,7 +64,7 @@ class ChequeController extends Controller
             ),
             'selectedSubject' => Subject::find(old('subject_id')),
             'endorsedSubject' => $cheque->histories->firstWhere('to_status', ChequeType::ENDORSED)?->payment?->settlementSubjectRelation,
-        ]);
+        ])->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function edit(Cheque $cheque)

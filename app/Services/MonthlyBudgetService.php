@@ -52,6 +52,8 @@ class MonthlyBudgetService
 
     public function saveForecast(int $month, array $data): MonthlyBudget
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         return DB::transaction(function () use ($month, $data) {
             $this->validateHierarchyForecast($month, $data);
 
@@ -122,6 +124,8 @@ class MonthlyBudgetService
 
     public function saveForecastForMonths(array $months, array $data): Collection
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $months = collect($months)->map(fn ($month) => (int) $month)->unique()->sort()->values();
         $unavailableMonths = $months->reject(fn (int $month) => $this->subjectIsAvailableForForecast($month, (int) $data['subject_id'], allowExistingSubject: true));
 
@@ -194,6 +198,8 @@ class MonthlyBudgetService
     /** Replace the current month's complete manual forecast set with the prior month's set. */
     public function rollover(int $month): Collection
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         if ($month === 1) {
             throw ValidationException::withMessages(['month' => __('The first month has no previous month in the active fiscal year.')]);
         }

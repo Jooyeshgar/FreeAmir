@@ -40,6 +40,8 @@ class ChequeService
 
     public function register(User $user, array $data): Cheque
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($data['fiscal_year_id'] ?? getActiveFiscalYear());
+
         return DB::transaction(function () use ($user, $data) {
             $direction = ChequeType::from((int) $data['direction']);
             $purpose = ChequeType::from((int) $data['purpose']);
@@ -87,6 +89,8 @@ class ChequeService
 
     public function update(Cheque $cheque, User $user, array $data): Cheque
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($cheque);
+
         return DB::transaction(function () use ($cheque, $user, $data) {
             $lockedCheque = Cheque::query()->lockForUpdate()->findOrFail($cheque->id);
             if ($lockedCheque->histories()->whereNotNull('from_status')->exists()) {
@@ -163,6 +167,8 @@ class ChequeService
 
     public function delete(Cheque $cheque): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($cheque);
+
         DB::transaction(function () use ($cheque) {
             $lockedCheque = Cheque::query()->lockForUpdate()->findOrFail($cheque->id);
 
@@ -186,6 +192,8 @@ class ChequeService
 
     public function transition(Cheque $cheque, User $user, string $action, array $data = []): Cheque
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($cheque);
+
         return DB::transaction(function () use ($cheque, $user, $action, $data) {
             $lockedCheque = Cheque::query()->lockForUpdate()->findOrFail($cheque->id);
 

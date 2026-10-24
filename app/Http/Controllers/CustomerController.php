@@ -7,6 +7,7 @@ use App\Http\Requests\StoreCustomerRequest;
 use App\Models\Cheque;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Transaction;
 use App\Services\CustomerImportService;
@@ -82,7 +83,7 @@ class CustomerController extends Controller
 
         $groups = CustomerGroup::select('id', 'name')->orderBy('name')->get();
 
-        return view('customers.index', compact('customers', 'groups', 'groupId', 'balanceFilter', 'balanceSum'));
+        return view('customers.index', compact('customers', 'groups', 'groupId', 'balanceFilter', 'balanceSum'))->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     private function balanceSubjectIds(string $balanceFilter)
@@ -175,7 +176,7 @@ class CustomerController extends Controller
             ->paginate(15, ['*'], 'cheques_page')
             ->withQueryString();
 
-        return view('customers.show', compact('customer', 'orders', 'cheques', 'subjectBalance'));
+        return view('customers.show', compact('customer', 'orders', 'cheques', 'subjectBalance'))->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function export(ReportExportService $reportExportService): StreamedResponse
