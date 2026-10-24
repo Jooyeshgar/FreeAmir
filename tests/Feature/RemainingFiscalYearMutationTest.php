@@ -35,6 +35,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Role;
@@ -194,12 +195,26 @@ class RemainingFiscalYearMutationTest extends TestCase
     public function test_audited_web_api_and_bulk_routes_enforce_the_closed_year_boundary(): void
     {
         $this->year->update(['closed_at' => now()]);
-        $inventory = json_decode(file_get_contents(base_path('tests/Fixtures/closed-fiscal-year-routes.json')), true, flags: JSON_THROW_ON_ERROR);
-        $audited = [];
-        foreach ($inventory as [$method, $name, $uri, $rule]) {
-            $route = clone Route::getRoutes()->getByName($name);
-            $this->assertNotNull($route, $name);
+        $routes = collect(Route::getRoutes()->getRoutes())
+            ->filter(function ($route) {
+                $middleware = $route->middleware();
+
+                // Select the application groups independently so a missing guard is caught too.
+                return in_array('fiscal-year-open', $middleware, true)
+                    || in_array('api-fiscal-year', $middleware, true)
+                    || in_array('ensure-employee', $middleware, true)
+                    || (in_array('check-permission', $middleware, true)
+                        && ! in_array('permission:access-super-admin-panel', $middleware, true));
+            });
+        $this->assertNotEmpty($routes);
+
+        foreach ($routes as $route) {
+            $route = clone $route;
+            $name = $route->getName();
+            $this->assertNotNull($name, $route->uri());
             $this->assertContains('fiscal-year-open', $route->middleware(), $name);
+            $method = $route->methods()[0];
+            $uri = $route->uri();
             $request = Request::create('/'.ltrim(preg_replace('/\{[^}]+\}/', (string) $this->year->id, $uri), '/'), $method);
             $route->bind($request);
             $request->setRouteResolver(fn () => $route);
@@ -210,15 +225,38 @@ class RemainingFiscalYearMutationTest extends TestCase
                 $blocked = true;
                 $this->assertArrayHasKey('fiscal_year', $exception->errors(), $name);
             }
-            $this->assertSame($rule === 'blocked', $blocked, $name);
-            $audited[] = $name;
+            $this->assertSame($this->routeShouldBeBlocked($method, $name), $blocked, $name);
         }
-        $actual = collect(Route::getRoutes()->getRoutes())
-            ->filter(fn ($route) => in_array('fiscal-year-open', $route->middleware(), true))
-            ->map(fn ($route) => $route->getName())->values()->all();
-        sort($actual);
-        sort($audited);
-        $this->assertSame($actual, $audited, 'Update the reviewed inventory when fiscal-year routes change.');
+    }
+
+    private function routeShouldBeBlocked(string $method, string $name): bool
+    {
+        if ($method === 'GET') {
+            // Shared records and new fiscal years stay available after closure.
+            if (in_array($name, [
+                'api-tokens.create', 'backups.create', 'companies.create', 'companies.edit',
+                'configs.create', 'fiscal-years.create', 'users.create', 'users.edit',
+            ], true)) {
+                return false;
+            }
+
+            return Str::is(['*.create', '*.edit', '*.bulk-create', '*.import'], $name)
+                || in_array($name, [
+                    'documents.duplicate', 'warehouses.transfer', 'invoices.void-form',
+                    'employee-portal.change-employee-information',
+                ], true);
+        }
+
+        return ! Str::is([
+            'fiscal-years.store', 'companies.store', 'companies.update', 'companies.test-moadian-connection',
+            'api-tokens.store', 'api-tokens.destroy', 'users.impersonate', 'users.store',
+            'users.update', 'users.destroy', 'report',
+            'backups.export', 'backups.import', 'documents.export.download',
+            'reports.documents.export', 'attendance.attendance-logs.import.preview', 'commercial-ledgers.store',
+            'commercial-ledgers.destroy', 'companies.close-fiscal-year',
+            'companies.closing-wizard.step1', 'companies.closing-wizard.step3',
+            'companies.closing-wizard.recalculate', 'companies.closing-wizard.recreate-opening',
+        ], $name);
     }
 
     private function resources(): array
