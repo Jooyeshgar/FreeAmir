@@ -18,6 +18,7 @@ use App\Models\Document;
 use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\ChequeService;
@@ -184,6 +185,32 @@ class ChequeManagementTest extends TestCase
         $this->assertBalanced($payment->document);
     }
 
+    public function test_received_cheque_can_be_transferred_directly_to_a_selected_subject(): void
+    {
+        $destination = Subject::create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'code' => '012001003',
+            'name' => 'Direct transfer destination',
+            'parent_id' => 1,
+            'type' => 3,
+        ]);
+
+        $cheque = $this->service->register($this->user, [
+            ...$this->data(ChequeType::RECEIVABLE, ChequeType::SETTLEMENT, $this->customer),
+            'destination_subject_id' => $destination->id,
+        ]);
+
+        $this->assertSame(ChequeType::ENDORSED, $cheque->status);
+        $this->assertCount(2, $cheque->histories);
+        $this->assertSame(ChequeType::REGISTERED, $cheque->histories()->oldest('id')->first()->to_status);
+        $payment = $cheque->payments()->firstOrFail();
+        $this->assertSame($destination->id, $payment->settlement_subject_id);
+        $this->assertSame(0, (int) $payment->document->transactions()->where('subject_id', 44)->count());
+        $this->assertEqualsWithDelta(-1000, $payment->document->transactions()->where('subject_id', $destination->id)->sum('value'), 0.01);
+        $this->assertEqualsWithDelta(1000, $payment->document->transactions()->where('subject_id', 201)->sum('value'), 0.01);
+        $this->assertBalanced($payment->document);
+    }
+
     public function test_account_side_subject_must_belong_to_cheque_company(): void
     {
         $otherFiscalYear = FiscalYear::factory()->create(['year' => 1405]);
@@ -206,6 +233,114 @@ class ChequeManagementTest extends TestCase
 
         $this->assertSame(0, Cheque::count());
         $this->assertSame(0, Document::count());
+    }
+
+    public function test_direct_invoice_transfer_tracks_the_destination_customer_and_settles_once(): void
+    {
+        Subject::whereKey(202)->update(['parent_id' => 1]);
+        $expenseId = $this->feeSubject();
+        $invoice = $this->invoice(InvoiceType::SELL, $this->customer, 1000);
+        config(['amir.cheque_documents_receivable' => null]);
+        $cheque = $this->service->register($this->user, [
+            ...$this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 1000),
+            'destination_subject_id' => 202,
+            'bank_service_fee' => 2,
+        ]);
+
+        $this->assertSame($this->vendor->id, $cheque->endorsed_to_id);
+        $this->assertSame(ChequeType::ENDORSED, $cheque->status);
+        $this->assertTrue($invoice->fresh()->status->isPaid());
+        $this->assertEquals(1000, app(PaymentService::class)->paidAmount($invoice));
+        $this->assertSame(1, $cheque->payments()->count());
+        $this->assertSame(1, Document::count());
+        $payment = $invoice->payments()->firstOrFail();
+        $this->assertEquals(-1000, $payment->document->transactions()->where('subject_id', 202)->sum('value'));
+        $this->assertEquals(1000, $payment->document->transactions()->where('subject_id', 201)->sum('value'));
+        $this->assertEquals(-2, $payment->document->transactions()->where('subject_id', $expenseId)->sum('value'));
+        $this->assertSame('2.00', $payment->bank_service_fee);
+        $this->assertEquals(2, $cheque->histories()->sum('bank_service_fee'));
+        $this->assertBalanced($payment->document);
+        $this->assertSame([], $cheque->availableActions());
+
+        app(PaymentService::class)->deletePayment($payment);
+        $this->assertSame(0, Cheque::count());
+        $this->assertSame(0, ChequeHistory::count());
+        $this->assertSame(0, Document::count());
+        $this->assertSame(0, Payment::count());
+        $this->assertTrue($invoice->fresh()->status->isApproved());
+    }
+
+    public function test_direct_transfer_rejects_invalid_destinations_and_incompatible_cheques_atomically(): void
+    {
+        $otherYear = FiscalYear::factory()->create(['year' => 1406]);
+        $foreign = Subject::create(['fiscal_year_id' => $otherYear->id, 'parent_id' => null, 'code' => '099', 'name' => 'Foreign destination', 'type' => 3]);
+        Subject::whereKey(201)->update(['parent_id' => 1]);
+        $base = $this->data(ChequeType::RECEIVABLE, ChequeType::SETTLEMENT, $this->customer);
+
+        foreach ([
+            [...$base, 'destination_subject_id' => $foreign->id],
+            [...$base, 'destination_subject_id' => 999999],
+            [...$base, 'destination_subject_id' => 1],
+            [...$base, 'destination_subject_id' => 201],
+            [...$base, 'destination_subject_id' => 203, 'purpose' => ChequeType::GUARANTEE->value],
+            [...$base, 'destination_subject_id' => 203, 'direction' => ChequeType::PAYABLE->value, 'bank_account_id' => $this->account->id],
+        ] as $data) {
+            try {
+                $this->service->register($this->user, $data);
+                $this->fail('Expected direct transfer validation to fail.');
+            } catch (ValidationException $exception) {
+                $this->assertArrayHasKey('destination_subject_id', $exception->errors());
+            }
+            $this->assertSame(0, Cheque::count());
+            $this->assertSame(0, ChequeHistory::count());
+            $this->assertSame(0, Document::count());
+            $this->assertSame(0, Payment::count());
+        }
+    }
+
+    public function test_direct_transfer_http_forms_and_registration_support_subject_selection(): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+        $this->get(route('cheques.create'))->assertOk()->assertSee('name="destination_subject_id"', false);
+        $this->get(route('cheques.create', ['direction' => ChequeType::PAYABLE->value]))->assertOk()->assertDontSee('name="destination_subject_id"', false);
+        $data = $this->data(ChequeType::RECEIVABLE, ChequeType::SETTLEMENT, $this->customer);
+        $data['issue_date'] = toEnglish(formatDate($data['issue_date']));
+        $data['due_date'] = toEnglish(formatDate($data['due_date']));
+        $this->post(route('cheques.store'), [...$data, 'destination_subject_id' => 203])->assertSessionHasNoErrors();
+        $cheque = Cheque::firstOrFail();
+        $this->assertSame(ChequeType::ENDORSED, $cheque->status);
+        $this->get(route('cheques.show', $cheque))->assertOk()->assertSee('Bank account subject');
+        $this->get(route('cheques.edit', $cheque))->assertStatus(409);
+    }
+
+    public function test_invoice_cheque_http_direct_transfer_preserves_the_destination(): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+        $invoice = $this->invoice(InvoiceType::SELL, $this->customer, 1000);
+        $this->user->givePermissionTo(Permission::findOrCreate('invoices.payments.store'));
+        $this->user->givePermissionTo(Permission::findOrCreate('invoices.payments.store-cheque'));
+        $this->get(route('invoices.show', $invoice))->assertOk()->assertSee('name="destination_subject_id"', false);
+        $data = $this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 1000);
+        $data['issue_date'] = toEnglish(formatDate($data['issue_date']));
+        $data['due_date'] = toEnglish(formatDate($data['due_date']));
+        $this->post(route('invoices.payments.store-cheque', $invoice), [...$data, 'destination_subject_id' => 203])
+            ->assertRedirect(route('invoices.show', $invoice))->assertSessionHasNoErrors();
+        $payment = $invoice->payments()->firstOrFail();
+        $this->assertSame(203, $payment->settlement_subject_id);
+        $this->assertTrue($invoice->fresh()->status->isPaid());
+        $this->assertSame(ChequeType::ENDORSED, $payment->cheque->status);
+    }
+
+    public function test_cheque_destination_search_requires_permission_and_scopes_subjects(): void
+    {
+        $otherYear = FiscalYear::factory()->create(['year' => 1406]);
+        Subject::create(['fiscal_year_id' => $otherYear->id, 'parent_id' => null, 'name' => 'Foreign subject', 'code' => '099', 'type' => 3]);
+        $this->getJson(route('cheques.search-subjects'))->assertForbidden();
+        $this->user->givePermissionTo(Permission::findOrCreate('cheques.search-subjects'));
+        $response = $this->getJson(route('cheques.search-subjects', ['q' => 'Bank account subject']))->assertOk();
+        $this->assertSame([203], $response->json('*.id'));
+        $this->getJson(route('cheques.search-subjects', ['q' => 'Foreign subject']))->assertOk()->assertExactJson([]);
+        $this->getJson(route('cheques.search-subjects', ['q' => str_repeat('a', 101)]))->assertUnprocessable();
     }
 
     public function test_issued_cheque_posts_documents_payable_then_clears_through_bank_payment(): void

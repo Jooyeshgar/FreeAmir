@@ -1035,6 +1035,9 @@
                                             {{ __('If you select a chequebook, it must belong to the selected bank account.') }}
                                         </div>
                                         <div class="grid [&>*]:min-w-0 gap-4 md:grid-cols-2">
+                                            @if ($chequeDirection === \App\Enums\ChequeType::RECEIVABLE)
+                                                <div class="md:col-span-2"><x-cheque-destination /></div>
+                                            @endif
                                             <div x-data="{ amountInput: '{{ $remainingAmount }}' }">
                                                 <label class="label"><span class="label-text">{{ __('Amount') }}</span></label>
                                                 <x-text-input input_name="amount" input_class="input-bordered locale-number"

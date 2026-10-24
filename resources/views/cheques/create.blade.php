@@ -41,6 +41,7 @@
                 [&_.textarea]:transition [&_.textarea:focus]:border-primary [&_.textarea:focus]:outline-none [&_.textarea:focus]:ring-2 [&_.textarea:focus]:ring-primary/10">
                 <div class="grid grid-cols-1 sm:grid-cols-2 items-start gap-x-5 gap-y-4 xl:grid-cols-3" x-data="{
                     direction: @js($selectedDirectionValue),
+                    purpose: @js((string) old('purpose', $cheque?->purpose->value ?? \App\Enums\ChequeType::SETTLEMENT->value)),
                     bankAccountId: @js((string) $selectedBankAccountId),
                 }">
                     <input type="hidden" name="direction" x-model="direction">
@@ -48,7 +49,7 @@
                     <div class="col-span-2 md:col-span-1">
                         <fieldset class="w-full">
                             <label for="purpose" class="label">{{ __('Purpose') }}</label>
-                            <select id="purpose" name="purpose" class="select w-full border-slate-400">
+                            <select id="purpose" name="purpose" x-model="purpose" class="select w-full border-slate-400">
                                 @foreach (\App\Enums\ChequeType::purposes() as $purpose)
                                     <option value="{{ $purpose->value }}" @selected((string) old('purpose', $cheque?->purpose->value ?? \App\Enums\ChequeType::SETTLEMENT->value) === (string) $purpose->value)>
                                         {{ $purpose->label() }}
@@ -80,6 +81,12 @@
                             <x-input name="customer_id" x-bind:value="accountSideId" hidden />
                         </div>
                     </div>
+
+                    @if (!$cheque && $selectedDirectionValue !== $payableDirectionValue)
+                        <template x-if="purpose === @js((string) \App\Enums\ChequeType::SETTLEMENT->value)">
+                            <div class="col-span-2 md:col-span-1"><x-cheque-destination /></div>
+                        </template>
+                    @endif
 
                     <div class="col-span-2 md:col-span-1">
                         <x-input name="amount" id="amount" :title="__('Amount')" :value="old('amount', $cheque?->amount)"

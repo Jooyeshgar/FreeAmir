@@ -8,6 +8,7 @@ use App\Models\Cheque;
 use App\Models\Chequebook;
 use App\Models\Customer;
 use App\Services\ChequeService;
+use App\Services\PaymentService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -40,6 +41,14 @@ class ChequeController extends Controller
             ...$this->formData($request->input('direction')),
             'cheque' => null,
         ]);
+    }
+
+    public function searchSubjects(Request $request, PaymentService $paymentService)
+    {
+        $validated = $request->validate(['q' => ['nullable', 'string', 'max:100']]);
+
+        return response()->json($paymentService->settlementSubjects(trim($validated['q'] ?? ''))
+            ->map(fn ($subject) => ['id' => $subject->id, 'name' => $subject->name, 'code' => $subject->formattedCode()]));
     }
 
     public function store(Request $request)
@@ -188,6 +197,7 @@ class ChequeController extends Controller
                 ],
                 'cheque_number' => ['nullable', 'string', 'max:50'],
                 'customer_id' => ['required', Rule::exists('customers', 'id')->where('fiscal_year_id', getActiveFiscalYear())],
+                'destination_subject_id' => [$cheque ? 'prohibited' : 'nullable', 'integer', Rule::exists('subjects', 'id')->where('fiscal_year_id', getActiveFiscalYear())->whereNotNull('parent_id')],
                 'bank_account_id' => [
                     Rule::requiredIf($direction === ChequeType::PAYABLE->value),
                     'nullable',

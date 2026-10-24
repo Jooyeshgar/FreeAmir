@@ -134,6 +134,7 @@
         ['label' => __('Bank account'), 'value' => $cheque->bankAccount?->name, 'url' => $cheque->bankAccount ? route('bank-accounts.show', $cheque->bankAccount) : null],
         ['label' => __('Chequebook'), 'value' => $cheque->chequebook?->bankAccount?->name, 'url' => $cheque->chequebook ? route('chequebooks.show', $cheque->chequebook) : null],
         ['label' => __('Endorsed to'), 'value' => $cheque->endorsedTo?->name, 'url' => $cheque->endorsedTo ? route('customers.show', $cheque->endorsedTo) : null],
+        ['label' => __('Destination subject'), 'value' => $cheque->status === \App\Enums\ChequeType::ENDORSED ? $cheque->payments()->latest('id')->first()?->settlementSubject()?->name : null, 'url' => null],
     ] as $item)
                         <div class="min-w-0 rounded-xl border border-base-200 bg-base-200/25 p-4">
                             <p class="text-xs font-medium text-base-content/45">{{ $item['label'] }}</p>

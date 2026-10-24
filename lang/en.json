@@ -3566,5 +3566,11 @@
     "Bookmark": "Bookmark",
     "Bookmark invoice": "Bookmark invoice",
     "Remove invoice bookmark": "Remove invoice bookmark",
-    "Bookmarked invoices": "Bookmarked invoices"
+    "Bookmarked invoices": "Bookmarked invoices",
+    "Receive and transfer cheque": "Receive and transfer cheque",
+    "Destination subject": "Destination subject",
+    "Leave empty to receive the cheque normally. Selecting a destination receives and transfers it directly.": "Leave empty to receive the cheque normally. Selecting a destination receives and transfers it directly.",
+    "Could not load subjects. Please try again.": "Could not load subjects. Please try again.",
+    "Direct transfer is only available when receiving a new settlement cheque.": "Direct transfer is only available when receiving a new settlement cheque.",
+    "Select a destination account different from the source customer in the active fiscal year.": "Select a destination account different from the source customer in the active fiscal year."
 }

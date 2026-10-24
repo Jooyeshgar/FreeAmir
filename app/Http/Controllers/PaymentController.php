@@ -129,6 +129,7 @@ class PaymentController extends Controller
                 Rule::exists('bank_accounts', 'id')->where('fiscal_year_id', getActiveFiscalYear()),
             ],
             'chequebook_id' => $direction === ChequeType::PAYABLE ? ['nullable', Rule::exists('chequebooks', 'id')->where('fiscal_year_id', getActiveFiscalYear())] : ['exclude'],
+            'destination_subject_id' => ['nullable', 'integer', Rule::exists('subjects', 'id')->where('fiscal_year_id', getActiveFiscalYear())->whereNotNull('parent_id')],
             'description' => ['nullable', 'string', 'max:1000'],
         ])->validate();
 

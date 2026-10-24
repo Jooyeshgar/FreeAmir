@@ -135,6 +135,7 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
 
     Route::resource('chequebooks', Controllers\ChequebookController::class)->names('chequebooks');
     Route::get('cheques/report', [Controllers\ChequeController::class, 'report'])->name('cheques.report');
+    Route::get('cheques/subjects', [Controllers\ChequeController::class, 'searchSubjects'])->name('cheques.search-subjects');
     Route::post('cheques/{cheque}/transition/{action}', [Controllers\ChequeController::class, 'transition'])->name('cheques.transition');
     Route::resource('cheques', Controllers\ChequeController::class);
 

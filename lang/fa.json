@@ -3567,5 +3567,11 @@
     "Bookmark": "نشان‌گذاری",
     "Bookmark invoice": "نشان‌گذاری فاکتور",
     "Remove invoice bookmark": "حذف نشان فاکتور",
-    "Bookmarked invoices": "فاکتورهای نشان‌گذاری‌شده"
+    "Bookmarked invoices": "فاکتورهای نشان‌گذاری‌شده",
+    "Receive and transfer cheque": "دریافت چک از مشتری و انتقال به مشتری",
+    "Destination subject": "سرفصل مقصد",
+    "Leave empty to receive the cheque normally. Selecting a destination receives and transfers it directly.": "برای دریافت عادی چک، خالی بگذارید. با انتخاب سرفصل مقصد، دریافت و انتقال چک به‌صورت مستقیم ثبت می‌شود.",
+    "Could not load subjects. Please try again.": "دریافت سرفصل‌ها انجام نشد. دوباره تلاش کنید.",
+    "Direct transfer is only available when receiving a new settlement cheque.": "انتقال مستقیم فقط هنگام دریافت چک جدید بابت تسویه امکان‌پذیر است.",
+    "Select a destination account different from the source customer in the active fiscal year.": "سرفصل مقصدی متفاوت از سرفصل مشتری مبدأ در سال مالی فعال انتخاب کنید."
 }

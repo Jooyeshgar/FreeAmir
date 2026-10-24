@@ -74,6 +74,9 @@ class ChequeService
             ]);
 
             $fee = $this->validateBankServiceFee($data);
+            if (! empty($data['destination_subject_id'])) {
+                return $this->registerDirectTransfer($user, $cheque, $invoice, $data, $fee);
+            }
             $document = $this->postInitialDocument($user, $cheque);
             $paymentSubject = $direction === ChequeType::RECEIVABLE ? self::DOCUMENTS_RECEIVABLE_CONFIG : self::DOCUMENTS_PAYABLE_CONFIG;
             $payment = $invoice ? $this->paymentService->saveChequePayment($user, $invoice, $cheque, $document, $this->subject($paymentSubject), fee: $fee) : null;
@@ -87,6 +90,10 @@ class ChequeService
 
     public function update(Cheque $cheque, User $user, array $data): Cheque
     {
+        if (! empty($data['destination_subject_id'])) {
+            throw ValidationException::withMessages(['destination_subject_id' => __('Direct transfer is only available when receiving a new settlement cheque.')]);
+        }
+
         return DB::transaction(function () use ($cheque, $user, $data) {
             $lockedCheque = Cheque::query()->lockForUpdate()->findOrFail($cheque->id);
             if ($lockedCheque->histories()->whereNotNull('from_status')->exists()) {
@@ -369,6 +376,37 @@ class ChequeService
             $direction === ChequeType::RECEIVABLE => ChequeType::REGISTERED,
             default => ChequeType::ISSUED,
         };
+    }
+
+    private function registerDirectTransfer(User $user, Cheque $cheque, ?Invoice $invoice, array $data, float $fee): Cheque
+    {
+        if ($cheque->direction !== ChequeType::RECEIVABLE || $cheque->purpose !== ChequeType::SETTLEMENT) {
+            throw ValidationException::withMessages(['destination_subject_id' => __('Direct transfer is only available when receiving a new settlement cheque.')]);
+        }
+
+        $destination = Subject::where('fiscal_year_id', $cheque->fiscal_year_id)->whereNotNull('parent_id')->find($data['destination_subject_id']);
+        $sourceSubject = $this->accountSideSubject($cheque);
+        if (! $destination || (int) $destination->id === $sourceSubject) {
+            throw ValidationException::withMessages(['destination_subject_id' => __('Select a destination account different from the source customer in the active fiscal year.')]);
+        }
+
+        $recipient = Customer::where('fiscal_year_id', $cheque->fiscal_year_id)
+            ->where(fn ($query) => $query->where('subject_id', $destination->id)
+                ->orWhereHas('subject', fn ($query) => $query->whereKey($destination->id)))
+            ->first();
+        $amount = (float) $cheque->amount;
+        $document = $this->post($user, $cheque, 'endorse', [
+            [$destination->id, -$amount],
+            [$sourceSubject, $amount],
+        ], $data['issue_date']);
+        $payment = $this->paymentService->saveChequePayment($user, $invoice, $cheque, $document, $destination->id, fee: $fee);
+
+        $this->history($cheque, $user, null, ChequeType::REGISTERED, null, null, $data['description'] ?? null);
+        $cheque->update(['status' => ChequeType::ENDORSED, 'endorsed_to_id' => $recipient?->id]);
+        $history = $this->history($cheque, $user, ChequeType::REGISTERED, ChequeType::ENDORSED, $document, $payment, $data['description'] ?? null);
+        $this->recordBankServiceFee($cheque, $user, $history, $data, $data['issue_date']);
+
+        return $cheque->fresh();
     }
 
     private function postInitialDocument(User $user, Cheque $cheque): ?Document
