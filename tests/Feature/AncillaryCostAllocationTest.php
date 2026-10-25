@@ -19,7 +19,7 @@ class AncillaryCostAllocationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_invoice_products_aggregate_repeated_lines_preserving_fractional_quantities_and_excluding_vat(): void
+    public function test_invoice_products_preserve_fractional_quantities_and_exclude_discount_and_vat(): void
     {
         $year = FiscalYear::factory()->create();
         config(['active-fiscal-year-id' => $year->id]);
