@@ -7,10 +7,13 @@
         <div
             class="card-header bg-gradient-to-r from-blue-50 to-indigo-50 dark:text-white dark:from-gray-800 dark:to-gray-700 px-4 py-3 sm:px-5 lg:px-6 lg:py-4 rounded-t-2xl border-b-2 border-primary/20">
             <div>
-                <h2 class="text-lg sm:text-xl lg:text-2xl break-words font-bold text-gray-800 dark:text-white">
-                    {{ __('Invoice') }} {{ $invoice->invoice_type->label() }}
-                    #{{ formatDocumentNumber($invoice->number ?? $invoice->id) }} - {{ $invoice->title }}
-                </h2>
+                <div class="flex items-center gap-1">
+                    <h2 class="text-lg sm:text-xl lg:text-2xl break-words font-bold text-gray-800 dark:text-white">
+                        {{ __('Invoice') }} {{ $invoice->invoice_type->label() }}
+                        #{{ formatDocumentNumber($invoice->number ?? $invoice->id) }} - {{ $invoice->title }}
+                    </h2>
+                    <x-user-guide-link source="invoices/inactive/inactive.md" />
+                </div>
                 <p class="mt-1 text-xs sm:text-sm lg:text-base sm:text-end">
                     {{ __('Issued on :date', ['date' => $invoice->date ? formatDate($invoice->date) : __('Unknown')]) }}
                 </p>
