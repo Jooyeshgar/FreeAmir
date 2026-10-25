@@ -862,6 +862,8 @@
     "Deletable Documents": "اسناد قابل حذف",
     "Delete": "حذف",
     "Delete All Documents": "حذف تمامی اسناد",
+    "Resolve conflicts and deactivate invoice": "رفع تعارض و غیرفعال‌سازی فاکتور",
+    "The selected invoice and its dependent invoices will become approved inactive. Their accounting documents will be removed.": "فاکتور انتخاب‌شده و فاکتورهای وابسته به آن به وضعیت تأیید غیرفعال می‌روند و اسناد حسابداری آن‌ها حذف می‌شود.",
     "Delete this cheque and all of its accounting entries and payments?": "این چک و تمام ثبت‌های حسابداری و پرداخت‌های مرتبط با آن حذف شوند؟",
     "Delete this chequebook? Its cheques will be preserved and unlinked.": "این دسته‌چک حذف شود؟ چک‌های آن نگهداری و ارتباطشان حذف خواهد شد.",
     "Delete this user account permanently.": "این حساب کاربری را برای همیشه حذف کنید.",
@@ -3568,5 +3570,10 @@
     "Bookmark": "نشان‌گذاری",
     "Bookmark invoice": "نشان‌گذاری فاکتور",
     "Remove invoice bookmark": "حذف نشان فاکتور",
-    "Bookmarked invoices": "فاکتورهای نشان‌گذاری‌شده"
+    "Bookmarked invoices": "فاکتورهای نشان‌گذاری‌شده",
+    "Approve inactive": "تأیید غیرفعال",
+    "Activate": "فعال‌سازی",
+    "Deactivate": "غیرفعال‌سازی",
+    "Invoice activated successfully.": "فاکتور با موفقیت فعال شد.",
+    "Invoice deactivated successfully.": "فاکتور با موفقیت غیرفعال شد."
 }

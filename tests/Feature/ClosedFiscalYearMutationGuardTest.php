@@ -39,7 +39,6 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
-use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -436,17 +435,22 @@ class ClosedFiscalYearMutationGuardTest extends TestCase
         }
     }
 
-    public static function nestedPaymentOperations(): array
+    public function test_delete_payment_rejects_its_closed_owning_year(): void
     {
-        return [
-            'delete' => ['deletePayment'],
-            'create document' => ['createPaymentDocument'],
-            'remove document' => ['removePaymentDocument'],
-        ];
+        $this->eachPaymentOperationRejectsItsClosedOwningYear('deletePayment');
     }
 
-    #[DataProvider('nestedPaymentOperations')]
-    public function test_each_payment_operation_rejects_its_closed_owning_year(string $operation): void
+    public function test_create_payment_document_rejects_its_closed_owning_year(): void
+    {
+        $this->eachPaymentOperationRejectsItsClosedOwningYear('createPaymentDocument');
+    }
+
+    public function test_remove_payment_document_rejects_its_closed_owning_year(): void
+    {
+        $this->eachPaymentOperationRejectsItsClosedOwningYear('removePaymentDocument');
+    }
+
+    private function eachPaymentOperationRejectsItsClosedOwningYear(string $operation): void
     {
         $payment = Payment::create([
             'invoice_id' => $this->invoice->id, 'amount' => 10,

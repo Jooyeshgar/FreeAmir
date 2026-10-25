@@ -740,6 +740,11 @@ class InvoiceController extends Controller
                 ->with('error', __('Invalid status action.'));
         }
 
+        return $this->applyInvoiceStatusChange($invoice, $status);
+    }
+
+    private function applyInvoiceStatusChange(Invoice $invoice, string $status): RedirectResponse
+    {
         $settled = $invoice->status->isPartiallyPaid() || $invoice->status->isPaid();
         if ($settled && ! request()->boolean('confirm')) {
             return redirect()->back()->with('warning', __('Deactivating this paid or partially paid invoice will remove its payment accounting documents while keeping the payment records. Please confirm this action.'));
@@ -758,11 +763,26 @@ class InvoiceController extends Controller
             return redirect()->back()->with('warning', $warning?->text ?? __('Please confirm your action.'))->with('confirm_invoice_status_change', true)->with('conflicting_invoices', $decision->conflicts->map(fn ($i) => ['id' => $i->id, 'number' => $i->number, 'type' => $i->invoice_type?->valueName()])->values()->all());
         }
 
+        $reactivating = $status === 'approved' && $invoice->status->isApprovedInactive();
         $this->invoiceService->changeInvoiceStatus($invoice, $status);
 
-        $message = $status === 'approved' ? __('Invoice approved successfully.') : __('Invoice unapproved successfully.');
+        $message = match (true) {
+            $reactivating => __('Invoice activated successfully.'),
+            $status === 'approved' => __('Invoice approved successfully.'),
+            $status === 'approved_inactive' => __('Invoice deactivated successfully.'),
+            default => __('Invoice unapproved successfully.'),
+        };
 
-        return redirect()->back()->with('success', __($message));
+        return redirect()->back()->with('success', $message);
+    }
+
+    public function approveInactive(Invoice $invoice): RedirectResponse
+    {
+        if (! $invoice->status->isApproved()) {
+            return redirect()->back()->with('error', __('Invalid status action.'));
+        }
+
+        return $this->applyInvoiceStatusChange($invoice, 'approved_inactive');
     }
 
     public function inactiveInvoices()

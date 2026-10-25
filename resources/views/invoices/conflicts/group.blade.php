@@ -47,7 +47,7 @@
                     <form method="POST" action="{{ route('invoices.group-action', $invoice) }}">
                         @csrf
                         <button type="submit" class="btn btn-primary {{ $fiscalYearClosed ? 'btn-disabled cursor-not-allowed' : '' }}"
-                            @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ __('Delete All Documents') }}</button>
+                            @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ $invoice->status->isApprovedOrSettled() ? __('Resolve conflicts and deactivate invoice') : __('Delete All Documents') }}</button>
                     </form>
                 </div>
             @endif
