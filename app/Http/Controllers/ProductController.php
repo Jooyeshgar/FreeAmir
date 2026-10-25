@@ -220,6 +220,7 @@ class ProductController extends Controller
             'sstid' => __('Product SSTID'),
             'location' => __('Location in warehouse'),
             'quantity_warning' => __('Quantity warning'),
+            'weight' => __('Unit weight (kg)'),
             'oversell' => __('Oversell'),
             'discount_formula' => __('Discount formula'),
             'description' => __('Description'),

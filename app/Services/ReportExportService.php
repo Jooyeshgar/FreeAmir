@@ -118,7 +118,7 @@ class ReportExportService
                             'inventory_subject_code' => $product->inventorySubject?->code, 'sales_returns_subject_code' => $product->salesReturnsSubject?->code,
                             'sstid' => $product->sstid, 'location' => $product->location, 'quantity_warning' => $product->quantity_warning,
                             'oversell' => $product->oversell, 'discount_formula' => $product->discount_formula,
-                            'description' => $product->description, 'vat' => $product->vat,
+                            'description' => $product->description, 'vat' => $product->vat, 'weight' => $product->weight,
                         ]);
                         fputcsv($file, array_map(fn (string $column) => $row[$column] ?? null, array_keys($columns)));
                     }
@@ -402,7 +402,7 @@ class ReportExportService
             'cogs_subject_code' => __('COGS subject code'), 'inventory_subject_code' => __('Inventory subject code'),
             'sales_returns_subject_code' => __('Sales returns subject code'), 'sstid' => __('Product SSTID'), 'location' => __('Location in warehouse'),
             'quantity_warning' => __('Quantity warning'), 'oversell' => __('Oversell'), 'discount_formula' => __('Discount formula'),
-            'description' => __('Description'), 'vat' => __('VAT'),
+            'description' => __('Description'), 'vat' => __('VAT'), 'weight' => __('Unit weight (kg)'),
             ...$this->warehouseColumns()];
     }
 

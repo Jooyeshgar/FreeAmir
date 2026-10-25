@@ -84,6 +84,7 @@
             <div class="divider text-lg font-semibold">{{ __('Pricing Information') }}</div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-3">
                 <x-stat-card :title="__('Selling Price')" :value="formatNumber($product->selling_price ?? 0)" type="info" />
+                <x-stat-card :title="__('Unit weight (kg)')" :value="formatNumber($product->weight ?? 0)" type="info" />
                 <x-stat-card :title="__('Average Cost')" :value="formatNumber($product->average_cost ?? 0)" type="info" />
                 <x-stat-card :title="__('Last Cost Of Goods')" :value="formatNumber($product->lastCOG ?? 0)" type="info" />
                 <x-stat-card :title="__('Sales profit')" :value="formatNumber($product->salesProfit ?? 0)" type="success" />

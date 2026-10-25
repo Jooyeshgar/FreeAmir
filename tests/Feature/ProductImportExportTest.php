@@ -71,6 +71,36 @@ class ProductImportExportTest extends TestCase
         return $rows;
     }
 
+    public function test_product_weight_round_trips_through_csv_and_legacy_csv_preserves_it(): void
+    {
+        $product = Product::factory()->withGroup($this->productGroup)->withSubjects()->create([
+            'name' => 'Weighted Widget', 'code' => 'W434', 'weight' => 0.125,
+        ]);
+        $csv = $this->actingAs($this->user)->get(route('products.export'))->streamedContent();
+        [$headers, $values] = $this->parseCsv($csv);
+        $this->assertSame('0.125', array_combine($headers, $values)['Unit weight (kg)']);
+
+        $product->update(['weight' => 0]);
+        $this->post(route('products.import.store'), ['file' => $this->upload($csv)])
+            ->assertSessionHasNoErrors();
+        $this->assertSame('0.125', $product->fresh()->weight);
+
+        $this->post(route('products.import.store'), [
+            'file' => $this->upload("code,name,group_name\nW434,Widget,{$this->productGroup->name}\n"),
+        ])->assertSessionHasNoErrors();
+        $this->assertSame('0.125', $product->fresh()->weight);
+    }
+
+    public function test_product_import_rejects_negative_or_invalid_weight(): void
+    {
+        foreach (['-1', 'invalid', '0.1234'] as $weight) {
+            $this->actingAs($this->user)->post(route('products.import.store'), [
+                'file' => $this->upload("code,name,group_name,weight\nW434,Widget,{$this->productGroup->name},{$weight}\n"),
+            ])->assertSessionHasErrors();
+            $this->assertDatabaseMissing('products', ['code' => 'W434']);
+        }
+    }
+
     public function test_product_export_rejects_columns_outside_the_allowlist(): void
     {
         $this->actingAs($this->user)->get(route('products.export', [

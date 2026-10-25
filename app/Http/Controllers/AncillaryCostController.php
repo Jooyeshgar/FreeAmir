@@ -251,13 +251,17 @@ class AncillaryCostController extends Controller
             ->with('itemable')
             ->get();
 
-        $products = collect($invoiceItems)->map(function ($item) {
+        $products = $invoiceItems->groupBy('itemable_id')->map(function ($items) {
+            $product = $items->first()->itemable;
+
             return [
-                'id' => $item->itemable->id,
-                'name' => $item->itemable->name,
-                'quantity' => (int) $item->quantity,
+                'id' => $product->id,
+                'name' => $product->name,
+                'quantity' => (float) $items->sum('quantity'),
+                'value' => (float) $items->sum(fn ($item) => $item->quantity * $item->unit_price - $item->unit_discount),
+                'weight' => (float) $product->weight,
             ];
-        })->unique('id')->values();
+        })->values();
 
         return response()->json(['products' => $products]);
     }

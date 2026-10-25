@@ -39,6 +39,7 @@ class ProductImportService
         'description',
         'vat',
         'warehouse',
+        'weight',
     ];
 
     /** Translation keys used by the product CSV export for importable columns. */
@@ -60,6 +61,7 @@ class ProductImportService
         'description' => 'Description',
         'vat' => 'VAT',
         'warehouse' => 'Warehouse',
+        'weight' => 'Unit weight (kg)',
     ];
 
     private const SUBJECT_COLUMNS = [
@@ -182,6 +184,14 @@ class ProductImportService
                     if ($value !== null && trim((string) $value) !== '') {
                         $data[$field] = convertToFloat(str_replace(',', '', trim((string) $value)));
                     }
+                }
+
+                if (isset($row['weight']) && trim((string) $row['weight']) !== '') {
+                    $weight = str_replace(',', '', toEnglish(trim((string) $row['weight'])));
+                    if (! is_numeric($weight) || (float) $weight < 0 || (float) $weight > 999999999999999.999 || ! preg_match('/^\d+(\.\d{1,3})?$/', $weight)) {
+                        $this->fail(__('Line :line: invalid product weight.', ['line' => $line]));
+                    }
+                    $data['weight'] = $weight;
                 }
 
                 // 3. Match the product and restore any explicitly exported subject relations.

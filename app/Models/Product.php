@@ -35,12 +35,14 @@ class Product extends Model
         'inventory_subject_id',
         'vat',
         'average_cost',
+        'weight',
     ];
 
     protected $casts = [
         'average_cost' => 'decimal:2',
         'selling_price' => 'decimal:2',
         'vat' => 'decimal:2',
+        'weight' => 'decimal:3',
     ];
 
     protected static function booted(): void

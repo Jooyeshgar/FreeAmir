@@ -76,6 +76,31 @@
             </div>
     </x-card>
 
+    <x-card class="mt-4 rounded-2xl w-full" class_body="p-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label class="flex flex-col gap-2 text-gray-500">
+                <span>{{ __('Allocation method') }}</span>
+                <select name="allocation_method" x-model="allocationMethod" @change="changeAllocationMethod()"
+                    class="select border-slate-400 w-full">
+                    <option value="manual">{{ __('Manual') }}</option>
+                    <option value="value">{{ __('Value') }}</option>
+                    <option value="weight">{{ __('Weight') }}</option>
+                </select>
+            </label>
+            <div x-show="allocationMethod !== 'manual'" x-cloak>
+                <x-text-input title="{{ __('Ancillary cost before VAT') }}" input_name="allocation_amount"
+                    x-model="allocationAmount" @input="allocate()" placeholder="0" />
+            </div>
+        </div>
+        <p x-show="allocationMethod === 'weight' && zeroWeightProducts.length" x-cloak
+            class="text-warning mt-3" role="alert">
+            {{ __('Products with zero weight are excluded from allocation:') }}
+            <span x-text="zeroWeightProducts.map(product => product.name).join('، ')"></span>
+        </p>
+        <p x-show="allocationMethod !== 'manual' && availableProducts.length && !allocationBasisTotal" x-cloak
+            class="text-warning mt-3" role="alert">{{ __('No positive allocation basis is available. Enter amounts manually or update product weights.') }}</p>
+    </x-card>
+
     <x-card class="mt-4 rounded-2xl w-full" class_body="p-0 pt-0 mt-4">
         <div class="overflow-x-auto overflow-y-hidden lg:overflow-visible">
             <div class="w-max min-w-full">
@@ -133,7 +158,7 @@
                             <div class="flex-1 min-w-32 max-w-48">
                                 <x-text-input placeholder="0" ::value="productAmounts[product.id] || 0"
                                     x-bind:name="'ancillaryCosts[' + index + '][amount]'"
-                                    x-bind:disabled="!selectedCostType" label_text_class="text-gray-500"
+                                    x-bind:disabled="!selectedCostType" x-bind:readonly="allocationMethod !== 'manual'" label_text_class="text-gray-500"
                                     label_class="w-full" input_class="border-gray-300"
                                     x-on:input="updateProductAmount(product.id, $event.target.value)">
                                 </x-text-input>
@@ -189,6 +214,49 @@
             Alpine.data('ancillaryCostForm', () => ({
                 availableProducts: [],
                 productAmounts: {},
+                allocationMethod: 'manual',
+                allocationAmount: @json(old('allocation_amount', 0)),
+
+                get zeroWeightProducts() {
+                    return this.availableProducts.filter(product => Number(product.weight) <= 0);
+                },
+
+                basis(product) {
+                    return Math.max(0, this.allocationMethod === 'weight'
+                        ? Number(product.quantity) * Number(product.weight)
+                        : Number(product.value));
+                },
+
+                get allocationBasisTotal() {
+                    return this.availableProducts.reduce((total, product) => total + this.basis(product), 0);
+                },
+
+                changeAllocationMethod() {
+                    if (this.allocationMethod !== 'manual') {
+                        if (!this.number(this.allocationAmount)) this.allocationAmount = this.calculateTotal();
+                        this.allocate();
+                    }
+                },
+
+                number(value) {
+                    return Number(this.$store.utils.convertToEnglish(value)) || 0;
+                },
+
+                allocate() {
+                    if (this.allocationMethod === 'manual') return;
+                    const totalBasis = this.allocationBasisTotal;
+                    const cents = Math.round(Math.max(0, this.number(this.allocationAmount)) * 100);
+                    // Round cumulative shares so the saved rows sum to the entered amount.
+                    let cumulativeBasis = 0;
+                    let allocatedCents = 0;
+                    this.productAmounts = Object.fromEntries(this.availableProducts.map(product => {
+                        cumulativeBasis += this.basis(product);
+                        const cumulativeCents = totalBasis > 0 ? Math.round(cents * cumulativeBasis / totalBasis) : 0;
+                        const share = cumulativeCents - allocatedCents;
+                        allocatedCents = cumulativeCents;
+                        return [product.id, share / 100];
+                    }));
+                },
                 selectedInvoiceId: {{ old('invoice_id') ?? ($ancillaryCost->invoice_id ?? 'null') }},
                 selectedCostType: '{{ old('type') ?? ($ancillaryCost->type?->valueName() ?? '') }}',
                 selectedCustomerId: {{ old('customer_id') ?? ($ancillaryCost->customer_id ?? 'null') }},
@@ -201,7 +269,7 @@
                     }
 
                     // Load existing amounts if editing
-                    const existingCosts = {!! json_encode($ancillaryCostItems ?? [], JSON_UNESCAPED_UNICODE) !!};
+                    const existingCosts = @json(old('ancillaryCosts', $ancillaryCostItems ?? []));
                     if (existingCosts && existingCosts.length > 0) {
                         existingCosts.forEach(cost => {
                             if (cost.product_id && cost.amount) {
@@ -252,12 +320,9 @@
                         .then(response => response.json())
                         .then(data => {
                             this.availableProducts = data.products;
-                            // Initialize amounts for new products
-                            data.products.forEach(product => {
-                                if (!(product.id in this.productAmounts)) {
-                                    this.productAmounts[product.id] = 0;
-                                }
-                            });
+                            this.productAmounts = Object.fromEntries(data.products.map(product =>
+                                [product.id, this.productAmounts[product.id] ?? 0]));
+                            this.allocate();
                         })
                         .catch(error => {
                             console.error('Error loading products:', error);

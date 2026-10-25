@@ -3575,5 +3575,12 @@
     "Activate": "فعال‌سازی",
     "Deactivate": "غیرفعال‌سازی",
     "Invoice activated successfully.": "فاکتور با موفقیت فعال شد.",
-    "Invoice deactivated successfully.": "فاکتور با موفقیت غیرفعال شد."
+    "Invoice deactivated successfully.": "فاکتور با موفقیت غیرفعال شد.",
+    "Unit weight (kg)": "وزن واحد کالا (کیلوگرم)",
+    "Allocation method": "روش تخصیص",
+    "Weight": "وزن",
+    "Ancillary cost before VAT": "مبلغ هزینه جانبی قبل از مالیات بر ارزش افزوده",
+    "Products with zero weight are excluded from allocation:": "کالاهای با وزن صفر از تخصیص حذف می‌شوند:",
+    "No positive allocation basis is available. Enter amounts manually or update product weights.": "مبنای مثبتی برای تخصیص وجود ندارد. مبالغ را دستی وارد کنید یا وزن کالاها را اصلاح کنید.",
+    "Line :line: invalid product weight.": "ردیف :line: وزن کالا نامعتبر است."
 }
