@@ -79,9 +79,12 @@ class InvoiceActivationTest extends TestCase
         $stock = $product->warehouseStocks()->firstOrFail();
         $oldDocumentId = $invoice->document_id;
         $url = route('invoices.show', $invoice);
-        $deactivate = route('invoices.change-status', [$invoice, 'approved_inactive']);
+        $deactivate = route('invoices.approve', $invoice);
 
-        $this->get($url)->assertOk()->assertSee($deactivate, false)->assertSeeText('Deactivate');
+        $unapprove = route('invoices.change-status', [$invoice, 'unapproved']);
+        $this->get($url)->assertOk()
+            ->assertSee($deactivate, false)->assertSeeText('Approve inactive')
+            ->assertSee($unapprove, false)->assertSeeText('Unapprove');
         $this->from($url)->post($deactivate.'?confirm=1')->assertRedirect($url)->assertSessionHas('success', 'Invoice deactivated successfully.');
         $this->assertSame(InvoiceStatus::APPROVED_INACTIVE, $invoice->fresh()->status);
         $this->assertNull($invoice->fresh()->document_id);
@@ -90,7 +93,7 @@ class InvoiceActivationTest extends TestCase
         $this->assertNotEquals($quantity, (float) $product->fresh()->quantity);
 
         $activate = route('invoices.change-status', [$invoice, 'approved']);
-        $this->get($url)->assertOk()->assertSee($activate, false)->assertSeeText('Activate')->assertDontSee($deactivate, false);
+        $this->get($url)->assertOk()->assertSee($activate, false)->assertSeeText('Activate')->assertDontSee($deactivate, false)->assertDontSee($unapprove, false);
         $this->post($activate.'?confirm=1')->assertRedirect($url)->assertSessionHas('success', 'Invoice activated successfully.');
         $invoice->refresh();
         $this->assertSame(InvoiceStatus::APPROVED, $invoice->status);
@@ -101,6 +104,46 @@ class InvoiceActivationTest extends TestCase
         $this->assertEqualsWithDelta($averageCost, $product->fresh()->average_cost, 0.001);
         $this->assertEqualsWithDelta($stock->quantity, $stock->fresh()->quantity, 0.001);
         $this->assertEqualsWithDelta($stock->average_cost, $stock->fresh()->average_cost, 0.001);
+    }
+
+    public function test_unapprove_remains_available_alongside_deactivation(): void
+    {
+        $product = $this->createProduct(['quantity' => 0, 'average_cost' => 0]);
+        $invoice = $this->buy([$this->productItem($product, 20, 100)])['invoice'];
+        $url = route('invoices.show', $invoice);
+
+        $this->from($url)->post(route('invoices.change-status', [$invoice, 'unapproved']))
+            ->assertRedirect($url)->assertSessionHas('success', 'Invoice unapproved successfully.');
+
+        $this->assertSame(InvoiceStatus::UNAPPROVED, $invoice->fresh()->status);
+        $this->get($url)->assertOk()
+            ->assertSeeText('Approve')
+            ->assertDontSeeText('Activate')
+            ->assertDontSeeText('Deactivate')
+            ->assertDontSee(route('invoices.change-status', [$invoice, 'approved_inactive']), false);
+    }
+
+    public function test_inactive_approval_uses_approval_permission_and_rejects_other_states(): void
+    {
+        $product = $this->createProduct(['quantity' => 0, 'average_cost' => 0]);
+        $invoice = $this->buy([$this->productItem($product, 20, 100)])['invoice'];
+        $this->user->revokePermissionTo('invoices.change-status');
+        $url = route('invoices.approve', $invoice);
+        $this->get(route('invoices.show', $invoice))->assertOk()->assertSee($url, false);
+        $this->post($url)->assertSessionHas('success', 'Invoice deactivated successfully.');
+        $this->assertSame(InvoiceStatus::APPROVED_INACTIVE, $invoice->fresh()->status);
+
+        $invoice->refresh();
+        foreach (InvoiceStatus::cases() as $status) {
+            if ($status->isApproved()) {
+                continue;
+            }
+            $invoice->update(['status' => $status]);
+            $documentId = $invoice->document_id;
+            $this->post($url)->assertSessionHas('error', 'Invalid status action.');
+            $this->assertSame($status, $invoice->fresh()->status);
+            $this->assertSame($documentId, $invoice->fresh()->document_id);
+        }
     }
 
     public function test_single_and_bulk_reactivation_restore_only_previously_approved_ancillary_costs(): void
@@ -119,7 +162,7 @@ class InvoiceActivationTest extends TestCase
         $averageCost = (float) $product->fresh()->average_cost;
 
         foreach ([false, true] as $bulk) {
-            $this->post(route('invoices.change-status', [$invoice, 'approved_inactive']))->assertSessionHas('success');
+            $this->post(route('invoices.approve', $invoice))->assertSessionHas('success');
             $this->assertSame(InvoiceStatus::APPROVED_INACTIVE, $approved->fresh()->status);
             $this->assertNull($approved->fresh()->document_id);
             $this->assertSame(InvoiceStatus::UNAPPROVED, $draft->fresh()->status);
@@ -136,6 +179,54 @@ class InvoiceActivationTest extends TestCase
         }
     }
 
+    public function test_inactive_purchase_reverses_multiple_costs_and_restores_prior_inventory_value(): void
+    {
+        $product = $this->createProduct(['quantity' => 0, 'average_cost' => 0]);
+        $prior = $this->buy([$this->productItem($product, 10, 100)])['invoice'];
+        $createCost = function ($invoice, int $amount) use ($product) {
+            return AncillaryCostService::createAncillaryCost($this->user, [
+                'invoice_id' => $invoice->id, 'customer_id' => $this->customer->id,
+                'fiscal_year_id' => $this->fiscalYearId, 'date' => $invoice->date->toDateString(),
+                'type' => 'Shipping', 'amount' => $amount, 'vatPrice' => 0,
+                'ancillaryCosts' => [['product_id' => $product->id, 'amount' => $amount]],
+            ], true)['ancillaryCost'];
+        };
+        $priorCost = $createCost($prior, 100);
+        $invoice = $this->buy([$this->productItem($product, 20, 200)])['invoice'];
+        $costs = collect([$createCost($invoice, 200), $createCost($invoice, 100)]);
+        $documents = $costs->pluck('document_id')->push($invoice->document_id);
+        $stock = $product->warehouseStocks()->firstOrFail();
+        $this->assertEqualsWithDelta(180, $product->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(180, $stock->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(180, $invoice->items()->firstOrFail()->cog_after, 0.001);
+
+        $this->post(route('invoices.approve', $invoice))->assertSessionHas('success');
+
+        $this->assertSame(InvoiceStatus::APPROVED_INACTIVE, $invoice->fresh()->status);
+        foreach ($costs as $cost) {
+            $this->assertSame(InvoiceStatus::APPROVED_INACTIVE, $cost->fresh()->status);
+            $this->assertNull($cost->fresh()->document_id);
+        }
+        foreach ($documents as $documentId) {
+            $this->assertDatabaseMissing('documents', ['id' => $documentId]);
+            $this->assertDatabaseMissing('transactions', ['document_id' => $documentId]);
+        }
+        $this->assertSame(InvoiceStatus::APPROVED, $priorCost->fresh()->status);
+        $this->assertEqualsWithDelta(10, $product->fresh()->quantity, 0.001);
+        $this->assertEqualsWithDelta(10, $stock->fresh()->quantity, 0.001);
+        $this->assertEqualsWithDelta(110, $product->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(110, $stock->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(110, $invoice->items()->firstOrFail()->cog_after, 0.001);
+        $this->assertEqualsWithDelta(110, $prior->items()->firstOrFail()->cog_after, 0.001);
+
+        $this->post(route('invoices.change-status', [$invoice, 'approved']))->assertSessionHas('success');
+        $this->assertEqualsWithDelta(30, $product->fresh()->quantity, 0.001);
+        $this->assertEqualsWithDelta(30, $stock->fresh()->quantity, 0.001);
+        $this->assertEqualsWithDelta(180, $product->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(180, $stock->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(180, $invoice->items()->firstOrFail()->cog_after, 0.001);
+    }
+
     public function test_dependencies_and_return_links_block_deactivation_without_side_effects(): void
     {
         $product = $this->createProduct();
@@ -143,7 +234,7 @@ class InvoiceActivationTest extends TestCase
         $dependent = $this->sell([$this->productItem($product, 2, 150)])['invoice'];
         $quantity = (float) $product->fresh()->quantity;
         $documentId = $invoice->document_id;
-        $url = route('invoices.change-status', [$invoice, 'approved_inactive']);
+        $url = route('invoices.approve', $invoice);
         $this->post($url.'?confirm=1')->assertSessionHas('error');
         $this->assertSame($quantity, (float) $product->fresh()->quantity);
         $this->unapproveInvoice($dependent);
@@ -154,14 +245,26 @@ class InvoiceActivationTest extends TestCase
         $this->assertEqualsWithDelta($quantity + 2, $product->fresh()->quantity, 0.001);
     }
 
+    public function test_approve_inactive_preserves_conflicts_without_changing_dependent_invoices(): void
+    {
+        $product = $this->createProduct(['quantity' => 10, 'average_cost' => 100]);
+        $invoice = $this->sell([$this->productItem($product, 2, 150)])['invoice'];
+        $dependent = $this->sell([$this->productItem($product, 1, 150)])['invoice'];
+
+        $documentId = $invoice->document_id;
+        $this->post(route('invoices.approve', $invoice))->assertSessionHas('error');
+
+        $this->assertSame(InvoiceStatus::APPROVED, $invoice->fresh()->status);
+        $this->assertSame(InvoiceStatus::APPROVED, $dependent->fresh()->status);
+        $this->assertSame($documentId, $invoice->fresh()->document_id);
+        $this->assertSame(7.0, (float) $product->fresh()->quantity);
+    }
+
     public function test_invalid_source_states_cannot_be_marked_approved_inactive(): void
     {
         $product = $this->createProduct();
         $invoice = $this->buy([$this->productItem($product, 20, 100)], false)['invoice'];
         foreach (InvoiceStatus::cases() as $status) {
-            if ($status->isApproved()) {
-                continue;
-            }
             $invoice->update(['status' => $status]);
             $this->post(route('invoices.change-status', [$invoice, 'approved_inactive']).'?confirm=1')->assertSessionHas('error');
             $this->assertSame($status, $invoice->fresh()->status);
@@ -172,7 +275,7 @@ class InvoiceActivationTest extends TestCase
     {
         $product = $this->createProduct();
         $invoice = $this->buy([$this->productItem($product, 20, 100)])['invoice'];
-        $deactivate = route('invoices.change-status', [$invoice, 'approved_inactive']);
+        $deactivate = route('invoices.approve', $invoice);
         $activate = route('invoices.change-status', [$invoice, 'approved']);
         $this->user->revokePermissionTo('invoices.change-status');
         $this->user->revokePermissionTo('invoices.approve');
@@ -180,7 +283,7 @@ class InvoiceActivationTest extends TestCase
         foreach ([$deactivate, $activate] as $url) {
             $this->post($url)->assertForbidden();
         }
-        $this->user->givePermissionTo('invoices.change-status');
+        $this->user->givePermissionTo(['invoices.change-status', 'invoices.approve']);
         FiscalYear::findOrFail($this->fiscalYearId)->update(['closed_at' => now()]);
         foreach ([$deactivate, $activate] as $url) {
             $this->postJson($url)->assertUnprocessable()->assertJsonValidationErrors('fiscal_year');
@@ -199,7 +302,7 @@ class InvoiceActivationTest extends TestCase
         $product = $this->createProduct(['quantity' => 10]);
         $invoice = $this->sell([$this->productItem($product, 2, 150)])['invoice'];
         $invoice->moadianHistories()->create(['data' => ['status' => 'SUCCESS']]);
-        $url = route('invoices.change-status', [$invoice, 'approved_inactive']);
+        $url = route('invoices.approve', $invoice);
         $this->get(route('invoices.show', $invoice))->assertOk()->assertDontSee($url, false);
         $this->post($url)->assertSessionHas('error');
         $this->assertSame(InvoiceStatus::APPROVED, $invoice->fresh()->status);

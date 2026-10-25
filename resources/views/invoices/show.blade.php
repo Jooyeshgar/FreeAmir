@@ -1207,14 +1207,12 @@
                         $canApprove =
                             ($isSellWorkflow ? false : $invoice->status->isPending()) ||
                             $invoice->status->isReadyToApprove() ||
-                            $invoice->status->isUnapproved() ||
-                            $invoice->status->isApprovedInactive();
+                            $invoice->status->isUnapproved();
                         // Settled invoices are shown as disabled in the list and cannot
                         // change status until their payments are removed.
-                        $canDeactivate = $invoice->status->isApproved();
+                        $canUnapprove = $invoice->status->isApproved();
+                        $canToggleActivation = $invoice->status->isApproved() || $invoice->status->isApprovedInactive();
                         $isSettled = $invoice->status->isPartiallyPaid() || $invoice->status->isPaid();
-                        $statusAction = $canDeactivate ? 'approved_inactive' : 'approved';
-                        $statusActionLabel = $canDeactivate ? __('Deactivate') : ($invoice->status->isApprovedInactive() ? __('Activate') : __('Approve'));
 
                         $hasMoadianSuccess = $invoice->moadianHistories->contains(function ($history) {
                             $data = $history->data;
@@ -1229,7 +1227,7 @@
                                 return strtoupper($data['status'] ?? '') === 'SUCCESS';
                             }) ?? false);
 
-                        $canChangeStatus = ($canApprove || $canDeactivate) && !$hasMoadianSuccess;
+                        $canChangeStatus = ($canApprove || $canUnapprove) && !$hasMoadianSuccess;
                     @endphp
 
                     @can('invoices.send-moadian')
@@ -1330,7 +1328,7 @@
                             </form>
                         @endif
 
-                        @if ($canChangeStatus && !$fiscalYearClosed)
+                        @if (($canChangeStatus || $canToggleActivation) && !$hasMoadianSuccess && !$fiscalYearClosed)
                             @if ($changeStatusValidation->hasErrors())
                                 <a data-tip="{{ $changeStatusValidation->toText() }}"
                                     href="{{ route('invoices.conflicts', $invoice) }}"
@@ -1339,21 +1337,33 @@
                                 </a>
                             @elseif ($isVoided)
                                 <span class="tooltip" data-tip="{{ __('To change the status, first unapprove the voiding invoice.') }}">
-                                    <button class="btn btn-sm lg:btn-md btn-error btn-disabled cursor-not-allowed">{{ $statusActionLabel }}</button>
+                                    <button class="btn btn-sm lg:btn-md btn-error btn-disabled cursor-not-allowed">{{ $canUnapprove ? __('Unapprove') : __('Activate') }}</button>
                                 </span>
                             @else
-                                <form
-                                    action="{{ route('invoices.change-status', [$invoice, $statusAction]) }}{{ ($changeStatusValidation->hasWarning() || $isSettled) ? '?confirm=1' : '' }}"
-                                    method="POST"
-                                    class="inline-block {{ ($changeStatusValidation->hasWarning() || $isSettled) ? 'change-status-form' : '' }}"
-                                    data-confirm-message="{{ $isSettled ? __('Deactivating this paid or partially paid invoice will remove its payment accounting documents while keeping the payment records. Are you sure?') : __('This invoice has warnings for change its status, are you sure to change status?') }}">
-                                    @csrf
-                                    <button type="submit" x-data="{}"
-                                        data-tip="{{ $changeStatusValidation->toText() }}"
-                                        class="btn btn-sm lg:btn-md inline-flex {{ $canDeactivate ? 'btn-warning' : 'btn-success' }} {{ $canApprove && $changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }}">
-                                        {{ $statusActionLabel }}
-                                    </button>
-                                </form>
+                                @if ($canToggleActivation)
+                                    <form action="{{ $canUnapprove ? route('invoices.approve', $invoice) : route('invoices.change-status', [$invoice, 'approved']) }}{{ $changeStatusValidation->hasWarning() ? '?confirm=1' : '' }}"
+                                        method="POST" class="inline-block {{ $changeStatusValidation->hasWarning() ? 'change-status-form' : '' }}"
+                                        data-confirm-message="{{ __('This invoice has warnings for change its status, are you sure to change status?') }}">
+                                        @csrf
+                                        <button type="submit" data-tip="{{ $changeStatusValidation->toText() }}"
+                                            class="btn btn-sm lg:btn-md inline-flex {{ $canUnapprove ? 'btn-warning' : 'btn-success' }} {{ $changeStatusValidation->hasWarning() ? 'btn-outline' : '' }}">
+                                            {{ $canUnapprove ? __('Approve inactive') : __('Activate') }}
+                                        </button>
+                                    </form>
+                                @endif
+
+                                @if ($canChangeStatus)
+                                    <form action="{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}{{ ($changeStatusValidation->hasWarning() || $isSettled) ? '?confirm=1' : '' }}"
+                                        method="POST" class="inline-block {{ ($changeStatusValidation->hasWarning() || $isSettled) ? 'change-status-form' : '' }}"
+                                        data-confirm-message="{{ $isSettled ? __('Deactivating this paid or partially paid invoice will remove its payment accounting documents while keeping the payment records. Are you sure?') : __('This invoice has warnings for change its status, are you sure to change status?') }}">
+                                        @csrf
+                                        <button type="submit" x-data="{}"
+                                            data-tip="{{ $changeStatusValidation->toText() }}"
+                                            class="btn btn-sm lg:btn-md inline-flex {{ $canUnapprove ? 'btn-warning' : 'btn-success' }} {{ $canApprove && $changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }}">
+                                            {{ $canUnapprove ? __('Unapprove') : __('Approve') }}
+                                        </button>
+                                    </form>
+                                @endif
                             @endif
                         @elseif ($fiscalYearClosed)
                             <span class="tooltip" data-tip="{{ $fiscalYearClosedMessage }}">

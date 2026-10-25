@@ -731,15 +731,20 @@ class InvoiceController extends Controller
 
     public function changeStatus(Invoice $invoice, string $status)
     {
-        $sellAllowedStatuses = ['approved', 'approved_inactive', 'unapproved', 'ready_to_approve', 'rejected'];
-        $defaultAllowedStatuses = ['approved', 'approved_inactive', 'unapproved'];
+        $sellAllowedStatuses = ['approved', 'unapproved', 'ready_to_approve', 'rejected'];
+        $defaultAllowedStatuses = ['approved', 'unapproved'];
         $allowedStatuses = $invoice->invoice_type === InvoiceType::SELL ? $sellAllowedStatuses : $defaultAllowedStatuses;
 
-        if (! in_array($status, $allowedStatuses) || ($status === 'approved_inactive' && ! $invoice->status->isApproved())) {
+        if (! in_array($status, $allowedStatuses)) {
             return redirect()->route('invoices.index', ['invoice_type' => $invoice->invoice_type->valueName()])
                 ->with('error', __('Invalid status action.'));
         }
 
+        return $this->applyInvoiceStatusChange($invoice, $status);
+    }
+
+    private function applyInvoiceStatusChange(Invoice $invoice, string $status): RedirectResponse
+    {
         $settled = $invoice->status->isPartiallyPaid() || $invoice->status->isPaid();
         if ($settled && ! request()->boolean('confirm')) {
             return redirect()->back()->with('warning', __('Deactivating this paid or partially paid invoice will remove its payment accounting documents while keeping the payment records. Please confirm this action.'));
@@ -769,6 +774,15 @@ class InvoiceController extends Controller
         };
 
         return redirect()->back()->with('success', $message);
+    }
+
+    public function approveInactive(Invoice $invoice): RedirectResponse
+    {
+        if (! $invoice->status->isApproved()) {
+            return redirect()->back()->with('error', __('Invalid status action.'));
+        }
+
+        return $this->applyInvoiceStatusChange($invoice, 'approved_inactive');
     }
 
     public function inactiveInvoices()
