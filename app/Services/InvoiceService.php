@@ -608,6 +608,19 @@ class InvoiceService
     {
         self::assertBeginningInventoryOrder($invoice, InvoiceStatus::APPROVED);
 
+        if ($invoice->invoice_type === InvoiceType::BEGINNING_INVENTORY) {
+            // Rebuild the stored stock baseline from posted invoice history before
+            // applying this opening. This removes unsupported quantities while
+            // retaining legitimate earlier openings in other warehouses.
+            $invoice->loadMissing('items.itemable');
+            $invoice->items
+                ->where('itemable_type', Product::class)
+                ->pluck('itemable')
+                ->filter()
+                ->unique('id')
+                ->each(fn (Product $product) => ProductService::recalculateQuantity($product));
+        }
+
         $invoice->status = InvoiceStatus::APPROVED;
         $createdDocument = self::createDocumentFromInvoiceItems(auth()->user(), $invoice);
         $invoice->document_id = $createdDocument->id;

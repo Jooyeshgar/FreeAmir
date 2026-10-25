@@ -25,6 +25,7 @@ use App\Services\ProductService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -66,6 +67,7 @@ class BeginningInventoryTest extends TestCase
         $this->mainWarehouse = $this->warehouse('Main');
         $this->otherWarehouse = $this->warehouse('Other');
         $this->product = $this->product('P-1', 125);
+        // Deliberately unsupported stock: opening approval must rebuild it from history.
         $this->setStock($this->product, $this->mainWarehouse, 2, 175);
         $this->product->update(['quantity' => 2]);
     }
@@ -126,27 +128,32 @@ class BeginningInventoryTest extends TestCase
         $this->assertEqualsWithDelta(0, $this->stockCost($product, $this->mainWarehouse), 0.001);
     }
 
-    public function test_opening_approval_and_reapproval_preserve_existing_stock_and_cost(): void
+    public function test_opening_approval_and_reapproval_rebuild_unsupported_stock_and_cost(): void
     {
         $invoice = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900, false);
 
         foreach (range(1, 2) as $attempt) {
             (new InvoiceService)->changeInvoiceStatus($invoice->fresh(), 'approved');
 
-            $this->assertQuantity($this->product, $this->mainWarehouse, 7);
-            $this->assertEqualsWithDelta(2, (float) $invoice->items()->firstOrFail()->quantity_at, 0.001);
-            $this->assertEqualsWithDelta(678.571, (float) $this->product->fresh()->average_cost, 0.001);
-            $this->assertEqualsWithDelta(692.86, $this->stockCost($this->product, $this->mainWarehouse), 0.001);
+            $this->assertQuantity($this->product, $this->mainWarehouse, 5);
+            $this->assertEqualsWithDelta(0, (float) $invoice->items()->firstOrFail()->quantity_at, 0.001);
+            $this->assertEqualsWithDelta(900, (float) $this->product->fresh()->average_cost, 0.001);
+            $this->assertEqualsWithDelta(900, $this->stockCost($this->product, $this->mainWarehouse), 0.001);
+            $this->assertEqualsWithDelta(900, (float) $invoice->items()->firstOrFail()->cog_after, 0.001);
+            $this->assertEqualsWithDelta(0, (float) $invoice->fresh()->document->transactions()->sum('value'), 0.001);
+            $this->assertEqualsWithDelta(5, ProductService::recalculateQuantity($this->product->fresh()), 0.001);
+            $this->assertQuantity($this->product, $this->mainWarehouse, 5);
+            $this->assertEqualsWithDelta(0, (float) $invoice->items()->firstOrFail()->quantity_at, 0.001);
 
             (new InvoiceService)->changeInvoiceStatus($invoice->fresh(), 'unapproved');
 
-            $this->assertQuantity($this->product, $this->mainWarehouse, 2);
-            $this->assertEqualsWithDelta(125, (float) $this->product->fresh()->average_cost, 0.01);
-            $this->assertEqualsWithDelta(175, $this->stockCost($this->product, $this->mainWarehouse), 0.01);
+            $this->assertQuantity($this->product, $this->mainWarehouse, 0);
+            $this->assertEqualsWithDelta(0, (float) $this->product->fresh()->average_cost, 0.001);
+            $this->assertEqualsWithDelta(0, $this->stockCost($this->product, $this->mainWarehouse), 0.001);
         }
     }
 
-    public function test_group_reactivation_preserves_existing_stock_and_orders_opening_snapshots(): void
+    public function test_group_reactivation_rebuilds_stock_and_orders_opening_snapshots_by_internal_id(): void
     {
         $this->product->update(['average_cost' => 200]);
         WarehouseProductStock::query()->where('product_id', $this->product->id)
@@ -156,18 +163,23 @@ class BeginningInventoryTest extends TestCase
 
         app(GroupActionService::class)->inactivateDependentInvoices($mainInventory);
 
-        $this->assertQuantity($this->product, $this->mainWarehouse, 2);
-        $this->assertEqualsWithDelta(200, (float) $this->product->fresh()->average_cost, 0.001);
+        $this->assertQuantity($this->product, $this->mainWarehouse, 0);
+        $this->assertEqualsWithDelta(0, (float) $this->product->fresh()->average_cost, 0.001);
+        $this->assertSame(InvoiceStatus::APPROVED_INACTIVE, $mainInventory->fresh()->status);
+        $this->assertSame(InvoiceStatus::APPROVED_INACTIVE, $otherInventory->fresh()->status);
 
+        // Neither inactive openings nor unsupported stored balances are posted stock.
+        $this->product->update(['quantity' => 99]);
+        WarehouseProductStock::query()->where('product_id', $this->product->id)->update(['quantity' => 99]);
         app(GroupActionService::class)->approveInactiveInvoices();
 
-        $this->assertEqualsWithDelta(12, (float) $this->product->fresh()->quantity, 0.001);
-        $this->assertEqualsWithDelta(2, (float) $mainInventory->items()->firstOrFail()->quantity_at, 0.001);
-        $this->assertEqualsWithDelta(7, (float) $otherInventory->items()->firstOrFail()->quantity_at, 0.001);
-        $this->assertEqualsWithDelta(300, (float) $this->product->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(10, (float) $this->product->fresh()->quantity, 0.001);
+        $this->assertEqualsWithDelta(0, (float) $mainInventory->items()->firstOrFail()->quantity_at, 0.001);
+        $this->assertEqualsWithDelta(5, (float) $otherInventory->items()->firstOrFail()->quantity_at, 0.001);
+        $this->assertEqualsWithDelta(320, (float) $this->product->fresh()->average_cost, 0.001);
         $this->assertEqualsWithDelta(200, $this->stockCost($this->product, $this->mainWarehouse), 0.001);
         $this->assertEqualsWithDelta(440, $this->stockCost($this->product, $this->otherWarehouse), 0.001);
-        $this->assertEqualsWithDelta(7, (float) WarehouseProductStock::query()
+        $this->assertEqualsWithDelta(5, (float) WarehouseProductStock::query()
             ->where('product_id', $this->product->id)->where('warehouse_id', $this->mainWarehouse->id)->value('quantity'), 0.001);
         $this->assertEqualsWithDelta(5, (float) WarehouseProductStock::query()
             ->where('product_id', $this->product->id)->where('warehouse_id', $this->otherWarehouse->id)->value('quantity'), 0.001);
@@ -188,6 +200,66 @@ class BeginningInventoryTest extends TestCase
         $this->assertEqualsWithDelta(200, (float) $product->fresh()->average_cost, 0.001);
         $this->assertEqualsWithDelta(100, $this->stockCost($product, $this->mainWarehouse), 0.001);
         $this->assertEqualsWithDelta(300, $this->stockCost($product, $this->otherWarehouse), 0.001);
+    }
+
+    #[DataProvider('postedOpeningStatuses')]
+    public function test_opening_rebuild_preserves_posted_stock_in_other_warehouses(InvoiceStatus $status): void
+    {
+        // Invoice numbers deliberately oppose date/internal-ID order.
+        $first = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 100, true, 2, '2026-01-01');
+        $first->update(['status' => $status]);
+        $this->setStock($this->product, $this->otherWarehouse, 99, 175);
+        $this->product->update(['quantity' => 104]);
+        $pending = $this->createBeginningInventory($this->product, 20, $this->warehouse('Pending'), 800, false, 3, '2026-01-01');
+
+        $second = $this->createBeginningInventory($this->product, 3, $this->otherWarehouse, 500, true, 1, '2026-01-01');
+
+        $this->assertEqualsWithDelta(8, (float) $this->product->fresh()->quantity, 0.001);
+        $this->assertEqualsWithDelta(0, (float) $first->items()->firstOrFail()->quantity_at, 0.001);
+        $this->assertEqualsWithDelta(5, (float) $second->items()->firstOrFail()->quantity_at, 0.001);
+        $this->assertEqualsWithDelta(250, (float) $this->product->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(100, $this->stockCost($this->product, $this->mainWarehouse), 0.001);
+        $this->assertEqualsWithDelta(500, $this->stockCost($this->product, $this->otherWarehouse), 0.001);
+        $this->assertEqualsWithDelta(5, (float) WarehouseProductStock::query()
+            ->where('product_id', $this->product->id)->where('warehouse_id', $this->mainWarehouse->id)->value('quantity'), 0.001);
+        $this->assertEqualsWithDelta(3, (float) WarehouseProductStock::query()
+            ->where('product_id', $this->product->id)->where('warehouse_id', $this->otherWarehouse->id)->value('quantity'), 0.001);
+        $this->assertSame(InvoiceStatus::PENDING, $pending->fresh()->status);
+        $this->assertEqualsWithDelta(8, ProductService::recalculateQuantity($this->product->fresh()), 0.001);
+        $this->assertEqualsWithDelta(5, (float) $second->items()->firstOrFail()->quantity_at, 0.001);
+
+        (new InvoiceService)->changeInvoiceStatus($second->fresh(), 'unapproved');
+
+        $this->assertQuantity($this->product, $this->mainWarehouse, 5);
+        $this->assertEqualsWithDelta(100, (float) $this->product->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(0, $this->stockCost($this->product, $this->otherWarehouse), 0.001);
+    }
+
+    public static function postedOpeningStatuses(): array
+    {
+        return [
+            'approved' => [InvoiceStatus::APPROVED],
+            'partially paid' => [InvoiceStatus::PARTIALLY_PAID],
+            'paid' => [InvoiceStatus::PAID],
+        ];
+    }
+
+    public function test_approved_correction_rebuilds_quantities_before_updating_cost_and_snapshots(): void
+    {
+        $invoice = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900, true);
+        $this->product->update(['quantity' => 7]);
+        WarehouseProductStock::query()->where('product_id', $this->product->id)->update(['quantity' => 7]);
+
+        InvoiceService::updateInvoice($invoice->id, $this->invoiceData($this->mainWarehouse, 1), [$this->item($this->product, 3, 800)], true);
+
+        $this->assertQuantity($this->product, $this->mainWarehouse, 3);
+        $this->assertEqualsWithDelta(0, (float) $invoice->items()->firstOrFail()->quantity_at, 0.001);
+        $this->assertEqualsWithDelta(800, (float) $invoice->items()->firstOrFail()->cog_after, 0.001);
+        $this->assertEqualsWithDelta(800, (float) $this->product->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(800, $this->stockCost($this->product, $this->mainWarehouse), 0.001);
+        $this->assertEqualsWithDelta(0, (float) $invoice->fresh()->document->transactions()->sum('value'), 0.001);
+        $this->assertEqualsWithDelta(3, ProductService::recalculateQuantity($this->product->fresh()), 0.001);
+        $this->assertEqualsWithDelta(0, (float) $invoice->items()->firstOrFail()->quantity_at, 0.001);
     }
 
     public function test_later_buy_with_equal_number_uses_approved_beginning_inventory_snapshot(): void
@@ -222,7 +294,9 @@ class BeginningInventoryTest extends TestCase
             true
         );
 
-        $this->assertQuantity($this->product, $this->mainWarehouse, 2);
+        $this->assertQuantity($this->product, $this->mainWarehouse, 0);
+        $this->assertEqualsWithDelta(0, (float) $this->product->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(0, $this->stockCost($this->product, $this->mainWarehouse), 0.001);
         $this->assertQuantity($replacement, $this->otherWarehouse, 3);
         $this->assertEqualsWithDelta(800, (float) $replacement->fresh()->average_cost, 0.001);
         $this->assertEqualsWithDelta(800, $this->stockCost($replacement, $this->otherWarehouse), 0.001);
@@ -245,6 +319,8 @@ class BeginningInventoryTest extends TestCase
         $this->assertSame(InvoiceStatus::PENDING, $invoice->fresh()->status);
         $this->assertNull($invoice->fresh()->document_id);
         $this->assertQuantity($this->product, $this->mainWarehouse, 2);
+        $this->assertEqualsWithDelta(125, (float) $this->product->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(175, $this->stockCost($this->product, $this->mainWarehouse), 0.001);
     }
 
     public function test_recalculation_only_includes_approved_beginning_inventory(): void
@@ -462,6 +538,10 @@ class BeginningInventoryTest extends TestCase
         $this->assertEqualsWithDelta(0, (float) $product->fresh()->average_cost, 0.001);
         $this->assertSame(0, Document::whereIn('id', $oldDocumentIds)->count());
         (new InvoiceService)->changeInvoiceStatus($opening->fresh(), 'approved');
+        $this->assertQuantity($product, $this->mainWarehouse, 10);
+        $this->assertEqualsWithDelta(0, (float) $opening->items()->firstOrFail()->quantity_at, 0.001);
+        $this->assertEqualsWithDelta(300, (float) $product->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(300, $this->stockCost($product, $this->mainWarehouse), 0.001);
         app(GroupActionService::class)->approveInactiveInvoices();
         $this->assertRebuiltOpeningWorkflow($product, $buy, $sale, $ancillary, 215, 16);
 
@@ -593,7 +673,7 @@ class BeginningInventoryTest extends TestCase
             ->assertRedirect(route('invoices.index', ['invoice_type' => 'beginning_inventory']));
 
         $this->assertDatabaseHas('invoices', ['id' => $invoice->id]);
-        $this->assertQuantity($this->product, $this->mainWarehouse, 7);
+        $this->assertQuantity($this->product, $this->mainWarehouse, 5);
     }
 
     public function test_posted_movements_across_all_warehouses_and_products_block_opening_approval(): void
@@ -614,7 +694,7 @@ class BeginningInventoryTest extends TestCase
         }
         $this->assertSame(InvoiceStatus::PENDING, $opening->fresh()->status);
         $this->assertNull($opening->fresh()->document_id);
-        $this->assertQuantity($this->product, $this->mainWarehouse, 7);
+        $this->assertQuantity($this->product, $this->mainWarehouse, 5);
     }
 
     public function test_draft_opening_and_normal_drafts_can_be_saved_but_posting_is_checked_later(): void
@@ -626,7 +706,7 @@ class BeginningInventoryTest extends TestCase
         $this->assertSame(InvoiceStatus::PENDING, $opening->fresh()->status);
         (new InvoiceService)->changeInvoiceStatus($buy->fresh(), 'unapproved');
         (new InvoiceService)->changeInvoiceStatus($opening->fresh(), 'approved');
-        $this->assertQuantity($this->product, $this->mainWarehouse, 8);
+        $this->assertQuantity($this->product, $this->mainWarehouse, 6);
         $this->assertSame(InvoiceStatus::UNAPPROVED, $buy->fresh()->status);
     }
 
