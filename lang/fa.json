@@ -3568,5 +3568,9 @@
     "Bookmark": "نشان‌گذاری",
     "Bookmark invoice": "نشان‌گذاری فاکتور",
     "Remove invoice bookmark": "حذف نشان فاکتور",
-    "Bookmarked invoices": "فاکتورهای نشان‌گذاری‌شده"
+    "Bookmarked invoices": "فاکتورهای نشان‌گذاری‌شده",
+    "Activate": "فعال‌سازی",
+    "Deactivate": "غیرفعال‌سازی",
+    "Invoice activated successfully.": "فاکتور با موفقیت فعال شد.",
+    "Invoice deactivated successfully.": "فاکتور با موفقیت غیرفعال شد."
 }

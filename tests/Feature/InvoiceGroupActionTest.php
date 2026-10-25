@@ -320,6 +320,30 @@ class InvoiceGroupActionTest extends TestCase
         $this->assertInvoiceStatus($sellInvoice->id, InvoiceStatus::APPROVED);
     }
 
+    public function test_single_status_changes_deactivate_to_approved_inactive_and_reactivate(): void
+    {
+        $product = $this->createProduct(['quantity' => 0, 'average_cost' => 0]);
+        $invoice = $this->buy([$this->productItem($product, 20, 100)], true, 2204)['invoice'];
+        $approvedDocumentId = $invoice->document_id;
+
+        $decision = InvoiceService::getChangeStatusDecision($invoice, 'approved_inactive');
+        $this->assertFalse($decision->hasErrors(), $decision->toText());
+
+        $service = new InvoiceService;
+        $service->changeInvoiceStatus($invoice, 'approved_inactive');
+
+        $this->assertInvoiceStatus($invoice->id, InvoiceStatus::APPROVED_INACTIVE);
+        $this->assertNull($invoice->fresh()->document_id);
+        $this->assertSame(0.0, (float) $product->fresh()->quantity);
+        $this->assertDatabaseMissing('documents', ['id' => $approvedDocumentId]);
+
+        $service->changeInvoiceStatus($invoice->fresh('items'), 'approved');
+
+        $this->assertInvoiceStatus($invoice->id, InvoiceStatus::APPROVED);
+        $this->assertNotNull($invoice->fresh()->document_id);
+        $this->assertSame(20.0, (float) $product->fresh()->quantity);
+    }
+
     public function test_invoice_approval_uses_the_customer_subject_relation_when_subject_id_is_missing(): void
     {
         $product = $this->createProduct(['quantity' => 200]);

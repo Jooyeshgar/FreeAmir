@@ -1211,8 +1211,10 @@
                             $invoice->status->isApprovedInactive();
                         // Settled invoices are shown as disabled in the list and cannot
                         // change status until their payments are removed.
-                        $canUnapprove = $invoice->status->isApproved();
+                        $canDeactivate = $invoice->status->isApproved();
                         $isSettled = $invoice->status->isPartiallyPaid() || $invoice->status->isPaid();
+                        $statusAction = $canDeactivate ? 'approved_inactive' : 'approved';
+                        $statusActionLabel = $canDeactivate ? __('Deactivate') : ($invoice->status->isApprovedInactive() ? __('Activate') : __('Approve'));
 
                         $hasMoadianSuccess = $invoice->moadianHistories->contains(function ($history) {
                             $data = $history->data;
@@ -1227,7 +1229,7 @@
                                 return strtoupper($data['status'] ?? '') === 'SUCCESS';
                             }) ?? false);
 
-                        $canChangeStatus = ($canApprove || $canUnapprove) && !$hasMoadianSuccess;
+                        $canChangeStatus = ($canApprove || $canDeactivate) && !$hasMoadianSuccess;
                     @endphp
 
                     @can('invoices.send-moadian')
@@ -1337,19 +1339,19 @@
                                 </a>
                             @elseif ($isVoided)
                                 <span class="tooltip" data-tip="{{ __('To change the status, first unapprove the voiding invoice.') }}">
-                                    <button class="btn btn-sm lg:btn-md btn-error btn-disabled cursor-not-allowed">{{ __('Unapprove') }}</button>
+                                    <button class="btn btn-sm lg:btn-md btn-error btn-disabled cursor-not-allowed">{{ $statusActionLabel }}</button>
                                 </span>
                             @else
                                 <form
-                                    action="{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}{{ ($changeStatusValidation->hasWarning() || $isSettled) ? '?confirm=1' : '' }}"
+                                    action="{{ route('invoices.change-status', [$invoice, $statusAction]) }}{{ ($changeStatusValidation->hasWarning() || $isSettled) ? '?confirm=1' : '' }}"
                                     method="POST"
                                     class="inline-block {{ ($changeStatusValidation->hasWarning() || $isSettled) ? 'change-status-form' : '' }}"
                                     data-confirm-message="{{ $isSettled ? __('Deactivating this paid or partially paid invoice will remove its payment accounting documents while keeping the payment records. Are you sure?') : __('This invoice has warnings for change its status, are you sure to change status?') }}">
                                     @csrf
                                     <button type="submit" x-data="{}"
                                         data-tip="{{ $changeStatusValidation->toText() }}"
-                                        class="btn btn-sm lg:btn-md inline-flex {{ $canUnapprove ? 'btn-warning' : 'btn-success' }} {{ $canApprove && $changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }}">
-                                        {{ $canUnapprove ? __('Unapprove') : __('Approve') }}
+                                        class="btn btn-sm lg:btn-md inline-flex {{ $canDeactivate ? 'btn-warning' : 'btn-success' }} {{ $canApprove && $changeStatusValidation->hasWarning() ? ' btn-outline ' : '' }}">
+                                        {{ $statusActionLabel }}
                                     </button>
                                 </form>
                             @endif
