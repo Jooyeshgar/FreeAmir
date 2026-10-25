@@ -14,7 +14,6 @@ use App\Models\WorkSite;
 use App\Services\AttendanceService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -141,26 +140,57 @@ class AttendanceServiceCalculationTest extends TestCase
         $this->assertSame(0, $columns['auto_overtime']);
     }
 
-    public static function hourlyLeaveFloatCases(): array
+    public function test_compute_log_columns_with_hourly_leave_around_float_cutoff_before_cutoff_with_float_made_up(): void
     {
-        // Shift 07:30–15:30, float 60 minutes, leave ends at physical entry (10:35).
-        // Expected values are minutes: delay, early leave, automatic overtime.
-        return [
-            'before cutoff, float made up' => ['08:29:00', '16:29:00', 0, 0, 0],
-            'before cutoff, one minute short' => ['08:29:00', '16:28:00', 0, 1, 0],
-            'before cutoff, seven minutes overtime' => ['08:29:00', '16:36:00', 0, 0, 7],
-            'at cutoff, required end is shifted by float' => ['08:30:00', '15:30:00', 0, 60, 0],
-            'at cutoff, one minute before shifted end' => ['08:30:00', '16:29:00', 0, 1, 0],
-            'at cutoff, seven minutes overtime' => ['08:30:00', '16:37:00', 0, 0, 7],
-            'at cutoff, no overtime at shifted end' => ['08:30:00', '16:30:00', 0, 0, 0],
-            'at cutoff, overtime capped at two hours' => ['08:30:00', '18:30:00', 0, 0, 120],
-            'after cutoff, one minute delay' => ['08:31:00', '16:30:00', 1, 0, 0],
-            'after cutoff, real delay and overtime' => ['08:31:00', '16:37:00', 1, 0, 7],
-        ];
+        $this->computeLogColumnsWithHourlyLeaveAroundFloatCutoff('08:29:00', '16:29:00', 0, 0, 0);
     }
 
-    #[DataProvider('hourlyLeaveFloatCases')]
-    public function test_compute_log_columns_with_hourly_leave_around_float_cutoff(
+    public function test_compute_log_columns_with_hourly_leave_around_float_cutoff_before_cutoff_one_minute_short(): void
+    {
+        $this->computeLogColumnsWithHourlyLeaveAroundFloatCutoff('08:29:00', '16:28:00', 0, 1, 0);
+    }
+
+    public function test_compute_log_columns_with_hourly_leave_around_float_cutoff_before_cutoff_with_seven_minutes_overtime(): void
+    {
+        $this->computeLogColumnsWithHourlyLeaveAroundFloatCutoff('08:29:00', '16:36:00', 0, 0, 7);
+    }
+
+    public function test_compute_log_columns_with_hourly_leave_around_float_cutoff_at_cutoff_with_end_shifted_by_float(): void
+    {
+        $this->computeLogColumnsWithHourlyLeaveAroundFloatCutoff('08:30:00', '15:30:00', 0, 60, 0);
+    }
+
+    public function test_compute_log_columns_with_hourly_leave_around_float_cutoff_at_cutoff_one_minute_before_shifted_end(): void
+    {
+        $this->computeLogColumnsWithHourlyLeaveAroundFloatCutoff('08:30:00', '16:29:00', 0, 1, 0);
+    }
+
+    public function test_compute_log_columns_with_hourly_leave_around_float_cutoff_at_cutoff_with_seven_minutes_overtime(): void
+    {
+        $this->computeLogColumnsWithHourlyLeaveAroundFloatCutoff('08:30:00', '16:37:00', 0, 0, 7);
+    }
+
+    public function test_compute_log_columns_with_hourly_leave_around_float_cutoff_at_cutoff_without_overtime_at_shifted_end(): void
+    {
+        $this->computeLogColumnsWithHourlyLeaveAroundFloatCutoff('08:30:00', '16:30:00', 0, 0, 0);
+    }
+
+    public function test_compute_log_columns_with_hourly_leave_around_float_cutoff_at_cutoff_with_overtime_capped_at_two_hours(): void
+    {
+        $this->computeLogColumnsWithHourlyLeaveAroundFloatCutoff('08:30:00', '18:30:00', 0, 0, 120);
+    }
+
+    public function test_compute_log_columns_with_hourly_leave_around_float_cutoff_after_cutoff_with_one_minute_delay(): void
+    {
+        $this->computeLogColumnsWithHourlyLeaveAroundFloatCutoff('08:31:00', '16:30:00', 1, 0, 0);
+    }
+
+    public function test_compute_log_columns_with_hourly_leave_around_float_cutoff_after_cutoff_with_delay_and_overtime(): void
+    {
+        $this->computeLogColumnsWithHourlyLeaveAroundFloatCutoff('08:31:00', '16:37:00', 1, 0, 7);
+    }
+
+    private function computeLogColumnsWithHourlyLeaveAroundFloatCutoff(
         string $leaveStart, string $exitTime, int $delay, int $earlyLeave, int $autoOvertime
     ): void {
         $shift = new WorkShift([
@@ -189,8 +219,57 @@ class AttendanceServiceCalculationTest extends TestCase
         $this->assertSame((int) Carbon::parse('10:35:00')->diffInMinutes(Carbon::parse($exitTime)), $columns['worked']);
     }
 
-    #[DataProvider('hourlyLeaveFloatCases')]
-    public function test_recalculate_log_with_hourly_leave_around_float_cutoff(
+    public function test_recalculate_log_with_hourly_leave_around_float_cutoff_before_cutoff_with_float_made_up(): void
+    {
+        $this->recalculateLogWithHourlyLeaveAroundFloatCutoff('08:29:00', '16:29:00', 0, 0, 0);
+    }
+
+    public function test_recalculate_log_with_hourly_leave_around_float_cutoff_before_cutoff_one_minute_short(): void
+    {
+        $this->recalculateLogWithHourlyLeaveAroundFloatCutoff('08:29:00', '16:28:00', 0, 1, 0);
+    }
+
+    public function test_recalculate_log_with_hourly_leave_around_float_cutoff_before_cutoff_with_seven_minutes_overtime(): void
+    {
+        $this->recalculateLogWithHourlyLeaveAroundFloatCutoff('08:29:00', '16:36:00', 0, 0, 7);
+    }
+
+    public function test_recalculate_log_with_hourly_leave_around_float_cutoff_at_cutoff_with_end_shifted_by_float(): void
+    {
+        $this->recalculateLogWithHourlyLeaveAroundFloatCutoff('08:30:00', '15:30:00', 0, 60, 0);
+    }
+
+    public function test_recalculate_log_with_hourly_leave_around_float_cutoff_at_cutoff_one_minute_before_shifted_end(): void
+    {
+        $this->recalculateLogWithHourlyLeaveAroundFloatCutoff('08:30:00', '16:29:00', 0, 1, 0);
+    }
+
+    public function test_recalculate_log_with_hourly_leave_around_float_cutoff_at_cutoff_with_seven_minutes_overtime(): void
+    {
+        $this->recalculateLogWithHourlyLeaveAroundFloatCutoff('08:30:00', '16:37:00', 0, 0, 7);
+    }
+
+    public function test_recalculate_log_with_hourly_leave_around_float_cutoff_at_cutoff_without_overtime_at_shifted_end(): void
+    {
+        $this->recalculateLogWithHourlyLeaveAroundFloatCutoff('08:30:00', '16:30:00', 0, 0, 0);
+    }
+
+    public function test_recalculate_log_with_hourly_leave_around_float_cutoff_at_cutoff_with_overtime_capped_at_two_hours(): void
+    {
+        $this->recalculateLogWithHourlyLeaveAroundFloatCutoff('08:30:00', '18:30:00', 0, 0, 120);
+    }
+
+    public function test_recalculate_log_with_hourly_leave_around_float_cutoff_after_cutoff_with_one_minute_delay(): void
+    {
+        $this->recalculateLogWithHourlyLeaveAroundFloatCutoff('08:31:00', '16:30:00', 1, 0, 0);
+    }
+
+    public function test_recalculate_log_with_hourly_leave_around_float_cutoff_after_cutoff_with_delay_and_overtime(): void
+    {
+        $this->recalculateLogWithHourlyLeaveAroundFloatCutoff('08:31:00', '16:37:00', 1, 0, 7);
+    }
+
+    private function recalculateLogWithHourlyLeaveAroundFloatCutoff(
         string $leaveStart, string $exitTime, int $delay, int $earlyLeave, int $autoOvertime
     ): void {
         $shift = $this->makeShift([

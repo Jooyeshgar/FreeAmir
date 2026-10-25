@@ -19,7 +19,6 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\Helpers\InvoiceTestHelper;
@@ -61,13 +60,27 @@ class InvoiceActivationTest extends TestCase
         $this->customer = Customer::factory()->withGroup($group)->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
     }
 
-    public static function invoiceTypes(): array
+    public function test_detail_actions_round_trip_accounting_and_inventory_buy(): void
     {
-        return array_map(fn ($type) => [$type], [InvoiceType::BUY, InvoiceType::SELL, InvoiceType::RETURN_BUY, InvoiceType::RETURN_SELL]);
+        $this->detailActionsRoundTripAccountingAndInventory(InvoiceType::BUY);
     }
 
-    #[DataProvider('invoiceTypes')]
-    public function test_detail_actions_round_trip_accounting_and_inventory(InvoiceType $type): void
+    public function test_detail_actions_round_trip_accounting_and_inventory_sell(): void
+    {
+        $this->detailActionsRoundTripAccountingAndInventory(InvoiceType::SELL);
+    }
+
+    public function test_detail_actions_round_trip_accounting_and_inventory_return_buy(): void
+    {
+        $this->detailActionsRoundTripAccountingAndInventory(InvoiceType::RETURN_BUY);
+    }
+
+    public function test_detail_actions_round_trip_accounting_and_inventory_return_sell(): void
+    {
+        $this->detailActionsRoundTripAccountingAndInventory(InvoiceType::RETURN_SELL);
+    }
+
+    private function detailActionsRoundTripAccountingAndInventory(InvoiceType $type): void
     {
         $product = $this->createProduct(['quantity' => 0, 'average_cost' => 0]);
         $purchase = $this->buy([$this->productItem($product, 20, 100)])['invoice'];
@@ -117,17 +130,22 @@ class InvoiceActivationTest extends TestCase
         $this->assertEqualsWithDelta($cogAfter, $invoice->items()->firstOrFail()->cog_after, 0.001);
     }
 
-    public static function retainedPayments(): array
+    public function test_detail_reactivation_restores_settlement_status_without_payments(): void
     {
-        return [
-            'no payments' => [0, InvoiceStatus::APPROVED],
-            'partial payment' => [0.5, InvoiceStatus::PARTIALLY_PAID],
-            'full payment' => [1, InvoiceStatus::PAID],
-        ];
+        $this->detailReactivationRestoresSettlementStatus(0, InvoiceStatus::APPROVED);
     }
 
-    #[DataProvider('retainedPayments')]
-    public function test_detail_reactivation_restores_settlement_status(float $paidFraction, InvoiceStatus $expectedStatus): void
+    public function test_detail_reactivation_restores_settlement_status_with_partial_payment(): void
+    {
+        $this->detailReactivationRestoresSettlementStatus(0.5, InvoiceStatus::PARTIALLY_PAID);
+    }
+
+    public function test_detail_reactivation_restores_settlement_status_with_full_payment(): void
+    {
+        $this->detailReactivationRestoresSettlementStatus(1, InvoiceStatus::PAID);
+    }
+
+    private function detailReactivationRestoresSettlementStatus(float $paidFraction, InvoiceStatus $expectedStatus): void
     {
         $product = $this->createProduct(['quantity' => 10]);
         $invoice = $this->sell([$this->productItem($product, 2, 150)])['invoice'];
@@ -255,13 +273,17 @@ class InvoiceActivationTest extends TestCase
         }
     }
 
-    public static function costReactivationPaths(): array
+    public function test_reactivation_restores_own_inactive_costs_individually(): void
     {
-        return ['individual' => [false], 'bulk' => [true]];
+        $this->reactivationRestoresOwnInactiveCostsInDateOrder(false);
     }
 
-    #[DataProvider('costReactivationPaths')]
-    public function test_reactivation_restores_own_inactive_costs_in_date_order(bool $bulk): void
+    public function test_reactivation_restores_own_inactive_costs_in_bulk(): void
+    {
+        $this->reactivationRestoresOwnInactiveCostsInDateOrder(true);
+    }
+
+    private function reactivationRestoresOwnInactiveCostsInDateOrder(bool $bulk): void
     {
         $product = $this->createProduct(['quantity' => 0, 'average_cost' => 0]);
         $invoice = $this->buy([$this->productItem($product, 20, 100)])['invoice'];
@@ -510,13 +532,17 @@ class InvoiceActivationTest extends TestCase
         return $state;
     }
 
-    public static function activationDirections(): array
+    public function test_closed_year_and_missing_permission_leave_all_relations_unchanged_when_deactivating(): void
     {
-        return ['deactivate' => [false], 'reactivate' => [true]];
+        $this->closedYearAndMissingPermissionLeaveAllRelationsUnchanged(false);
     }
 
-    #[DataProvider('activationDirections')]
-    public function test_closed_year_and_missing_permission_leave_all_relations_unchanged(bool $reactivate): void
+    public function test_closed_year_and_missing_permission_leave_all_relations_unchanged_when_reactivating(): void
+    {
+        $this->closedYearAndMissingPermissionLeaveAllRelationsUnchanged(true);
+    }
+
+    private function closedYearAndMissingPermissionLeaveAllRelationsUnchanged(bool $reactivate): void
     {
         $product = $this->createProduct(['quantity' => 0, 'average_cost' => 0]);
         $invoice = $this->buy([$this->productItem($product, 20, 100)])['invoice'];

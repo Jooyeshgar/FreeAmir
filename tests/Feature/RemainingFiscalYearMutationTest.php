@@ -37,7 +37,6 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
@@ -60,13 +59,17 @@ class RemainingFiscalYearMutationTest extends TestCase
         $this->withoutMiddleware(CheckPermission::class);
     }
 
-    public static function roles(): array
+    public function test_remaining_resources_reject_direct_edit_and_mutations_without_changes(): void
     {
-        return ['ordinary user' => [false], 'super admin' => [true]];
+        $this->remainingResourcesRejectDirectEditAndMutations(false);
     }
 
-    #[DataProvider('roles')]
-    public function test_remaining_resources_reject_direct_edit_and_mutations_without_changes(bool $superAdmin): void
+    public function test_super_admin_remaining_resources_reject_direct_edit_and_mutations_without_changes(): void
+    {
+        $this->remainingResourcesRejectDirectEditAndMutations(true);
+    }
+
+    private function remainingResourcesRejectDirectEditAndMutations(bool $superAdmin): void
     {
         if ($superAdmin) {
             $this->user->assignRole(Role::findOrCreate('Super-Admin'));
