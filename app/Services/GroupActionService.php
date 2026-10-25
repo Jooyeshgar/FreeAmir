@@ -51,7 +51,7 @@ class GroupActionService
 
                 // Restore costs before payments: a fully paid purchase may also
                 // include ancillary costs in its payable amount.
-                foreach ($invoice->ancillaryCosts()->where('status', InvoiceStatus::APPROVED_INACTIVE)->get() as $ancillaryCost) {
+                foreach ($invoice->ancillaryCosts()->where('status', InvoiceStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('id')->get() as $ancillaryCost) {
                     $validation = $this->ancillaryCostService->getChangeStatusValidation($ancillaryCost);
 
                     if (! $validation['allowed']) {

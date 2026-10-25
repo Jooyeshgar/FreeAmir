@@ -246,6 +246,58 @@ class InvoiceActivationTest extends TestCase
         }
     }
 
+    public static function costReactivationPaths(): array
+    {
+        return ['individual' => [false], 'bulk' => [true]];
+    }
+
+    #[DataProvider('costReactivationPaths')]
+    public function test_reactivation_restores_own_inactive_costs_in_date_order(bool $bulk): void
+    {
+        $product = $this->createProduct(['quantity' => 0, 'average_cost' => 0]);
+        $invoice = $this->buy([$this->productItem($product, 20, 100)])['invoice'];
+        $createInactiveCost = function ($invoice, $product, string $date) {
+            $cost = AncillaryCostService::createAncillaryCost($this->user, [
+                'invoice_id' => $invoice->id,
+                'customer_id' => $this->customer->id,
+                'fiscal_year_id' => $this->fiscalYearId,
+                'date' => $date,
+                'type' => 'Shipping', 'amount' => 200, 'vatPrice' => 0,
+                'ancillaryCosts' => [['product_id' => $product->id, 'amount' => 200]],
+            ], false)['ancillaryCost'];
+            $cost->update(['status' => InvoiceStatus::APPROVED_INACTIVE]);
+
+            return $cost;
+        };
+
+        // Creation order deliberately differs from the required approval order.
+        $lateCost = $createInactiveCost($invoice, $product, $invoice->date->copy()->addDay()->toDateString());
+        $earlyCost = $createInactiveCost($invoice, $product, $invoice->date->toDateString());
+        $otherProduct = $this->createProduct(['quantity' => 0, 'average_cost' => 0]);
+        $otherInvoice = $this->buy([$this->productItem($otherProduct, 10, 100)])['invoice'];
+        $otherCost = $createInactiveCost($otherInvoice, $otherProduct, $otherInvoice->date->toDateString());
+
+        $this->post(route('invoices.approve', $invoice))->assertSessionHas('success');
+        $this->assertSame(InvoiceStatus::APPROVED_INACTIVE, $invoice->fresh()->status);
+        if ($bulk) {
+            app(GroupActionService::class)->approveInactiveInvoices();
+        } else {
+            $this->post(route('invoices.change-status', [$invoice, 'approved']))->assertSessionHas('success');
+            $this->assertSame(InvoiceStatus::APPROVED_INACTIVE, $otherCost->fresh()->status);
+            $this->assertNull($otherCost->fresh()->document_id);
+        }
+
+        $this->assertSame(InvoiceStatus::APPROVED, $invoice->fresh()->status);
+        foreach ([$earlyCost, $lateCost] as $cost) {
+            $this->assertSame(InvoiceStatus::APPROVED, $cost->fresh()->status);
+            $this->assertNotNull($cost->fresh()->document_id);
+            $this->assertEqualsWithDelta(0, $cost->fresh()->document->transactions()->sum('value'), 0.01);
+        }
+        $this->assertLessThan($lateCost->fresh()->document_id, $earlyCost->fresh()->document_id);
+        $this->assertEqualsWithDelta(120, $product->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(120, $product->warehouseStocks()->firstOrFail()->average_cost, 0.001);
+    }
+
     public function test_inactive_purchase_reverses_multiple_costs_and_restores_prior_inventory_value(): void
     {
         $product = $this->createProduct(['quantity' => 0, 'average_cost' => 0]);

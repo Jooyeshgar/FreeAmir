@@ -663,9 +663,9 @@ class InvoiceService
     {
         app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
 
-        // Costs must be restored before payments because they affect payables.
+        // Restore this invoice's costs in date order before its payments.
         $ancillaryCostService = app(AncillaryCostService::class);
-        foreach ($invoice->ancillaryCosts()->where('status', InvoiceStatus::APPROVED_INACTIVE)->get() as $ancillaryCost) {
+        foreach ($invoice->ancillaryCosts()->where('status', InvoiceStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('id')->get() as $ancillaryCost) {
             $validation = $ancillaryCostService->getChangeStatusValidation($ancillaryCost);
             if (! $validation['allowed']) {
                 $reason = $validation['reason'] ?? __('unknown reason');
