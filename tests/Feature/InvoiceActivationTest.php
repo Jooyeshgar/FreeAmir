@@ -9,10 +9,12 @@ use App\Models\CustomerGroup;
 use App\Models\Document;
 use App\Models\FiscalYear;
 use App\Models\ProductGroup;
+use App\Models\Subject;
 use App\Models\User;
 use App\Services\AncillaryCostService;
 use App\Services\GroupActionService;
 use App\Services\InvoiceService;
+use App\Services\PaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
@@ -104,6 +106,71 @@ class InvoiceActivationTest extends TestCase
         $this->assertEqualsWithDelta($averageCost, $product->fresh()->average_cost, 0.001);
         $this->assertEqualsWithDelta($stock->quantity, $stock->fresh()->quantity, 0.001);
         $this->assertEqualsWithDelta($stock->average_cost, $stock->fresh()->average_cost, 0.001);
+    }
+
+    public static function retainedPayments(): array
+    {
+        return [
+            'no payments' => [0, InvoiceStatus::APPROVED],
+            'partial payment' => [0.5, InvoiceStatus::PARTIALLY_PAID],
+            'full payment' => [1, InvoiceStatus::PAID],
+        ];
+    }
+
+    #[DataProvider('retainedPayments')]
+    public function test_detail_reactivation_restores_settlement_status(float $paidFraction, InvoiceStatus $expectedStatus): void
+    {
+        $product = $this->createProduct(['quantity' => 10]);
+        $invoice = $this->sell([$this->productItem($product, 2, 150)])['invoice'];
+        $payment = null;
+        $oldPaymentDocumentId = null;
+
+        if ($paidFraction > 0) {
+            $cashBook = Subject::withoutGlobalScopes()->findOrFail((int) config('amir.cash_book'));
+            $cashSubject = Subject::factory()->withParent($cashBook)->create([
+                'name' => 'صندوق',
+                'fiscal_year_id' => $this->fiscalYearId,
+            ]);
+            $decision = app(PaymentService::class)->createPayment($this->user, $invoice, [
+                'amount' => (float) $invoice->amount * $paidFraction,
+                'subject_id' => $cashSubject->id,
+            ]);
+            $this->assertFalse($decision->hasErrors(), $decision->toText());
+            $payment = $invoice->payments()->sole();
+            $oldPaymentDocumentId = $payment->document_id;
+            $this->assertNotNull($oldPaymentDocumentId);
+        }
+        $this->assertSame($expectedStatus, $invoice->fresh()->status);
+        $quantity = (float) $product->fresh()->quantity;
+
+        // Retained payments also occur when dependency resolution deactivates an invoice.
+        app(GroupActionService::class)->inactivateDependentInvoices($invoice->fresh('items'));
+        $this->assertSame(InvoiceStatus::APPROVED_INACTIVE, $invoice->fresh()->status);
+        $this->assertNull($invoice->fresh()->document_id);
+        if ($payment) {
+            $this->assertNull($payment->fresh()->document_id);
+            $this->assertDatabaseMissing('documents', ['id' => $oldPaymentDocumentId]);
+        }
+
+        $url = route('invoices.show', $invoice);
+        $activate = route('invoices.change-status', [$invoice, 'approved']);
+        $this->get($url)->assertOk()->assertSee($activate, false)->assertSeeText('Activate');
+        $this->from($url)->post($activate.'?confirm=1')
+            ->assertRedirect($url)->assertSessionHas('success', 'Invoice activated successfully.');
+
+        $invoice->refresh();
+        $this->assertSame($expectedStatus, $invoice->status);
+        $this->assertNotNull($invoice->document_id);
+        $this->assertEqualsWithDelta(0, $invoice->document->transactions()->sum('value'), 0.01);
+        $this->assertEqualsWithDelta($quantity, $product->fresh()->quantity, 0.001);
+        $this->assertSame($payment ? 1 : 0, $invoice->payments()->count());
+        if ($payment) {
+            $payment->refresh();
+            $this->assertNotNull($payment->document_id);
+            $this->assertNotEquals($oldPaymentDocumentId, $payment->document_id);
+            $this->assertEqualsWithDelta((float) $invoice->amount * $paidFraction, $payment->amount, 0.01);
+            $this->assertEqualsWithDelta(0, $payment->document->transactions()->sum('value'), 0.01);
+        }
     }
 
     public function test_unapprove_remains_available_alongside_deactivation(): void
