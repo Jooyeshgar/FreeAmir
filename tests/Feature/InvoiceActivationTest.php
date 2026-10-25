@@ -17,6 +17,7 @@ use App\Services\InvoiceService;
 use App\Services\PaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Permission;
@@ -79,6 +80,12 @@ class InvoiceActivationTest extends TestCase
         $quantity = (float) $product->fresh()->quantity;
         $averageCost = (float) $product->fresh()->average_cost;
         $stock = $product->warehouseStocks()->firstOrFail();
+        $cogAfter = (float) $invoice->items()->firstOrFail()->cog_after;
+        $reversedQuantity = match ($type) {
+            InvoiceType::BUY => 0,
+            InvoiceType::SELL, InvoiceType::RETURN_BUY => 20,
+            InvoiceType::RETURN_SELL => 15,
+        };
         $oldDocumentId = $invoice->document_id;
         $url = route('invoices.show', $invoice);
         $deactivate = route('invoices.approve', $invoice);
@@ -92,7 +99,8 @@ class InvoiceActivationTest extends TestCase
         $this->assertNull($invoice->fresh()->document_id);
         $this->assertDatabaseMissing('documents', ['id' => $oldDocumentId]);
         $this->assertDatabaseMissing('transactions', ['document_id' => $oldDocumentId]);
-        $this->assertNotEquals($quantity, (float) $product->fresh()->quantity);
+        $this->assertEqualsWithDelta($reversedQuantity, $product->fresh()->quantity, 0.001);
+        $this->assertEqualsWithDelta($reversedQuantity, $stock->fresh()->quantity, 0.001);
 
         $activate = route('invoices.change-status', [$invoice, 'approved']);
         $this->get($url)->assertOk()->assertSee($activate, false)->assertSeeText('Activate')->assertDontSee($deactivate, false)->assertDontSee($unapprove, false);
@@ -106,6 +114,7 @@ class InvoiceActivationTest extends TestCase
         $this->assertEqualsWithDelta($averageCost, $product->fresh()->average_cost, 0.001);
         $this->assertEqualsWithDelta($stock->quantity, $stock->fresh()->quantity, 0.001);
         $this->assertEqualsWithDelta($stock->average_cost, $stock->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta($cogAfter, $invoice->items()->firstOrFail()->cog_after, 0.001);
     }
 
     public static function retainedPayments(): array
@@ -485,8 +494,79 @@ class InvoiceActivationTest extends TestCase
         $invoice->moadianHistories()->create(['data' => ['status' => 'SUCCESS']]);
         $url = route('invoices.approve', $invoice);
         $this->get(route('invoices.show', $invoice))->assertOk()->assertDontSee($url, false);
+        $before = $this->accountingAndInventoryState();
         $this->post($url)->assertSessionHas('error');
+        $this->assertSame($before, $this->accountingAndInventoryState());
         $this->assertSame(InvoiceStatus::APPROVED, $invoice->fresh()->status);
+    }
+
+    private function accountingAndInventoryState(): array
+    {
+        $state = [];
+        foreach (['invoices', 'invoice_items', 'documents', 'transactions', 'products', 'warehouse_product_stocks', 'payments', 'ancillary_costs', 'ancillary_cost_items'] as $table) {
+            $state[$table] = DB::table($table)->orderBy('id')->get()->toJson();
+        }
+
+        return $state;
+    }
+
+    public static function activationDirections(): array
+    {
+        return ['deactivate' => [false], 'reactivate' => [true]];
+    }
+
+    #[DataProvider('activationDirections')]
+    public function test_closed_year_and_missing_permission_leave_all_relations_unchanged(bool $reactivate): void
+    {
+        $product = $this->createProduct(['quantity' => 0, 'average_cost' => 0]);
+        $invoice = $this->buy([$this->productItem($product, 20, 100)])['invoice'];
+        AncillaryCostService::createAncillaryCost($this->user, [
+            'invoice_id' => $invoice->id, 'customer_id' => $this->customer->id,
+            'fiscal_year_id' => $this->fiscalYearId, 'date' => $invoice->date->toDateString(),
+            'type' => 'Shipping', 'amount' => 200, 'vatPrice' => 0,
+            'ancillaryCosts' => [['product_id' => $product->id, 'amount' => 200]],
+        ], true);
+        $cashBook = Subject::withoutGlobalScopes()->findOrFail((int) config('amir.cash_book'));
+        $cashSubject = Subject::factory()->withParent($cashBook)->create([
+            'name' => 'صندوق', 'fiscal_year_id' => $this->fiscalYearId,
+        ]);
+        $decision = app(PaymentService::class)->createPayment($this->user, $invoice->fresh(), [
+            'amount' => 100, 'subject_id' => $cashSubject->id,
+        ]);
+        $this->assertFalse($decision->hasErrors(), $decision->toText());
+        // Settled invoices use the existing dependency flow to retain payments.
+        app(GroupActionService::class)->inactivateDependentInvoices($invoice->fresh('items'));
+        if (! $reactivate) {
+            $this->post(route('invoices.change-status', [$invoice, 'approved']))->assertSessionHas('success');
+        }
+        $url = $reactivate
+            ? route('invoices.change-status', [$invoice, 'approved'])
+            : route('invoices.approve', $invoice);
+        $permission = $reactivate ? 'invoices.change-status' : 'invoices.approve';
+        $before = $this->accountingAndInventoryState();
+        $this->user->revokePermissionTo($permission);
+        $this->post($url.'?confirm=1')->assertForbidden();
+        $this->assertSame($before, $this->accountingAndInventoryState());
+
+        $this->user->givePermissionTo($permission);
+        FiscalYear::findOrFail($this->fiscalYearId)->update(['closed_at' => now()]);
+        $this->postJson($url.'?confirm=1')->assertUnprocessable()->assertJsonValidationErrors('fiscal_year');
+        $this->assertSame($before, $this->accountingAndInventoryState());
+    }
+
+    public function test_dependency_conflict_blocks_reactivation_without_restoring_relations(): void
+    {
+        $product = $this->createProduct(['quantity' => 0, 'average_cost' => 0]);
+        $invoice = $this->buy([$this->productItem($product, 20, 100)])['invoice'];
+        $this->post(route('invoices.approve', $invoice))->assertSessionHas('success');
+        $later = $this->buy([$this->productItem($product, 10, 200)])['invoice'];
+        $before = $this->accountingAndInventoryState();
+
+        $this->post(route('invoices.change-status', [$invoice, 'approved']).'?confirm=1')->assertSessionHas('error');
+
+        $this->assertSame($before, $this->accountingAndInventoryState());
+        $this->assertSame(InvoiceStatus::APPROVED_INACTIVE, $invoice->fresh()->status);
+        $this->assertSame(InvoiceStatus::APPROVED, $later->fresh()->status);
     }
 
     public function test_failed_reactivation_rolls_back_invoice_accounting_and_stock(): void
