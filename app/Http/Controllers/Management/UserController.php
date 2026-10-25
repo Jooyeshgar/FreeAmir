@@ -253,6 +253,10 @@ class UserController extends Controller
 
         $request->session()->regenerate();
 
+        if ($request->user()->can('access-super-admin-panel')) {
+            $request->session()->put('interface_mode', 'management');
+        }
+
         return redirect()->route('users.index')->with('success', __('Impersonation ended.'));
     }
 

@@ -101,6 +101,24 @@ class UserImpersonationTest extends TestCase
         $this->assertImpersonationSessionIsClear();
     }
 
+    public function test_user_with_management_access_returns_to_management_users_after_impersonation(): void
+    {
+        $fiscalYear = $this->fiscalYear(1405);
+        $admin = $this->userWithRole('Admin', $fiscalYear, canImpersonate: true, canViewUsers: true);
+        $admin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+        $target = $this->userWithRole('Employee', $fiscalYear, attributes: ['name' => 'Target User']);
+        $this->setActiveCompany($fiscalYear);
+
+        $this->actingAs($admin)->post(route('users.impersonate', $target));
+
+        $this->withSession(['interface_mode' => 'workspace'])->post(route('impersonation.leave'))
+            ->assertRedirect(route('users.index'))->assertSessionHas('success');
+
+        $this->assertAuthenticatedAs($admin);
+        $this->assertSame('management', session('interface_mode'));
+        $this->get(route('users.index'))->assertOk()->assertSee(__('Platform users'));
+    }
+
     public function test_guest_cannot_start_impersonation(): void
     {
         $target = User::factory()->create();
