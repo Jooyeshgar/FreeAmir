@@ -260,6 +260,69 @@ class InvoiceActivationTest extends TestCase
         $this->assertSame(7.0, (float) $product->fresh()->quantity);
     }
 
+    public function test_resolve_conflicts_option_deactivates_selected_invoice_and_dependencies(): void
+    {
+        $this->user->givePermissionTo([
+            Permission::findOrCreate('invoices.conflicts'),
+            Permission::findOrCreate('invoices.group-action'),
+        ]);
+        $product = $this->createProduct(['quantity' => 0, 'average_cost' => 0]);
+        $invoice = $this->buy([$this->productItem($product, 20, 100)])['invoice'];
+        $dependent = $this->sell([$this->productItem($product, 2, 150)])['invoice'];
+        $later = $this->sell([$this->productItem($product, 1, 150)])['invoice'];
+        $documents = [$invoice->document_id, $dependent->document_id, $later->document_id];
+        $detailsUrl = route('invoices.show', $invoice);
+        $conflictsUrl = route('invoices.conflicts', $invoice);
+        $resolveUrl = route('invoices.group-action', $invoice);
+
+        $this->get($detailsUrl)->assertOk()
+            ->assertSee($conflictsUrl, false)
+            ->assertSeeText('Resolve conflicts and deactivate invoice');
+        $this->get($conflictsUrl)->assertOk()
+            ->assertSee($resolveUrl, false)
+            ->assertSeeText('Resolve conflicts and deactivate invoice')
+            ->assertSeeText('The selected invoice and its dependent invoices will become approved inactive. Their accounting documents will be removed.');
+
+        $this->post($resolveUrl)->assertRedirect($detailsUrl);
+
+        foreach ([$invoice, $dependent, $later] as $affected) {
+            $this->assertSame(InvoiceStatus::APPROVED_INACTIVE, $affected->fresh()->status);
+            $this->assertNull($affected->fresh()->document_id);
+        }
+        foreach ($documents as $documentId) {
+            $this->assertDatabaseMissing('documents', ['id' => $documentId]);
+            $this->assertDatabaseMissing('transactions', ['document_id' => $documentId]);
+        }
+        $this->assertEqualsWithDelta(0, $product->fresh()->quantity, 0.001);
+        $this->assertEqualsWithDelta(0, $product->warehouseStocks()->firstOrFail()->quantity, 0.001);
+    }
+
+    public function test_resolve_conflicts_option_requires_existing_permission_and_open_year(): void
+    {
+        $this->user->givePermissionTo(Permission::findOrCreate('invoices.conflicts'));
+        Permission::findOrCreate('invoices.group-action');
+        $product = $this->createProduct(['quantity' => 0, 'average_cost' => 0]);
+        $invoice = $this->buy([$this->productItem($product, 20, 100)])['invoice'];
+        $dependent = $this->sell([$this->productItem($product, 2, 150)])['invoice'];
+        $conflictsUrl = route('invoices.conflicts', $invoice);
+        $resolveUrl = route('invoices.group-action', $invoice);
+
+        $this->get($conflictsUrl)->assertOk()->assertSee($resolveUrl, false);
+        $this->post($resolveUrl)->assertForbidden();
+
+        $this->user->givePermissionTo('invoices.group-action');
+        FiscalYear::findOrFail($this->fiscalYearId)->update(['closed_at' => now()]);
+        $this->get($conflictsUrl)->assertOk()
+            ->assertSeeText('Resolve conflicts and deactivate invoice')
+            ->assertSee('disabled', false);
+        $this->postJson($resolveUrl)->assertUnprocessable()->assertJsonValidationErrors('fiscal_year');
+        foreach ([$invoice, $dependent] as $affected) {
+            $this->assertSame(InvoiceStatus::APPROVED, $affected->fresh()->status);
+            $this->assertNotNull($affected->fresh()->document_id);
+        }
+        $this->assertEqualsWithDelta(18, $product->fresh()->quantity, 0.001);
+    }
+
     public function test_invalid_source_states_cannot_be_marked_approved_inactive(): void
     {
         $product = $this->createProduct();

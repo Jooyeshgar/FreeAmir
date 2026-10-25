@@ -1333,7 +1333,7 @@
                                 <a data-tip="{{ $changeStatusValidation->toText() }}"
                                     href="{{ route('invoices.conflicts', $invoice) }}"
                                     class="btn btn-sm lg:btn-md btn-accent inline-flex tooltip">
-                                    {{ __('Fix Conflict') }}
+                                    {{ $canUnapprove ? __('Resolve conflicts and deactivate invoice') : __('Fix Conflict') }}
                                 </a>
                             @elseif ($isVoided)
                                 <span class="tooltip" data-tip="{{ __('To change the status, first unapprove the voiding invoice.') }}">

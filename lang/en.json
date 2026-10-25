@@ -866,6 +866,8 @@
     "Deletable Documents": "Deletable Documents",
     "Delete": "Delete",
     "Delete All Documents": "Delete All Documents",
+    "Resolve conflicts and deactivate invoice": "Resolve conflicts and deactivate invoice",
+    "The selected invoice and its dependent invoices will become approved inactive. Their accounting documents will be removed.": "The selected invoice and its dependent invoices will become approved inactive. Their accounting documents will be removed.",
     "Delete this cheque and all of its accounting entries and payments?": "Delete this cheque and all of its accounting entries and payments?",
     "Delete this chequebook? Its cheques will be preserved and unlinked.": "Delete this chequebook? Its cheques will be preserved and unlinked.",
     "Delete this user account permanently.": "Delete this user account permanently.",

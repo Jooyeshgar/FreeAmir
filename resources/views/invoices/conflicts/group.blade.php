@@ -44,13 +44,16 @@
 
             @if ($allowedToResolve)
                 <div class="px-4 py-2 text-left">
+                    @if ($invoice->status->isApprovedOrSettled())
+                        <p class="mb-3">{{ __('The selected invoice and its dependent invoices will become approved inactive. Their accounting documents will be removed.') }}</p>
+                    @endif
                     <form method="POST" action="{{ route('invoices.group-action', $invoice) }}">
                         @csrf
                         <button type="submit" class="btn btn-primary {{ $fiscalYearClosed ? 'btn-disabled cursor-not-allowed' : '' }}"
-                            @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ __('Delete All Documents') }}</button>
+                            @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ $invoice->status->isApprovedOrSettled() ? __('Resolve conflicts and deactivate invoice') : __('Delete All Documents') }}</button>
                     </form>
                 </div>
-            @endif
+                @endif
         </div>
     </div>
 </x-app-layout>
