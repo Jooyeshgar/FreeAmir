@@ -49,12 +49,15 @@ A product or service group has name, tax rate, and Taxpayer System ID (`SSTID`).
 | Warehouse location | Optional text up to 50 characters; a general location label, not one warehouse's stock |
 | Quantity | Nonnegative number with optional thousands separator and fractional part; blank becomes zero |
 | Alert threshold | Same number format as quantity; a positive value is used for reorder detection |
+| Unit weight (kg) | Nonnegative, with up to three decimal places; blank becomes zero. Weight allocation uses purchase quantity × unit weight |
 | Sell beyond stock | If on, confirmation with insufficient stock is allowed with a warning; if off, confirmation is rejected |
 | Discount formula | Optional text up to 100 characters, e.g. `1-30:400, 30-100:360.7` |
 | Description | Optional text up to 150 characters |
 | Websites | Every address must be a valid URL |
 
 Entering quantity on the product form changes product database fields only; it does **not** create an accounting document, invoice movement, or warehouse stock. Use a purchase or opening-stock invoice for auditable inventory.
+
+Unit weight is independent of stock quantity. For example, 0.125 means 125 grams per unit. Zero weight excludes a product from weight allocation. Changing weight does not automatically change saved ancillary costs; see [Ancillary purchase costs](../../invoices/purchases/ancillary-costs/ancillary-costs.en.md) to recalculate shares or use Manual or Value instead.
 
 ## Service fields
 
@@ -83,6 +86,7 @@ Imports must be CSV or TXT, at most 5 MB. Exporting first gives the safest heade
 - An imported subject code must match the relevant group subject's code structure and not already be linked to another record.
 - In a product CSV, a column named after a warehouse sets stock in that warehouse and product stock is updated from their sum.
 - The entire file imports in one transaction; any row error rolls back earlier rows from that file.
+- Unit weight can be imported and exported as `Unit weight (kg)`, `weight`, or its Persian header. Use nonnegative values with up to three decimal places. An omitted or blank weight preserves an existing product's weight; new products default to zero.
 
 CSV stock import creates no invoice movement or inventory document. Use an opening-stock invoice for a reconcilable opening balance.
 
