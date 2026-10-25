@@ -3580,6 +3580,7 @@
     "Weight": "Weight",
     "Ancillary cost before VAT": "Ancillary cost before VAT",
     "Products with zero weight are excluded from allocation:": "Products with zero weight are excluded from allocation:",
+    "For this product, weight is not defined, so it will be excluded from allocation.": "For this product, weight is not defined, so it will be excluded from allocation.",
     "No positive allocation basis is available. Enter amounts manually or update product weights.": "No positive allocation basis is available. Enter amounts manually or update product weights.",
     "Line :line: invalid product weight.": "Line :line: invalid product weight."
 }

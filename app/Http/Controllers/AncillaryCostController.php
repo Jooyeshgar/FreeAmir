@@ -55,22 +55,6 @@ class AncillaryCostController extends Controller
             abort(403, __('Ancillary Costs cannot be added to service buy invoices.'));
         }
 
-        $invoiceItems = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing()->take(20);
-
-        if ($invoice) {
-            $invoiceItems = $invoiceItems->filter(fn ($item) => $item->id === $invoice->id);
-        }
-
-        $invoices = $invoiceItems->map(function ($item) { // Format invoices for select box
-            return [
-                'id' => $item->id,
-                'groupId' => 0,
-                'groupName' => 'General',
-                'text' => $item->number,
-                'type' => 'invoice',
-            ];
-        })->values()->all();
-
         $customers = Customer::with('group')->orderBy('name', 'asc')->limit(20)->get();
         $ancillaryCost = new AncillaryCost;
         if ($invoice) {
@@ -78,7 +62,7 @@ class AncillaryCostController extends Controller
         }
         $ancillaryCostItems = old('ancillaryCosts') ?? [];
 
-        return view('ancillaryCosts.create', compact('invoices', 'customers', 'ancillaryCost', 'ancillaryCostItems', 'invoice'));
+        return view('ancillaryCosts.create', compact('customers', 'ancillaryCost', 'ancillaryCostItems', 'invoice'));
     }
 
     public function store(StoreAncillaryCostRequest $request, ?Invoice $invoice = null)
@@ -122,23 +106,6 @@ class AncillaryCostController extends Controller
         }
 
         $this->ensureInvoiceMatchesAncillaryCost($invoice, $ancillaryCost);
-        $invoices = AncillaryCostService::getAllowedInvoicesForAncillaryCostsCreatingOrEditing()->take(20)
-            ->map(function ($invoice) { // Format invoices for select box
-                return [
-                    'id' => $invoice->id,
-                    'groupId' => 0,
-                    'groupName' => 'General',
-                    'text' => $invoice->number,
-                    'type' => 'invoice',
-                ];
-            })->push([ // Include current invoice
-                'id' => $ancillaryCost->invoice->id,
-                'groupId' => 0,
-                'groupName' => 'General',
-                'text' => $ancillaryCost->invoice->number,
-                'type' => 'invoice',
-            ])->unique('id')->values()->all();
-
         // Load ancillary cost items for editing
         $ancillaryCostItems = $ancillaryCost->items->map(function ($item) {
             return [
@@ -156,7 +123,7 @@ class AncillaryCostController extends Controller
         $vatPercentage = $subtotalBeforeVat > 0 ? ($ancillaryCost['vat'] / $subtotalBeforeVat) * 100 : 0;
         $ancillaryCost['vat'] = $vatPercentage;
 
-        return view('ancillaryCosts.edit', compact('ancillaryCost', 'invoices', 'customers', 'ancillaryCostItems', 'invoice'));
+        return view('ancillaryCosts.edit', compact('ancillaryCost', 'customers', 'ancillaryCostItems', 'invoice'));
     }
 
     public function update(StoreAncillaryCostRequest $request, Invoice $invoice, AncillaryCost $ancillaryCost)
