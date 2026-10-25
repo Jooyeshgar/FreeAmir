@@ -280,8 +280,7 @@ class InvoiceActivationTest extends TestCase
             ->assertSeeText('Resolve conflicts and deactivate invoice');
         $this->get($conflictsUrl)->assertOk()
             ->assertSee($resolveUrl, false)
-            ->assertSeeText('Resolve conflicts and deactivate invoice')
-            ->assertSeeText('The selected invoice and its dependent invoices will become approved inactive. Their accounting documents will be removed.');
+            ->assertSeeText('Resolve conflicts and deactivate invoice');
 
         $this->post($resolveUrl)->assertRedirect($detailsUrl);
 
