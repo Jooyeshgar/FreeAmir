@@ -3574,5 +3574,12 @@
     "Activate": "Activate",
     "Deactivate": "Deactivate",
     "Invoice activated successfully.": "Invoice activated successfully.",
-    "Invoice deactivated successfully.": "Invoice deactivated successfully."
+    "Invoice deactivated successfully.": "Invoice deactivated successfully.",
+    "Unit weight (kg)": "Unit weight (kg)",
+    "Allocation method": "Allocation method",
+    "Weight": "Weight",
+    "Ancillary cost before VAT": "Ancillary cost before VAT",
+    "Products with zero weight are excluded from allocation:": "Products with zero weight are excluded from allocation:",
+    "No positive allocation basis is available. Enter amounts manually or update product weights.": "No positive allocation basis is available. Enter amounts manually or update product weights.",
+    "Line :line: invalid product weight.": "Line :line: invalid product weight."
 }
