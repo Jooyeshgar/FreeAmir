@@ -47,10 +47,12 @@ return new class extends Migration
 
     public function up(): void
     {
-        $duplicateYear = DB::table('companies')->select('name', 'fiscal_year')->groupBy('name', 'fiscal_year')->havingRaw('COUNT(*) > 1')->first();
+        $duplicateYear = DB::table('companies')->select('name', 'fiscal_year', 'phone_number')->groupBy('name', 'fiscal_year', 'phone_number')->havingRaw('COUNT(*) > 1')->first();
 
         if ($duplicateYear) {
-            throw new RuntimeException("Company {$duplicateYear->name} has more than one record for fiscal year {$duplicateYear->fiscal_year}.");
+            $phoneNumber = $duplicateYear->phone_number ?? 'NULL';
+
+            throw new RuntimeException("Company {$duplicateYear->name} has more than one record for fiscal year {$duplicateYear->fiscal_year} with phone number {$phoneNumber}.");
         }
 
         $this->assertReferenceTables();
@@ -140,8 +142,9 @@ return new class extends Migration
         $duplicateCompanyIds = [];
 
         foreach (DB::table('companies')->orderBy('id')->cursor() as $company) {
-            $canonicalCompanyIds[$company->name] ??= $company->id;
-            $canonicalCompanyId = $canonicalCompanyIds[$company->name];
+            $companyKey = serialize([$company->name, $company->phone_number]);
+            $canonicalCompanyIds[$companyKey] ??= $company->id;
+            $canonicalCompanyId = $canonicalCompanyIds[$companyKey];
 
             if ($canonicalCompanyId !== $company->id) {
                 $duplicateCompanyIds[$company->id] = $canonicalCompanyId;
