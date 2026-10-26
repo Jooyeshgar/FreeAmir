@@ -8,18 +8,6 @@
         "framework"
     ],
     "license": "MIT",
-    "repositories": [
-        {
-            "type": "path",
-            "url": "../amir-enterprise/packages/invoice-categories",
-            "options": {
-                "symlink": true,
-                "versions": {
-                    "amir/invoice-categories": "dev-local"
-                }
-            }
-        }
-    ],
     "require": {
         "php": "^8.2",
         "barryvdh/laravel-debugbar": "^3.13",
@@ -27,7 +15,6 @@
         "doctrine/dbal": "^3.10",
         "fakerphp/faker": "^1.9.1",
         "guzzlehttp/guzzle": "^7.2",
-        "amir/invoice-categories": "dev-local",
         "jooyeshgar/moadian": "^3.0",
         "kasraghoreyshi/persian-faker": "^1.04",
         "lab404/laravel-impersonate": "^1.7",
