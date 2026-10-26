@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+project_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$project_dir"
+
+# Override Compose's development DB settings in the test process only.
+exec ./vendor/bin/sail run env \
+    APP_ENV=testing \
+    DB_CONNECTION=sqlite \
+    DB_DATABASE=:memory: \
+    DB_FOREIGN_KEYS=true \
+    sh -c '
+        set -eu
+        test_config_dir="$(mktemp -d)"
+        trap '\''rm -rf -- "$test_config_dir"'\'' EXIT
+        export APP_CONFIG_CACHE="$test_config_dir/config.php"
+        php vendor/bin/phpunit "$@"
+    ' test-sail "$@"

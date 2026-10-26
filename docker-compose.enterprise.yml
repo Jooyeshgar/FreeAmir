@@ -1,0 +1,8 @@
+services:
+    laravel.test:
+        volumes:
+            - type: bind
+              source: '${AMIR_ENTERPRISE_PATH:-../amir-enterprise}'
+              target: /var/www/amir-enterprise
+              bind:
+                  create_host_path: false
