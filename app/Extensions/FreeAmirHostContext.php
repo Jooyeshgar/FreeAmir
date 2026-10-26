@@ -39,10 +39,12 @@ final class FreeAmirHostContext implements HostContext
             throw new AuthenticationException;
         }
 
-        if ($this->activeFiscalYearId() !== $fiscalYearId || ! FiscalYear::query()
+        $hasAccess = $user->can('access-super-admin-panel') || FiscalYear::query()
             ->whereKey($fiscalYearId)
             ->whereHas('users', fn ($query) => $query->whereKey($user->getAuthIdentifier()))
-            ->exists()) {
+            ->exists();
+
+        if ($this->activeFiscalYearId() !== $fiscalYearId || ! $hasAccess) {
             throw new AuthorizationException;
         }
     }

@@ -4,8 +4,42 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "46f7707e6bf7ce4bf824cbd7da8e0886",
+    "content-hash": "b534f5b11066d364658eee59bd33ceee",
     "packages": [
+        {
+            "name": "amir/invoice-categories",
+            "version": "dev-local",
+            "dist": {
+                "type": "path",
+                "url": "../amir-enterprise/packages/invoice-categories",
+                "reference": "414906e0f3dd1cc0c2a15d73667becdff8d60098"
+            },
+            "require": {
+                "laravel/framework": "^12.0",
+                "php": "^8.2"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Amir\\InvoiceCategories\\InvoiceCategoriesServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Amir\\InvoiceCategories\\": "src/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "description": "Fiscal-year-scoped invoice categories for FreeAmir",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
+        },
         {
             "name": "barryvdh/laravel-debugbar",
             "version": "v3.16.5",
@@ -11603,12 +11637,14 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": [],
+    "stability-flags": {
+        "amir/invoice-categories": 20
+    },
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
         "php": "^8.2"
     },
-    "platform-dev": [],
-    "plugin-api-version": "2.6.0"
+    "platform-dev": {},
+    "plugin-api-version": "2.9.0"
 }
