@@ -107,6 +107,7 @@ class PaymentController extends Controller
         abort_unless($direction, 422, __('This invoice type cannot be settled by cheque.'));
 
         $normalized = [
+            'title' => filled($request->input('title')) ? trim((string) $request->input('title')) : null,
             'amount' => convertToFloat($request->input('amount', 0)),
             'bank_service_fee' => $this->normalizeBankServiceFee($request),
             'sayad_number' => preg_replace('/\D/', '', toEnglish((string) $request->input('sayad_number'))),
@@ -121,6 +122,7 @@ class PaymentController extends Controller
         }
 
         $validated = Validator::make(array_replace($request->all(), $normalized), [
+            'title' => ['nullable', 'string', 'min:2', 'max:255'],
             'amount' => ['required', 'numeric', 'gt:0'],
             'bank_service_fee' => ['required', 'numeric', 'min:0'],
             'issue_date' => ['required', 'date'],

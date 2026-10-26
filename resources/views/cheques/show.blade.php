@@ -1,4 +1,4 @@
-<x-app-layout :title="$cheque->title ?? $cheque->cheque_number ? __('Cheque #:number', ['number' => $cheque->cheque_number]) : __('Cheque')">
+<x-app-layout :title="$cheque->title ? $cheque->title : ($cheque->cheque_number ? __('Cheque #:number', ['number' => $cheque->cheque_number]) : __('Cheque'))">
     <x-show-message-bags />
 
     <div class="space-y-5 px-1 pb-6">

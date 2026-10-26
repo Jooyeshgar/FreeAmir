@@ -745,10 +745,10 @@
                                             @if($payment->cheque)
                                                 @can('cheques.show')
                                                     <a class="link link-primary" href="{{ route('cheques.show', $payment->cheque) }}">
-                                                        {{ __('Cheque number') }}: {{ localizeNumber($payment->cheque->cheque_number) ?: '—' }}
+                                                        {{ \Illuminate\Support\Str::limit($payment->cheque->title ? $payment->cheque->title : ($payment->cheque->cheque_number ? __('Cheque #:number', ['number' => localizeNumber($payment->cheque->cheque_number)]) : '—'), 15) }}
                                                     </a>
                                                 @else
-                                                    {{ __('Cheque number') }}: {{ localizeNumber($payment->cheque->cheque_number) ?: '—' }}
+                                                    {{ \Illuminate\Support\Str::limit($payment->cheque->title ? $payment->cheque->title : ($payment->cheque->cheque_number ? __('Cheque #:number', ['number' => localizeNumber($payment->cheque->cheque_number)]) : '—'), 15) }}
                                                 @endcan
                                                 <div class="text-xs opacity-60">
                                                     {{ __('Cheque serial') }}: {{ localizeNumber($payment->cheque->serial) ?: '—' }}
@@ -1065,6 +1065,10 @@
                                         {{ __('If you select a chequebook, it must belong to the selected bank account.') }}
                                     </div>
                                     <div class="grid [&>*]:min-w-0 gap-4 md:grid-cols-2">
+                                        <div>
+                                            <label class="label"><span class="label-text">{{ __('Cheque Title') }}</span></label>
+                                            <x-text-input input_name="title" input_class="input-bordered" maxlength="255" x-model="title" />
+                                        </div>
                                         <div x-data="{}">
                                             <label class="label"><span class="label-text">{{ __('Amount') }}</span></label>
                                             <x-text-input input_name="amount" input_class="input-bordered locale-number"
@@ -1079,12 +1083,16 @@
                                         </div>
                                         <div>
                                             <label class="label"><span class="label-text">{{ __('16-digit Sayad number') }}</span></label>
-                                            <x-text-input input_name="sayad_number" input_class="input-bordered font-mono"
-                                                inputmode="numeric" minlength="16" maxlength="16" required x-model="sayadNumber" />
+                                            <x-text-input input_name="sayad_number" input_class="input-bordered"
+                                                inputmode="numeric" minlength="16" maxlength="16" required x-model="sayadNumber"
+                                                @input="sayadNumber = $store.utils.convertToEnglish($event.target.value)"
+                                                x-effect="$el.value = $store.utils.localizeNumber(sayadNumber)" />
                                         </div>
                                         <div>
                                             <label class="label"><span class="label-text">{{ __('Cheque number') }}</span></label>
-                                            <x-text-input input_name="cheque_number" input_class="input-bordered" maxlength="50" x-model="chequeNumber" />
+                                            <x-text-input input_name="cheque_number" input_class="input-bordered" maxlength="50" x-model="chequeNumber"
+                                                @input="chequeNumber = $store.utils.convertToEnglish($event.target.value)"
+                                                x-effect="$el.value = $store.utils.localizeNumber(chequeNumber)" />
                                         </div>
                                         <div>
                                             <label class="label"><span class="label-text">{{ __('Issue date') }}</span></label>
@@ -1140,11 +1148,9 @@
                                         @endif
                                         <div>
                                             <label class="label"><span class="label-text">{{ __('Cheque serial') }}</span></label>
-                                            <x-text-input input_name="serial" input_class="input-bordered" maxlength="50" x-model="serial" />
-                                        </div>
-                                        <div x-show="editing" x-cloak>
-                                            <label class="label"><span class="label-text">{{ __('Cheque Title') }}</span></label>
-                                            <x-text-input input_name="title" input_class="input-bordered" maxlength="255" x-model="title" x-bind:disabled="!editing" />
+                                            <x-text-input input_name="serial" input_class="input-bordered" maxlength="50" x-model="serial"
+                                                @input="serial = $store.utils.convertToEnglish($event.target.value)"
+                                                x-effect="$el.value = $store.utils.localizeNumber(serial)" />
                                         </div>
                                     </div>
                                     <div>

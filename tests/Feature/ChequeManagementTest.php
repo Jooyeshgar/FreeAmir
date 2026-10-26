@@ -853,6 +853,7 @@ class ChequeManagementTest extends TestCase
 
         $response = $this->post(route('invoices.payments.store-cheque', $invoice), [
             'amount' => 1000,
+            'title' => 'HTTP invoice cheque title',
             'issue_date' => toEnglish(formatDate($invoice->date)),
             'due_date' => toEnglish(formatDate($invoice->date->copy()->addMonth())),
             'serial' => 'HTTP-CHEQUE',
@@ -866,6 +867,7 @@ class ChequeManagementTest extends TestCase
         $this->assertDatabaseHas('payments', ['invoice_id' => $invoice->id]);
         $cheque = $invoice->payments()->firstOrFail()->cheque;
         $this->assertSame(ChequeType::RECEIVABLE, $cheque->direction);
+        $this->assertSame('HTTP invoice cheque title', $cheque->title);
         $this->assertNull($cheque->chequebook_id);
         $this->assertSame($invoice->date->toDateString(), $cheque->write_date->toDateString());
         $this->assertSame($invoice->date->copy()->addMonth()->toDateString(), $cheque->due_date->toDateString());
