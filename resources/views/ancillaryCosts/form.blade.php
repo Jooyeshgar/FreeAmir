@@ -1,7 +1,7 @@
 <div x-data="ancillaryCostForm">
     <x-card class="rounded-2xl w-full" class_body="p-4">
-        <div class="grid grid-cols-1 gap-2 md:grid-cols-2 lg:flex lg:items-center lg:justify-start">
-            <div class="flex w-full lg:w-1/4">
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-12 lg:items-end">
+            <div class="flex w-full min-w-0 lg:col-span-4">
                 @php
                     $initialCustomerId = old('customer_id', $ancillaryCost->customer_id ?? null);
                     $initialSelectedValue = $initialCustomerId ? "customer-$initialCustomerId" : null;
@@ -31,28 +31,7 @@
                     <x-input x-bind:value="customer_id" name="customer_id" hidden />
                 </div>
             </div>
-            <div class="flex w-1/8 hidden">
-                <div class="flex flex-wrap w-full">
-                    @php
-                        $initialInvoiceId = old('invoice_id', $ancillaryCost->invoice_id ?? null);
-                        $initialSelectedValue = $initialInvoiceId ? "invoice-$initialInvoiceId" : null;
-                    @endphp
-                    <div class="flex flex-wrap w-full" x-data="{
-                            invoice_id: '{{ $initialInvoiceId }}',
-                            selectedValue: '{{ $initialSelectedValue }}',
-                        }">
-                        <span class="text-gray-500">{{ __('Invoice') }}</span>
-
-                        <x-select-box url="{{ route('ancillary-costs.search-invoice') }}" :options="[['headerGroup' => 'invoice', 'options' => $invoices]]" x-model="selectedValue"
-                            x-init="if (!selectedValue && invoice_id) {
-                                selectedValue = 'invoice-' + invoice_id;
-                            }" placeholder="{{ __('Select Invoice') }}"
-                            @selected="invoice_id = $event.detail.id; loadInvoiceProducts(invoice_id);" />
-                        <x-input x-bind:value="invoice_id" name="invoice_id" hidden />
-                    </div>
-                </div>
-            </div>
-            <div class="flex w-full lg:w-1/4">
+            <div class="flex w-full min-w-0 lg:col-span-3">
                 <div class="flex-wrap w-full">
                     <span class="text-gray-500 w-full"> {{ __('Cost Type') }} </span>
                     <select name="type" id="type" x-model="selectedCostType"
@@ -64,16 +43,31 @@
                     </select>
                 </div>
             </div>
-            <div class="flex w-full lg:w-1/8">
-                <x-text-input placeholder="0" title="{{ __('VAT') }} (%)" input_name="vat" x-model="vat"
+            <div class="flex w-full min-w-0 lg:col-span-1">
+                <x-text-input placeholder="{{ localizeNumber('0') }}" title="{{ __('VAT') }} (%)" input_name="vat" x-model="vat"
+                    @input="vat = $store.utils.convertToEnglish($event.target.value)"
+                    x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(vat))"
                     input_value="{{ old('vat') ?? $ancillaryCost->vat }}" label_text_class="text-gray-500"
                     label_class="w-full" input_class="border-gray-300"></x-text-input>
             </div>
-            <div class="flex w-1/8 hidden">
-                <x-text-input data-jdp class="w-3/4" title="{{ __('date') }}" input_name="date"
-                    placeholder="{{ __('date') }}" input_value="{{ old('date') ?? convertToJalali($invoice->date ?? now()) }}"
-                    label_text_class="text-gray-500 text-nowrap" input_class="datePicker w-full"></x-text-input>
+            <div class="flex w-full min-w-0 lg:col-span-2">
+                <div class="flex-wrap w-full">
+                    <span class="label-text text-gray-500">{{ __('Allocation method') }}</span>
+                    <select name="allocation_method" x-model="allocationMethod" @change="changeAllocationMethod()" class="select select-bordered w-full">
+                        <option value="manual">{{ __('Manual') }}</option>
+                        <option value="value">{{ __('Value') }}</option>
+                        <option value="weight">{{ __('Weight') }}</option>
+                    </select>
+                </div>
             </div>
+            <div x-show="allocationMethod !== 'manual'" x-cloak class="flex w-full min-w-0 lg:col-span-2">
+                <x-text-input title="{{ __('Ancillary cost before VAT') }}" label_text_class="text-gray-500"
+                    input_name="allocation_amount" x-model="allocationAmount"
+                    @input="allocationAmount = $store.utils.convertToEnglish($event.target.value); allocate()"
+                    x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(allocationAmount))"
+                    placeholder="{{ localizeNumber('0') }}" />
+            </div>
+        </div>
     </x-card>
 
     <x-card class="mt-4 rounded-2xl w-full" class_body="p-0 pt-0 mt-4">
@@ -109,11 +103,25 @@
                     <template x-for="(product, index) in availableProducts" :key="product.id">
                         <div class="flex w-max min-w-full gap-2 items-center px-4 py-3 border-b">
                             <div class="flex-1 text-center max-w-8">
-                                <span class="text-gray-500" x-text="index + 1"></span>
+                                <span class="text-gray-500" x-text="$store.utils.localizeNumber(String(index + 1))"></span>
                             </div>
 
                             <div class="flex-1 min-w-48 text-center">
                                 <span class="text-gray-500" x-text="product.name"></span>
+                                <span x-show="allocationWarning(product)" x-cloak
+                                    class="tooltip inline-block align-middle"
+                                    x-bind:class="availableProducts.length === 1 || product.id !== availableProducts[availableProducts.length - 1].id ? 'tooltip-left' : 'tooltip-top'"
+                                    x-bind:data-tip="allocationWarning(product)">
+                                    <button type="button" class="inline-flex items-center justify-center p-1 text-warning"
+                                        x-bind:aria-label="allocationWarning(product)">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24"
+                                            fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M10.3 3.9 2.1 18a2 2 0 0 0 1.7 3h16.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+                                            <path stroke-linecap="round" d="M12 9v4m0 4h.01" />
+                                        </svg>
+                                    </button>
+                                </span>
                                 <x-input name="" x-bind:name="'ancillaryCosts[' + index + '][product_id]'"
                                     x-bind:value="product.id" hidden />
                                 <x-input name="" x-bind:name="'ancillaryCosts[' + index + '][description]'"
@@ -121,7 +129,7 @@
                             </div>
 
                             <div class="flex-1 min-w-32 max-w-32">
-                                <x-text-input x-bind:value="product.quantity ?? 0" readonly
+                                <x-text-input x-bind:value="$store.utils.localizeNumber($store.utils.formatNumber(product.quantity ?? 0))" readonly
                                     label_class="w-full" input_class="border-gray-200 text-gray-500 text-center" />
                             </div>
 
@@ -131,14 +139,18 @@
                             </div>
 
                             <div class="flex-1 min-w-32 max-w-48">
-                                <x-text-input placeholder="0" ::value="productAmounts[product.id] || 0"
+                                <x-text-input placeholder="{{ localizeNumber('0') }}"
+                                    x-bind:value="$store.utils.localizeNumber($store.utils.formatNumber(productAmounts[product.id] ?? 0))"
                                     x-bind:name="'ancillaryCosts[' + index + '][amount]'"
-                                    x-bind:disabled="!selectedCostType" label_text_class="text-gray-500"
-                                    label_class="w-full" input_class="border-gray-300"
+                                    x-bind:readonly="allocationMethod !== 'manual'"
+                                    label_text_class="text-gray-500"
+                                    label_class="w-full"
+                                    x-bind:class="allocationMethod === 'manual' ? 'border-gray-300' : 'border-gray-200 text-gray-500'"
                                     x-on:input="updateProductAmount(product.id, $event.target.value)">
                                 </x-text-input>
                             </div>
 
+                        </div>
                     </template>
                 </div>
             </template>
@@ -150,15 +162,15 @@
             <div class="flex flex-wrap justify-end px-4 gap-4 py-3">
                 <div class="flex items-center gap-2 px-4 py-2 shadow-sm rounded-xl border border-gray-200 max-w-full">
                     <span class="text-sm font-medium text-gray-500">{{ __('Total') }} ({{ config('amir.currency') ?? __('Rial') }}):</span>
-                    <span class="text-lg font-bold text-green-600" x-text="calculateTotal().toLocaleString('fa-IR')">
-                        0
+                    <span class="text-lg font-bold text-green-600" x-text="$store.utils.localizeNumber(calculateTotal().toLocaleString())">
+                        {{ localizeNumber('0') }}
                     </span>
                 </div>
                 <div class="flex items-center gap-2 px-4 py-2 shadow-sm rounded-xl border border-gray-200 max-w-full">
                     <span class="text-sm font-medium text-gray-500">{{ __('Total with VAT') }} ({{ config('amir.currency') ?? __('Rial') }}):</span>
                     <span class="text-lg font-bold text-green-600"
-                        x-text="calculateTotalWithVat(Number(vat)).toLocaleString('fa-IR')">
-                        0
+                        x-text="$store.utils.localizeNumber(calculateTotalWithVat(vat).toLocaleString())">
+                        {{ localizeNumber('0') }}
                     </span>
                 </div>
             </div>
@@ -189,7 +201,57 @@
             Alpine.data('ancillaryCostForm', () => ({
                 availableProducts: [],
                 productAmounts: {},
-                selectedInvoiceId: {{ old('invoice_id') ?? ($ancillaryCost->invoice_id ?? 'null') }},
+                allocationMethod: @json(old('allocation_method', 'manual')),
+                allocationAmount: @json(old('allocation_amount', 0)),
+
+                get zeroWeightProducts() {
+                    return this.availableProducts.filter(product => Number(product.weight) <= 0);
+                },
+
+                allocationWarning(product) {
+                    if (this.allocationMethod === 'weight' && Number(product.weight) <= 0) {
+                        return @json(__('For this product, weight is not defined, so it will be excluded from allocation.'));
+                    }
+                    return '';
+                },
+
+                basis(product) {
+                    return Math.max(0, this.allocationMethod === 'weight'
+                        ? Number(product.quantity) * Number(product.weight)
+                        : Number(product.value));
+                },
+
+                get allocationBasisTotal() {
+                    return this.availableProducts.reduce((total, product) => total + this.basis(product), 0);
+                },
+
+                changeAllocationMethod() {
+                    if (this.allocationMethod !== 'manual') {
+                        if (!this.number(this.allocationAmount)) this.allocationAmount = this.calculateTotal();
+                        this.allocate();
+                    }
+                },
+
+                number(value) {
+                    return Number(this.$store.utils.convertToEnglish(value)) || 0;
+                },
+
+                allocate() {
+                    if (this.allocationMethod === 'manual') return;
+                    const totalBasis = this.allocationBasisTotal;
+                    const cents = Math.round(Math.max(0, this.number(this.allocationAmount)) * 100);
+                    // Round cumulative shares so the saved rows sum to the entered amount.
+                    let cumulativeBasis = 0;
+                    let allocatedCents = 0;
+                    this.productAmounts = Object.fromEntries(this.availableProducts.map(product => {
+                        cumulativeBasis += this.basis(product);
+                        const cumulativeCents = totalBasis > 0 ? Math.round(cents * cumulativeBasis / totalBasis) : 0;
+                        const share = cumulativeCents - allocatedCents;
+                        allocatedCents = cumulativeCents;
+                        return [product.id, share / 100];
+                    }));
+                },
+                selectedInvoiceId: @json($invoice->id),
                 selectedCostType: '{{ old('type') ?? ($ancillaryCost->type?->valueName() ?? '') }}',
                 selectedCustomerId: {{ old('customer_id') ?? ($ancillaryCost->customer_id ?? 'null') }},
                 vat: '{{ old('vat') ?? ($ancillaryCost->vat ?? 0) }}',
@@ -201,7 +263,7 @@
                     }
 
                     // Load existing amounts if editing
-                    const existingCosts = {!! json_encode($ancillaryCostItems ?? [], JSON_UNESCAPED_UNICODE) !!};
+                    const existingCosts = @json(old('ancillaryCosts', $ancillaryCostItems ?? []));
                     if (existingCosts && existingCosts.length > 0) {
                         existingCosts.forEach(cost => {
                             if (cost.product_id && cost.amount) {
@@ -232,13 +294,13 @@
                 calculateAmountPerUnit(productId, quantity) {
                     const productQuantity = Number(this.$store.utils.convertToEnglish(quantity ?? 0)) ||
                         0;
-                    if (!productQuantity) return Number(this.$store.utils.convertToEnglish(0));
+                    if (!productQuantity) return this.$store.utils.localizeNumber('0');
                     const amount = Number(this.$store.utils.convertToEnglish(this.productAmounts[
                         productId] ?? 0)) || 0;
                     const perUnit = amount / productQuantity;
-                    return perUnit.toLocaleString('fa-IR', {
+                    return this.$store.utils.localizeNumber(perUnit.toLocaleString(undefined, {
                         maximumFractionDigits: 2
-                    });
+                    }));
                 },
 
                 loadInvoiceProducts(invoiceId) {
@@ -252,12 +314,9 @@
                         .then(response => response.json())
                         .then(data => {
                             this.availableProducts = data.products;
-                            // Initialize amounts for new products
-                            data.products.forEach(product => {
-                                if (!(product.id in this.productAmounts)) {
-                                    this.productAmounts[product.id] = 0;
-                                }
-                            });
+                            this.productAmounts = Object.fromEntries(data.products.map(product =>
+                                [product.id, this.productAmounts[product.id] ?? 0]));
+                            this.allocate();
                         })
                         .catch(error => {
                             console.error('Error loading products:', error);
