@@ -4,7 +4,10 @@
             method="POST">
             @csrf
             <div class="card-body">
-                <h2 class="card-title">{{ __('Add Ancillary Cost') }}</h2>
+                <div class="flex items-center gap-1">
+                    <h2 class="card-title">{{ __('Add Ancillary Cost') }}</h2>
+                    <x-user-guide-link source="invoices/purchases/ancillary-costs/ancillary-costs.md" />
+                </div>
                 <x-show-message-bags />
 
                 @include('ancillaryCosts.form')

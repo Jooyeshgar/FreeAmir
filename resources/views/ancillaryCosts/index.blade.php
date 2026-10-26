@@ -2,6 +2,10 @@
     <x-show-message-bags />
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
+            <div class="flex items-center gap-1">
+                <h2 class="card-title">{{ __('Ancillary Costs') }}</h2>
+                <x-user-guide-link source="invoices/purchases/ancillary-costs/ancillary-costs.md" />
+            </div>
             <dl class="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
                 @foreach (\App\Enums\InvoiceStatus::cases() as $status)
                     @if (! $status->isReadyToApprove() && ! $status->isRejected())

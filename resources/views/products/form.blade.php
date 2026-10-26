@@ -83,6 +83,11 @@
             placeholder="{{ __('Please insert quantity') }}" />
     </div>
 
+    <div class="col-span-2 md:col-span-1">
+        <x-input name="weight" id="weight" title="{{ __('Unit weight (kg)') }}"
+            :value="old('weight', $product->weight ?? 0)" placeholder="0" />
+    </div>
+
     @include('products.websites.form', ['websites' => isset($product) ? $product->productWebsites : []])
 
 </div>
