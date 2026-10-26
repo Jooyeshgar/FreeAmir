@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ChequeType;
+use App\Models\Cheque;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Services\ChequeService;
@@ -60,7 +61,15 @@ class PaymentController extends Controller
 
     public function update(Request $request, Invoice $invoice, Payment $payment)
     {
-        abort_unless($payment->invoice_id === $invoice->id && ! $payment->cheque_id, 404);
+        abort_unless($payment->invoice_id === $invoice->id, 404);
+
+        if ($payment->cheque_id) {
+            $cheque = Cheque::query()->findOrFail($payment->cheque_id);
+            $data = $this->chequeService->validateInvoiceCheque($request->all(), $invoice, $cheque);
+            $this->chequeService->update($cheque, $request->user(), $data);
+
+            return redirect()->route('invoices.show', $invoice)->with('success', __('Invoice payment cheque updated successfully.'));
+        }
 
         $normalized = array_replace($request->all(), [
             'amount' => convertToFloat($request->input('amount', 0)),
