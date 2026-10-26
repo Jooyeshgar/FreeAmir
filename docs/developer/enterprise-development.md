@@ -74,5 +74,5 @@ After the sibling mount is active, the Enterprise checkout uses its own Composer
 ```
 
 These are the existing package-skeleton checks. They do not prove that invoice categories are implemented.
-The package-specific and host integration suites are added in the later checkpoints documented in
-[the extension API](extensions.md).
+The package-specific and host integration suites are under the Enterprise checkout's
+`integration/freeamir/` directory and are documented in the invoice-categories README.

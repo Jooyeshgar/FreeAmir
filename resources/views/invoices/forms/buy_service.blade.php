@@ -45,6 +45,8 @@
         </div>
     </div>
 
+    <x-extension-slot :slot="$extensionSlot ?? 'invoice.create.fields'" :invoice="$invoice" />
+
     <div class="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2 xl:flex xl:justify-start">
         <x-text-input input_value="{{ old('invoice_id') ?? ($invoice->id ?? '') }}" input_name="invoice_id"
             label_text_class="text-gray-500" label_class="w-full hidden"></x-text-input>

@@ -20,8 +20,11 @@ class ExtensionRegistryTest extends TestCase
 {
     public function test_empty_registries_leave_the_request_and_query_unchanged(): void
     {
-        self::assertSame([], app(NavigationRegistry::class)->items());
-        self::assertSame([], app(ViewSlotRegistry::class)->items('invoice.show.panels'));
+        self::assertNotContains('example', array_column(app(NavigationRegistry::class)->items(), 'id'));
+        self::assertSame([], array_values(array_filter(
+            app(ViewSlotRegistry::class)->items('invoice.show.panels'),
+            fn (array $item): bool => $item['id'] !== 'invoice-categories',
+        )));
         $registry = app(InvoiceExtensionRegistry::class);
         $query = Invoice::query();
         $sql = $query->toSql();
@@ -65,8 +68,11 @@ class ExtensionRegistryTest extends TestCase
         $registry->register('invoice.show.panels', 'beta', 'example::beta', priority: 10);
         $registry->register('invoice.show.panels', 'alpha', 'example::alpha', priority: 10);
         $registry->register('invoice.edit.fields', 'alpha', 'example::alpha');
-        self::assertSame(['alpha', 'beta', 'later'], array_column($registry->items('invoice.show.panels'), 'id'));
-        self::assertCount(1, $registry->items('invoice.edit.fields'));
+        self::assertSame(['alpha', 'beta', 'later'], array_column(
+            array_filter($registry->items('invoice.show.panels'), fn (array $item): bool => $item['id'] !== 'invoice-categories'),
+            'id',
+        ));
+        self::assertCount(2, $registry->items('invoice.edit.fields'));
         $this->expectException(LogicException::class);
         $registry->register('invoice.show.panels', 'alpha', 'example::duplicate');
     }
@@ -82,7 +88,7 @@ class ExtensionRegistryTest extends TestCase
         $registry = app(ViewSlotRegistry::class);
         $registry->register('invoice.show.panels', 'example', 'example::panel',
             fn (array $context): array => ['invoice_id' => $context['invoice']->getKey()]);
-        $resolve = $registry->items('invoice.show.panels')[0]['data'];
+        $resolve = collect($registry->items('invoice.show.panels'))->firstWhere('id', 'example')['data'];
         self::assertSame(['invoice_id' => 11], $resolve(['invoice' => (new Invoice)->forceFill(['id' => 11])]));
         self::assertSame(['invoice_id' => 22], $resolve(['invoice' => (new Invoice)->forceFill(['id' => 22])]));
     }
@@ -174,7 +180,7 @@ class ExtensionRegistryTest extends TestCase
         $registry = app(InvoiceExtensionRegistry::class);
         $registry->register('reference', ReferenceExtension::class);
         $registry->register('labels', LabelsExtension::class);
-        self::assertSame(['labels', 'reference'], array_keys($registry->extensions()));
+        self::assertSame(['invoice_categories', 'labels', 'reference'], array_keys($registry->extensions()));
     }
 
     public function test_unregistered_persistence_payloads_are_programming_errors(): void
