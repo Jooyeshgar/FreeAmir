@@ -745,10 +745,10 @@
                                             @if($payment->cheque)
                                                 @can('cheques.show')
                                                     <a class="link link-primary" href="{{ route('cheques.show', $payment->cheque) }}">
-                                                        {{ __('Cheque number') }}: {{ localizeNumber($payment->cheque->cheque_number) ?: '—' }}
+                                                        {{ \Illuminate\Support\Str::limit($payment->cheque->title ? $payment->cheque->title : ($payment->cheque->cheque_number ? __('Cheque #:number', ['number' => localizeNumber($payment->cheque->cheque_number)]) : '—'), 15) }}
                                                     </a>
                                                 @else
-                                                    {{ __('Cheque number') }}: {{ localizeNumber($payment->cheque->cheque_number) ?: '—' }}
+                                                    {{ \Illuminate\Support\Str::limit($payment->cheque->title ? $payment->cheque->title : ($payment->cheque->cheque_number ? __('Cheque #:number', ['number' => localizeNumber($payment->cheque->cheque_number)]) : '—'), 15) }}
                                                 @endcan
                                                 <div class="text-xs opacity-60">
                                                     {{ __('Cheque serial') }}: {{ localizeNumber($payment->cheque->serial) ?: '—' }}
@@ -803,7 +803,31 @@
                                                     @endcan
                                                 @endif
 
-                                                @if (!$payment->cheque_id)
+                                                @if ($payment->cheque)
+                                                    @can('invoices.payments.update')
+                                                        @php
+                                                            $initialChequeHistory = $payment->cheque->histories->firstWhere('from_status', null);
+                                                        @endphp
+                                                        <button type="button" x-data="{}" class="btn btn-xs btn-outline" data-cheque-payment-id="{{ $payment->id }}"
+                                                            @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : '' }}"
+                                                            @click="$dispatch('invoice-cheque-edit', {
+                                                                id: @js($payment->id),
+                                                                title: @js($payment->cheque->title ?? ''),
+                                                                amount: @js((string) $payment->cheque->amount),
+                                                                bankServiceFee: @js((string) ((float) $initialChequeHistory?->bank_service_fee ?: (float) $payment->bank_service_fee)),
+                                                                issueDate: @js(convertToJalali($payment->cheque->write_date, true)),
+                                                                dueDate: @js(convertToJalali($payment->cheque->due_date, true)),
+                                                                sayadNumber: @js($payment->cheque->sayad_number),
+                                                                chequeNumber: @js($payment->cheque->cheque_number ?? ''),
+                                                                serial: @js($payment->cheque->serial ?? ''),
+                                                                bankAccountId: @js((string) ($payment->cheque->bank_account_id ?? '')),
+                                                                chequebookId: @js((string) ($payment->cheque->chequebook_id ?? '')),
+                                                                description: @js($payment->cheque->desc ?? '')
+                                                            })">
+                                                            {{ __('Edit') }}
+                                                        </button>
+                                                    @endcan
+                                                @else
                                                     @can('invoices.payments.update')
                                                         <button type="button" x-data="{}" class="btn btn-xs btn-outline" data-payment-id="{{ $payment->id }}"
                                                             @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : '' }}"
@@ -866,7 +890,7 @@
                                 @can('invoices.payments.store-cheque')
                                     <button type="button" @disabled($fiscalYearClosed)
                                         class="btn btn-sm lg:btn-md btn-secondary gap-2 {{ $fiscalYearClosed ? 'btn-disabled cursor-not-allowed' : '' }}"
-                                        title="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : '' }}" onclick="cheque_payment_modal.showModal()">
+                                        title="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : '' }}" onclick="window.dispatchEvent(new CustomEvent('invoice-cheque-create'))">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 lg:h-5 lg:w-5" fill="none"
                                             viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -1020,108 +1044,128 @@
                             <button>{{ __('close') }}</button>
                         </form>
                     </dialog>
-                    @can('invoices.payments.store')
-                    @if($chequeDirection)
-                        @can('invoices.payments.store-cheque')
-                            <dialog id="cheque_payment_modal" class="modal">
-                                <div class="modal-box max-w-3xl">
-                                    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
-                                        <div>
-                                            <h3 class="text-sm md:text-base lg:text-lg break-words font-bold">{{ __('Pay invoice by cheque') }}</h3>
-                                            <p class="text-sm opacity-70">{{ $chequeDirection->label() }} - {{ $invoice->customer?->name }}</p>
-                                        </div>
-                                        <span class="badge badge-sm md:badge-md lg:badge-lg h-auto max-w-full whitespace-normal py-1 badge-secondary">{{ __('Remaining Amount') }}: {{ formatNumber($remainingAmount) }}</span>
+                    @if($chequeDirection && ($chequePaymentModalState['canCreate'] || $chequePaymentModalState['canEdit']))
+                        <dialog id="cheque_payment_modal" class="modal"
+                            x-data="invoiceChequeForm(@js($chequePaymentModalState), @js(route('invoices.payments.store-cheque', $invoice)), @js(route('invoices.payments.update', [$invoice, '__PAYMENT__'])))"
+                            x-on:invoice-cheque-create.window="create()" x-on:invoice-cheque-edit.window="edit($event.detail)" x-init="restore()">
+                            <div class="modal-box max-w-3xl">
+                                <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                                    <div>
+                                        <h3 class="text-sm md:text-base lg:text-lg break-words font-bold"><span x-text="editing ? @js(__('Edit cheque')) : @js(__('Pay invoice by cheque'))"></span></h3>
+                                        <p class="text-sm opacity-70">{{ $chequeDirection->label() }} - {{ $invoice->customer?->name }}</p>
                                     </div>
-                                    <form method="POST" action="{{ route('invoices.payments.store-cheque', $invoice) }}">
-                                        @csrf
-                                        <div class="alert alert-info p-1 mb-2 text-sm">
-                                            {{ __('If you select a chequebook, it must belong to the selected bank account.') }}
+                                    <span class="badge badge-sm md:badge-md lg:badge-lg h-auto max-w-full whitespace-normal py-1 badge-secondary">{{ __('Remaining Amount') }}: <span x-text="$store.utils.convertToFarsi($store.utils.formatNumber(availableAmount))"></span></span>
+                                </div>
+                                <form method="POST" :action="action" @submit="if (@js($fiscalYearClosed)) $event.preventDefault()">
+                                    @csrf
+                                    <input type="hidden" name="_method" value="PUT" :disabled="!editing">
+                                    <input type="hidden" name="cheque_payment_mode" :value="editing ? 'edit' : 'create'">
+                                    <input type="hidden" name="cheque_payment_id" :value="paymentId">
+                                    <div class="alert alert-info p-1 mb-2 text-sm">
+                                        {{ __('If you select a chequebook, it must belong to the selected bank account.') }}
+                                    </div>
+                                    <div class="grid [&>*]:min-w-0 gap-4 md:grid-cols-2">
+                                        <div>
+                                            <label class="label"><span class="label-text">{{ __('Cheque Title') }}</span></label>
+                                            <x-text-input input_name="title" input_class="input-bordered" maxlength="255" x-model="title" />
                                         </div>
-                                        <div class="grid [&>*]:min-w-0 gap-4 md:grid-cols-2">
-                                            <div x-data="{ amountInput: '{{ $remainingAmount }}' }">
-                                                <label class="label"><span class="label-text">{{ __('Amount') }}</span></label>
-                                                <x-text-input input_name="amount" input_class="input-bordered locale-number"
-                                                    input_value="{{ $remainingAmount }}" required x-model="amountInput"
-                                                    @input="amountInput = $store.utils.cleanupNumber($event.target.value)"
-                                                    x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(amountInput))" />
-                                            </div>
-                                            <div class="md:col-span-1" x-data="{ chequeFee: @js((string) old('bank_service_fee', 0)) }">
-                                                <x-text-input title="{{ __('Bank service fee') }}" label_text_class="text-sm text-gray-500" input_name="bank_service_fee" id_input="cheque_payment_fee" input_class="locale-number" :input_value="old('bank_service_fee', 0)"
-                                                    inputmode="decimal" x-model="chequeFee" @input="chequeFee = $store.utils.cleanupNumber($event.target.value)"
-                                                    x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(chequeFee))" />
-                                            </div>
-                                            <div>
-                                                <label class="label"><span class="label-text">{{ __('16-digit Sayad number') }}</span></label>
-                                                <x-text-input input_name="sayad_number" input_class="input-bordered font-mono"
-                                                    inputmode="numeric" minlength="16" maxlength="16" required />
-                                            </div>
-                                            <div>
-                                                <label class="label"><span class="label-text">{{ __('Cheque number') }}</span></label>
-                                                <x-text-input input_name="cheque_number" input_class="input-bordered" maxlength="50" />
-                                            </div>
-                                            <div>
-                                                <label class="label"><span class="label-text">{{ __('Issue date') }}</span></label>
-                                                <x-text-input data-jdp input_name="issue_date" id_input="cheque_issue_date"
-                                                    autocomplete="off" readonly
-                                                    input_class="input-bordered" input_value="{{ convertToJalali(now(), true) }}" required />
-                                            </div>
-                                            <div>
-                                                <label class="label"><span class="label-text">{{ __('Due date') }}</span></label>
-                                                <x-text-input data-jdp input_name="due_date" id_input="cheque_due_date"
-                                                    autocomplete="off" readonly
-                                                    input_class="input-bordered" required />
-                                            </div>
-                                            @if($chequeDirection !== \App\Enums\ChequeType::PAYABLE)
-                                                <div>
-                                                    <label class="label"><span class="label-text">{{ __('Bank') }}</span></label>
-                                                    <select name="bank_id" class="select select-bordered w-full" required>
-                                                        <option value="">{{ __('Select bank') }}</option>
-                                                        @foreach($chequeBanks as $bank)
-                                                            <option value="{{ $bank->id }}">{{ $bank->name }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                </div>
-                                            @endif
-                                            @if($chequeDirection === \App\Enums\ChequeType::PAYABLE)
-                                                <div>
-                                                    <label class="label"><span class="label-text">{{ __('Bank account') }}</span></label>
-                                                    <select name="bank_account_id" class="select select-bordered w-full" required>
-                                                        <option value="">{{ __('Select bank account') }}</option>
-                                                        @foreach($chequeBankAccounts as $account)
-                                                            <option value="{{ $account->id }}">{{ $account->name }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                </div>
-                                                <div>
-                                                    <label class="label"><span class="label-text">{{ __('Chequebook') }}</span></label>
-                                                    <select name="chequebook_id" class="select select-bordered w-full">
-                                                        <option value="">{{ __('No chequebook') }}</option>
-                                                        @foreach($chequebooks as $chequebook)
-                                                            <option value="{{ $chequebook->id }}">{{ $chequebook->bankAccount?->name }}</option>
-                                                        @endforeach
-                                                    </select>
-                                                </div>
-                                            @endif
-                                            <div>
-                                                <label class="label"><span class="label-text">{{ __('Cheque serial') }}</span></label>
-                                                <x-text-input input_name="serial" input_class="input-bordered" />
-                                            </div>
+                                        <div x-data="{}">
+                                            <label class="label"><span class="label-text">{{ __('Amount') }}</span></label>
+                                            <x-text-input input_name="amount" input_class="input-bordered locale-number"
+                                                input_value="{{ $chequePaymentModalState['amount'] }}" required x-model="amount"
+                                                @input="amount = $store.utils.cleanupNumber($event.target.value)"
+                                                x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(amount))" />
+                                        </div>
+                                        <div class="md:col-span-1">
+                                            <x-text-input title="{{ __('Bank service fee') }}" label_text_class="text-sm text-gray-500" input_name="bank_service_fee" id_input="cheque_payment_fee" input_class="locale-number" :input_value="$chequePaymentModalState['bankServiceFee']"
+                                                inputmode="decimal" x-model="bankServiceFee" @input="bankServiceFee = $store.utils.cleanupNumber($event.target.value)"
+                                                x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(bankServiceFee))" />
                                         </div>
                                         <div>
-                                            <label class="label"><span class="label-text">{{ __('Description') }}</span></label>
-                                            <textarea name="description" class="textarea textarea-bordered w-full" rows="2"></textarea>
+                                            <label class="label"><span class="label-text">{{ __('16-digit Sayad number') }}</span></label>
+                                            <x-text-input input_name="sayad_number" input_class="input-bordered"
+                                                inputmode="numeric" minlength="16" maxlength="16" required x-model="sayadNumber"
+                                                @input="sayadNumber = $store.utils.convertToEnglish($event.target.value)"
+                                                x-effect="$el.value = $store.utils.localizeNumber(sayadNumber)" />
                                         </div>
-                                        <div class="modal-action">
-                                            <button type="button" class="btn btn-sm md:btn-sm lg:btn-md" onclick="cheque_payment_modal.close()">{{ __('Cancel') }}</button>
-                                            <button type="submit" class="btn btn-sm md:btn-sm lg:btn-md btn-secondary">{{ __('Register cheque and pay') }}</button>
+                                        <div>
+                                            <label class="label"><span class="label-text">{{ __('Cheque number') }}</span></label>
+                                            <x-text-input input_name="cheque_number" input_class="input-bordered" maxlength="50" x-model="chequeNumber"
+                                                @input="chequeNumber = $store.utils.convertToEnglish($event.target.value)"
+                                                x-effect="$el.value = $store.utils.localizeNumber(chequeNumber)" />
                                         </div>
-                                    </form>
-                                </div>
-                                <form method="dialog" class="modal-backdrop"><button>{{ __('close') }}</button></form>
-                            </dialog>
-                        @endcan
+                                        <div>
+                                            <label class="label"><span class="label-text">{{ __('Issue date') }}</span></label>
+                                            <x-text-input data-jdp input_name="issue_date" id_input="cheque_issue_date" x-model="issueDate"
+                                                autocomplete="off" readonly
+                                                input_class="input-bordered" input_value="{{ $chequePaymentModalState['issueDate'] }}" required />
+                                        </div>
+                                        <div>
+                                            <label class="label"><span class="label-text">{{ __('Due date') }}</span></label>
+                                            <x-text-input data-jdp input_name="due_date" id_input="cheque_due_date" x-model="dueDate"
+                                                autocomplete="off" readonly
+                                                input_class="input-bordered" required />
+                                        </div>
+                                        @if($chequeDirection !== \App\Enums\ChequeType::PAYABLE)
+                                            <div x-show="!editing" x-cloak>
+                                                <label class="label"><span class="label-text">{{ __('Bank') }}</span></label>
+                                                <select name="bank_id" class="select select-bordered w-full" x-model="bankId" :required="!editing" :disabled="editing">
+                                                    <option value="">{{ __('Select bank') }}</option>
+                                                    @foreach($chequeBanks as $bank)
+                                                        <option value="{{ $bank->id }}">{{ $bank->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div x-show="editing" x-cloak>
+                                                <label class="label"><span class="label-text">{{ __('Bank account') }}</span></label>
+                                                <select name="bank_account_id" class="select select-bordered w-full" x-model="bankAccountId" :disabled="!editing">
+                                                    <option value="">{{ __('Select bank account') }}</option>
+                                                    @foreach($chequeBankAccounts as $account)
+                                                        <option value="{{ $account->id }}">{{ $account->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                        @endif
+                                        @if($chequeDirection === \App\Enums\ChequeType::PAYABLE)
+                                            <div>
+                                                <label class="label"><span class="label-text">{{ __('Bank account') }}</span></label>
+                                                <select name="bank_account_id" class="select select-bordered w-full" x-model="bankAccountId" required>
+                                                    <option value="">{{ __('Select bank account') }}</option>
+                                                    @foreach($chequeBankAccounts as $account)
+                                                        <option value="{{ $account->id }}">{{ $account->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="label"><span class="label-text">{{ __('Chequebook') }}</span></label>
+                                                <select name="chequebook_id" class="select select-bordered w-full" x-model="chequebookId">
+                                                    <option value="">{{ __('No chequebook') }}</option>
+                                                    @foreach($chequebooks as $chequebook)
+                                                        <option value="{{ $chequebook->id }}">{{ $chequebook->bankAccount?->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+                                        @endif
+                                        <div>
+                                            <label class="label"><span class="label-text">{{ __('Cheque serial') }}</span></label>
+                                            <x-text-input input_name="serial" input_class="input-bordered" maxlength="50" x-model="serial"
+                                                @input="serial = $store.utils.convertToEnglish($event.target.value)"
+                                                x-effect="$el.value = $store.utils.localizeNumber(serial)" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="label"><span class="label-text">{{ __('Description') }}</span></label>
+                                        <textarea name="description" class="textarea textarea-bordered w-full" rows="2" x-model="description"></textarea>
+                                    </div>
+                                    <div class="modal-action">
+                                        <button type="button" class="btn btn-sm md:btn-sm lg:btn-md" onclick="cheque_payment_modal.close()">{{ __('Cancel') }}</button>
+                                        <button type="submit" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : '' }}" class="btn btn-sm md:btn-sm lg:btn-md btn-secondary" x-text="editing ? @js(__('Save changes')) : @js(__('Register cheque and pay'))"></button>
+                                    </div>
+                                </form>
+                            </div>
+                            <form method="dialog" class="modal-backdrop"><button>{{ __('close') }}</button></form>
+                        </dialog>
                     @endif
-                    @endcan
                     @pushOnce('scripts')
                         <script type="module">
                             const invoiceModalDateSelector = [
@@ -1507,6 +1551,41 @@
                     this.description = payment.description;
                     this.setSubject(payment.subjectId, payment.subjectName);
                     document.getElementById('payment_modal').showModal();
+                },
+            };
+        }
+
+        function invoiceChequeForm(initial, createUrl, updateUrl) {
+            const defaults = {
+                paymentId: '', title: '', amount: @js((string) $remainingAmount),
+                availableAmount: @js((string) $remainingAmount), bankServiceFee: '0',
+                issueDate: @js(convertToJalali(now(), true)), dueDate: '', sayadNumber: '',
+                chequeNumber: '', serial: '', bankId: '', bankAccountId: '', chequebookId: '', description: '',
+            };
+            return {
+                ...defaults,
+                ...initial,
+                action: initial.editing ? updateUrl.replace('__PAYMENT__', initial.paymentId) : createUrl,
+                restore() {
+                    if (initial.closed || !initial.restore) return;
+                    if (this.editing ? !initial.canEdit : !initial.canCreate) return;
+                    this.$nextTick(() => document.getElementById('cheque_payment_modal').showModal());
+                },
+                create() {
+                    if (initial.closed || !initial.canCreate) return;
+                    Object.assign(this, defaults);
+                    this.editing = false;
+                    this.action = createUrl;
+                    this.$nextTick(() => document.getElementById('cheque_payment_modal').showModal());
+                },
+                edit(cheque) {
+                    if (initial.closed || !initial.canEdit) return;
+                    Object.assign(this, defaults, cheque);
+                    this.paymentId = cheque.id;
+                    this.editing = true;
+                    this.availableAmount = Number(defaults.availableAmount) + Number(cheque.amount);
+                    this.action = updateUrl.replace('__PAYMENT__', cheque.id);
+                    this.$nextTick(() => document.getElementById('cheque_payment_modal').showModal());
                 },
             };
         }

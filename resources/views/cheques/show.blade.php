@@ -1,17 +1,4 @@
-@php
-    $actionLabels = [
-        'deposit' => __('Deposit to bank'),
-        'clear' => __('Clear / cash'),
-        'endorse' => __('Endorse / transfer'),
-        'bounce' => __('Mark dishonoured'),
-        'return' => __('Return to customer'),
-        'cancel' => __('Cancel / take back'),
-        'execute' => __('Execute guarantee'),
-        'fee' => __('Record bank service fee'),
-    ];
-@endphp
-
-<x-app-layout :title="$cheque->title ?? $cheque->cheque_number ? __('Cheque #:number', ['number' => $cheque->cheque_number]) : __('Cheque')">
+<x-app-layout :title="$cheque->title ? $cheque->title : ($cheque->cheque_number ? __('Cheque #:number', ['number' => $cheque->cheque_number]) : __('Cheque'))">
     <x-show-message-bags />
 
     <div class="space-y-5 px-1 pb-6">
@@ -74,7 +61,7 @@
                             </span>
                         </div>
 
-                        @if ($cheque->histories->whereNotNull('from_status')->isEmpty())
+                        @can('cheques.edit')
                             <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" class="btn btn-primary btn-sm gap-1.5" href="{{ route('cheques.edit', $cheque) }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor">
@@ -83,7 +70,7 @@
                                 </svg>
                                 {{ __('Edit') }}
                             </x-closed-year-action-link>
-                        @endif
+                        @endcan
                         <form method="POST" action="{{ route('cheques.destroy', $cheque) }}">
                             @csrf
                             @method('DELETE')
