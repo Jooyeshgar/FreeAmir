@@ -116,4 +116,5 @@
             </div>
         </div>
     </div>
+    <x-extension-slot slot="invoice.show.panels" :invoice="$invoice" />
 </x-app-layout>

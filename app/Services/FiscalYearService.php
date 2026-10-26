@@ -24,6 +24,7 @@ use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Enums\SubjectType;
 use App\Enums\ThursdayStatus;
+use App\Extensions\Events\FiscalYearCopied;
 use App\Models\AncillaryCost;
 use App\Models\AncillaryCostItem;
 use App\Models\AttendanceLog;
@@ -3017,6 +3018,8 @@ class FiscalYearService
 
         $sectionsToCopy = ['subjects', 'configs', 'banks', 'customers', 'products', 'warehouses', 'services', 'employees']; // Sections to copy to the new fiscal year
         $newFiscalYear = self::createWithCopiedData($newFiscalYearData, $fiscalYear->id, $sectionsToCopy);
+
+        event(new FiscalYearCopied($fiscalYear, $newFiscalYear));
 
         self::copyMoadianKeys($fiscalYear, $newFiscalYear);
 

@@ -14,8 +14,9 @@
                 </h2>
                 <x-show-message-bags />
 
-                @php($invoice = $invoice ?? new \App\Models\Invoice())
-                @switch($invoice_type)
+            @php($invoice = $invoice ?? new \App\Models\Invoice())
+            @php($extensionSlot = 'invoice.create.fields')
+            @switch($invoice_type)
                     @case('sell')
                         @include('invoices.forms.sell')
                     @break

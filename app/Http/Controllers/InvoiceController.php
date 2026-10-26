@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\ChequeType;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Extensions\InvoiceExtensionRegistry;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\Bank;
 use App\Models\BankAccount;
@@ -28,6 +29,7 @@ use App\Services\MoadianService;
 use App\Services\PaymentService;
 use App\Services\ReportExportService;
 use DB;
+use Closure;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -65,6 +67,8 @@ class InvoiceController extends Controller
         $builder->when(in_array($invoiceType, [InvoiceType::SELL, InvoiceType::VOID], true),
             fn ($q) => $q->with('latestMoadianHistory')
         );
+
+        app(InvoiceExtensionRegistry::class)->extendQuery($builder, $request);
 
         $isServiceBuy = $this->isServiceBuyFilterActive($request, $invoiceType);
         $this->applyInvoiceFilters($builder, $request, $invoiceType, $isServiceBuy);
@@ -280,6 +284,7 @@ class InvoiceController extends Controller
     public function store(StoreInvoiceRequest $request)
     {
         $validated = $request->validated();
+        $extensionPayloads = $this->validatedExtensionPayloads($request);
         $invoiceData = InvoiceService::extractInvoiceData($validated);
         $items = InvoiceService::mapTransactionsToItems($validated['transactions']);
 
@@ -289,7 +294,7 @@ class InvoiceController extends Controller
             auth()->user()->can('invoices.approve');
         }
 
-        $result = $this->invoiceService->createInvoice(auth()->user(), $invoiceData, $items, $approved);
+        $result = $this->invoiceService->createInvoice(auth()->user(), $invoiceData, $items, $approved, $this->extensionPersister($extensionPayloads));
 
         [$msgType, $msg] = $this->invoiceMessage($result, 'created', $approved);
 
@@ -504,6 +509,7 @@ class InvoiceController extends Controller
         }
 
         $validated = $request->validated();
+        $extensionPayloads = $this->validatedExtensionPayloads($request, $invoice);
         $invoiceData = InvoiceService::extractInvoiceData($validated);
         $items = InvoiceService::mapTransactionsToItems($validated['transactions'], true);
 
@@ -517,7 +523,7 @@ class InvoiceController extends Controller
             auth()->user()->can('invoices.approve');
         }
 
-        $result = $this->invoiceService->updateInvoice($invoice->id, $invoiceData, $items, $approved);
+        $result = $this->invoiceService->updateInvoice($invoice->id, $invoiceData, $items, $approved, $this->extensionPersister($extensionPayloads));
 
         [$msgType, $msg] = $this->invoiceMessage($result, 'updated', $approved);
 
@@ -528,6 +534,39 @@ class InvoiceController extends Controller
             : redirect()->route('invoices.index', ['invoice_type' => $result['invoice']->invoice_type->valueName(), 'service_buy' => $isServiceBuy ? '1' : null]);
 
         return $redirect->with($msgType, $msg);
+    }
+
+    /**
+     * Validate submitted extension payloads before any invoice write so a
+     * validation failure leaves the database untouched.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function validatedExtensionPayloads(Request $request, ?Invoice $invoice = null): array
+    {
+        if (! $request->has('extensions')) {
+            return [];
+        }
+
+        return app(InvoiceExtensionRegistry::class)->validateRequest($request, $invoice);
+    }
+
+    /**
+     * Build the callback handed to the invoice service; it runs inside the
+     * invoice's own database transaction.
+     *
+     * @param  array<string, array<string, mixed>>  $payloads
+     * @return Closure(Invoice): void|null
+     */
+    private function extensionPersister(array $payloads): ?Closure
+    {
+        if ($payloads === []) {
+            return null;
+        }
+
+        return static function (Invoice $invoice) use ($payloads): void {
+            app(InvoiceExtensionRegistry::class)->persist($invoice, $payloads);
+        };
     }
 
     public function destroy(Request $request, Invoice $invoice)

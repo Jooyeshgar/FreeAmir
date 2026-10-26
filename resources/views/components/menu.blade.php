@@ -88,6 +88,7 @@
                 @can('customers.create')
                     <li><a href="{{ route('customers.create') }}">{{ __('Add Customer') }}</a></li>
                 @endcan
+                <x-extension-navigation area="navigation.workspace.invoices" />
             </ul>
         </details>
     </li>
@@ -345,6 +346,8 @@
                     </details>
                 </li>
             @endcanany
+
+            <x-extension-navigation area="navigation.management" />
 
             <li><a href="{{ route('about') }}">{{ __('about.about') }}</a></li>
         </ul>

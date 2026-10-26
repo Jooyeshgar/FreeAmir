@@ -5,6 +5,7 @@ namespace App\Services;
 use App\DTO\InvoiceStatusDecision;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Extensions\Events\InvoiceDerived;
 use App\Models\AncillaryCost;
 use App\Models\Cheque;
 use App\Models\FiscalYear;
@@ -15,6 +16,7 @@ use App\Models\Service;
 use App\Models\User;
 use App\Models\WarehouseProductStock;
 use Exception;
+use Closure;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -30,8 +32,10 @@ class InvoiceService
      * @return array ['document' => Document, 'invoice' => Invoice]
      *
      * @throws ValidationException
+     *
+     * @param  Closure(Invoice): void|null  $extensionPersister  runs inside the invoice's save transaction
      */
-    public static function createInvoice(User $user, array $invoiceData, array $items = [], bool $approved = false): array
+    public static function createInvoice(User $user, array $invoiceData, array $items = [], bool $approved = false, ?Closure $extensionPersister = null): array
     {
         app(FiscalYearMutationGuard::class)->ensureOpen($invoiceData['fiscal_year_id'] ?? getActiveFiscalYear());
 
@@ -39,14 +43,14 @@ class InvoiceService
         $items = self::assignWarehouseToItems($items, $invoiceData['warehouse_id'] ?? null);
 
         if ($invoiceData['invoice_type'] === InvoiceType::BEGINNING_INVENTORY) {
-            return self::createBeginningInventory($user, $invoiceData, $items, $date, $approved);
+            return self::createBeginningInventory($user, $invoiceData, $items, $date, $approved, $extensionPersister);
         }
 
         $transactionBuilder = new InvoiceTransactionBuilder($items, $invoiceData);
         $buildResult = $transactionBuilder->build();
 
         $createdDocument = null;
-        $createdInvoice = self::createInvoiceWithoutApproval($user, $invoiceData, $items, $buildResult, $date);
+        $createdInvoice = self::createInvoiceWithoutApproval($user, $invoiceData, $items, $buildResult, $date, $extensionPersister);
 
         if ($approved) {
 
@@ -103,9 +107,9 @@ class InvoiceService
         ];
     }
 
-    private static function createBeginningInventory(User $user, array $invoiceData, array $items, string $date, bool $approved): array
+    private static function createBeginningInventory(User $user, array $invoiceData, array $items, string $date, bool $approved, ?Closure $extensionPersister = null): array
     {
-        $invoice = DB::transaction(function () use ($user, $invoiceData, $items, $date, $approved) {
+        $invoice = DB::transaction(function () use ($user, $invoiceData, $items, $date, $approved, $extensionPersister) {
             self::assertBeginningInventoryWarehouseAvailable($invoiceData['warehouse_id']);
 
             $invoice = Invoice::create([
@@ -123,6 +127,10 @@ class InvoiceService
 
             self::syncInvoiceItems($invoice, $items, false);
 
+            if ($extensionPersister !== null) {
+                $extensionPersister($invoice);
+            }
+
             if ($approved) {
                 $invoice->unsetRelation('items');
                 $invoice->load('items');
@@ -135,11 +143,11 @@ class InvoiceService
         return ['document' => $invoice->document, 'invoice' => $invoice];
     }
 
-    private static function createInvoiceWithoutApproval(User $user, array $invoiceData, array $items, array $buildResult, string $date)
+    private static function createInvoiceWithoutApproval(User $user, array $invoiceData, array $items, array $buildResult, string $date, ?Closure $extensionPersister = null)
     {
         $createdInvoice = null;
 
-        DB::transaction(function () use ($user, $invoiceData, $items, $buildResult, $date, &$createdDocument, &$createdInvoice) {
+        DB::transaction(function () use ($user, $invoiceData, $items, $buildResult, $date, $extensionPersister, &$createdInvoice) {
             $invoiceData['document_id'] = null;
             $invoiceData['vat'] = $buildResult['totalVat'];
             $invoiceData['amount'] = $buildResult['totalAmount'];
@@ -151,6 +159,10 @@ class InvoiceService
             $createdInvoice = Invoice::create($invoiceData);
 
             self::syncInvoiceItems($createdInvoice, $items);
+
+            if ($extensionPersister !== null) {
+                $extensionPersister($createdInvoice);
+            }
         });
 
         return $createdInvoice;
@@ -162,8 +174,10 @@ class InvoiceService
      * @return array ['document' => Document, 'invoice' => Invoice]
      *
      * @throws ValidationException
+     *
+     * @param  Closure(Invoice): void|null  $extensionPersister  runs inside the invoice's update transaction
      */
-    public static function updateInvoice(int $invoiceId, array $invoiceData, array $items = [], bool $approved = false): array
+    public static function updateInvoice(int $invoiceId, array $invoiceData, array $items = [], bool $approved = false, ?Closure $extensionPersister = null): array
     {
         app(FiscalYearMutationGuard::class)->ensureOpen(Invoice::withoutGlobalScopes()->findOrFail($invoiceId));
 
@@ -178,7 +192,7 @@ class InvoiceService
         }
 
         if ($invoice->invoice_type->isBeginningInventory()) {
-            return self::updateBeginningInventory($invoice, $invoiceData, $items, $approved);
+            return self::updateBeginningInventory($invoice, $invoiceData, $items, $approved, $extensionPersister);
         }
 
         $wasApproved = $invoice->status->isApprovedOrSettled();
@@ -197,7 +211,7 @@ class InvoiceService
         // replacement in one transaction so warehouse stock cannot be doubled.
         if ($approved && $wasApproved) {
             $handledApprovedEdit = true;
-            DB::transaction(function () use ($invoice, $invoiceData, $items, $buildResult, $oldItems, &$createdDocument) {
+            DB::transaction(function () use ($invoice, $invoiceData, $items, $buildResult, $oldItems, $extensionPersister, &$createdDocument) {
                 $replacement = clone $invoice;
                 $replacement->fill($invoiceData);
                 $replacement->setRelation('items', collect($items)->map(fn ($item) => new InvoiceItem([
@@ -236,9 +250,13 @@ class InvoiceService
                 CostOfGoodsService::updateProductsAverageCost($invoice);
                 ProductService::updateWarehouseAverageCosts($invoice);
                 self::syncCOGAfterForInvoiceItems($invoice);
+
+                if ($extensionPersister !== null) {
+                    $extensionPersister($invoice);
+                }
             });
         } else {
-            $invoice = self::updateInvoiceWithoutApproval($invoice, $invoiceData, $items, $buildResult);
+            $invoice = self::updateInvoiceWithoutApproval($invoice, $invoiceData, $items, $buildResult, approved: $approved, extensionPersister: $extensionPersister);
         }
 
         if ($approved && ! $handledApprovedEdit) {
@@ -288,9 +306,9 @@ class InvoiceService
         ];
     }
 
-    private static function updateInvoiceWithoutApproval(Invoice $invoice, array $invoiceData, array $items, array $buildResult, bool $approved = false)
+    private static function updateInvoiceWithoutApproval(Invoice $invoice, array $invoiceData, array $items, array $buildResult, bool $approved = false, ?Closure $extensionPersister = null)
     {
-        DB::transaction(function () use ($invoice, $invoiceData, $items, $buildResult) {
+        DB::transaction(function () use ($invoice, $invoiceData, $items, $buildResult, $extensionPersister) {
             if ($invoice->status->isApprovedOrSettled()) {
                 $replacement = clone $invoice;
                 $replacement->fill($invoiceData);
@@ -307,6 +325,10 @@ class InvoiceService
             self::syncAncillaryCostsDate($invoice);
 
             self::syncInvoiceItems($invoice, $items);
+
+            if ($extensionPersister !== null) {
+                $extensionPersister($invoice);
+            }
         });
 
         return $invoice;
@@ -321,11 +343,11 @@ class InvoiceService
         $invoice->ancillaryCosts()->update(['date' => $invoice->date->toDateString()]);
     }
 
-    private static function updateBeginningInventory(Invoice $invoice, array $invoiceData, array $items, bool $approved): array
+    private static function updateBeginningInventory(Invoice $invoice, array $invoiceData, array $items, bool $approved, ?Closure $extensionPersister = null): array
     {
         $items = self::assignWarehouseToItems($items, $invoiceData['warehouse_id'] ?? null);
 
-        DB::transaction(function () use ($invoice, $invoiceData, $items, $approved) {
+        DB::transaction(function () use ($invoice, $invoiceData, $items, $approved, $extensionPersister) {
             self::assertBeginningInventoryWarehouseAvailable($invoiceData['warehouse_id'], $invoice->id);
 
             $wasApproved = $invoice->status->isApprovedOrSettled();
@@ -357,6 +379,10 @@ class InvoiceService
             ]);
 
             self::syncInvoiceItems($invoice, $items, false);
+
+            if ($extensionPersister !== null) {
+                $extensionPersister($invoice);
+            }
 
             if ($approved) {
                 $invoice->unsetRelation('items');
@@ -1503,6 +1529,8 @@ class InvoiceService
             $voidInvoice->invoice_type = InvoiceType::VOID;
             $voidInvoice->returned_invoice_id = $invoice->id; // Like a return sell invoice
             $voidInvoice->save();
+
+            event(new InvoiceDerived($invoice, $voidInvoice));
 
             $voidInvoice->items()->createMany(
                 $invoice->items->map(fn ($item) => [

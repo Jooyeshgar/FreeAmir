@@ -48,6 +48,7 @@
                 <x-checkbox name="voided" id="voided" :title="__('Voided')" value="1" :checked="request('voided') == '1'" />
             @endif
             <x-checkbox name="bookmarked" id="bookmarked" :title="__('Bookmarked invoices')" value="1" :checked="request()->boolean('bookmarked')" />
+            <x-extension-slot slot="invoice.index.filters" />
             <div>
                 <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
             </div>
