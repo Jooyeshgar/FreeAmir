@@ -193,7 +193,7 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->assertEqualsWithDelta(9, (float) $sell->items()->firstOrFail()->quantity_at, 0.001);
     }
 
-    public function test_approved_beginning_inventory_adds_stock_updates_cost_and_creates_accounting(): void
+    public function test_approved_beginning_inventory_replaces_unsupported_stock_updates_cost_and_creates_accounting(): void
     {
         $this->setStock($this->mainWarehouse, 2, 175);
         $this->product->update(['quantity' => 2, 'average_cost' => 125]);
@@ -213,10 +213,15 @@ class WarehouseInvoiceStockTest extends TestCase
             'subject_id' => (int) config('amir.beginning_inventory'),
             'value' => 4500,
         ]);
-        $this->assertEqualsWithDelta(7, (float) $this->product->fresh()->quantity, 0.001);
-        $this->assertStock($this->mainWarehouse, 7);
-        $this->assertEqualsWithDelta(678.571, (float) $this->product->fresh()->average_cost, 0.001);
-        $this->assertEqualsWithDelta(692.86, $this->stockAverageCost($this->mainWarehouse, $this->product), 0.001);
+        $this->assertEqualsWithDelta(5, (float) $this->product->fresh()->quantity, 0.001);
+        $this->assertStock($this->mainWarehouse, 5);
+        $this->assertEqualsWithDelta(0, (float) $invoice->items->first()->quantity_at, 0.001);
+        $this->assertEqualsWithDelta(900, (float) $this->product->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(900, $this->stockAverageCost($this->mainWarehouse, $this->product), 0.001);
+        $this->assertEqualsWithDelta(0, (float) $invoice->document->transactions()->sum('value'), 0.001);
+        $this->assertEqualsWithDelta(5, ProductService::recalculateQuantity($this->product->fresh()), 0.001);
+        $this->assertStock($this->mainWarehouse, 5);
+        $this->assertEqualsWithDelta(0, (float) $invoice->items()->firstOrFail()->quantity_at, 0.001);
         $this->assertEqualsWithDelta(900, (float) $invoice->items->first()->unit_price, 0.001);
     }
 
