@@ -60,7 +60,7 @@
                 <div class="flex-wrap w-full">
                     <span class="label-text text-gray-500">{{ __('Allocation method') }}</span>
                     <select name="allocation_method" x-model="allocationMethod" @change="changeAllocationMethod()"
-                        class="select select-bordered w-full">
+                        class="h-10 min-h-10 border border-slate-400 w-full rounded-md text-gray-500 px-2">
                         <option value="manual">{{ __('Manual') }}</option>
                         <option value="value">{{ __('Value') }}</option>
                         <option value="weight">{{ __('Weight') }}</option>
