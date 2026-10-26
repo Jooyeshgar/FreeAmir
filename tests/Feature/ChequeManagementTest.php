@@ -898,8 +898,8 @@ class ChequeManagementTest extends TestCase
         $this->assertSame(0, $xpath->query('//dialog[@id="cheque_edit_modal"]')->length);
         $fields = $xpath->query('//dialog[@id="cheque_payment_modal"]//input[@name and not(@type="hidden")] | //dialog[@id="cheque_payment_modal"]//select[@name] | //dialog[@id="cheque_payment_modal"]//textarea[@name]');
         $this->assertSame([
-            'amount', 'bank_service_fee', 'sayad_number', 'cheque_number',
-            'issue_date', 'due_date', 'bank_id', 'bank_account_id', 'serial', 'title', 'description',
+            'title', 'amount', 'bank_service_fee', 'sayad_number', 'cheque_number',
+            'issue_date', 'due_date', 'bank_id', 'bank_account_id', 'serial', 'description',
         ], array_map(fn ($field) => $field->getAttribute('name'), iterator_to_array($fields)));
         $response->assertSee('invoice-cheque-create.window', false)
             ->assertSee('invoice-cheque-edit.window', false);
