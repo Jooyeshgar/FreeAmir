@@ -133,7 +133,7 @@
                         ['label' => __('Bank'), 'value' => $cheque->bankAccount?->bank?->name, 'url' => null],
         ['label' => __('Bank account'), 'value' => $cheque->bankAccount?->name, 'url' => $cheque->bankAccount ? route('bank-accounts.show', $cheque->bankAccount) : null],
         ['label' => __('Chequebook'), 'value' => $cheque->chequebook?->bankAccount?->name, 'url' => $cheque->chequebook ? route('chequebooks.show', $cheque->chequebook) : null],
-        ['label' => __('Endorsed to'), 'value' => $cheque->endorsedTo?->name, 'url' => $cheque->endorsedTo ? route('customers.show', $cheque->endorsedTo) : null],
+        ['label' => __('Endorsed to'), 'value' => $endorsedSubject?->formattedName() ?? $cheque->endorsedTo?->name, 'url' => $endorsedSubject ? route('subjects.show', $endorsedSubject) : ($cheque->endorsedTo ? route('customers.show', $cheque->endorsedTo) : null)],
     ] as $item)
                         <div class="min-w-0 rounded-xl border border-base-200 bg-base-200/25 p-4">
                             <p class="text-xs font-medium text-base-content/45">{{ $item['label'] }}</p>
@@ -195,20 +195,19 @@
                                         @endforeach
                                     </select>
                                 @elseif($action === 'endorse')
-                                    @php
-                                        $initialEndorseeId = old('customer_id');
-                                        $initialEndorseeValue = $initialEndorseeId
-                                            ? "customer-{$initialEndorseeId}"
-                                            : '';
-                                    @endphp
                                     <div x-data="{
-                                        accountSideId: @js((string) $initialEndorseeId),
-                                        selectedAccountSide: @js($initialEndorseeValue),
+                                        selectedId: @js($selectedSubject?->id),
+                                        selectedName: @js($selectedSubject?->name ?? ''),
+                                        selectedCode: @js($selectedSubject?->code ?? ''),
                                     }">
-                                        <x-select-box :options="[['headerGroup' => 'customer', 'options' => $accountSides]]" x-model="selectedAccountSide"
-                                            placeholder="{{ __('Vendor / endorsee') }}"
-                                            @selected="accountSideId = $event.detail.id" />
-                                        <x-input name="customer_id" x-bind:value="accountSideId" hidden />
+                                        <x-subject-select :subjects="$subjects"
+                                            placeholder="{{ __('Destination Subject') }}"
+                                            @selected="
+                                                selectedId = $event.detail.id;
+                                                selectedName = $event.detail.name;
+                                                selectedCode = $event.detail.code;
+                                            " />
+                                        <x-input name="subject_id" x-bind:value="selectedId" hidden />
                                     </div>
                                 @endif
                                 <div class="mt-3 grid gap-2 sm:grid-cols-2" x-data="{ chequeFee: @js((string) old('bank_service_fee', 0)) }">

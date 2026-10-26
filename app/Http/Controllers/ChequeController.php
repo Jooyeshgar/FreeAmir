@@ -7,7 +7,9 @@ use App\Models\BankAccount;
 use App\Models\Cheque;
 use App\Models\Chequebook;
 use App\Models\Customer;
+use App\Models\Subject;
 use App\Services\ChequeService;
+use App\Services\SubjectService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -51,12 +53,16 @@ class ChequeController extends Controller
 
     public function show(Cheque $cheque)
     {
-        $cheque->load(['customer', 'endorsedTo', 'bankAccount.bank', 'chequebook', 'histories.user', 'histories.document', 'histories.payment']);
+        $cheque->load(['customer', 'endorsedTo', 'bankAccount.bank', 'chequebook', 'histories.user', 'histories.document', 'histories.payment.settlementSubjectRelation']);
 
         return view('cheques.show', [
             'cheque' => $cheque,
             'bankAccounts' => BankAccount::with('bank')->get(),
-            'accountSides' => Customer::with('group')->get(['id', 'name', 'group_id']),
+            'subjects' => app(SubjectService::class)->buildSubjectTreeFromCollection(
+                Subject::orderBy('code')->get(['id', 'name', 'code', 'parent_id']),
+            ),
+            'selectedSubject' => Subject::find(old('subject_id')),
+            'endorsedSubject' => $cheque->histories->firstWhere('to_status', ChequeType::ENDORSED)?->payment?->settlementSubjectRelation,
         ]);
     }
 
@@ -233,6 +239,7 @@ class ChequeController extends Controller
             [
                 'date' => ['nullable', 'date'],
                 'bank_account_id' => ['nullable', Rule::exists('bank_accounts', 'id')->where('fiscal_year_id', getActiveFiscalYear())],
+                'subject_id' => ['nullable', 'integer', Rule::exists('subjects', 'id')->where('fiscal_year_id', getActiveFiscalYear())],
                 'customer_id' => ['nullable', Rule::exists('customers', 'id')->where('fiscal_year_id', getActiveFiscalYear())],
                 'bank_service_fee' => ['sometimes'],
                 'description' => ['nullable', 'string', 'max:1000'],
