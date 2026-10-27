@@ -13,7 +13,7 @@
 
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>{{ $invoice->invoice_type->isBeginningInventory() ? __('Beginning Inventory') : __('Pre Invoice') }}</title>
+    <title>{{ $invoiceTitle }}</title>
     <style>{!! file_get_contents(resource_path('css/invoice.css')) !!}</style>
     @include('invoices.partials.browser-print', ['orientation' => 'landscape'])
 </head>

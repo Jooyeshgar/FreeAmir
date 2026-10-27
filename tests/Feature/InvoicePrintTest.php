@@ -72,7 +72,7 @@ class InvoicePrintTest extends TestCase
         $printResponse->assertSee($draftLayout ? 'size: A4 portrait' : 'size: A4 landscape', false)
             ->assertSee('font-family: sahel', false);
         if (! $draftLayout) {
-            $printResponse->assertSee('<title>Pre Invoice</title>', false)
+            $printResponse->assertSee('<title>صورتحساب فروش کالا و خدمات</title>', false)
                 ->assertSee('print-color-adjust: exact', false)
                 ->assertSee('<span>نقدی</span> <input type="checkbox" />', false);
         }
