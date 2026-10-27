@@ -1,12 +1,20 @@
-<!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }}">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $invoice->invoice_type->isBeginningInventory() ? __('Beginning Inventory') : __('Pre Invoice') }}</title>
-    @vite('resources/css/invoice-draft.css')
-</head>
-<body>
+<x-report-layout :title="$invoice->invoice_type->isBeginningInventory() ? __('Beginning Inventory') : __('Pre Invoice')">
+    @push('styles')
+        @vite('resources/css/invoice-draft.css')
+        <style>
+            .printable main {
+                background-color: white;
+                width: auto;
+                max-width: 200mm;
+            }
+
+            .printable td {
+                white-space: normal;
+                overflow: visible;
+            }
+        </style>
+    @endpush
+
     <div class="draft-invoice">
         <div class="invoice-meta">
             <div>{{ __('Invoice Number') }}: {{ localizeNumber(intval($invoice->number ?? 0)) ?? '' }}</div>
@@ -98,11 +106,12 @@
             </tbody>
         </table>
     </div>
-</body>
-</html>
-<script>
-    window.addEventListener('load', async () => {
-        await document.fonts.ready;
-        window.print();
-    });
-</script>
+    @push('scripts')
+        <script>
+            window.addEventListener('load', async () => {
+                await document.fonts.ready;
+                window.print();
+            });
+        </script>
+    @endpush
+</x-report-layout>

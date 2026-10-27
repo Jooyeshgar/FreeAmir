@@ -8,16 +8,24 @@
         default => __('Beginning Inventory'),
     };
 @endphp
-<!DOCTYPE html>
-<html>
+<x-report-layout :title="$invoiceTitle">
+    @push('styles')
+        @vite('resources/css/invoice.css')
+        <style>
+            .printable main {
+                background-color: white;
+                width: auto;
+                max-width: 287mm;
+                direction: ltr;
+            }
 
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>{{ $invoiceTitle }}</title>
-    @vite('resources/css/invoice.css')
-</head>
+            .printable td {
+                white-space: normal;
+                overflow: visible;
+            }
+        </style>
+    @endpush
 
-<body>
     @php
         $company = $invoice->fiscalYear?->company;
         $companyLogo = null;
@@ -36,7 +44,7 @@
         }
     @endphp
 
-    <table width="100%">
+    <table class="invoiceInfoTable">
         <tbody>
             <tr>
                 <td class="invoiceInfo">{{ $invoice->taxID }}</td>
@@ -203,12 +211,12 @@
             </tr>
         </tbody>
     </table>
-</body>
-
-</html>
-<script>
-    window.addEventListener('load', async () => {
-        await document.fonts.ready;
-        window.print();
-    });
-</script>
+    @push('scripts')
+        <script>
+            window.addEventListener('load', async () => {
+                await document.fonts.ready;
+                window.print();
+            });
+        </script>
+    @endpush
+</x-report-layout>
