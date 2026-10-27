@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSubjectRequest;
+use App\Models\FiscalYear;
 use App\Models\Subject;
+use App\Services\FiscalYearMutationGuard;
 use App\Services\SubjectService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -25,7 +27,7 @@ class SubjectController extends Controller
         $subjectTree = Subject::orderBy('code')->limit(30)->get(['id', 'name', 'code', 'parent_id']);
         $subjectTree = $this->subjectService->buildSubjectTreeFromCollection($subjectTree);
 
-        return view('subjects.index', compact('subjects', 'currentParent', 'subjectTree'));
+        return view('subjects.index', compact('subjects', 'currentParent', 'subjectTree'))->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function create(Request $request)
@@ -85,6 +87,7 @@ class SubjectController extends Controller
 
     public function destroy(Subject $subject)
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($subject);
 
         try {
             $subject->delete();

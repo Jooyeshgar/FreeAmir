@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\PayrollStatus;
 use App\Enums\PersonnelRequestStatus;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\MonthlyAttendance;
 use App\Models\OrganizationUnit;
 use App\Models\Payroll;
@@ -12,6 +13,7 @@ use App\Models\PayrollItem;
 use App\Models\PayrollStatusHistory;
 use App\Models\PersonnelRequest;
 use App\Models\SalaryDecree;
+use App\Services\FiscalYearMutationGuard;
 use App\Services\PayrollService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -35,7 +37,9 @@ class PayrollController extends Controller
     {
         $payroll->load(['employee', 'decree.benefits.element', 'monthlyAttendance', 'items.element', 'statusHistories.user']);
 
-        return view('payrolls.show', compact('payroll'))
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('payrolls.show', compact('fiscalYearClosed', 'payroll'))
             ->with('isEmployeeView', false);
     }
 
@@ -211,6 +215,8 @@ class PayrollController extends Controller
      */
     public function store(Request $request, MonthlyAttendance $monthlyAttendance): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($monthlyAttendance);
+
         $validated = $request->validate([
             'decree_id' => ['required', 'integer', 'exists:salary_decrees,id'],
         ]);
@@ -223,7 +229,7 @@ class PayrollController extends Controller
         $payroll = $this->payrollService->createFromAttendance(
             attendance: $monthlyAttendance,
             decree: $decree,
-            companyId: (int) getActiveFiscalYear(),
+            fiscalYearId: (int) getActiveFiscalYear(),
         );
 
         return redirect()->route('salary.payrolls.show', $payroll)
@@ -237,7 +243,9 @@ class PayrollController extends Controller
     {
         $payrollItem->load(['element', 'payroll']);
 
-        return view('payrolls.edit-item', compact('payrollItem'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('payrolls.edit-item', compact('fiscalYearClosed', 'payrollItem'));
     }
 
     /**
@@ -245,6 +253,8 @@ class PayrollController extends Controller
      */
     public function updateItem(Request $request, PayrollItem $payrollItem): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($payrollItem->payroll ?? $payrollItem);
+
         $validated = $request->validate([
             'calculated_amount' => ['required', 'numeric'],
             'unit_count' => ['nullable', 'numeric'],
@@ -294,6 +304,8 @@ class PayrollController extends Controller
      */
     public function destroy(Payroll $payroll): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($payroll);
+
         $payroll->items()->delete();
         $payroll->delete();
 
@@ -302,6 +314,8 @@ class PayrollController extends Controller
 
     private function transition(Request $request, Payroll $payroll, PayrollStatus $toStatus, string $message): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($payroll);
+
         $validated = $request->validate([
             'note' => ['nullable', 'string', 'max:1000'],
         ]);

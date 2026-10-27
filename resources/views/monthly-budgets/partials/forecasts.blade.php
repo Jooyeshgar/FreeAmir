@@ -20,7 +20,7 @@
                 <form method="POST" action="{{ route('budgets.rollover') }}" onsubmit="return confirm({{ Illuminate\Support\Js::from(__('Copy the previous month forecast into :month. Existing values for this month will be replaced.', ['month' => $selectedMonthLabel])) }})">
                     @csrf
                     <x-input name="month" value="{{ $selectedMonth }}" hidden />
-                    <button type="submit" class="budget-button" @disabled(! $hasPreviousForecast) title="{{ ! $hasPreviousForecast ? __('No forecast exists for the previous month.') : '' }}">{{ __('Copy Previous Month') }}</button>
+                    <button type="submit" class="budget-button" @disabled($fiscalYearClosed || ! $hasPreviousForecast) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : (! $hasPreviousForecast ? __('No forecast exists for the previous month.') : '') }}">{{ __('Copy Previous Month') }}</button>
                 </form>
             @endcan
             @if (auth()->user()->can('budgets.store') && auth()->user()->can('budgets.search-subjects'))
@@ -39,7 +39,7 @@
                     <span>{{ __('Forecast :type', ['type' => $label]) }}</span>
                     <strong>{{ formatNumber(abs($forecast)) }}</strong>
                     <small>{{ __('Actual') }}: {{ is_null($actual) ? '—' : formatNumber(abs($actual)) }} {{ $currency }}</small>
-                    <div class="budget-forecast-progress"><span style="width:{{ min(100, max(0, $progress)) }}%"></span></div>
+                    <div class="budget-forecast-progress"><span data-budget-width="{{ min(100, max(0, $progress)) }}"></span></div>
                     <small>{{ __('Achievement') }}: {{ $hasDocuments && $forecast != 0 ? localizeNumber(number_format($progress, 0)).'%' : '—' }}</small>
                 </article>
             @endforeach

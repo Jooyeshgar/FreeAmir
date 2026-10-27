@@ -7,7 +7,7 @@
                 <x-user-guide-link source="management/finance/bank-accounts/bank-accounts.md" />
             </div>
             <div class="card-actions">
-                <a href="{{ route('bank-accounts.create') }}" class="btn btn-primary">{{ __('Create Bank Account') }}</a>
+                <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('bank-accounts.create') }}" class="btn btn-primary">{{ __('Create Bank Account') }}</x-closed-year-action-link>
             </div>
             <div class="overflow-auto">
                 <table class="table w-full mt-4">
@@ -38,12 +38,12 @@
                                     <div class="inline-flex gap-2">
                                         <a href="{{ route('bank-accounts.show', $bankAccount) }}"
                                             class="btn btn-sm btn-info">{{ __('View') }}</a>
-                                        <a href="{{ route('bank-accounts.edit', $bankAccount) }}"
-                                            class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                        <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('bank-accounts.edit', $bankAccount) }}"
+                                            class="btn btn-sm btn-info">{{ __('Edit') }}</x-closed-year-action-link>
                                         <form action="{{ route('bank-accounts.destroy', $bankAccount) }}" method="POST">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                            <button type="submit" class="btn btn-sm btn-error" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ __('Delete') }}</button>
                                         </form>
                                     </div>
                                 </td>

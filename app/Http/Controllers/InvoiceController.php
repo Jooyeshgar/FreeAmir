@@ -335,6 +335,7 @@ class InvoiceController extends Controller
             'payments.payer.subject',
             'payments.creator',
             'payments.cheque',
+            'payments.cheque.histories',
         ]);
 
         $paymentDecision = $paymentService->validateInvoicePayment($invoice);
@@ -347,12 +348,39 @@ class InvoiceController extends Controller
         $chequeBankAccounts = $chequeDirection ? BankAccount::with('bank')->orderBy('name')->get() : collect();
         $chequebooks = $chequeDirection === ChequeType::PAYABLE ? Chequebook::with('bankAccount.bank')->orderBy('serial_prefix')->get() : collect();
 
+        $restoreChequeModal = in_array(old('cheque_payment_mode'), ['create', 'edit'], true);
+        $editingChequePayment = old('cheque_payment_mode') === 'edit' ? $invoice->payments->firstWhere('id', old('cheque_payment_id')) : null;
+        $editingCheque = $editingChequePayment?->cheque;
+        $initialChequeHistory = $editingCheque?->histories->firstWhere('from_status', null);
+        $chequeInput = fn (string $key, mixed $default = '') => $restoreChequeModal ? old($key, $default) : $default;
+        $chequePaymentModalState = [
+            'editing' => $editingCheque !== null,
+            'paymentId' => $editingChequePayment?->id ?? '',
+            'title' => $chequeInput('title', $editingCheque?->title ?? ''),
+            'amount' => $chequeInput('amount', (string) ($editingCheque?->amount ?? $remainingAmount)),
+            'availableAmount' => (string) ($remainingAmount + (float) ($editingChequePayment?->amount ?? 0)),
+            'bankServiceFee' => $chequeInput('bank_service_fee', (string) ((float) $initialChequeHistory?->bank_service_fee ?: (float) ($editingChequePayment?->bank_service_fee ?? 0))),
+            'issueDate' => $chequeInput('issue_date', convertToJalali($editingCheque?->write_date ?? now(), true)),
+            'dueDate' => $chequeInput('due_date', $editingCheque?->due_date ? convertToJalali($editingCheque->due_date, true) : ''),
+            'sayadNumber' => $chequeInput('sayad_number', $editingCheque?->sayad_number ?? ''),
+            'chequeNumber' => $chequeInput('cheque_number', $editingCheque?->cheque_number ?? ''),
+            'serial' => $chequeInput('serial', $editingCheque?->serial ?? ''),
+            'bankId' => $chequeInput('bank_id'),
+            'bankAccountId' => $chequeInput('bank_account_id', (string) ($editingCheque?->bank_account_id ?? '')),
+            'chequebookId' => $chequeInput('chequebook_id', (string) ($editingCheque?->chequebook_id ?? '')),
+            'description' => $chequeInput('description', $editingCheque?->desc ?? ''),
+            'restore' => $restoreChequeModal,
+            'closed' => $invoice->fiscalYear?->isClosed() ?? false,
+            'canCreate' => auth()->user()->can('invoices.payments.store') && auth()->user()->can('invoices.payments.store-cheque'),
+            'canEdit' => auth()->user()->can('invoices.payments.update'),
+        ];
+
         $ancillaryCostProductIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->unique()->values()->all();
         $canCreateAncillaryCost = $invoice->invoice_type === InvoiceType::BUY && ! $isServiceBuy && empty(InvoiceService::notAllowedInvoiceForAncillaryCosts($invoice, $ancillaryCostProductIds));
 
         $fiscalYears = auth()->user()->fiscalYears()->with('company')->where('fiscal_years.id', '!=', getActiveFiscalYear())->orderByDesc('year')->get();
 
-        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects', 'paymentModalSubject', 'paidAmount', 'remainingAmount', 'chequeDirection', 'chequeBanks', 'chequeBankAccounts', 'chequebooks', 'fiscalYears', 'canCreateAncillaryCost'));
+        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects', 'paymentModalSubject', 'paidAmount', 'remainingAmount', 'chequeDirection', 'chequeBanks', 'chequeBankAccounts', 'chequebooks', 'chequePaymentModalState', 'fiscalYears', 'canCreateAncillaryCost'));
     }
 
     public function updateBookmark(Request $request, Invoice $invoice): RedirectResponse
@@ -374,19 +402,16 @@ class InvoiceController extends Controller
         return back();
     }
 
-    public function print(Invoice $invoice, ReportExportService $reportExportService)
+    public function print(Request $request, Invoice $invoice): View
     {
-        if ($invoice->invoice_type->isBeginningInventory()) {
-            return redirect()->route('invoices.edit', $invoice);
+        $invoice->load('fiscalYear.company', 'customer', 'items.itemable');
+        $autoPrint = $request->boolean('autoprint');
+
+        if ($invoice->invoice_type->isBeginningInventory() || ! $invoice->status->isApprovedOrSettled()) {
+            return view('invoices.draft', compact('invoice', 'autoPrint'));
         }
 
-        $invoice->load('customer', 'items');
-
-        if (! $invoice->status->isApprovedOrSettled()) {
-            return view('invoices.draft', compact('invoice'));
-        }
-
-        return $reportExportService->inlineResponse('invoice_pdf', ['invoice_id' => $invoice->id]);
+        return view('invoices.print', compact('invoice', 'autoPrint'));
     }
 
     /**
@@ -740,6 +765,11 @@ class InvoiceController extends Controller
                 ->with('error', __('Invalid status action.'));
         }
 
+        return $this->applyInvoiceStatusChange($invoice, $status);
+    }
+
+    private function applyInvoiceStatusChange(Invoice $invoice, string $status): RedirectResponse
+    {
         $settled = $invoice->status->isPartiallyPaid() || $invoice->status->isPaid();
         if ($settled && ! request()->boolean('confirm')) {
             return redirect()->back()->with('warning', __('Deactivating this paid or partially paid invoice will remove its payment accounting documents while keeping the payment records. Please confirm this action.'));
@@ -758,11 +788,26 @@ class InvoiceController extends Controller
             return redirect()->back()->with('warning', $warning?->text ?? __('Please confirm your action.'))->with('confirm_invoice_status_change', true)->with('conflicting_invoices', $decision->conflicts->map(fn ($i) => ['id' => $i->id, 'number' => $i->number, 'type' => $i->invoice_type?->valueName()])->values()->all());
         }
 
+        $reactivating = $status === 'approved' && $invoice->status->isApprovedInactive();
         $this->invoiceService->changeInvoiceStatus($invoice, $status);
 
-        $message = $status === 'approved' ? __('Invoice approved successfully.') : __('Invoice unapproved successfully.');
+        $message = match (true) {
+            $reactivating => __('Invoice activated successfully.'),
+            $status === 'approved' => __('Invoice approved successfully.'),
+            $status === 'approved_inactive' => __('Invoice deactivated successfully.'),
+            default => __('Invoice unapproved successfully.'),
+        };
 
-        return redirect()->back()->with('success', __($message));
+        return redirect()->back()->with('success', $message);
+    }
+
+    public function approveInactive(Invoice $invoice): RedirectResponse
+    {
+        if (! $invoice->status->isApproved()) {
+            return redirect()->back()->with('error', __('Invalid status action.'));
+        }
+
+        return $this->applyInvoiceStatusChange($invoice, 'approved_inactive');
     }
 
     public function inactiveInvoices()

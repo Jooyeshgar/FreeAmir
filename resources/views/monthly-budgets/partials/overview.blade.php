@@ -21,7 +21,7 @@
         </div>
         <div class="budget-profit-bottom">
             <div><div class="budget-margin-number">{{ is_null($profitability['accountingMargin']) ? '—' : localizeNumber(number_format($profitability['accountingMargin'], 1)).'%' }}</div><div class="budget-metric-foot">{{ __('Net margin') }}</div></div>
-            <div class="budget-mini-progress" aria-hidden="true"><span style="width:{{ min(100, max(0, $profitability['accountingMargin'] ?? 0)) }}%"></span></div>
+            <div class="budget-mini-progress" aria-hidden="true"><span data-budget-width="{{ min(100, max(0, $profitability['accountingMargin'] ?? 0)) }}"></span></div>
             <div class="budget-profit-change">@include('monthly-budgets.partials.change', ['comparison' => $profitability['accountingComparisons']['accountingMargin'], 'increaseIsGood' => true, 'neutral' => false, 'points' => true])</div>
         </div>
     </article>
@@ -48,7 +48,7 @@
 <div class="budget-card budget-kpi-grid">
     @foreach ([['sales', __('Net Product Sales'), '#5b5bd6', true], ['cogs', __('Cost of Goods Sold'), '#8a95ad', false], ['grossProfit', __('Gross Profit'), '#11855b', true], ['purchases', __('Net Purchases'), '#a96809', false]] as [$key, $title, $color, $increaseIsGood])
         <article class="budget-kpi">
-            <div class="budget-kpi-title"><span class="budget-kpi-dot" style="background:{{ $color }}"></span>{{ $title }}</div>
+            <div class="budget-kpi-title"><span class="budget-kpi-dot" data-budget-color="{{ $color }}"></span>{{ $title }}</div>
             <div class="budget-kpi-value {{ $key === 'grossProfit' && $profitability[$key] < 0 ? 'budget-negative' : '' }}">{{ formatNumber($profitability[$key]) }}</div>
             <div class="budget-kpi-foot">
                 <span>{{ __('Previous month') }}: {{ is_null($profitability['comparisons'][$key]['previous'] ?? null) ? '—' : formatNumber($profitability['comparisons'][$key]['previous']) }}</span>

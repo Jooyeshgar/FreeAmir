@@ -156,6 +156,14 @@ function initializeMonthlyBudgetStyles() {
             element.style.setProperty('--budget-donut-gradient', gradient);
         }
     });
+
+    document.querySelectorAll('[data-budget-color]').forEach((element) => {
+        const color = element.dataset.budgetColor;
+
+        if (/^#[\da-f]{6}$/i.test(color)) {
+            element.style.setProperty('--budget-kpi-color', color);
+        }
+    });
 }
 
 initializeMonthlyBudgetStyles();

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreTaxSlabRequest;
 use App\Http\Requests\UpdateTaxSlabRequest;
+use App\Models\FiscalYear;
 use App\Models\TaxSlab;
 
 class TaxSlabController extends Controller
@@ -12,7 +13,9 @@ class TaxSlabController extends Controller
     {
         $taxSlabs = TaxSlab::orderBy('income_to')->paginate(15);
 
-        return view('tax-slabs.index', compact('taxSlabs'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('tax-slabs.index', compact('fiscalYearClosed', 'taxSlabs'));
     }
 
     public function create()

@@ -15,7 +15,6 @@ use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Arr;
-use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -42,20 +41,47 @@ class InvoiceBookmarkTest extends TestCase
         $this->customer = Customer::create(['name' => 'Bookmark customer', 'fiscal_year_id' => $this->fiscalYear->id]);
     }
 
-    public static function invoiceTypes(): array
+    public function test_viewers_share_bookmarks_from_index_and_detail_for_every_invoice_type_buy(): void
     {
-        $types = [];
-        foreach (InvoiceType::cases() as $type) {
-            $types[$type->valueName()] = [$type, false];
-        }
-        $types['service_buy'] = [InvoiceType::BUY, true];
-        $types['return_service_buy'] = [InvoiceType::RETURN_BUY, true];
-
-        return $types;
+        $this->viewersShareBookmarksFromIndexAndDetail(InvoiceType::BUY, false);
     }
 
-    #[DataProvider('invoiceTypes')]
-    public function test_viewers_share_bookmarks_from_index_and_detail_for_every_invoice_type(InvoiceType $type, bool $serviceBuy): void
+    public function test_viewers_share_bookmarks_from_index_and_detail_for_every_invoice_type_sell(): void
+    {
+        $this->viewersShareBookmarksFromIndexAndDetail(InvoiceType::SELL, false);
+    }
+
+    public function test_viewers_share_bookmarks_from_index_and_detail_for_every_invoice_type_return_buy(): void
+    {
+        $this->viewersShareBookmarksFromIndexAndDetail(InvoiceType::RETURN_BUY, false);
+    }
+
+    public function test_viewers_share_bookmarks_from_index_and_detail_for_every_invoice_type_return_sell(): void
+    {
+        $this->viewersShareBookmarksFromIndexAndDetail(InvoiceType::RETURN_SELL, false);
+    }
+
+    public function test_viewers_share_bookmarks_from_index_and_detail_for_every_invoice_type_void(): void
+    {
+        $this->viewersShareBookmarksFromIndexAndDetail(InvoiceType::VOID, false);
+    }
+
+    public function test_viewers_share_bookmarks_from_index_and_detail_for_every_invoice_type_beginning_inventory(): void
+    {
+        $this->viewersShareBookmarksFromIndexAndDetail(InvoiceType::BEGINNING_INVENTORY, false);
+    }
+
+    public function test_viewers_share_bookmarks_from_index_and_detail_for_every_invoice_type_service_buy(): void
+    {
+        $this->viewersShareBookmarksFromIndexAndDetail(InvoiceType::BUY, true);
+    }
+
+    public function test_viewers_share_bookmarks_from_index_and_detail_for_every_invoice_type_return_service_buy(): void
+    {
+        $this->viewersShareBookmarksFromIndexAndDetail(InvoiceType::RETURN_BUY, true);
+    }
+
+    private function viewersShareBookmarksFromIndexAndDetail(InvoiceType $type, bool $serviceBuy): void
     {
         $invoice = $this->invoice($type, $serviceBuy);
         $original = $invoice->getAttributes();
@@ -89,8 +115,47 @@ class InvoiceBookmarkTest extends TestCase
         $this->assertSame($transactions, Transaction::count());
     }
 
-    #[DataProvider('invoiceTypes')]
-    public function test_filter_returns_only_bookmarked_invoices_and_filters_totals(InvoiceType $type, bool $serviceBuy): void
+    public function test_filter_returns_only_bookmarked_invoices_and_filters_totals_buy(): void
+    {
+        $this->filterReturnsOnlyBookmarkedInvoices(InvoiceType::BUY, false);
+    }
+
+    public function test_filter_returns_only_bookmarked_invoices_and_filters_totals_sell(): void
+    {
+        $this->filterReturnsOnlyBookmarkedInvoices(InvoiceType::SELL, false);
+    }
+
+    public function test_filter_returns_only_bookmarked_invoices_and_filters_totals_return_buy(): void
+    {
+        $this->filterReturnsOnlyBookmarkedInvoices(InvoiceType::RETURN_BUY, false);
+    }
+
+    public function test_filter_returns_only_bookmarked_invoices_and_filters_totals_return_sell(): void
+    {
+        $this->filterReturnsOnlyBookmarkedInvoices(InvoiceType::RETURN_SELL, false);
+    }
+
+    public function test_filter_returns_only_bookmarked_invoices_and_filters_totals_void(): void
+    {
+        $this->filterReturnsOnlyBookmarkedInvoices(InvoiceType::VOID, false);
+    }
+
+    public function test_filter_returns_only_bookmarked_invoices_and_filters_totals_beginning_inventory(): void
+    {
+        $this->filterReturnsOnlyBookmarkedInvoices(InvoiceType::BEGINNING_INVENTORY, false);
+    }
+
+    public function test_filter_returns_only_bookmarked_invoices_and_filters_totals_service_buy(): void
+    {
+        $this->filterReturnsOnlyBookmarkedInvoices(InvoiceType::BUY, true);
+    }
+
+    public function test_filter_returns_only_bookmarked_invoices_and_filters_totals_return_service_buy(): void
+    {
+        $this->filterReturnsOnlyBookmarkedInvoices(InvoiceType::RETURN_BUY, true);
+    }
+
+    private function filterReturnsOnlyBookmarkedInvoices(InvoiceType $type, bool $serviceBuy): void
     {
         $included = $this->invoice($type, $serviceBuy);
         $included->is_bookmarked = true;

@@ -13,6 +13,8 @@ class ProductGroupService
 
     public function create(array $data): ProductGroup
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($data['fiscal_year_id'] ?? getActiveFiscalYear());
+
         $productGroup = ProductGroup::create($data);
 
         $this->syncSubjects($productGroup);
@@ -22,6 +24,8 @@ class ProductGroupService
 
     public function update(ProductGroup $productGroup, array $data): ProductGroup
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($productGroup, $data['fiscal_year_id'] ?? null);
+
         $productGroup->fill($data);
         $productGroup->save();
 
@@ -32,6 +36,8 @@ class ProductGroupService
 
     public function delete(ProductGroup $productGroup): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($productGroup);
+
         DB::transaction(function () use ($productGroup): void {
             $this->ensureCanDelete($productGroup);
 

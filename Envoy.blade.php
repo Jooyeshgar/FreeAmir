@@ -106,8 +106,7 @@
     echo "Installing npm dependencies..."
     cd {{ $release }}
     rm -rf {{ $release }}/node_modules
-    rm -rf {{ $release }}/package-lock.json
-    npm install
+    npm ci --no-audit --no-fund
     npm run build
 @endtask
 

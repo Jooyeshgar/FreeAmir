@@ -74,6 +74,8 @@ class CustomerGroupService
 
     public function create(array $data): CustomerGroup
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($data['fiscal_year_id'] ?? getActiveFiscalYear());
+
         $data['fiscal_year_id'] ??= getActiveFiscalYear();
 
         $customerGroup = CustomerGroup::create($data);
@@ -85,6 +87,8 @@ class CustomerGroupService
 
     public function update(CustomerGroup $customerGroup, array $data): CustomerGroup
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($customerGroup, $data['fiscal_year_id'] ?? null);
+
         $customerGroup->fill($data);
         $customerGroup->save();
 
@@ -95,6 +99,8 @@ class CustomerGroupService
 
     public function delete(CustomerGroup $customerGroup): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($customerGroup);
+
         DB::transaction(function () use ($customerGroup) {
             foreach ($customerGroup->customers as $customer) {
                 app(ActivityLogService::class)->deleteModels($customer->comments()->getQuery());

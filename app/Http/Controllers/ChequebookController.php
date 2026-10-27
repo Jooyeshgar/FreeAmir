@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\BankAccount;
 use App\Models\Chequebook;
+use App\Models\FiscalYear;
+use App\Services\FiscalYearMutationGuard;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -27,7 +29,7 @@ class ChequebookController extends Controller
 
         $bankAccounts = BankAccount::with('bank')->orderBy('name')->get();
 
-        return view('chequebooks.index', compact('chequebooks', 'bankAccounts'));
+        return view('chequebooks.index', compact('chequebooks', 'bankAccounts'))->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function create()
@@ -40,6 +42,8 @@ class ChequebookController extends Controller
 
     public function store(Request $request)
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $chequebook = Chequebook::create([
             ...$this->validatedData($request),
             'fiscal_year_id' => getActiveFiscalYear(),
@@ -54,7 +58,7 @@ class ChequebookController extends Controller
         $cheques = $chequebook->cheques()->with('customer')
             ->withExists(['histories as has_lifecycle_actions' => fn ($query) => $query->whereNotNull('from_status')])->latest('due_date')->paginate(20);
 
-        return view('chequebooks.show', compact('chequebook', 'cheques'));
+        return view('chequebooks.show', compact('chequebook', 'cheques'))->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function edit(Chequebook $chequebook)
@@ -67,6 +71,8 @@ class ChequebookController extends Controller
 
     public function update(Request $request, Chequebook $chequebook)
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($chequebook);
+
         $chequebook->update($this->validatedData($request, $chequebook));
 
         return redirect()->route('chequebooks.show', $chequebook)->with('success', __('Chequebook updated successfully.'));
@@ -74,6 +80,8 @@ class ChequebookController extends Controller
 
     public function destroy(Chequebook $chequebook)
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($chequebook);
+
         $chequebook->delete();
 
         return redirect()->route('chequebooks.index')->with('success', __('Chequebook deleted successfully. Associated cheques were preserved.'));

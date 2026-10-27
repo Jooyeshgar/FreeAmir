@@ -64,7 +64,7 @@
                                 <form method="POST" action="{{ route('budgets.destroy', $line['budget']) }}" onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-square btn-ghost btn-sm text-base-content/60 hover:text-error" aria-label="{{ __('Delete forecast for :subject', ['subject' => $line['subject']->name]) }}">
+                                    <button type="submit" class="btn btn-square btn-ghost btn-sm text-base-content/60 hover:text-error" @disabled($fiscalYearClosed) aria-label="{{ __('Delete forecast for :subject', ['subject' => $line['subject']->name]) }}" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Delete') }}">
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16m-10 4v6m4-6v6M9 7l1-3h4l1 3m-9 0 1 14h10l1-14" />
                                         </svg>

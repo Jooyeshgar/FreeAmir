@@ -17,9 +17,7 @@
                 </form>
 
                 @can('hr.organization-units.create')
-                    <a href="{{ route('hr.organization-units.create') }}" class="btn btn-primary">
-                        {{ __('Create Organization Unit') }}
-                    </a>
+                    <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('hr.organization-units.create') }}" class="btn btn-primary">{{ __('Create Organization Unit') }}</x-closed-year-action-link>
                 @endcan
             </div>
 
@@ -60,16 +58,16 @@
                                 <td>
                                     <div class="inline-flex gap-2">
                                         @can('hr.organization-units.edit')
-                                            <a href="{{ route('hr.organization-units.edit', $organizationUnit) }}" class="btn btn-sm btn-info">
+                                            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('hr.organization-units.edit', $organizationUnit) }}" class="btn btn-sm btn-info">
                                                 {{ __('Edit') }}
-                                            </a>
+                                            </x-closed-year-action-link>
                                         @endcan
                                         @can('hr.organization-units.destroy')
                                             <form action="{{ route('hr.organization-units.destroy', $organizationUnit) }}" method="POST" class="inline-block"
                                                 onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-error">
+                                                <button type="submit" @disabled($fiscalYearClosed) class="btn btn-sm btn-error {{ $fiscalYearClosed ? 'opacity-60' : '' }}" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Delete') }}">
                                                     {{ __('Delete') }}
                                                 </button>
                                             </form>

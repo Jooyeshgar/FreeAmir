@@ -29,21 +29,108 @@ class EnsureFiscalYearOpen
 
         $this->fiscalYearMutationGuard->ensureOpen($subject, $destination);
 
+        // Nested records can have a different owner from the first route parameter.
+        foreach ($request->route()?->parameters() ?? [] as $parameter) {
+            // The user is only the account to link; the active year owns the new employee.
+            if ($request->routeIs('users.create-employee') && $parameter === $request->route('user')) {
+                continue;
+            }
+
+            if ($parameter instanceof EloquentModel && $parameter !== $subject) {
+                $this->fiscalYearMutationGuard->ensureOpen($parameter);
+            }
+        }
+
         return $next($request);
     }
 
     private function isExempt(Request $request): bool
     {
-        if ($request->isMethod('GET') && ! $request->routeIs([
+        if ($request->isMethod('GET') && $request->routeIs([
             'fiscal-years.edit',
-            'documents.duplicate',
-            'invoices.create',
+            'subjects.edit',
+            'product-groups.edit',
+            'service-groups.edit',
+            'comments.edit',
+            'configs.edit',
+            'documents.edit',
+            'documents.files.edit',
+            'products.edit',
+            'warehouses.edit',
+            'services.edit',
+            'customers.edit',
+            'customer-groups.edit',
+            'bank-accounts.edit',
+            'banks.edit',
+            'chequebooks.edit',
+            'cheques.edit',
             'invoices.edit',
-            'invoices.void-form',
-            'invoices.ancillary-costs.create',
             'invoices.ancillary-costs.edit',
+            'hr.employees.edit',
+            'hr.organization-units.edit',
+            'hr.org-charts.edit',
+            'hr.personnel-requests.edit',
+            'attendance.attendance-logs.edit',
+            'attendance.monthly-attendances.edit',
+            'attendance.work-shifts.edit',
+            'salary.payroll-elements.edit',
+            'salary.salary-decrees.edit',
+            'salary.public-holidays.edit',
+            'salary.tax-slabs.edit',
+            'salary.work-sites.edit',
+            'salary.work-site-contracts.edit',
+            'salary.payroll-items.edit',
+            'employee-portal.personnel-requests.edit',
         ])) {
-            return true;
+            return false;
+        }
+
+        if ($request->isMethod('GET')) {
+            return ! $request->routeIs([
+                'subjects.create',
+                'products.create',
+                'products.import',
+                'product-groups.create',
+                'services.create',
+                'services.import',
+                'service-groups.create',
+                'customers.create',
+                'customers.import',
+                'customer-groups.create',
+                'warehouses.create',
+                'warehouses.transfer',
+                'banks.create',
+                'bank-accounts.create',
+                'chequebooks.create',
+                'cheques.create',
+                'comments.create',
+                'documents.create',
+                'documents.files.create',
+                'documents.import',
+                'documents.duplicate',
+                'invoices.create',
+                'invoices.void-form',
+                'invoices.ancillary-costs.create',
+                'hr.employees.create',
+                'hr.organization-units.create',
+                'hr.org-charts.create',
+                'hr.personnel-requests.create',
+                'attendance.attendance-logs.create',
+                'attendance.attendance-logs.bulk-create',
+                'attendance.attendance-logs.import',
+                'attendance.monthly-attendances.create',
+                'attendance.monthly-attendances.bulk-create',
+                'attendance.work-shifts.create',
+                'salary.payroll-elements.create',
+                'salary.salary-decrees.create',
+                'salary.public-holidays.create',
+                'salary.tax-slabs.create',
+                'salary.work-sites.create',
+                'salary.work-site-contracts.create',
+                'employee-portal.change-employee-information',
+                'employee-portal.personnel-requests.create',
+                'attendance.attendance-logs.import.preview',
+            ]);
         }
 
         return $request->routeIs([
@@ -66,6 +153,8 @@ class EnsureFiscalYearOpen
             'backups.import',
             'documents.export.download',
             'invoices.export',
+            'reports.documents.export',
+            'attendance.attendance-logs.import.preview',
             'commercial-ledgers.store',
             'commercial-ledgers.destroy',
             'companies.close-fiscal-year',

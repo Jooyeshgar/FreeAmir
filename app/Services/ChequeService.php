@@ -14,8 +14,11 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Subject;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
@@ -38,8 +41,67 @@ class ChequeService
         };
     }
 
+    public function validateInvoiceCheque(array $input, Invoice $invoice, ?Cheque $cheque = null): array
+    {
+        $direction = $this->directionForInvoice($invoice);
+        abort_unless($direction, 422, __('This invoice type cannot be settled by cheque.'));
+
+        $fee = $input['bank_service_fee'] ?? 0;
+        if (is_string($fee)) {
+            $fee = str_replace([',', '٬', '٫'], ['', '', '.'], trim(toEnglish($fee)));
+            $fee = $fee === '' ? 0 : $fee;
+        }
+
+        $normalized = [
+            'title' => filled($input['title'] ?? null) ? trim((string) $input['title']) : null,
+            'amount' => convertToFloat($input['amount'] ?? 0),
+            'bank_service_fee' => $fee,
+            'sayad_number' => preg_replace('/\D/', '', toEnglish((string) ($input['sayad_number'] ?? null))),
+            'serial' => trim(toEnglish((string) ($input['serial'] ?? null))),
+            'cheque_number' => trim(toEnglish((string) ($input['cheque_number'] ?? null))),
+        ];
+        foreach (['issue_date', 'due_date'] as $field) {
+            if (filled($input[$field] ?? null)) {
+                $normalized[$field] = jalaliInputToGregorian($input[$field], $field);
+            }
+        }
+
+        $validated = Validator::make(array_replace($input, $normalized), [
+            'title' => ['nullable', 'string', 'min:2', 'max:255'],
+            'amount' => ['required', 'numeric', 'gt:0'],
+            'bank_service_fee' => ['required', 'numeric', 'min:0', 'lt:10000000000000000'],
+            'issue_date' => ['required', 'date'],
+            'due_date' => ['required', 'date', 'after_or_equal:issue_date'],
+            'serial' => ['nullable', 'string', 'max:50'],
+            'cheque_number' => ['nullable', 'string', 'max:50'],
+            'sayad_number' => [
+                'required',
+                'regex:/^\d{16}$/',
+                Rule::unique('cheques', 'sayad_number')->where('fiscal_year_id', getActiveFiscalYear())->ignore($cheque?->id),
+            ],
+            'bank_account_id' => [
+                Rule::requiredIf($direction === ChequeType::PAYABLE),
+                'nullable',
+                Rule::exists('bank_accounts', 'id')->where('fiscal_year_id', getActiveFiscalYear()),
+            ],
+            'chequebook_id' => $direction === ChequeType::PAYABLE
+                ? ['nullable', Rule::exists('chequebooks', 'id')->where('fiscal_year_id', getActiveFiscalYear())]
+                : ['exclude'],
+            'description' => ['nullable', 'string', 'max:1000'],
+        ])->validate();
+
+        return [
+            ...$validated,
+            'direction' => $direction->value,
+            'purpose' => ChequeType::SETTLEMENT->value,
+            'customer_id' => $invoice->customer_id,
+        ];
+    }
+
     public function register(User $user, array $data): Cheque
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($data['fiscal_year_id'] ?? getActiveFiscalYear());
+
         return DB::transaction(function () use ($user, $data) {
             $direction = ChequeType::from((int) $data['direction']);
             $purpose = ChequeType::from((int) $data['purpose']);
@@ -87,21 +149,34 @@ class ChequeService
 
     public function update(Cheque $cheque, User $user, array $data): Cheque
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($cheque);
+
         return DB::transaction(function () use ($cheque, $user, $data) {
             $lockedCheque = Cheque::query()->lockForUpdate()->findOrFail($cheque->id);
-            if ($lockedCheque->histories()->whereNotNull('from_status')->exists()) {
-                throw ValidationException::withMessages(['cheque' => __('A cheque cannot be edited after a lifecycle action. Register a replacement cheque to preserve its audit history.')]);
-            }
+
+            $histories = $lockedCheque->histories()->with(['document.transactions', 'payment.invoice'])->orderBy('id')->get();
+            $historySnapshots = $this->snapshotHistories($histories);
+            $hasLifecycle = $histories->contains(fn (ChequeHistory $history): bool => $history->from_status !== null);
+            $initialPurpose = $this->initialPurpose($histories, $lockedCheque->purpose);
 
             $direction = ChequeType::from((int) $data['direction']);
             $purpose = ChequeType::from((int) $data['purpose']);
             $this->validateRegistrationData($data, $direction, $lockedCheque);
 
+            if ($hasLifecycle && ($direction !== $lockedCheque->direction || $purpose !== $initialPurpose)) {
+                throw ValidationException::withMessages(['cheque' => __('The cheque direction and purpose cannot be changed after a lifecycle action.')]);
+            }
+
+            $oldBankAccountId = (int) $lockedCheque->bank_account_id;
+            $bankAccountChanged = array_key_exists('bank_account_id', $data) && (int) ($data['bank_account_id'] ?? 0) !== $oldBankAccountId;
+            $data['bank_account_id'] = array_key_exists('bank_account_id', $data) ? ($data['bank_account_id'] ?: null) : $lockedCheque->bank_account_id;
+            $data['chequebook_id'] = array_key_exists('chequebook_id', $data) ? ($data['chequebook_id'] ?: null) : $lockedCheque->chequebook_id;
+
             if (! empty($data['chequebook_id'])) {
                 $data['cheque_number'] = (int) $data['chequebook_id'] === (int) $lockedCheque->chequebook_id ? $lockedCheque->cheque_number : $this->allocateChequebookLeaf((int) $data['chequebook_id']);
             }
 
-            $initialHistory = $lockedCheque->histories()->whereNull('from_status')->oldest('id')->first();
+            $initialHistory = $histories->firstWhere('from_status', null);
             $initialPayment = $initialHistory?->payment;
             $invoice = $initialPayment?->invoice;
             $data['bank_service_fee'] ??= (float) $initialHistory?->bank_service_fee ?: ($initialPayment?->bank_service_fee ?? 0);
@@ -110,11 +185,18 @@ class ChequeService
                 $this->validateInvoicePaymentData($invoice, $direction, $purpose, $data, $initialPayment);
             }
 
-            if ($initialHistory?->document_id) {
-                DocumentService::deleteDocument($initialHistory->document_id);
+            $replay = $this->prepareLifecycleReplay($historySnapshots, $direction, $purpose);
+            if (! $hasLifecycle) {
+                $documentIds = $histories->pluck('document_id')->merge($histories->pluck('payment')->pluck('document_id'))->filter()->unique()->values();
+                foreach ($documentIds as $documentId) {
+                    DocumentService::deleteDocument((int) $documentId);
+                }
+                $historySnapshots = collect($historySnapshots)->map(fn (array $snapshot): array => [
+                    ...$snapshot,
+                    'document_id' => null,
+                ])->all();
             }
 
-            $status = $this->initialStatus($direction, $purpose);
             $lockedCheque->update([
                 'title' => filled($data['title'] ?? null) ? trim($data['title']) : __('Cheque #').($data['cheque_number'] ?? ''),
                 'amount' => $data['amount'],
@@ -125,44 +207,381 @@ class ChequeService
                 'sayad_number' => $data['sayad_number'],
                 'direction' => $direction,
                 'purpose' => $purpose,
-                'status' => $status,
+                'status' => $this->initialStatus($direction, $purpose),
                 'customer_id' => $data['customer_id'],
                 'endorsed_to_id' => null,
-                'bank_account_id' => $data['bank_account_id'] ?? null,
-                'chequebook_id' => $data['chequebook_id'] ?? null,
+                'bank_account_id' => $data['bank_account_id'],
+                'chequebook_id' => $data['chequebook_id'],
                 'desc' => $data['description'] ?? null,
             ]);
 
-            $fee = $this->validateBankServiceFee($data);
-            $document = $this->postInitialDocument($user, $lockedCheque);
-            if ($initialPayment && $document) {
-                $paymentSubject = $direction === ChequeType::RECEIVABLE ? self::DOCUMENTS_RECEIVABLE_CONFIG : self::DOCUMENTS_PAYABLE_CONFIG;
-                $initialPayment = $this->paymentService->saveChequePayment($user, $invoice, $lockedCheque, $document, $this->subject($paymentSubject), $initialPayment, $fee);
-            } elseif ($initialPayment) {
-                $initialPayment->delete();
-                $initialPayment = null;
-            }
-            $historyData = [
-                'to_status' => $status,
-                'user_id' => $user->id,
-                'document_id' => $document?->id,
-                'payment_id' => $initialPayment?->id,
-                'desc' => $data['description'] ?? null,
-            ];
-            if ($initialHistory) {
-                $initialHistory->update($historyData);
-            } else {
-                $initialHistory = $this->history($lockedCheque, $user, null, $status, $document, $initialPayment, $data['description'] ?? null);
-            }
+            $this->rebuildLifecycle($lockedCheque, $user, $historySnapshots, $initialPayment, $invoice, $data, $replay, $bankAccountChanged);
 
-            $this->recordBankServiceFee($lockedCheque, $user, $initialHistory, $data, $data['issue_date']);
+            if ($invoice) {
+                $this->paymentService->syncInvoiceStatus($invoice->fresh());
+            }
 
             return $lockedCheque->fresh();
         });
     }
 
+    /**
+     * Capture the lifecycle information before its accounting documents are rebuilt.
+     * Documents are generated from the edited cheque, while action dates, notes and settlement subjects remain attached to their original history rows.
+     */
+    private function snapshotHistories(Collection $histories): array
+    {
+        return $histories->map(fn (ChequeHistory $history): array => [
+            'id' => $history->id,
+            'action' => $this->actionFromHistory($history),
+            'document_id' => $history->document_id,
+            'desc' => $history->desc,
+            'bank_service_fee' => (float) $history->bank_service_fee,
+            'document_date' => $history->document?->date?->toDateString(),
+            'payment_id' => $history->payment_id,
+            'payment_date' => $history->payment?->date?->toDateString(),
+            'payment_description' => $history->payment?->description,
+            'payment_payer_id' => $history->payment?->payer_id,
+            'payment_settlement_subject_id' => $history->payment?->settlement_subject_id,
+            'payment_creator_id' => $history->payment?->creator_id,
+        ])->all();
+    }
+
+    private function initialPurpose(Collection $histories, ChequeType $fallback): ChequeType
+    {
+        $initial = $histories->firstWhere('from_status', null);
+
+        return in_array($initial?->to_status, [ChequeType::GUARANTEE_RECEIVED, ChequeType::GUARANTEE_GIVEN], true)
+            ? ChequeType::GUARANTEE
+            : ($fallback === ChequeType::GUARANTEE ? ChequeType::GUARANTEE : ChequeType::SETTLEMENT);
+    }
+
+    public function registrationDetails(Cheque $cheque): array
+    {
+        $histories = $cheque->histories()->orderBy('id')->get();
+
+        return [
+            'direction' => $cheque->direction,
+            'purpose' => $this->initialPurpose($histories, $cheque->purpose),
+        ];
+    }
+
+    private function actionFromHistory(ChequeHistory $history): ?string
+    {
+        if ($history->from_status === null) {
+            return null;
+        }
+
+        if ($history->from_status === $history->to_status) {
+            return 'fee';
+        }
+
+        if (in_array($history->from_status, [ChequeType::GUARANTEE_RECEIVED, ChequeType::GUARANTEE_GIVEN], true)
+                && in_array($history->to_status, [ChequeType::REGISTERED, ChequeType::ISSUED], true)) {
+            return 'execute';
+        }
+
+        return match ($history->to_status) {
+            ChequeType::DEPOSITED => 'deposit',
+            ChequeType::CLEARED => 'clear',
+            ChequeType::ENDORSED => 'endorse',
+            ChequeType::BOUNCED => 'bounce',
+            ChequeType::RETURNED => 'return',
+            ChequeType::CANCELLED => 'cancel',
+            default => throw ValidationException::withMessages(['cheque' => __('This cheque history cannot be replayed after editing.')]),
+        };
+    }
+
+    /** Validate the saved action sequence against the edited cheque type, then compute the statuses that should be written back to each history row.*/
+    private function prepareLifecycleReplay(array $snapshots, ChequeType $direction, ChequeType $purpose): array
+    {
+        $cheque = new Cheque;
+        $cheque->direction = $direction;
+        $cheque->purpose = $purpose;
+        $cheque->status = $this->initialStatus($direction, $purpose);
+
+        $events = [];
+        $endorsedToId = null;
+        foreach (array_slice($snapshots, 1) as $snapshot) {
+            $action = $snapshot['action'];
+            if (! $action) {
+                throw ValidationException::withMessages(['cheque' => __('This cheque history cannot be replayed after editing.')]);
+            }
+
+            $from = $cheque->status;
+            $purposeBefore = $cheque->purpose;
+            if ($action === 'fee') {
+                $to = $from;
+            } else {
+                if (! in_array($action, $cheque->availableActions(), true)) {
+                    throw ValidationException::withMessages(['cheque' => __('The edited cheque details are not compatible with its saved lifecycle actions.')]);
+                }
+
+                $to = match ($action) {
+                    'deposit' => ChequeType::DEPOSITED,
+                    'clear' => ChequeType::CLEARED,
+                    'endorse' => ChequeType::ENDORSED,
+                    'bounce' => ChequeType::BOUNCED,
+                    'return' => ChequeType::RETURNED,
+                    'cancel' => ChequeType::CANCELLED,
+                    'execute' => $this->initialStatus($direction, ChequeType::SETTLEMENT),
+                    default => throw ValidationException::withMessages(['cheque' => __('This cheque history cannot be replayed after editing.')]),
+                };
+                if ($action === 'execute') {
+                    $cheque->purpose = ChequeType::SETTLEMENT;
+                }
+                $endorsedToId = $action === 'endorse' ? $snapshot['payment_payer_id'] : null;
+            }
+
+            $snapshot['action'] = $action;
+            $snapshot['replayed_from_status'] = $from;
+            $snapshot['replayed_to_status'] = $to;
+            $snapshot['purpose_before'] = $purposeBefore;
+            $events[] = $snapshot;
+            $cheque->status = $to;
+        }
+
+        return [
+            'histories' => $events,
+            'status' => $cheque->status,
+            'purpose' => $cheque->purpose,
+            'endorsed_to_id' => $endorsedToId,
+        ];
+    }
+
+    /** Rebuild every accounting document affected by an edited cheque, including documents created by actions that happened before the edit.*/
+    private function rebuildLifecycle(Cheque $cheque, User $user, array $snapshots, ?Payment $initialPayment, ?Invoice $invoice, array $data, array $replay, bool $bankAccountChanged): void
+    {
+        $initialSnapshot = $snapshots[0] ?? [
+            'id' => null,
+            'from_status' => null,
+            'to_status' => $this->initialStatus($cheque->direction, $cheque->purpose)->value,
+            'user_id' => $user->id,
+            'desc' => $data['description'] ?? null,
+            'bank_service_fee' => 0,
+            'document_date' => null,
+            'payment_id' => null,
+        ];
+        $initialHistory = $initialSnapshot['id'] ? ChequeHistory::findOrFail($initialSnapshot['id']) : null;
+        $initialDocument = ! empty($initialSnapshot['document_id']) ? Document::find($initialSnapshot['document_id']) : null;
+        $initialEntries = $cheque->purpose === ChequeType::GUARANTEE
+            ? []
+            : ($cheque->direction === ChequeType::RECEIVABLE
+                ? [
+                    [$this->subject(self::DOCUMENTS_RECEIVABLE_CONFIG), -(float) $cheque->amount],
+                    [$this->accountSideSubject($cheque), (float) $cheque->amount],
+                ]
+                : [
+                    [$this->accountSideSubject($cheque), -(float) $cheque->amount],
+                    [$this->subject(self::DOCUMENTS_PAYABLE_CONFIG), (float) $cheque->amount],
+                ]);
+        $initialEvent = $cheque->direction === ChequeType::RECEIVABLE ? 'register' : 'issue';
+        $initialDocument = $this->rewriteEditedDocument($user, $cheque, $initialDocument, $initialEvent, $initialEntries, $data['issue_date'], (float) $data['bank_service_fee']);
+        if ($initialPayment && $initialDocument) {
+            $paymentSubject = $cheque->direction === ChequeType::RECEIVABLE ? self::DOCUMENTS_RECEIVABLE_CONFIG : self::DOCUMENTS_PAYABLE_CONFIG;
+            $initialPayment = $this->paymentService->saveChequePayment($user, $invoice, $cheque, $initialDocument, $this->subject($paymentSubject), $initialPayment, (float) $data['bank_service_fee']);
+        } elseif ($initialPayment) {
+            $initialPayment->delete();
+            $initialPayment = null;
+        }
+
+        if ($initialHistory) {
+            $initialHistory->update([
+                'to_status' => $this->initialStatus($cheque->direction, $cheque->purpose),
+                'document_id' => $initialDocument?->id,
+                'payment_id' => $initialPayment?->id,
+                'desc' => $data['description'] ?? null,
+            ]);
+        } else {
+            $initialHistory = $this->history($cheque, $user, null, $this->initialStatus($cheque->direction, $cheque->purpose), $initialDocument, $initialPayment, $data['description'] ?? null);
+        }
+        $initialHistory->update(['bank_service_fee' => (float) $data['bank_service_fee']]);
+
+        foreach ($replay['histories'] as $snapshot) {
+            $history = ChequeHistory::findOrFail($snapshot['id']);
+            [$document, $payment] = $this->rebuildTransition($cheque, $user, $snapshot, $bankAccountChanged);
+
+            $history->update([
+                'from_status' => $snapshot['replayed_from_status'],
+                'to_status' => $snapshot['replayed_to_status'],
+                'document_id' => $document?->id,
+                'payment_id' => $payment?->id,
+                'bank_service_fee' => (float) $snapshot['bank_service_fee'],
+            ]);
+        }
+
+        $cheque->update([
+            'status' => $replay['status'],
+            'purpose' => $replay['purpose'],
+            'endorsed_to_id' => $replay['endorsed_to_id'],
+        ]);
+    }
+
+    private function rebuildTransition(Cheque $cheque, User $user, array $snapshot, bool $bankAccountChanged): array
+    {
+        $date = $snapshot['document_date'] ?? now()->toDateString();
+        $payment = $snapshot['payment_id'] ? Payment::find($snapshot['payment_id']) : null;
+        $action = $snapshot['action'];
+        $amount = (float) $cheque->amount;
+        $entries = [];
+        $event = $action;
+
+        if ($action === 'execute') {
+            $entries = $cheque->direction === ChequeType::RECEIVABLE
+                ? [[$this->subject(self::DOCUMENTS_RECEIVABLE_CONFIG), -$amount], [$this->accountSideSubject($cheque), $amount]]
+                : [[$this->accountSideSubject($cheque), -$amount], [$this->subject(self::DOCUMENTS_PAYABLE_CONFIG), $amount]];
+        } else {
+            $entries = match ($action) {
+                'deposit' => [
+                    [$this->subject(self::DOCUMENTS_IN_COLLECTION_CONFIG), -$amount],
+                    [$this->subject(self::DOCUMENTS_RECEIVABLE_CONFIG), $amount],
+                ],
+                'clear' => $cheque->direction === ChequeType::RECEIVABLE
+                    ? [[$this->clearSettlementSubject($cheque, $snapshot, $bankAccountChanged), -$amount], [$this->subject(self::DOCUMENTS_IN_COLLECTION_CONFIG), $amount]]
+                    : [[$this->subject(self::DOCUMENTS_PAYABLE_CONFIG), -$amount], [$this->clearSettlementSubject($cheque, $snapshot, $bankAccountChanged), $amount]],
+                'endorse' => $this->endorseEntries($cheque, $snapshot, $amount),
+                'bounce' => $cheque->direction === ChequeType::RECEIVABLE
+                    ? [[$this->subject(self::DOCUMENTS_RECEIVABLE_CONFIG), -$amount], [$this->subject(self::DOCUMENTS_IN_COLLECTION_CONFIG), $amount]]
+                    : [[$this->subject(self::DOCUMENTS_PAYABLE_CONFIG), -$amount], [$this->accountSideSubject($cheque), $amount]],
+                'return' => [
+                    [$this->accountSideSubject($cheque), -$amount],
+                    [$this->subject(self::DOCUMENTS_RECEIVABLE_CONFIG), $amount],
+                ],
+                'cancel' => ($snapshot['purpose_before'] === ChequeType::SETTLEMENT && $snapshot['replayed_from_status'] === ChequeType::ISSUED)
+                    ? [
+                        [$this->subject(self::DOCUMENTS_PAYABLE_CONFIG), -$amount],
+                        [$this->accountSideSubject($cheque), $amount],
+                    ]
+                    : [],
+                default => [],
+            };
+        }
+
+        $document = ! empty($snapshot['document_id']) ? Document::find($snapshot['document_id']) : null;
+        $document = $this->rewriteEditedDocument($user, $cheque, $document, $event, $entries, $date, (float) $snapshot['bank_service_fee']);
+
+        if (! $document && $payment) {
+            $payment->delete();
+
+            return [null, null];
+        }
+
+        if ($document && $payment) {
+            $subjectId = $action === 'clear' ? $this->clearSettlementSubject($cheque, $snapshot, $bankAccountChanged) : (int) $snapshot['payment_settlement_subject_id'];
+            $payment->update([
+                'amount' => $cheque->amount,
+                'date' => $snapshot['payment_date'] ?? $date,
+                'description' => $snapshot['payment_description'] ?? $snapshot['desc'] ?? $cheque->desc,
+                'reference_number' => $cheque->sayad_number,
+                'payer_id' => $action === 'clear'
+                    ? ($cheque->direction === ChequeType::RECEIVABLE ? $cheque->customer_id : null)
+                    : $snapshot['payment_payer_id'],
+                'document_id' => $document->id,
+                'settlement_subject_id' => $subjectId ?: null,
+                'creator_id' => $snapshot['payment_creator_id'] ?: $user->id,
+            ]);
+            DocumentService::syncDocumentable($document, $payment);
+            $payment = $payment->fresh();
+        }
+
+        return [$document, $payment];
+    }
+
+    private function endorseEntries(Cheque $cheque, array $snapshot, float $amount): array
+    {
+        $subjectId = (int) $snapshot['payment_settlement_subject_id'];
+        if (! $subjectId || ! Subject::where('fiscal_year_id', $cheque->fiscal_year_id)->whereKey($subjectId)->exists()) {
+            throw ValidationException::withMessages(['subject_id' => __('The endorsed settlement account is invalid.')]);
+        }
+
+        return [
+            [$subjectId, -$amount],
+            [$this->subject(self::DOCUMENTS_RECEIVABLE_CONFIG), $amount],
+        ];
+    }
+
+    private function rewriteEditedDocument(User $user, Cheque $cheque, ?Document $document, string $event, array $entries, string $date, float $fee): ?Document
+    {
+        $description = $cheque->desc ?: ($event === 'fee' ? __('Bank service fee') : $this->accountingDescription($event, $cheque));
+        $transactions = array_map(fn (array $entry): array => [
+            'subject_id' => $entry[0],
+            'desc' => $description,
+            'value' => $entry[1],
+        ], $entries);
+        if ($fee > 0) {
+            $transactions = array_merge($transactions, $this->paymentService->bankServiceFeeTransactions($fee, $this->accountSideSubject($cheque)));
+        }
+
+        $title = $entries === []
+            ? __('Bank service fee').' - '.$cheque->title
+            : ($cheque->title ?: $this->accountingDescription($event, $cheque));
+
+        if ($transactions === []) {
+            if ($document) {
+                DocumentService::deleteDocument($document->id);
+            }
+
+            return null;
+        }
+
+        if ($document) {
+            if ($document->approved_at) {
+                DocumentService::changeDocumentStatus($document, $user, 'unapproved');
+            }
+            DocumentService::updateDocument($document, [
+                'date' => $date,
+                'title' => $title,
+                'documentable' => $document->documentable,
+            ]);
+            $transactionIds = $document->transactions()->orderBy('id')->pluck('id')->all();
+            $transactions = array_map(function (array $transaction, int $index) use ($transactionIds): array {
+                if (isset($transactionIds[$index])) {
+                    $transaction['transaction_id'] = $transactionIds[$index];
+                }
+
+                return $transaction;
+            }, $transactions, array_keys($transactions));
+            DocumentService::updateDocumentTransactions($document->id, $transactions);
+            DocumentService::changeDocumentStatus($document, $user, 'approved');
+
+            return $document->fresh();
+        }
+
+        $document = DocumentService::createDocument($user, [
+            'date' => $date,
+            'title' => $title,
+            'number' => null,
+            'documentable' => $cheque,
+        ], $transactions);
+        DocumentService::changeDocumentStatus($document, $user, 'approved');
+
+        return $document;
+    }
+
+    private function clearSettlementSubject(Cheque $cheque, array $snapshot, bool $bankAccountChanged): int
+    {
+        $storedSubjectId = (int) ($snapshot['payment_settlement_subject_id'] ?? 0);
+        if ($storedSubjectId && ! $bankAccountChanged && Subject::where('fiscal_year_id', $cheque->fiscal_year_id)->whereKey($storedSubjectId)->exists()) {
+            return $storedSubjectId;
+        }
+
+        return $this->bankAccountSubject($cheque);
+    }
+
+    private function bankAccountSubject(Cheque $cheque): int
+    {
+        $subjectId = (int) ($cheque->bankAccount?->subject_id ?: $cheque->bankAccount?->subject?->id);
+        if (! $subjectId) {
+            throw ValidationException::withMessages(['bank_account_id' => __('The bank account has no accounting subject.')]);
+        }
+
+        return $subjectId;
+    }
+
     public function delete(Cheque $cheque): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($cheque);
+
         DB::transaction(function () use ($cheque) {
             $lockedCheque = Cheque::query()->lockForUpdate()->findOrFail($cheque->id);
 
@@ -186,6 +605,8 @@ class ChequeService
 
     public function transition(Cheque $cheque, User $user, string $action, array $data = []): Cheque
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($cheque);
+
         return DB::transaction(function () use ($cheque, $user, $action, $data) {
             $lockedCheque = Cheque::query()->lockForUpdate()->findOrFail($cheque->id);
 

@@ -12,11 +12,13 @@ use App\Enums\EmployeeNationality;
 use App\Http\Requests\StoreEmployeeRequest;
 use App\Http\Requests\UpdateEmployeeRequest;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\OrganizationUnit;
 use App\Models\OrgChart;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
 use App\Models\WorkSiteContract;
+use App\Services\FiscalYearMutationGuard;
 use App\Services\ReportExportService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -55,7 +57,10 @@ class EmployeeController extends Controller
         $newHiresCount = (int) $stats->new_hires_count;
         $withoutSalaryDecreeCount = Employee::doesntHave('salaryDecrees')->count();
 
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
         return view('employees.index', compact(
+            'fiscalYearClosed',
             'employees',
             'totalCount',
             'activeCount',
@@ -89,6 +94,8 @@ class EmployeeController extends Controller
 
     public function store(StoreEmployeeRequest $request): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         Employee::create(array_merge(
             $request->validated(),
             ['fiscal_year_id' => getActiveFiscalYear()]
@@ -111,7 +118,9 @@ class EmployeeController extends Controller
             'payrolls' => fn ($query) => $query->with(['decree', 'monthlyAttendance'])->orderByDesc('year')->orderByDesc('month'),
         ]);
 
-        return view('employees.show', compact('employee'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('employees.show', compact('fiscalYearClosed', 'employee'));
     }
 
     public function edit(Employee $employee): View
@@ -130,6 +139,8 @@ class EmployeeController extends Controller
 
     public function update(UpdateEmployeeRequest $request, Employee $employee): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($employee);
+
         $validated = $request->validated();
         if ($employee->user && ($employee->first_name !== $validated['first_name'] || $employee->last_name !== $validated['last_name'])) {
             $employee->user->name = $validated['first_name'].' '.$validated['last_name'];
@@ -144,6 +155,8 @@ class EmployeeController extends Controller
 
     public function destroy(Employee $employee): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($employee);
+
         $employee->delete();
 
         return redirect()->route('hr.employees.index')

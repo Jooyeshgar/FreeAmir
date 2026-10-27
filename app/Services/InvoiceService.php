@@ -33,7 +33,7 @@ class InvoiceService
      */
     public static function createInvoice(User $user, array $invoiceData, array $items = [], bool $approved = false): array
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoiceData['fiscal_year_id'] ?? getActiveFiscalYear());
 
         $date = $invoiceData['date'] ?? now()->toDateString();
         $items = self::assignWarehouseToItems($items, $invoiceData['warehouse_id'] ?? null);
@@ -168,6 +168,7 @@ class InvoiceService
         app(FiscalYearMutationGuard::class)->ensureOpen(Invoice::withoutGlobalScopes()->findOrFail($invoiceId));
 
         $invoice = Invoice::findOrFail($invoiceId);
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
         $requestedInvoiceType = InvoiceType::tryFromName($invoiceData['invoice_type'] ?? null);
 
         if ($requestedInvoiceType !== $invoice->invoice_type) {
@@ -415,10 +416,11 @@ class InvoiceService
      */
     public static function deleteInvoice(int $invoiceId): void
     {
-        app(FiscalYearMutationGuard::class)->ensureOpen(Invoice::withoutGlobalScopes()->findOrFail($invoiceId));
+        $invoice = Invoice::withoutGlobalScopes()->find($invoiceId);
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
 
         DB::transaction(function () use ($invoiceId) {
-            $invoice = Invoice::findOrFail($invoiceId);
+            $invoice = Invoice::withoutGlobalScopes()->findOrFail($invoiceId);
 
             $chequeIds = $invoice->payments()->whereNotNull('cheque_id')->pluck('cheque_id')->unique();
             Cheque::whereIn('id', $chequeIds)->each(fn (Cheque $cheque) => app(ChequeService::class)->delete($cheque));
@@ -573,13 +575,28 @@ class InvoiceService
         app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
 
         DB::transaction(function () use ($invoice, $status) {
+            $reactivating = $status === 'approved' && $invoice->status->isApprovedInactive();
+            if ($status === 'approved_inactive' || $reactivating) {
+                $decision = self::getChangeStatusDecision($invoice, $status);
+                if ($decision->hasErrors()) {
+                    throw ValidationException::withMessages([
+                        'invoice' => $decision->messages->where('type', 'error')->pluck('text')->all(),
+                    ]);
+                }
+            }
+
             match ($status) {
                 'ready_to_approve' => $invoice->update(['status' => InvoiceStatus::READY_TO_APPROVE]),
                 'rejected' => $invoice->update(['status' => InvoiceStatus::REJECTED]),
                 'approved' => $this->approveInvoice($invoice),
+                'approved_inactive' => $this->deactivateInvoice($invoice),
                 'unapproved' => $this->unapproveInvoice($invoice),
                 default => null,
             };
+
+            if ($reactivating) {
+                $this->restoreInactiveInvoiceRelations($invoice);
+            }
         });
 
     }
@@ -590,6 +607,19 @@ class InvoiceService
     private function approveInvoice(Invoice $invoice): void
     {
         self::assertBeginningInventoryOrder($invoice, InvoiceStatus::APPROVED);
+
+        if ($invoice->invoice_type === InvoiceType::BEGINNING_INVENTORY) {
+            // Rebuild the stored stock baseline from posted invoice history before
+            // applying this opening. This removes unsupported quantities while
+            // retaining legitimate earlier openings in other warehouses.
+            $invoice->loadMissing('items.itemable');
+            $invoice->items
+                ->where('itemable_type', Product::class)
+                ->pluck('itemable')
+                ->filter()
+                ->unique('id')
+                ->each(fn (Product $product) => ProductService::recalculateQuantity($product));
+        }
 
         $invoice->status = InvoiceStatus::APPROVED;
         $createdDocument = self::createDocumentFromInvoiceItems(auth()->user(), $invoice);
@@ -628,6 +658,51 @@ class InvoiceService
         ProductService::subProductsQuantities($invoice->items->toArray(), $invoice->invoice_type);
         CostOfGoodsService::updateProductsAverageCost($invoice);
         ProductService::updateWarehouseAverageCosts($invoice);
+    }
+
+    private function deactivateInvoice(Invoice $invoice): void
+    {
+        // Only costs reversed by this action retain their approval history.
+        $approvedCosts = $invoice->ancillaryCosts()->where('status', InvoiceStatus::APPROVED)->get();
+        $this->unapproveInvoice($invoice);
+        foreach ($approvedCosts as $cost) {
+            $cost->update(['status' => InvoiceStatus::APPROVED_INACTIVE]);
+        }
+        $invoice->update(['status' => InvoiceStatus::APPROVED_INACTIVE]);
+    }
+
+    /** Restore the costs and payments reversed by single or bulk deactivation. */
+    private function restoreInactiveInvoiceRelations(Invoice $invoice): void
+    {
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
+
+        // Restore this invoice's costs in date order before its payments.
+        $ancillaryCostService = app(AncillaryCostService::class);
+        foreach ($invoice->ancillaryCosts()->where('status', InvoiceStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('id')->get() as $ancillaryCost) {
+            $validation = $ancillaryCostService->getChangeStatusValidation($ancillaryCost);
+            if (! $validation['allowed']) {
+                $reason = $validation['reason'] ?? __('unknown reason');
+                throw ValidationException::withMessages([
+                    'ancillary_cost' => [__('Invoice #:invoice_number: Ancillary Cost #:id cannot be approved due to: :reason', ['invoice_number' => $invoice->number, 'id' => $ancillaryCost->id, 'reason' => $reason])],
+                ]);
+            }
+            $ancillaryCostService->changeAncillaryCostStatus($ancillaryCost, 'approve');
+        }
+
+        $paymentService = app(PaymentService::class);
+        foreach ($invoice->payments()->whereNull('document_id')->whereNull('cheque_id')->get() as $payment) {
+            $decision = $paymentService->createPaymentDocument(auth()->user(), $payment->fresh('invoice'));
+            if ($decision->hasErrors()) {
+                throw ValidationException::withMessages([
+                    'payment' => $decision->messages->map(fn ($message) => __('Invoice #:invoice_number: Payment #:id cannot be restored due to: :reason', [
+                        'invoice_number' => $invoice->number,
+                        'id' => $payment->id,
+                        'reason' => $message->text,
+                    ]))->all(),
+                ]);
+            }
+        }
+        $paymentService->syncInvoiceStatus($invoice->fresh());
     }
 
     private function unapproveAncillaryCostsOfInvoice(Invoice $invoice): void
@@ -1033,6 +1108,18 @@ class InvoiceService
         $productIds = self::getProductIdsFromInvoice($invoice);
 
         $nextStatus = $nextStatus instanceof InvoiceStatus ? $nextStatus : InvoiceStatus::fromName($nextStatus);
+
+        if ($nextStatus->isApprovedInactive()) {
+            if (! $invoice->status->isApproved() || $invoice->moadianHistories->contains(fn ($history) => strtoupper($history->data['status'] ?? '') === 'SUCCESS')) {
+                $decision = new InvoiceStatusDecision;
+                $decision->addMessage('error', __('Invalid status action.'));
+
+                return $decision;
+            }
+
+            // Apply the same return, dependency and opening rules as reversal.
+            $nextStatus = InvoiceStatus::UNAPPROVED;
+        }
 
         return self::decideInvoiceStatusChange($invoice, $productIds, $nextStatus);
     }

@@ -172,6 +172,7 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::get('invoices/{invoice}/print', [Controllers\InvoiceController::class, 'print'])->name('invoices.print');
     Route::get('invoices/{invoice}/void', [Controllers\InvoiceController::class, 'showVoidForm'])->name('invoices.void-form');
     Route::post('invoices/{invoice}/void', [Controllers\InvoiceController::class, 'voidInvoice'])->name('invoices.void');
+    Route::post('invoices/{invoice}/approve-inactive', [Controllers\InvoiceController::class, 'approveInactive'])->name('invoices.approve');
     Route::post('invoices/{invoice}/change-status/{status}', [Controllers\InvoiceController::class, 'changeStatus'])->name('invoices.change-status');
     Route::post('invoices/{invoice}/payments', [Controllers\PaymentController::class, 'store'])->name('invoices.payments.store');
     Route::get('invoices/{invoice}/payments/subjects', [Controllers\PaymentController::class, 'searchSubjects'])->name('invoices.payments.search-subjects');

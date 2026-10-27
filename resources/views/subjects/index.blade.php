@@ -16,7 +16,7 @@
             </div>
             <div class="card-actions">
                 <div>
-                    <a href="{{ route('subjects.create', ['parent_id' => request('parent_id', null)]) }}" class="btn btn-sm btn-primary ">{{ __('Create Subject') }}</a>
+                    <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('subjects.create', ['parent_id' => request('parent_id', null)]) }}" class="btn btn-sm btn-primary ">{{ __('Create Subject') }}</x-closed-year-action-link>
                 </div>
                 @if($currentParent)
                     @php
@@ -31,7 +31,7 @@
                         {{ __('Back') }}
                     </a>
                     @if(! $currentParent->children()->exists())
-                        <button class="btn btn-sm btn-primary" x-on:click="openTransferModal('{{ $currentParent->id }}', '{{ $currentParent->name }}')" title="{{ __('Transfer transactions from this subject and its descendants to another') }}">
+                        <button class="btn btn-sm btn-primary" @disabled($fiscalYearClosed) x-on:click="openTransferModal('{{ $currentParent->id }}', '{{ $currentParent->name }}')" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Transfer transactions from this subject and its descendants to another') }}">
                             {{ __('Transfer Transactions') }}
                         </button>
                     @endif
@@ -75,9 +75,9 @@
                                 <td class="px-4 py-2">
                                     <div class="inline-flex gap-2">
                                         @if ($subject->subjectable)
-                                            <a href="{{ route(model_route($subject->subjectable, 'edit'), $subject->subjectable) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route(model_route($subject->subjectable, 'edit'), $subject->subjectable) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</x-closed-year-action-link>
                                         @else
-                                            <a href="{{ route('subjects.edit', $subject) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('subjects.edit', $subject) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</x-closed-year-action-link>
                                         @endif
 
                                         @if ($subject->subjectable || $subject->children_count > 0 || $subject->transactions_count > 0)
@@ -87,12 +87,12 @@
                                                 if ($subject->children_count > 0) $reasons[] = __('Cannot delete subject with children');
                                                 if ($subject->transactions_count > 0) $reasons[] = __('Cannot delete subject with transactions');
                                             @endphp
-                                            <button class="btn btn-sm btn-error" disabled>{{ __('Delete') }}</button>
+                                            <button class="btn btn-sm btn-error" disabled title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ __('Delete') }}</button>
                                         @else
                                             <form action="{{ route('subjects.destroy', $subject) }}" method="POST">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                                <button type="submit" class="btn btn-sm btn-error" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ __('Delete') }}</button>
                                             </form>
                                         @endif
                                     </div>
@@ -108,10 +108,10 @@
                     <p>
                         {{ __('There are no subjects in the current level.') }}
                         {{ __('You can for this level') }} 
-                        <a href="{{ route('subjects.create', ['parent_id' => request('parent_id', null)]) }}" class="link link-primary">{{ __('create a subject') }}</a>
+                        <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('subjects.create', ['parent_id' => request('parent_id', null)]) }}" class="link link-primary">{{ __('create a subject') }}</x-closed-year-action-link>
                         @if($currentParent)
                             {{ __('or') }}
-                            <a href="#" x-on:click.prevent="openTransferModal('{{ $currentParent->id }}', '{{ $currentParent->name }}')" class="link link-primary">{{ __('transfer this subject to this level') }}</a>.
+                            <button type="button" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}" x-on:click="openTransferModal('{{ $currentParent->id }}', '{{ $currentParent->name }}')" class="link link-primary">{{ __('transfer this subject to this level') }}</button>.
                         @endif
                     </p>
                 </div>
@@ -187,7 +187,7 @@
 
                         <div class="modal-action">
                             <button type="button" onclick="document.getElementById('transferModal').close()" class="btn btn-sm md:btn-sm lg:btn-md">{{ __('Cancel') }}</button>
-                            <button type="submit" class="btn btn-sm md:btn-sm lg:btn-md btn-primary">{{ __('Transfer Transactions') }}</button>
+                            <button type="submit" class="btn btn-sm md:btn-sm lg:btn-md btn-primary" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ __('Transfer Transactions') }}</button>
                         </div>
                     </form>
                 </div>

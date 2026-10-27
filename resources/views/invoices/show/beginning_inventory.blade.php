@@ -77,11 +77,14 @@
             </div>
 
             <div class="card-actions justify-end">
+                <x-export-delivery-choice :id="'invoice-pdf-delivery-'.$invoice->id" export="invoice_pdf"
+                    :filters="['invoice_id' => $invoice->id]" :print-url="route('invoices.print', [$invoice, 'autoprint' => 1])"
+                    :label="__('Print')" :title="__('Receive PDF')" />
                 <a class="btn btn-sm" href="{{ route('invoices.index', ['invoice_type' => 'beginning_inventory']) }}">{{ __('Back') }}</a>
                 @can('invoices.edit')
                     @if ($fiscalYearClosed)
                         <button class="btn btn-sm btn-primary btn-disabled cursor-not-allowed" disabled title="{{ __('This fiscal year is already closed.') }}">{{ __('Edit invoice') }}</button>
-                    @elseif (! $invoice->status->isApprovedOrSettled())
+                    @elseif (! $invoice->status->isApprovedOrSettled() || $fiscalYearClosed)
                         <a class="btn btn-sm btn-primary" href="{{ route('invoices.edit', $invoice) }}">{{ __('Edit invoice') }}</a>
                     @endif
                 @endcan

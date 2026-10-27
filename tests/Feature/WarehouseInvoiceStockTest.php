@@ -27,7 +27,6 @@ use App\Services\ProductService;
 use App\Services\WarehouseService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
-use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Helpers\SeederHelper;
 use Tests\TestCase;
 
@@ -194,7 +193,7 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->assertEqualsWithDelta(9, (float) $sell->items()->firstOrFail()->quantity_at, 0.001);
     }
 
-    public function test_approved_beginning_inventory_adds_stock_updates_cost_and_creates_accounting(): void
+    public function test_approved_beginning_inventory_replaces_unsupported_stock_updates_cost_and_creates_accounting(): void
     {
         $this->setStock($this->mainWarehouse, 2, 175);
         $this->product->update(['quantity' => 2, 'average_cost' => 125]);
@@ -214,10 +213,15 @@ class WarehouseInvoiceStockTest extends TestCase
             'subject_id' => (int) config('amir.beginning_inventory'),
             'value' => 4500,
         ]);
-        $this->assertEqualsWithDelta(7, (float) $this->product->fresh()->quantity, 0.001);
-        $this->assertStock($this->mainWarehouse, 7);
-        $this->assertEqualsWithDelta(678.571, (float) $this->product->fresh()->average_cost, 0.001);
-        $this->assertEqualsWithDelta(692.86, $this->stockAverageCost($this->mainWarehouse, $this->product), 0.001);
+        $this->assertEqualsWithDelta(5, (float) $this->product->fresh()->quantity, 0.001);
+        $this->assertStock($this->mainWarehouse, 5);
+        $this->assertEqualsWithDelta(0, (float) $invoice->items->first()->quantity_at, 0.001);
+        $this->assertEqualsWithDelta(900, (float) $this->product->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(900, $this->stockAverageCost($this->mainWarehouse, $this->product), 0.001);
+        $this->assertEqualsWithDelta(0, (float) $invoice->document->transactions()->sum('value'), 0.001);
+        $this->assertEqualsWithDelta(5, ProductService::recalculateQuantity($this->product->fresh()), 0.001);
+        $this->assertStock($this->mainWarehouse, 5);
+        $this->assertEqualsWithDelta(0, (float) $invoice->items()->firstOrFail()->quantity_at, 0.001);
         $this->assertEqualsWithDelta(900, (float) $invoice->items->first()->unit_price, 0.001);
     }
 
@@ -431,8 +435,17 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->assertSame($this->emptyWarehouse->id, $buy->fresh()->warehouse_id);
     }
 
-    #[DataProvider('stockErrorMessages')]
-    public function test_stock_mutation_rejects_an_outgoing_invoice_that_would_make_warehouse_negative(string $locale, string $expectedMessage): void
+    public function test_stock_mutation_rejects_an_outgoing_invoice_that_would_make_warehouse_negative_in_persian(): void
+    {
+        $this->stockMutationRejectsAnOutgoingInvoiceThatWouldMakeWarehouseNegative('fa', 'موجودی انبار انتخاب‌شده برای کالای کالای آزمایشی (کد: 00123) کافی نیست.');
+    }
+
+    public function test_stock_mutation_rejects_an_outgoing_invoice_that_would_make_warehouse_negative_in_english(): void
+    {
+        $this->stockMutationRejectsAnOutgoingInvoiceThatWouldMakeWarehouseNegative('en', 'The selected warehouse does not have enough stock for product کالای آزمایشی (code: 00123).');
+    }
+
+    private function stockMutationRejectsAnOutgoingInvoiceThatWouldMakeWarehouseNegative(string $locale, string $expectedMessage): void
     {
         app()->setLocale($locale);
         $this->product->update(['name' => 'کالای آزمایشی', 'code' => '00123', 'oversell' => false]);
@@ -449,14 +462,6 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->assertStock($this->emptyWarehouse, 0);
         $this->assertSame(InvoiceStatus::READY_TO_APPROVE, $sell->fresh()->status);
         $this->assertEqualsWithDelta(0, (float) $this->product->fresh()->quantity, 0.001);
-    }
-
-    public static function stockErrorMessages(): array
-    {
-        return [
-            'Persian' => ['fa', 'موجودی انبار انتخاب‌شده برای کالای کالای آزمایشی (کد: 00123) کافی نیست.'],
-            'English' => ['en', 'The selected warehouse does not have enough stock for product کالای آزمایشی (code: 00123).'],
-        ];
     }
 
     public function test_void_restores_and_unapproval_removes_stock_from_original_sell_warehouse(): void

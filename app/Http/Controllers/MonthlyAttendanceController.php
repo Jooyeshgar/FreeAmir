@@ -4,10 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Enums\ThursdayStatus;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\MonthlyAttendance;
 use App\Models\PublicHoliday;
 use App\Models\SalaryDecree;
 use App\Services\AttendanceService;
+use App\Services\FiscalYearMutationGuard;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,7 +35,9 @@ class MonthlyAttendanceController extends Controller
         $monthlyAttendances = $query->paginate(15);
         $employees = Employee::orderBy('first_name')->get();
 
-        return view('monthly-attendances.index', compact('monthlyAttendances', 'employees'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('monthly-attendances.index', compact('fiscalYearClosed', 'monthlyAttendances', 'employees'));
     }
 
     public function create(): View
@@ -50,6 +54,8 @@ class MonthlyAttendanceController extends Controller
             'start_date' => ['required', 'regex:/^\d{4}\/\d{1,2}\/\d{1,2}$/'],
             'duration' => ['required', 'integer', 'min:28', 'max:31'],
         ]);
+
+        app(FiscalYearMutationGuard::class)->ensureOpen(Employee::findOrFail($validated['employee_id']));
 
         [$jalaliYear, $jalaliMonth] = array_map('intval', explode('/', $validated['start_date']));
 
@@ -82,6 +88,10 @@ class MonthlyAttendanceController extends Controller
             'start_date' => ['required', 'regex:/^\d{4}\/\d{1,2}\/\d{1,2}$/'],
             'duration' => ['required', 'integer', 'min:28', 'max:31'],
         ]);
+
+        foreach ($validated['employee_ids'] as $employeeId) {
+            app(FiscalYearMutationGuard::class)->ensureOpen(Employee::findOrFail((int) $employeeId));
+        }
 
         [$jalaliYear, $jalaliMonth] = array_map('intval', explode('/', $validated['start_date']));
 
@@ -152,7 +162,9 @@ class MonthlyAttendanceController extends Controller
             );
         }
 
-        return view('monthly-attendances.show', compact('monthlyAttendance', 'decrees', 'allDays'))
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('monthly-attendances.show', compact('fiscalYearClosed', 'monthlyAttendance', 'decrees', 'allDays'))
             ->with('isAdminView', true)
             ->with('backRoute', route('attendance.monthly-attendances.index'));
     }
@@ -166,6 +178,8 @@ class MonthlyAttendanceController extends Controller
 
     public function update(Request $request, MonthlyAttendance $monthlyAttendance): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($monthlyAttendance);
+
         $validated = $request->validate([
             'work_days' => ['required', 'integer', 'min:0', 'max:31'],
             'present_days' => ['required', 'integer', 'min:0', 'max:31'],
@@ -192,6 +206,8 @@ class MonthlyAttendanceController extends Controller
 
     public function destroy(MonthlyAttendance $monthlyAttendance): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($monthlyAttendance);
+
         $monthlyAttendance->employee->leave_remain += $monthlyAttendance->paid_leave - $monthlyAttendance->employee->workShift->paid_leave;
         $monthlyAttendance->employee->save();
 
@@ -203,6 +219,8 @@ class MonthlyAttendanceController extends Controller
 
     public function recalculate(Request $request, MonthlyAttendance $monthlyAttendance): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($monthlyAttendance);
+
         $validated = $request->validate([
             'start_date' => ['required'],
             'duration' => ['required', 'integer', 'min:28', 'max:31'],

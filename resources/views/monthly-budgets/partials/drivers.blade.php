@@ -29,7 +29,7 @@
                         @endif
                     </div>
                 </div>
-                <div class="budget-driver-track" role="img" aria-label="{{ __('Share') }}: {{ is_null($driver['share']) ? '—' : localizeNumber(number_format($driver['share'], 1)).'%' }}"><span style="width:{{ max(0, min(100, $driver['share'] ?? 0)) }}%"></span></div>
+                <div class="budget-driver-track" role="img" aria-label="{{ __('Share') }}: {{ is_null($driver['share']) ? '—' : localizeNumber(number_format($driver['share'], 1)).'%' }}"><span data-budget-width="{{ max(0, min(100, $driver['share'] ?? 0)) }}"></span></div>
             </div>
         @empty
             <div class="budget-empty">{{ __('No actual second-level account activity is available.') }}</div>

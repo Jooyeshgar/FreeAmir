@@ -328,6 +328,7 @@ html[data-theme="dark"] body:has(.budget-workbench) {
 
 .budget-mini-progress span {
     display: block;
+    width: var(--budget-width, 0%);
     height: 100%;
     border-radius: inherit;
     background: var(--bw-primary);
@@ -409,6 +410,7 @@ html[data-theme="dark"] body:has(.budget-workbench) {
     width: .45rem;
     height: .45rem;
     border-radius: 50%;
+    background: var(--budget-kpi-color, var(--bw-primary));
 }
 
 .budget-kpi-value {
@@ -834,6 +836,7 @@ html[data-theme="dark"] body:has(.budget-workbench) {
 
 .budget-driver-track span {
     display: block;
+    width: var(--budget-width, 0%);
     height: 100%;
     border-radius: inherit;
     background: var(--bw-primary);
@@ -1169,6 +1172,7 @@ html[data-theme="dark"] body:has(.budget-workbench) {
 
 .budget-forecast-progress span {
     display: block;
+    width: var(--budget-width, 0%);
     height: 100%;
     border-radius: inherit;
     background: var(--bw-green);

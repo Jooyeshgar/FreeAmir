@@ -13,6 +13,8 @@ class ServiceGroupService
 
     public function create(array $data): ServiceGroup
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($data['fiscal_year_id'] ?? getActiveFiscalYear());
+
         $serviceGroup = ServiceGroup::create($data);
 
         $this->syncSubjects($serviceGroup);
@@ -22,6 +24,8 @@ class ServiceGroupService
 
     public function update(ServiceGroup $serviceGroup, array $data): ServiceGroup
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($serviceGroup, $data['fiscal_year_id'] ?? null);
+
         $serviceGroup->fill($data);
         $serviceGroup->save();
 
@@ -32,6 +36,8 @@ class ServiceGroupService
 
     public function delete(ServiceGroup $serviceGroup): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($serviceGroup);
+
         DB::transaction(function () use ($serviceGroup): void {
             $this->ensureCanDelete($serviceGroup);
 

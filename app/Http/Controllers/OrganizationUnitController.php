@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FiscalYear;
 use App\Models\OrganizationUnit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,7 +31,9 @@ class OrganizationUnitController extends Controller
 
         $organizationUnits = $query->paginate(15)->withQueryString();
 
-        return view('organization-units.index', compact('organizationUnits'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('organization-units.index', compact('fiscalYearClosed', 'organizationUnits'));
     }
 
     public function create(): View
@@ -59,7 +62,9 @@ class OrganizationUnitController extends Controller
             'employees' => fn ($query) => $query->with('workSite')->orderBy('code'),
         ]);
 
-        return view('organization-units.show', compact('organizationUnit'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('organization-units.show', compact('fiscalYearClosed', 'organizationUnit'));
     }
 
     public function edit(OrganizationUnit $organizationUnit): View
