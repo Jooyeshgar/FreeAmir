@@ -16,13 +16,10 @@ use App\Models\Transaction;
 use App\Models\Warehouse;
 use App\Services\DocumentImportExport\DocumentImportExportService;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Foundation\Vite;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\HtmlString;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use PDF;
@@ -352,38 +349,11 @@ class ReportExportService
     private function invoicePdf(array $filters): array
     {
         $invoice = Invoice::with('fiscalYear.company', 'customer', 'items.itemable')->findOrFail($filters['invoice_id'] ?? null);
-
-        return ['content' => $this->renderInvoicePdf($invoice),
-            'filename' => 'invoice-'.formatDocumentNumber($invoice->number ?? $invoice->id).'.pdf', 'mime' => 'application/pdf'];
-    }
-
-    private function renderInvoicePdf(Invoice $invoice): string
-    {
         $draft = $invoice->invoice_type->isBeginningInventory() || ! $invoice->status->isApprovedOrSettled();
-        $view = $draft ? 'invoices.draft' : 'invoices.print';
-        $css = File::get(resource_path($draft ? 'css/invoice-draft.css' : 'css/invoice.css'));
-        // mPDF treats "A4 portrait/landscape" as lengths, collapsing the content area.
-        $css = preg_replace('/\bsize\s*:\s*A4\s+(portrait|landscape)\s*;/i', 'size: $1;', $css);
+        $view = $draft ? 'invoices.pdf-draft' : 'invoices.pdf-download';
 
-        // PDF rendering must not fetch Vite assets or depend on the build manifest.
-        $vite = app(Vite::class);
-        app()->instance(Vite::class, new class extends Vite
-        {
-            public function __invoke($entrypoints, $buildDirectory = null): HtmlString
-            {
-                return new HtmlString('');
-            }
-        });
-        try {
-            $html = view($view, compact('invoice'))->render();
-        } finally {
-            app()->instance(Vite::class, $vite);
-        }
-
-        $html = preg_replace('/<script\b[^>]*>.*?<\/script\s*>/is', '', $html);
-        $html = str_replace('</head>', '<style>'.$css.'</style></head>', $html);
-
-        return PDF::loadHTML($html, ['format' => 'A4', 'orientation' => $draft ? 'P' : 'L'])->output();
+        return ['content' => PDF::loadView($view, compact('invoice'), [], ['format' => 'A4', 'orientation' => $draft ? 'P' : 'L'])->output(),
+            'filename' => 'invoice-'.formatDocumentNumber($invoice->number ?? $invoice->id).'.pdf', 'mime' => 'application/pdf'];
     }
 
     private function csv(string $filename, array $headers, callable $writeRows): array

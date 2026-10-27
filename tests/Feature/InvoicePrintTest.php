@@ -133,8 +133,10 @@ class InvoicePrintTest extends TestCase
         $css = File::get(resource_path($draft ? 'css/invoice-draft.css' : 'css/invoice.css'));
         $orientation = $draft ? 'portrait' : 'landscape';
 
-        PDF::shouldReceive('loadHTML')->once()->andReturnUsing(function (string $html, array $config) use ($renderer, $css, $orientation, $draft) {
-            $this->assertStringContainsString('<style>'.str_replace('size: A4 '.$orientation.';', 'size: '.$orientation.';', $css).'</style>', $html);
+        PDF::shouldReceive('loadView')->once()->andReturnUsing(function (string $view, array $data, array $mergeData, array $config) use ($renderer, $css, $orientation, $draft) {
+            $this->assertSame($draft ? 'invoices.pdf-draft' : 'invoices.pdf-download', $view);
+            $html = view($view, $data)->render();
+            $this->assertStringContainsString(str_replace('size: A4 '.$orientation.';', 'size: '.$orientation.';', $css), $html);
             $this->assertStringNotContainsString('<script', $html);
             $this->assertStringNotContainsString('<link', $html);
             $pdf = $renderer->loadHTML($html, $config);
@@ -156,11 +158,11 @@ class InvoicePrintTest extends TestCase
         $this->assertSame($vite, app(Vite::class));
     }
 
-    public function test_pdf_restores_browser_assets_when_view_rendering_fails(): void
+    public function test_pdf_view_failure_leaves_browser_assets_unchanged(): void
     {
         $invoice = $this->invoice();
         $vite = app(Vite::class);
-        View::composer('invoices.draft', function () {
+        View::composer('invoices.pdf-draft', function () {
             throw new \RuntimeException('Invoice view failed');
         });
 
