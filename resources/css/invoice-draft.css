@@ -10,8 +10,11 @@
     }
 }
 
+* {
+    font-family: "Sahel";
+}
+
 body {
-    font-family: sahel, sans-serif;
     color: #000;
     background: #fff;
     margin: 0;
