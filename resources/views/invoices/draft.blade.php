@@ -1,37 +1,12 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ app()->getLocale() === 'fa' ? 'rtl' : 'ltr' }}">
-
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $invoice->invoice_type->isBeginningInventory() ? __('Beginning Inventory') : __('Pre Invoice') }}</title>
-    <style>
-        {!! Illuminate\Support\Facades\File::get(resource_path('css/invoice-draft.css')) !!} @page {
-            size: A4 {{ $orientation }};
-        }
-
-        @media print {
-            * {
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-        }
-
-        @font-face {
-            font-family: sahel;
-            src: url({{ asset('fonts/Sahel.ttf') }});
-        }
-
-        @font-face {
-            font-family: sahel;
-            font-weight: bold;
-            src: url({{ asset('fonts/Sahel-Bold.ttf') }});
-        }
-    </style>
-
+    <style>{!! Illuminate\Support\Facades\File::get(resource_path('css/invoice-draft.css')) !!}</style>
     @include('invoices.partials.browser-print', ['orientation' => 'portrait'])
 </head>
-
 <body>
     <div class="draft-invoice">
         <div class="invoice-meta">
@@ -40,41 +15,39 @@
         </div>
 
         <div class="invoice-title">
-            {{ $invoice->invoice_type->isBeginningInventory() ? __('Beginning Inventory') : __('Pre Invoice') . ' ' . $invoice->invoice_type->label() }}
+            {{ $invoice->invoice_type->isBeginningInventory() ? __('Beginning Inventory') : __('Pre Invoice').' '.$invoice->invoice_type->label() }}
         </div>
 
-        <table class="customer-details">
-            <tr>
-                <td class="customer-column">
-                    <div>
-                        <span>{{ __('Name') }} {{ __('Customer') }}:</span>
-                        <span>{{ $invoice->customer?->name ?? __('Beginning Inventory') }}</span>
-                    </div>
-                    <div>
-                        <span>{{ __('Address') }}:</span>
-                        <span class="address">{{ $invoice->customer?->address }}</span>
-                    </div>
-                </td>
-                <td class="customer-column">
-                    <div>
-                        @if ($invoice->customer?->mobile)
-                            <span>{{ __('Mobile') }}:</span>
-                            <span>{{ localizeNumber($invoice->customer?->mobile) }}</span>
-                        @elseif ($invoice->customer?->phone)
-                            <span>{{ __('Phone') }}:</span>
-                            <span>{{ localizeNumber($invoice->customer?->phone) }}</span>
-                        @else
-                            <span>{{ __('Phone') }}:</span>
-                            <span>-</span>
-                        @endif
-                    </div>
-                    <div>
-                        <span>{{ __('Postal Code') }}:</span>
-                        <span>{{ localizeNumber($invoice->customer?->postal_code) }}</span>
-                    </div>
-                </td>
-            </tr>
-        </table>
+        <table class="customer-details"><tr>
+            <td class="customer-column">
+                <div>
+                    <span>{{ __('Name') }} {{ __('Customer') }}:</span>
+                    <span>{{ $invoice->customer?->name ?? __('Beginning Inventory') }}</span>
+                </div>
+                <div>
+                    <span>{{ __('Address') }}:</span>
+                    <span class="address">{{ $invoice->customer?->address }}</span>
+                </div>
+            </td>
+            <td class="customer-column">
+                <div>
+                    @if ($invoice->customer?->mobile)
+                        <span>{{ __('Mobile') }}:</span>
+                        <span>{{ localizeNumber($invoice->customer?->mobile) }}</span>
+                    @elseif ($invoice->customer?->phone)
+                        <span>{{ __('Phone') }}:</span>
+                        <span>{{ localizeNumber($invoice->customer?->phone) }}</span>
+                    @else
+                        <span>{{ __('Phone') }}:</span>
+                        <span>-</span>
+                    @endif
+                </div>
+                <div>
+                    <span>{{ __('Postal Code') }}:</span>
+                    <span>{{ localizeNumber($invoice->customer?->postal_code) }}</span>
+                </div>
+            </td>
+        </tr></table>
 
         <table class="invoice-items">
             <thead>
@@ -127,12 +100,4 @@
         </table>
     </div>
 </body>
-
 </html>
-
-<script>
-    window.addEventListener('load', async () => {
-        await document.fonts.ready;
-        window.print();
-    });
-</script>
