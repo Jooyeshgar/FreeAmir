@@ -1,10 +1,21 @@
+@php
+    $invoiceTitle = match ($invoice->invoice_type) {
+        App\Enums\InvoiceType::BUY => 'صورتحساب خرید کالا و خدمات',
+        App\Enums\InvoiceType::SELL => 'صورتحساب فروش کالا و خدمات',
+        App\Enums\InvoiceType::RETURN_BUY => 'صورتحساب برگشت از خرید',
+        App\Enums\InvoiceType::RETURN_SELL => 'صورتحساب برگشت از فروش',
+        App\Enums\InvoiceType::VOID => 'صورتحساب ابطال فروش',
+        default => __('Beginning Inventory'),
+    };
+@endphp
 <!DOCTYPE html>
 <html>
 
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>{{ $invoice->invoice_type->isBeginningInventory() ? __('Beginning Inventory') : __('Pre Invoice') }}</title>
     <style>{!! file_get_contents(resource_path('css/invoice.css')) !!}</style>
-    @include('invoices.partials.browser-print')
+    @include('invoices.partials.browser-print', ['orientation' => 'landscape'])
 </head>
 
 <body>
@@ -31,17 +42,7 @@
             <tr>
                 <td class="invoiceInfo">{{ $invoice->taxID }}</td>
                 <td class="invoiceType" rowspan="2">
-                    @if ($invoice->invoice_type == App\Enums\InvoiceType::BUY)
-                        صورتحساب خرید کالا و خدمات
-                    @elseif ($invoice->invoice_type == App\Enums\InvoiceType::SELL)
-                        صورتحساب فروش کالا و خدمات
-                    @elseif ($invoice->invoice_type == App\Enums\InvoiceType::RETURN_BUY)
-                        صورتحساب برگشت از خرید
-                    @elseif ($invoice->invoice_type == App\Enums\InvoiceType::RETURN_SELL)
-                        صورتحساب برگشت از فروش
-                    @elseif ($invoice->invoice_type == App\Enums\InvoiceType::VOID)
-                        صورتحساب ابطال فروش
-                    @endif
+                    {{ $invoiceTitle }}
                 </td>
             </tr>
             <tr>
@@ -181,13 +182,11 @@
                 <td colspan="2" class="signature">مهر و امضاء خریدار</td>
                 <td colspan="3" class="signature">مهر و امضای فروشنده</td>
                 <td colspan="2" class="cashType">
-                    <span>غیر نقدی</span>
-                    <input type="checkbox" />
+                    <label><span>غیر نقدی</span> <input type="checkbox" /></label>
                 </td>
 
                 <td class="cashType leftBorder">
-                    <span>نقدی</span>
-                    <input type="checkbox" />
+                    <label><span>نقدی</span> <input type="checkbox" /></label>
                 </td>
 
                 <td colspan="3" class="payType">:شرایط و نحوه فروش</td>

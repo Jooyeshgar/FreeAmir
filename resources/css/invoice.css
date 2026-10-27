@@ -109,6 +109,7 @@
 .signature {
     padding: 5px;
     border: none;
+    border-top: 1px solid #000;
     font-size: 10pt;
 }
 
@@ -125,6 +126,11 @@
     font-size: 10pt;
 }
 
+.cashType label {
+    display: inline-block;
+    white-space: nowrap;
+}
+
 .leftBorder {
     border-left: none;
 }
@@ -134,5 +140,5 @@
 }
 
 * {
-    font-family: "Sahel"
+    font-family: "Sahel", sans-serif;
 }

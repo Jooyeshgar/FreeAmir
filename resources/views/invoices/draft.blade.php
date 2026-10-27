@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $invoice->invoice_type->isBeginningInventory() ? __('Beginning Inventory') : __('Pre Invoice') }}</title>
     <style>{!! file_get_contents(resource_path('css/invoice-draft.css')) !!}</style>
-    @include('invoices.partials.browser-print')
+    @include('invoices.partials.browser-print', ['orientation' => 'portrait'])
 </head>
 <body>
     <div class="draft-invoice">

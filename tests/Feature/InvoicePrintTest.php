@@ -64,10 +64,18 @@ class InvoicePrintTest extends TestCase
             ->assertSee('Send to email')->assertSee('Download')->assertSee('Cancel')
             ->assertSee('window.open(', false)->assertSee('autoprint=1', false);
         $this->assertSame(2, substr_count($response->getContent(), '>Print</button>'));
-        $this->get(route('invoices.print', [$invoice, 'autoprint' => 1]))
+        $printResponse = $this->get(route('invoices.print', [$invoice, 'autoprint' => 1]))
             ->assertOk()->assertHeader('Content-Type', 'text/html; charset=utf-8')
             ->assertViewIs($draftLayout ? 'invoices.draft' : 'invoices.print')
             ->assertSee('window.print()', false)->assertSee('Print Widget');
+
+        $printResponse->assertSee($draftLayout ? 'size: A4 portrait' : 'size: A4 landscape', false)
+            ->assertSee('font-family: sahel', false);
+        if (! $draftLayout) {
+            $printResponse->assertSee('<title>Pre Invoice</title>', false)
+                ->assertSee('print-color-adjust: exact', false)
+                ->assertSee('<span>نقدی</span> <input type="checkbox" />', false);
+        }
         $this->get(route('invoices.print', $invoice))->assertOk()->assertDontSee('window.print()', false);
         Notification::assertNothingSent();
 
