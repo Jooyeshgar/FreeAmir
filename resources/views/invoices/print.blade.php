@@ -3,7 +3,8 @@
 
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <link rel="stylesheet" href="{{ resource_path('css/invoice.css') }}">
+    <style>{!! file_get_contents(resource_path('css/invoice.css')) !!}</style>
+    @include('invoices.partials.browser-print')
 </head>
 
 <body>

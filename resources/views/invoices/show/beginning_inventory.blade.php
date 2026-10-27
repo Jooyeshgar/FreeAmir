@@ -77,6 +77,9 @@
             </div>
 
             <div class="card-actions justify-end">
+                <x-export-delivery-choice :id="'invoice-pdf-delivery-'.$invoice->id" export="invoice_pdf"
+                    :filters="['invoice_id' => $invoice->id]" :print-url="route('invoices.print', [$invoice, 'autoprint' => 1])"
+                    :label="__('Print')" :title="__('Receive PDF')" />
                 <a class="btn btn-sm" href="{{ route('invoices.index', ['invoice_type' => 'beginning_inventory']) }}">{{ __('Back') }}</a>
                 @can('invoices.edit')
                     @if ($fiscalYearClosed)
