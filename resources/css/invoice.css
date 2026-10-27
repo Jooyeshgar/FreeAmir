@@ -100,6 +100,7 @@
 
 .totalInvoiceTransactions {
     background-color: #ffe0eb;
+    border-bottom: 1px solid #000;
     border-left: 1px solid #000;
     text-align: center !important;
     direction: rtl;
@@ -109,19 +110,18 @@
 .signature {
     padding: 5px;
     border: none;
-    border-top: 1px solid #000;
     font-size: 10pt;
 }
 
 .payType {
     padding: 10px;
-    border-top: 1px solid #000;
     border-bottom: 1px solid #000;
     font-size: 10pt;
 }
 
 .cashType {
     border: 1px solid #000;
+    border-top: none;
     border-right: none;
     font-size: 10pt;
 }
@@ -140,5 +140,5 @@
 }
 
 * {
-    font-family: "Sahel", sans-serif;
+    font-family: "Sahel";
 }
