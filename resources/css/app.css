@@ -4,7 +4,7 @@
 }
 @import '@majidh1/jalalidatepicker/dist/jalalidatepicker.css' layer(base);
 @import './style.scss' layer(base);
-@import './monthly-budgets.scss';
+@import './monthly-budgets.css';
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
