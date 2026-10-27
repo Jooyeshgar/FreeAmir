@@ -1349,14 +1349,10 @@
                         @endif
                     @endcan
 
-                    @if ($invoice->status->isApprovedOrSettled())
-                        <x-export-delivery-choice :id="'invoice-pdf-delivery-'.$invoice->id" export="invoice_pdf" :filters="['invoice_id' => $invoice->id]" :label="__('Print')" :title="__('Receive PDF')" class="btn btn-sm lg:btn-md btn-outline gap-2"
-                            :desc="__('You can replace your email address to send this pdf to someone else. The email will identify you as the requester.')"/>
-                    @else
-                        <a href="{{ route('invoices.print', $invoice) }}" class="btn btn-sm lg:btn-md btn-outline gap-2" target="_blank" rel="noopener">
-                            {{ __('Print') }}
-                        </a>
-                    @endif
+                    <x-export-delivery-choice :id="'invoice-pdf-delivery-'.$invoice->id" export="invoice_pdf"
+                        :filters="['invoice_id' => $invoice->id]" :print-url="route('invoices.print', [$invoice, 'autoprint' => 1])"
+                        :label="__('Print')" :title="__('Receive PDF')" class="btn btn-sm lg:btn-md btn-outline gap-2"
+                        :desc="__('You can replace your email address to send this pdf to someone else. The email will identify you as the requester.')"/>
 
                     @can('invoices.approve')
                         @if (!$fiscalYearClosed && $isSellWorkflow && ($invoice->status->isPreInvoice() || $invoice->status->isRejected()))

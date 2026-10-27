@@ -348,12 +348,11 @@ class ReportExportService
 
     private function invoicePdf(array $filters): array
     {
-        $invoice = Invoice::with('fiscalYear', 'customer', 'items')->findOrFail($filters['invoice_id'] ?? null);
-        if (! $invoice->status->isApprovedOrSettled()) {
-            throw ValidationException::withMessages(['invoice_id' => __('Only approved and paid invoices can be emailed as PDF.')]);
-        }
+        $invoice = Invoice::with('fiscalYear.company', 'customer', 'items.itemable')->findOrFail($filters['invoice_id'] ?? null);
+        $draft = $invoice->invoice_type->isBeginningInventory() || ! $invoice->status->isApprovedOrSettled();
+        $view = $draft ? 'invoices.pdf-draft' : 'invoices.pdf-print';
 
-        return ['content' => PDF::loadView('invoices.print', compact('invoice'))->output(),
+        return ['content' => PDF::loadView($view, compact('invoice'), [], ['format' => 'A4', 'orientation' => $draft ? 'P' : 'L'])->output(),
             'filename' => 'invoice-'.formatDocumentNumber($invoice->number ?? $invoice->id).'.pdf', 'mime' => 'application/pdf'];
     }
 

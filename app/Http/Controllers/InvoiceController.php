@@ -402,19 +402,16 @@ class InvoiceController extends Controller
         return back();
     }
 
-    public function print(Invoice $invoice, ReportExportService $reportExportService)
+    public function print(Request $request, Invoice $invoice): View
     {
-        if ($invoice->invoice_type->isBeginningInventory()) {
-            return redirect()->route('invoices.edit', $invoice);
+        $invoice->load('fiscalYear.company', 'customer', 'items.itemable');
+        $autoPrint = $request->boolean('autoprint');
+
+        if ($invoice->invoice_type->isBeginningInventory() || ! $invoice->status->isApprovedOrSettled()) {
+            return view('invoices.draft', compact('invoice', 'autoPrint'));
         }
 
-        $invoice->load('customer', 'items');
-
-        if (! $invoice->status->isApprovedOrSettled()) {
-            return view('invoices.draft', compact('invoice'));
-        }
-
-        return $reportExportService->inlineResponse('invoice_pdf', ['invoice_id' => $invoice->id]);
+        return view('invoices.print', compact('invoice', 'autoPrint'));
     }
 
     /**
