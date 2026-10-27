@@ -1,5 +1,13 @@
 @page {
     margin: 5mm;
+    size: A4 portrait;
+}
+
+@media print {
+    * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
 }
 
 body {

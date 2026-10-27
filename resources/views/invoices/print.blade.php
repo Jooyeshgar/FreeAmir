@@ -14,8 +14,7 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <title>{{ $invoiceTitle }}</title>
-    <style>{!! Illuminate\Support\Facades\File::get(resource_path('css/invoice.css')) !!}</style>
-    @include('invoices.partials.browser-print', ['orientation' => 'landscape'])
+    @vite('resources/css/invoice.css')
 </head>
 
 <body>
@@ -207,3 +206,9 @@
 </body>
 
 </html>
+<script>
+    window.addEventListener('load', async () => {
+        await document.fonts.ready;
+        window.print();
+    });
+</script>

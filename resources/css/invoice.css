@@ -137,6 +137,14 @@
 
 @page {
     margin: 5mm 5mm 0 5mm;
+    size: A4 landscape;
+}
+
+@media print {
+    * {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
 }
 
 * {

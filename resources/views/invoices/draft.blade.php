@@ -4,8 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $invoice->invoice_type->isBeginningInventory() ? __('Beginning Inventory') : __('Pre Invoice') }}</title>
-    <style>{!! Illuminate\Support\Facades\File::get(resource_path('css/invoice-draft.css')) !!}</style>
-    @include('invoices.partials.browser-print', ['orientation' => 'portrait'])
+    @vite('resources/css/invoice-draft.css')
 </head>
 <body>
     <div class="draft-invoice">
@@ -101,3 +100,9 @@
     </div>
 </body>
 </html>
+<script>
+    window.addEventListener('load', async () => {
+        await document.fonts.ready;
+        window.print();
+    });
+</script>
