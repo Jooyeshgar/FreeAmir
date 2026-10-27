@@ -254,7 +254,4 @@
         </details>
     </div>
 
-    @push('footer')
-        @vite('resources/css/monthly-budgets.scss')
-    @endpush
 </x-app-layout>
