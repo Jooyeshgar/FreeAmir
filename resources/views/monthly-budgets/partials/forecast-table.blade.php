@@ -11,13 +11,13 @@
             </tr>
         </thead>
         <tbody class="divide-y divide-base-200">
-            @forelse ($budgetLines as $line)
+            @forelse ($visibleBudgetLines as $line)
                 <tr class="group hover:bg-base-200/40" x-show="matches(@js($line['subject']->name.' '.$line['subject']->code), @js($line['type']))">
                     <td>
                         <div @class(['min-w-56', 'ps-6' => $line['isChild']])>
                             <div class="flex items-center gap-1.5 font-medium text-base-content">
                                 @if ($line['isChild'])<span class="text-base-content/35">↳</span>@endif
-                                <span>{{ $line['subject']->name }}</span>
+                                <a href="{{ route('transactions.index', ['subject_id' => $line['subject']->id]) }}" class="link link-hover">{{ $line['subject']->name }} <span aria-hidden="true">↗</span></a>
                                 @if ($line['isRemainder'])
                                     <span class="badge badge-ghost badge-xs">{{ __('Remainder excluding lower-level forecasts') }}</span>
                                 @elseif (! $line['includedInSummary'])
@@ -75,7 +75,7 @@
                     </td>
                 </tr>
             @empty
-                <tr><td colspan="6" class="py-12 text-center text-base-content/50">{{ __('No temporary income or expense subjects are available.') }}</td></tr>
+                <tr><td colspan="6" class="py-12 text-center text-base-content/50">{{ __('No forecast or actual values to display.') }}</td></tr>
             @endforelse
         </tbody>
     </table>

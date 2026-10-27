@@ -441,7 +441,10 @@ class MonthlyBudgetTest extends TestCase
                     && $metrics['accountingNet'] === 1000.0
                     && $metrics['accountingComparisons']['income']['previous'] === 1000.0
                     && $metrics['accountingComparisons']['accountingNet']['previous'] === 600.0;
-            })->assertViewHas('categoryDrivers', fn (array $drivers) => $drivers['income']->sole()['percent'] === 50.0);
+            })->assertViewHas('categoryDrivers', fn (array $drivers) => $drivers['income']->sole()['percent'] === 50.0)
+            ->assertSee(route('transactions.index', ['subject_id' => $income->id]), false)
+            ->assertSee(__('Accounting Net Profit or Loss'))
+            ->assertSee(formatNumber(1000.0));
 
         $this->assertSame(10500.0, $this->service->analysis(5)['actualIncome']);
     }
@@ -1344,6 +1347,7 @@ class MonthlyBudgetTest extends TestCase
     {
         $currentYear = (int) toEnglish(jdate('Y'));
         $currentMonth = (int) toEnglish(jdate('n'));
+        $this->travelTo(Carbon::parse(jalali_to_gregorian($currentYear, $currentMonth, 15, '-').' 12:00:00', 'Asia/Tehran'));
         $this->setFiscalYear($currentYear);
         $income = $this->temporarySubject('Sales', SubjectType::CREDITOR);
         $expense = $this->temporarySubject('Rent', SubjectType::DEBTOR);

@@ -55,6 +55,41 @@ function formatNumber($number)
     return $formattedNumber;
 }
 
+/**
+ * Format a monetary amount using a compact magnitude and the configured currency.
+ *
+ * @return array{value: string, unit: string, formatted: string}
+ */
+function formatCompactCurrencyParts(int|float|string $amount, ?string $currency = null): array
+{
+    $amount = (float) $amount;
+    $absoluteAmount = abs($amount);
+    [$scale, $magnitude] = match (true) {
+        $absoluteAmount >= 1_000_000_000 => [1_000_000_000, 'Billion'],
+        $absoluteAmount >= 1_000_000 => [1_000_000, 'Million'],
+        $absoluteAmount >= 1_000 => [1_000, 'Thousand'],
+        default => [1, null],
+    };
+
+    $currency ??= config('amir.currency') ?? __('Rial');
+    $value = formatNumber($amount / $scale);
+    $unit = $magnitude ? __($magnitude).' '.$currency : $currency;
+
+    return [
+        'value' => $value,
+        'unit' => $unit,
+        'formatted' => $value.' '.$unit,
+    ];
+}
+
+/**
+ * Format a monetary amount as a compact value and unit in one string.
+ */
+function formatCompactCurrency(int|float|string $amount, ?string $currency = null): string
+{
+    return formatCompactCurrencyParts($amount, $currency)['formatted'];
+}
+
 function formatDocumentNumber(float $number)
 {
     if (floor($number) == $number) {

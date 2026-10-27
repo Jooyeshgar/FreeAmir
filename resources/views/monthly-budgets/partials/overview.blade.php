@@ -1,64 +1,64 @@
-<div class="budget-overview-grid">
-    <article class="budget-result">
-        <div>
-            <h3 class="text-sm font-medium">{{ __('Accounting Net Profit or Loss') }}</h3>
-            <div class="budget-result-value">{{ is_null($profitability['accountingNet']) ? '—' : formatNumber($profitability['accountingNet']) }}</div>
-            <p class="budget-caption">{{ $currency }}</p>
+@php
+    $accountingNetAmount = is_null($profitability['accountingNet']) ? null : formatCompactCurrencyParts($profitability['accountingNet'], $currency);
+@endphp
+
+<div class="budget-hero">
+    <article class="budget-card budget-profit-card">
+        <div class="budget-card-label"><span class="budget-label-icon" aria-hidden="true">↗</span>{{ __('Accounting Net Profit or Loss') }}</div>
+        <div class="budget-profit-value">{{ is_null($accountingNetAmount) ? '—' : $accountingNetAmount['value'].' ' }}@if (! is_null($accountingNetAmount))<span>{{ $accountingNetAmount['unit'] }}</span>@endif</div>
+        <div class="budget-profit-meta">
+            @include('monthly-budgets.partials.change', [
+                'comparison' => $profitability['accountingComparisons']['accountingNet'],
+                'increaseIsGood' => true,
+                'neutral' => false,
+                'points' => false,
+                'compact' => true,
+                'currency' => $currency,
+            ])
+            @if (! is_null($profitability['accountingComparisons']['accountingNet']['change'] ?? null))
+                <span>{{ formatCompactCurrency(abs($profitability['accountingComparisons']['accountingNet']['change']), $currency) }} {{ __('Compared with previous month') }}</span>
+            @endif
         </div>
-        <div>
-            @include('monthly-budgets.partials.change', ['comparison' => $profitability['accountingComparisons']['accountingNet'], 'increaseIsGood' => true, 'neutral' => false, 'points' => false])
-            <p class="budget-caption">{{ __('Previous month') }}: {{ is_null($profitability['accountingComparisons']['accountingNet']['previous']) ? '—' : formatNumber($profitability['accountingComparisons']['accountingNet']['previous']) }}</p>
-        </div>
-        <div class="border-t border-white/20 pt-3">
-            <div class="flex flex-wrap justify-between gap-2 text-sm"><span>{{ __('Net margin') }}</span><strong>{{ is_null($profitability['accountingMargin']) ? '—' : localizeNumber(number_format($profitability['accountingMargin'], 1)).'%' }}</strong></div>
-            @include('monthly-budgets.partials.change', ['comparison' => $profitability['accountingComparisons']['accountingMargin'], 'increaseIsGood' => true, 'neutral' => false, 'points' => true])
+        <div class="budget-profit-bottom">
+            <div><div class="budget-margin-number">{{ is_null($profitability['accountingMargin']) ? '—' : localizeNumber(number_format($profitability['accountingMargin'], 1)).'%' }}</div><div class="budget-metric-foot">{{ __('Net margin') }}</div></div>
+            <div class="budget-mini-progress" aria-hidden="true"><span style="width:{{ min(100, max(0, $profitability['accountingMargin'] ?? 0)) }}%"></span></div>
+            <div class="budget-profit-change">@include('monthly-budgets.partials.change', ['comparison' => $profitability['accountingComparisons']['accountingMargin'], 'increaseIsGood' => true, 'neutral' => false, 'points' => true])</div>
         </div>
     </article>
-    <div class="budget-panel">
-        @foreach ([['income', __('Actual Income'), $actualIncome, $forecastIncome, $incomeVariance, $incomeAchievement], ['expense', __('Actual Expense'), $actualExpense, $forecastExpense, $expenseVariance, $expenseUtilization]] as [$metric, $label, $actual, $forecast, $variance, $progress])
-            <article class="budget-metric {{ $loop->first ? 'border-b border-base-300' : '' }}">
-                <div class="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                        <h3 class="budget-metric-label">{{ $label }}</h3>
-                        <div class="budget-metric-value">{{ is_null($actual) ? '—' : formatNumber($actual) }}</div>
-                    </div>
-                    <div class="text-end">
-                        <p class="budget-caption">{{ __('Previous month') }}: {{ is_null($profitability['accountingComparisons'][$metric]['previous']) ? '—' : formatNumber($profitability['accountingComparisons'][$metric]['previous']) }}</p>
-                        @include('monthly-budgets.partials.change', ['comparison' => $profitability['accountingComparisons'][$metric], 'increaseIsGood' => $metric === 'income', 'neutral' => false, 'points' => false])
-                    </div>
-                </div>
-                <div class="mt-3 flex flex-wrap justify-between gap-2 text-xs text-base-content/65">
-                    <span>{{ $metric === 'income' ? __('Forecast Income') : __('Forecast Expense') }}: <strong>{{ formatNumber($forecast) }}</strong></span>
-                    <span>{{ $metric === 'income' ? __('Income achievement') : __('Expense utilization') }}: {{ $hasDocuments && $forecast != 0 ? localizeNumber(number_format($progress, 0)).'%' : '—' }}</span>
-                </div>
-                <div class="budget-share" aria-hidden="true"><span style="width: {{ min(100, $progress) }}%"></span></div>
-                @if (! is_null($variance))
-                    <p class="budget-caption">{{ __('Variance') }}: <strong class="{{ $variance >= 0 ? 'text-success' : 'text-error' }}">{{ formatNumber($variance) }}</strong> · {{ $variance == 0 ? __('Unchanged') : ($variance > 0 ? __('Favorable change') : __('Unfavorable change')) }}</p>
-                @endif
+
+    <div class="budget-card budget-summary-side">
+        @foreach ([['income', __('Actual Income'), $actualIncome], ['expense', __('Actual Expense'), $actualExpense]] as [$metric, $label, $actual])
+            <article class="budget-summary-metric">
+                <div class="budget-card-label"><span class="budget-label-icon {{ $metric === 'expense' ? 'is-expense' : '' }}" aria-hidden="true">{{ $metric === 'income' ? '↑' : '↓' }}</span>{{ $label }}</div>
+                <div class="budget-metric-value">{{ is_null($actual) ? '—' : formatCompactCurrency(abs($actual), $currency) }}</div>
+                @include('monthly-budgets.partials.change', [
+                    'comparison' => $profitability['accountingComparisons'][$metric],
+                    'increaseIsGood' => $metric === 'income',
+                    'neutral' => false,
+                    'points' => false,
+                    'compact' => true,
+                    'currency' => $currency,
+                ])
+                <div class="budget-metric-foot">{{ __('Previous month') }}: {{ is_null($profitability['accountingComparisons'][$metric]['previous']) ? '—' : formatCompactCurrency($profitability['accountingComparisons'][$metric]['previous'], $currency) }}</div>
             </article>
         @endforeach
     </div>
 </div>
 
-<div class="budget-panel">
-    <div class="budget-panel-heading">
-        <div><h3 class="font-semibold text-sm">{{ __('Product performance') }}</h3><p class="budget-caption">{{ __('Sales and purchases exclude VAT') }}</p></div>
-        <a href="#monthly-products" class="budget-back">{{ __('View product details') }} <span aria-hidden="true">↗</span></a>
-    </div>
-    <div class="grid grid-cols-1 divide-y divide-base-300 sm:grid-cols-2 xl:grid-cols-4 xl:divide-y-0">
-        @foreach ([['sales', __('Net Product Sales')], ['cogs', __('Cost of Goods Sold')], ['grossProfit', __('Gross Profit')], ['purchases', __('Net Purchases')]] as [$key, $title])
-            <article class="budget-metric">
-                <h3 class="budget-metric-label">{{ $title }}</h3>
-                <div class="budget-metric-value">{{ formatNumber($profitability[$key]) }}</div>
-                <p class="budget-caption">{{ __('Previous month') }}: {{ is_null($profitability['comparisons'][$key]['previous'] ?? null) ? '—' : formatNumber($profitability['comparisons'][$key]['previous']) }}</p>
-                @include('monthly-budgets.partials.change', ['comparison' => $profitability['comparisons'][$key] ?? [], 'increaseIsGood' => true, 'neutral' => in_array($key, ['cogs', 'purchases']), 'points' => false])
-                @if ($key === 'grossProfit')
-                    <p class="budget-caption">{{ __('Gross margin') }}: <strong>{{ is_null($profitability['grossMargin']) ? '—' : localizeNumber(number_format($profitability['grossMargin'], 1)).'%' }}</strong></p>
-                    @include('monthly-budgets.partials.change', ['comparison' => $profitability['comparisons']['grossMargin'], 'increaseIsGood' => true, 'neutral' => false, 'points' => true])
-                @elseif ($key === 'purchases')
-                    <p class="budget-caption">{{ __('Inventory purchased, not the cost of goods sold.') }}</p>
-                @endif
-            </article>
-        @endforeach
-    </div>
+<div class="budget-card budget-kpi-grid">
+    @foreach ([['sales', __('Net Product Sales'), '#5b5bd6', true], ['cogs', __('Cost of Goods Sold'), '#8a95ad', false], ['grossProfit', __('Gross Profit'), '#11855b', true], ['purchases', __('Net Purchases'), '#a96809', false]] as [$key, $title, $color, $increaseIsGood])
+        <article class="budget-kpi">
+            <div class="budget-kpi-title"><span class="budget-kpi-dot" style="background:{{ $color }}"></span>{{ $title }}</div>
+            <div class="budget-kpi-value {{ $key === 'grossProfit' && $profitability[$key] < 0 ? 'budget-negative' : '' }}">{{ formatNumber($profitability[$key]) }}</div>
+            <div class="budget-kpi-foot">
+                <span>{{ __('Previous month') }}: {{ is_null($profitability['comparisons'][$key]['previous'] ?? null) ? '—' : formatNumber($profitability['comparisons'][$key]['previous']) }}</span>
+                @include('monthly-budgets.partials.change', ['comparison' => $profitability['comparisons'][$key] ?? [], 'increaseIsGood' => $increaseIsGood, 'neutral' => false, 'points' => false])
+            </div>
+            @if ($key === 'grossProfit')
+                <div class="budget-kpi-foot budget-kpi-extra">{{ __('Gross margin') }}: <b class="budget-positive">{{ is_null($profitability['grossMargin']) ? '—' : localizeNumber(number_format($profitability['grossMargin'], 1)).'%' }}</b></div>
+            @elseif ($key === 'purchases')
+                <div class="budget-kpi-extra">{{ __('Inventory purchased, not the cost of goods sold.') }}</div>
+            @endif
+        </article>
+    @endforeach
 </div>
