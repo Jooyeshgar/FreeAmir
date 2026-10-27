@@ -1,4 +1,10 @@
-@php($displayProducts = $profitability['products']->take(5))
+@php
+    $topProducts = $profitability['products']->take(10);
+    $lossMakingProducts = $profitability['products']->filter(fn ($product) => $product['grossProfit'] < 0);
+    $displayProducts = $topProducts
+        ->concat($lossMakingProducts->whereNotIn('id', $topProducts->pluck('id')))
+        ->values();
+@endphp
 
 <section id="monthly-products" class="budget-section budget-product-section" aria-labelledby="monthly-products-title"
     x-data="{ search: '', lossesOnly: false, matches(name, profit) { return name.toLocaleLowerCase().includes(this.search.trim().toLocaleLowerCase()) && (!this.lossesOnly || profit < 0); } }">

@@ -42,6 +42,7 @@
                     @can('reports.cost-income')<a
                     href="{{ route('reports.cost-income') }}">{{ __('Annual income and expense report') }}</a>@else<span>{{ __('Reports') }}</span>@endcan
                     <span aria-hidden="true">/</span><span>{{ __('Actual Income') }} · {{ __('Actual Expense') }}</span>
+                    <x-user-guide-link source="reports/budgets/budgets.md" class="!h-5 !w-5 !min-h-5 !p-0" />
                 </div>
                 <h1 class="budget-title">{{ __('Monthly Financial Performance') }} {{ $selectedMonthLabel }}
                     {{ $fiscalYearLabel }}
