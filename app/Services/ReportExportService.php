@@ -350,7 +350,7 @@ class ReportExportService
     {
         $invoice = Invoice::with('fiscalYear.company', 'customer', 'items.itemable')->findOrFail($filters['invoice_id'] ?? null);
         $draft = $invoice->invoice_type->isBeginningInventory() || ! $invoice->status->isApprovedOrSettled();
-        $view = $draft ? 'invoices.pdf-draft' : 'invoices.pdf-download';
+        $view = $draft ? 'invoices.pdf-draft' : 'invoices.pdf-print';
 
         return ['content' => PDF::loadView($view, compact('invoice'), [], ['format' => 'A4', 'orientation' => $draft ? 'P' : 'L'])->output(),
             'filename' => 'invoice-'.formatDocumentNumber($invoice->number ?? $invoice->id).'.pdf', 'mime' => 'application/pdf'];
