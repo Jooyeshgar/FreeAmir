@@ -11,8 +11,13 @@ use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\User;
 use App\Notifications\ReportExportNotification;
+use App\Services\ReportExportService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Vite;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\View;
+use PDF;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -69,14 +74,11 @@ class InvoicePrintTest extends TestCase
             ->assertViewIs($draftLayout ? 'invoices.draft' : 'invoices.print')
             ->assertSee('window.print()', false)->assertSee('Print Widget');
 
-        $printResponse->assertSee($draftLayout ? 'size: A4 portrait' : 'size: A4 landscape', false)
-            ->assertSee('font-family: sahel', false);
         if (! $draftLayout) {
             $printResponse->assertSee('<title>صورتحساب فروش کالا و خدمات</title>', false)
-                ->assertSee('print-color-adjust: exact', false)
                 ->assertSee('<span>نقدی</span> <input type="checkbox" />', false);
         }
-        $this->get(route('invoices.print', $invoice))->assertOk()->assertDontSee('window.print()', false);
+        $this->get(route('invoices.print', $invoice))->assertOk()->assertSee('window.print()', false);
         Notification::assertNothingSent();
 
         $filters = ['invoice_id' => $invoice->id];
@@ -110,6 +112,66 @@ class InvoicePrintTest extends TestCase
             ])->assertForbidden();
         }
         Notification::assertNothingSent();
+    }
+
+    public static function pdfLayouts(): array
+    {
+        return [
+            'pre-invoice' => [InvoiceStatus::UNAPPROVED, true],
+            'approved invoice' => [InvoiceStatus::APPROVED, false],
+        ];
+    }
+
+    #[DataProvider('pdfLayouts')]
+    public function test_pdf_embeds_styles_and_preserves_page_layout_without_browser_assets(InvoiceStatus $status, bool $draft): void
+    {
+        app()->setLocale('fa');
+        $invoice = $this->invoice($status);
+        $vite = $this->mock(Vite::class);
+        $vite->shouldNotReceive('__invoke');
+        $renderer = PDF::getFacadeRoot();
+        $css = File::get(resource_path($draft ? 'css/invoice-draft.css' : 'css/invoice.css'));
+        $orientation = $draft ? 'portrait' : 'landscape';
+
+        PDF::shouldReceive('loadHTML')->once()->andReturnUsing(function (string $html, array $config) use ($renderer, $css, $orientation, $draft) {
+            $this->assertStringContainsString('<style>'.str_replace('size: A4 '.$orientation.';', 'size: '.$orientation.';', $css).'</style>', $html);
+            $this->assertStringNotContainsString('<script', $html);
+            $this->assertStringNotContainsString('<link', $html);
+            $pdf = $renderer->loadHTML($html, $config);
+            $mpdf = $pdf->getMpdf();
+            $this->assertSame(1, $mpdf->page);
+            $this->assertEqualsWithDelta($draft ? 210 : 297, $mpdf->w, 0.1);
+            $this->assertEqualsWithDelta($draft ? 297 : 210, $mpdf->h, 0.1);
+            $this->assertEqualsWithDelta(5, $mpdf->lMargin, 0.1);
+            $this->assertEqualsWithDelta(5, $mpdf->rMargin, 0.1);
+
+            return $pdf;
+        });
+
+        $file = app(ReportExportService::class)->generate('invoice_pdf', ['invoice_id' => $invoice->id]);
+        $this->assertStringStartsWith('%PDF-', $file['content']);
+        $this->assertMatchesRegularExpression('/\/BaseFont\s*\/[A-Z]+\+Sahel\b/', $file['content']);
+        $this->assertMatchesRegularExpression('/\/BaseFont\s*\/[A-Z]+\+Sahel-Bold\b/', $file['content']);
+        $this->assertStringContainsString('/FontFile2', $file['content']);
+        $this->assertSame($vite, app(Vite::class));
+    }
+
+    public function test_pdf_restores_browser_assets_when_view_rendering_fails(): void
+    {
+        $invoice = $this->invoice();
+        $vite = app(Vite::class);
+        View::composer('invoices.draft', function () {
+            throw new \RuntimeException('Invoice view failed');
+        });
+
+        try {
+            app(ReportExportService::class)->generate('invoice_pdf', ['invoice_id' => $invoice->id]);
+            $this->fail('The view rendering failure should propagate.');
+        } catch (\RuntimeException $exception) {
+            $this->assertSame('Invoice view failed', $exception->getMessage());
+        } finally {
+            $this->assertSame($vite, app(Vite::class));
+        }
     }
 
     public function test_other_fiscal_year_invoices_cannot_be_printed_downloaded_or_emailed(): void
