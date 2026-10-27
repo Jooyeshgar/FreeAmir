@@ -37,7 +37,7 @@
         </fieldset>
 
         <div class="w-full justify-self-start sm:w-auto">
-            <button type="submit" class="btn btn-primary btn-sm h-10 w-full gap-1.5 whitespace-nowrap px-3 sm:w-auto" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Save Forecast Line') }}">
+            <button type="submit" class="btn btn-primary btn-sm h-10 w-full cursor-pointer gap-1.5 whitespace-nowrap px-3 sm:w-auto" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Save Forecast Line') }}">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-7-7h14" />
                 </svg>
