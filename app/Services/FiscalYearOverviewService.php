@@ -17,7 +17,6 @@ use App\Models\Service;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
-use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
 class FiscalYearOverviewService
@@ -316,13 +315,8 @@ class FiscalYearOverviewService
 
     public function getMonthlyWarehouse()
     {
-        $year = config('active-company-fiscal-year') ?? toEnglish(jdate('Y'));
-        $startDate = jalali_to_gregorian($year, 1, 1, '-');
-        // Esfand (month 12) has 30 days in a Jalali leap year, 29 in a common year.
-        // Formula matches jdf.php jcheckdate() to avoid overflowing into the next fiscal year.
-        $y = (int) $year;
-        $lastDayOfYear = ($y % 33 % 4 - 1) === (int) ($y % 33 * 0.05) ? 30 : 29;
-        $endDate = jalali_to_gregorian($year, 12, $lastDayOfYear, '-');
+        $fiscalYear = FiscalYear::findOrFail(getActiveFiscalYear());
+        [$startDate, $endDate] = $fiscalYear->range();
 
         $invoiceItems = \DB::table('invoice_items')
             ->join('invoices', 'invoice_items.invoice_id', '=', 'invoices.id')
@@ -382,10 +376,10 @@ class FiscalYearOverviewService
 
     public function balanceForSubjectIds(array $subjectIds, int $duration, bool $inverse = true)
     {
-        $year = config('active-company-fiscal-year');
+        $fiscalYear = FiscalYear::findOrFail(getActiveFiscalYear());
+        [$firstDayOfFiscalYear, $lastDayOfFiscalYear] = $fiscalYear->range();
 
         $endDate = now();
-        $lastDayOfFiscalYear = Carbon::parse(jalali_to_gregorian($year, 12, 29, '/'));
         if ($endDate->isAfter($lastDayOfFiscalYear)) {
             $endDate = $lastDayOfFiscalYear;
         }
@@ -393,8 +387,6 @@ class FiscalYearOverviewService
         $transactionQuery = Transaction::query()->whereIn('subject_id', $subjectIds);
 
         $startDate = (clone $endDate)->subMonths($duration * 3);
-
-        $firstDayOfFiscalYear = Carbon::parse(jalali_to_gregorian($year, 1, 1, '/'));
 
         if ($startDate->isBefore($firstDayOfFiscalYear)) {
             $startDate = $firstDayOfFiscalYear;

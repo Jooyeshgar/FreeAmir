@@ -311,7 +311,7 @@ class WarehouseDashboardTest extends TestCase
 
     public function test_holding_days_include_both_period_endpoints_for_every_preset(): void
     {
-        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail($this->fiscalYearId);
+        $fiscalYear = FiscalYear::findOrFail($this->fiscalYearId);
         [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
         $group = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $product = Product::factory()->withGroup($group)->withSubjects()->create([
@@ -479,7 +479,7 @@ class WarehouseDashboardTest extends TestCase
 
     public function test_report_clamps_movements_to_the_end_of_a_closed_fiscal_year(): void
     {
-        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail($this->fiscalYearId);
+        $fiscalYear = FiscalYear::findOrFail($this->fiscalYearId);
         $fiscalYear->update(['year' => 1404]);
         [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
 

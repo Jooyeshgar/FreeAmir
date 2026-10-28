@@ -416,7 +416,7 @@ class CostIncomeDashboardTest extends TestCase
 
     private function setFiscalYear(int $year): void
     {
-        FiscalYear::withoutGlobalScopes()->findOrFail($this->fiscalYearId)->update(['year' => $year]);
+        FiscalYear::findOrFail($this->fiscalYearId)->update(['year' => $year]);
         config(['active-company-fiscal-year' => $year]);
     }
 

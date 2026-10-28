@@ -15,7 +15,7 @@ class DemoSeeder extends Seeder
     {
         $fiscalYearId ??= (int) getActiveFiscalYear();
 
-        if (! FiscalYear::withoutGlobalScopes()->whereKey($fiscalYearId)->exists()) {
+        if (! FiscalYear::whereKey($fiscalYearId)->exists()) {
             throw new RuntimeException("Fiscal year with ID {$fiscalYearId} does not exist.");
         }
 

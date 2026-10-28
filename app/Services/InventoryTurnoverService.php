@@ -97,7 +97,7 @@ class InventoryTurnoverService
 
     private function validateFilters(array $rawFilters): array
     {
-        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        $fiscalYear = FiscalYear::findOrFail(getActiveFiscalYear());
         [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
         $fiscalStartDate = $fiscalStart->toDateString();
         $fiscalEndDate = $fiscalEnd->toDateString();

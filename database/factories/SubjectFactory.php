@@ -15,7 +15,7 @@ class SubjectFactory extends Factory
             'fiscal_year_id' => function () {
                 $fiscalYearId = (int) getActiveFiscalYear();
 
-                if (! FiscalYear::withoutGlobalScopes()->whereKey($fiscalYearId)->exists()) {
+                if (! FiscalYear::whereKey($fiscalYearId)->exists()) {
                     throw new \LogicException('An active fiscal year is required to create a subject.');
                 }
 

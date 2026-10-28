@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\Customer;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Transaction;
 use Carbon\Carbon;
@@ -16,11 +17,12 @@ class CrmDashboardService
 
     public function dashboard(): array
     {
-        $fiscalYear = (int) (config('active-company-fiscal-year') ?? toEnglish(jdate('Y')));
+        $fiscalYearModel = FiscalYear::findOrFail(getActiveFiscalYear());
+        $fiscalYear = (int) $fiscalYearModel->year;
         $currentJalaliMonth = (int) toEnglish(jdate('m'));
 
         [$monthStart, $monthEnd] = $this->jalaliMonthRange($fiscalYear, $currentJalaliMonth);
-        [$yearStart, $yearEnd] = $this->fiscalYearRange($fiscalYear);
+        [$yearStart, $yearEnd] = $fiscalYearModel->range();
 
         // Net sell amount per customer (sell - return_sell) for the whole fiscal year.
         $yearSellByCustomer = $this->netSellByCustomer($yearStart, $yearEnd);
@@ -342,19 +344,6 @@ class CrmDashboardService
         $nextYear = $jMonth === 12 ? $jYear + 1 : $jYear;
         $nextMonth = $jMonth === 12 ? 1 : $jMonth + 1;
         $end = Carbon::parse(jalali_to_gregorian($nextYear, $nextMonth, 1, '/'))->subDay()->endOfDay();
-
-        return [$start, $end];
-    }
-
-    /**
-     * @return array{0: Carbon, 1: Carbon}
-     */
-    private function fiscalYearRange(int $jYear): array
-    {
-        $start = Carbon::parse(jalali_to_gregorian($jYear, 1, 1, '/'))->startOfDay();
-        // Esfand has 30 days in Jalali leap years, so derive the last day from the
-        // first day of the next fiscal year rather than assuming a fixed Esfand 29.
-        $end = Carbon::parse(jalali_to_gregorian($jYear + 1, 1, 1, '/'))->subDay()->endOfDay();
 
         return [$start, $end];
     }

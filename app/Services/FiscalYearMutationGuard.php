@@ -64,7 +64,7 @@ class FiscalYearMutationGuard
         }
 
         if (is_int($subject) || (is_string($subject) && ctype_digit($subject))) {
-            return FiscalYear::withoutGlobalScopes()->find((int) $subject);
+            return FiscalYear::find((int) $subject);
         }
 
         if (! $subject instanceof Model) {
@@ -76,7 +76,7 @@ class FiscalYearMutationGuard
         }
 
         if ($subject->getAttribute('fiscal_year_id')) {
-            return FiscalYear::withoutGlobalScopes()->find((int) $subject->getAttribute('fiscal_year_id'));
+            return FiscalYear::find((int) $subject->getAttribute('fiscal_year_id'));
         }
 
         // Child records such as payments inherit their fiscal year through a parent that may be hidden by the currently selected fiscal-year scope.

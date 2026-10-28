@@ -106,7 +106,7 @@ class TrialBalanceService
 
     private function validateTrialBalanceFilters(Request $request): void
     {
-        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        $fiscalYear = FiscalYear::findOrFail(getActiveFiscalYear());
         [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
         $fiscalStartDate = $fiscalStart->toDateString();
         $fiscalEndDate = $fiscalEnd->toDateString();
@@ -161,7 +161,7 @@ class TrialBalanceService
 
     private function normalizeTrialBalanceFilters(Request $request): array
     {
-        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        $fiscalYear = FiscalYear::findOrFail(getActiveFiscalYear());
         [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
 
         return [

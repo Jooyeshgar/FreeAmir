@@ -348,7 +348,7 @@ class HomeServiceChartTest extends TestCase
             'type' => SubjectType::CREDITOR,
             'is_permanent' => false,
         ]);
-        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail($this->fiscalYearId);
+        $fiscalYear = FiscalYear::findOrFail($this->fiscalYearId);
         [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
 
         foreach ([

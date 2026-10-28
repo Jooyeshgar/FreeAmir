@@ -73,7 +73,7 @@ class FiscalYearTransferService
      */
     private static function _validateTransferFiscalYears(int $sourceFiscalYearId, int $targetFiscalYearId): array
     {
-        $fiscalYears = FiscalYear::withoutGlobalScopes()->whereKey([$sourceFiscalYearId, $targetFiscalYearId])->get()->keyBy('id');
+        $fiscalYears = FiscalYear::whereKey([$sourceFiscalYearId, $targetFiscalYearId])->get()->keyBy('id');
 
         $source = $fiscalYears->get($sourceFiscalYearId);
         $target = $fiscalYears->get($targetFiscalYearId);

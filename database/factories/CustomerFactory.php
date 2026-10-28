@@ -17,7 +17,7 @@ class CustomerFactory extends Factory
     public function definition()
     {
         $fiscalYearId = (int) getActiveFiscalYear();
-        if (! FiscalYear::withoutGlobalScopes()->whereKey($fiscalYearId)->exists()) {
+        if (! FiscalYear::whereKey($fiscalYearId)->exists()) {
             throw new \LogicException('An active fiscal year is required to create a customer.');
         }
 
