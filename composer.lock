@@ -4,8 +4,43 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "46f7707e6bf7ce4bf824cbd7da8e0886",
+    "content-hash": "5ace40aa71b0b6cb4ecdaa5eed6adffc",
     "packages": [
+        {
+            "name": "amir/mcp-server",
+            "version": "dev-local",
+            "dist": {
+                "type": "path",
+                "url": "../amir-enterprise/packages/mcp-server",
+                "reference": "79fb9bc03f306df3b18d2dc3986af32785b1c354"
+            },
+            "require": {
+                "illuminate/console": "^12.0",
+                "illuminate/support": "^12.0",
+                "php": "^8.2"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Amir\\McpServer\\McpServerServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Amir\\McpServer\\": "src/"
+                }
+            },
+            "license": [
+                "proprietary"
+            ],
+            "description": "Model Context Protocol (MCP) server for FreeAmir accounting system",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
+        },
         {
             "name": "barryvdh/laravel-debugbar",
             "version": "v3.16.5",
@@ -11603,7 +11638,9 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": [],
+    "stability-flags": {
+        "amir/mcp-server": 20
+    },
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {

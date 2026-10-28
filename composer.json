@@ -8,8 +8,21 @@
         "framework"
     ],
     "license": "MIT",
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../amir-enterprise/packages/mcp-server",
+            "options": {
+                "symlink": true,
+                "versions": {
+                    "amir/mcp-server": "dev-local"
+                }
+            }
+        }
+    ],
     "require": {
         "php": "^8.2",
+        "amir/mcp-server": "dev-local",
         "barryvdh/laravel-debugbar": "^3.13",
         "carlos-meneses/laravel-mpdf": "^2.1",
         "doctrine/dbal": "^3.10",

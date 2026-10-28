@@ -8,6 +8,18 @@ use Illuminate\Support\Facades\Route;
 class ApiTokenAbilityService
 {
     /**
+     * Additional abilities available for MCP (AI) and financial reporting.
+     *
+     * @var array<int, string>
+     */
+    protected array $mcpAbilities = [
+        'invoices.index',
+        'reports.cost-income',
+        'reports.company-overview',
+        'customers.index',
+    ];
+
+    /**
      * Permissions attached to API routes are the abilities users may grant to tokens.
      */
     public function abilities(): Collection
@@ -17,6 +29,7 @@ class ApiTokenAbilityService
             ->flatMap(fn ($route) => collect($route->gatherMiddleware())
                 ->filter(fn (string $middleware) => str_starts_with($middleware, 'check-permission:'))
                 ->map(fn (string $middleware) => substr($middleware, strlen('check-permission:'))))
+            ->concat($this->mcpAbilities)
             ->reject(fn (string $permission) => in_array($permission, [
                 'api.access',
                 'api-tokens.index',
