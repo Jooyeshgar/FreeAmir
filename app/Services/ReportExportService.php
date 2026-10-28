@@ -210,19 +210,22 @@ class ReportExportService
         $type = InvoiceType::tryFromName($request->invoice_type);
         $status = InvoiceStatus::tryFromName($request->status);
         $query = Invoice::with(['customer', 'document', 'items'])->orderByDesc('date')->orderByDesc('number');
-        ($this->invoiceExtensionRegistry ?? app(InvoiceExtensionRegistry::class))->extendQuery($query, $request);
+        $extensionRegistry = $this->invoiceExtensionRegistry ?? app(InvoiceExtensionRegistry::class);
+        $extensionRegistry->extendQuery($query, $request);
         $this->applyInvoiceFilters($query, $request, $type);
         $query->when($status !== null, fn ($invoice) => $invoice->where('status', $status));
+        $extensionHeaders = $extensionRegistry->csvHeaders();
         $headers = [__('Invoice Number'), __('Customer Name'), __('Date'), __('Document Number'), __('Before discounts and tax'),
-            __('Discounts'), __('Tax'), __('Amount'), __('Amount - Discounts')];
+            __('Discounts'), __('Tax'), __('Amount'), __('Amount - Discounts'), ...$extensionHeaders];
 
-        return $this->csv('invoices_'.now()->format('YmdHis').'.csv', $headers, function ($file) use ($query): void {
-            $query->chunk(200, function ($invoices) use ($file): void {
+        return $this->csv('invoices_'.now()->format('YmdHis').'.csv', $headers, function ($file) use ($query, $extensionRegistry): void {
+            $query->chunk(200, function ($invoices) use ($file, $extensionRegistry): void {
                 foreach ($invoices as $invoice) {
                     $subtotal = $invoice->items->sum(fn ($item) => (float) $item->quantity * (float) $item->unit_price);
                     $discounts = (float) $invoice->items->sum('unit_discount');
+                    $extensionValues = $extensionRegistry->csvRow($invoice);
                     fputcsv($file, [$invoice->number, $invoice->customer?->name, formatDate($invoice->date), $invoice->document?->number,
-                        $subtotal, $discounts, (float) $invoice->items->sum('vat'), (float) $invoice->amount - (float) $invoice->subtraction, $subtotal - $discounts]);
+                        $subtotal, $discounts, (float) $invoice->items->sum('vat'), (float) $invoice->amount - (float) $invoice->subtraction, $subtotal - $discounts, ...$extensionValues]);
                 }
             });
         });

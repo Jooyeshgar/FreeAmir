@@ -105,4 +105,40 @@ final class InvoiceExtensionRegistry
             $this->container->make($definition['handler'])->extendQuery($query, $request);
         }
     }
+
+    /**
+     * @return array<int, string>
+     */
+    public function csvHeaders(): array
+    {
+        $headers = [];
+        foreach ($this->extensions() as $definition) {
+            $handler = $this->container->make($definition['handler']);
+            if (method_exists($handler, 'csvHeaders')) {
+                foreach ($handler->csvHeaders() as $header) {
+                    $headers[] = (string) $header;
+                }
+            }
+        }
+
+        return $headers;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public function csvRow(Model $invoice): array
+    {
+        $row = [];
+        foreach ($this->extensions() as $definition) {
+            $handler = $this->container->make($definition['handler']);
+            if (method_exists($handler, 'csvRow')) {
+                foreach ($handler->csvRow($invoice) as $value) {
+                    $row[] = (string) $value;
+                }
+            }
+        }
+
+        return $row;
+    }
 }
