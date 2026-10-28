@@ -12,6 +12,18 @@ class ApiTokenTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_user_can_view_api_tokens_index_page_with_mcp_url(): void
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo(Permission::firstOrCreate(['name' => 'api-tokens.index']));
+
+        $this->actingAs($user)
+            ->get(route('api-tokens.index'))
+            ->assertOk()
+            ->assertSee(url('/api/mcp'))
+            ->assertSee(__('MCP Server URL'));
+    }
+
     public function test_user_can_open_create_token_page(): void
     {
         $user = User::factory()->create();
