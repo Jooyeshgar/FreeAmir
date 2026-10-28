@@ -31,12 +31,12 @@ class AncillaryCostAllocationTest extends TestCase
         ]);
         $invoice->items()->create([
             'itemable_type' => Product::class, 'itemable_id' => $product->id,
-            'quantity' => 1.25, 'unit_price' => 100, 'unit_discount' => 25,
+            'quantity' => 1.25, 'unit_price' => 100, 'discount' => 25,
             'vat' => 10, 'amount' => 110,
         ]);
         $invoice->items()->create([
             'itemable_type' => Product::class, 'itemable_id' => $unweighed->id,
-            'quantity' => 2.5, 'unit_price' => 100, 'unit_discount' => 0, 'vat' => 0, 'amount' => 250,
+            'quantity' => 2.5, 'unit_price' => 100, 'discount' => 0, 'vat' => 0, 'amount' => 250,
         ]);
 
         $products = app(AncillaryCostController::class)->getBuyInvoiceProducts($invoice->id)->getData(true)['products'];
