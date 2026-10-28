@@ -284,7 +284,7 @@ class InvoiceDashboardTest extends TestCase
             'itemable_id' => $service->id,
             'quantity' => 2,
             'unit' => 500,
-            'unit_discount' => 100,
+            'discount' => 100,
             'vat' => 0,
         ]]);
 
@@ -377,7 +377,7 @@ class InvoiceDashboardTest extends TestCase
             'itemable_id' => $item->id,
             'quantity' => $quantity,
             'unit_price' => $unitPrice,
-            'unit_discount' => 0,
+            'discount' => 0,
             'vat' => 0,
             'amount' => $amount,
             'cog_after' => $cogAfter,

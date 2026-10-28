@@ -217,7 +217,7 @@ class ReportExportService
             $query->chunk(200, function ($invoices) use ($file): void {
                 foreach ($invoices as $invoice) {
                     $subtotal = $invoice->items->sum(fn ($item) => (float) $item->quantity * (float) $item->unit_price);
-                    $discounts = (float) $invoice->items->sum('unit_discount');
+                    $discounts = (float) $invoice->items->sum('discount');
                     fputcsv($file, [$invoice->number, $invoice->customer?->name, formatDate($invoice->date), $invoice->document?->number,
                         $subtotal, $discounts, (float) $invoice->items->sum('vat'), (float) $invoice->amount - (float) $invoice->subtraction, $subtotal - $discounts]);
                 }

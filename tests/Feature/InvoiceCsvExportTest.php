@@ -41,6 +41,7 @@ class InvoiceCsvExportTest extends TestCase
         $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
         config(['active-fiscal-year-id' => $this->fiscalYearId]);
         App::setLocale('en');
+        $this->withSession(['locale' => 'en']);
 
         $this->customer = Customer::create(['name' => 'Alpha Customer', 'fiscal_year_id' => $this->fiscalYearId]);
     }
@@ -69,8 +70,8 @@ class InvoiceCsvExportTest extends TestCase
             'invoice_type' => 'sell',
             'status' => 'approved',
             'text' => 'Alpha',
-            'start_date' => '2026/06/01',
-            'end_date' => '2026/06/30',
+            'start_date' => '2026-06-01',
+            'end_date' => '2026-06-30',
         ]));
 
         $response->assertOk();
@@ -104,6 +105,7 @@ class InvoiceCsvExportTest extends TestCase
     public function test_export_translates_column_titles(): void
     {
         App::setLocale('fa');
+        $this->withSession(['locale' => 'fa']);
 
         $response = $this->actingAs($this->user)->get(route('invoices.export', ['invoice_type' => 'sell']));
 
@@ -143,7 +145,7 @@ class InvoiceCsvExportTest extends TestCase
             'invoice_id' => $invoice->id,
             'quantity' => $quantity,
             'unit_price' => $unitPrice,
-            'unit_discount' => $discount,
+            'discount' => $discount,
             'vat' => $vat,
             'amount' => ($quantity * $unitPrice) - $discount + $vat,
         ]);

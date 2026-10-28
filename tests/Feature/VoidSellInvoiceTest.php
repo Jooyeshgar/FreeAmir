@@ -326,7 +326,7 @@ class VoidSellInvoiceTest extends TestCase
             'itemable_id' => $service->id,
             'quantity' => 2,
             'unit' => 500,
-            'unit_discount' => 0,
+            'discount' => 0,
             'vat' => 0,
         ]], true, 7161, '2026-07-01')['invoice'];
 

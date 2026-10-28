@@ -181,7 +181,7 @@ return [
                 'subject_id' => 'Headline',
                 'total' => 'plural',
                 'unit' => 'Unit price',
-                'unit_discount' => 'Unit discount',
+                'discount' => 'discount',
                 'vat' => 'tax',
                 'off' => 'off',
             ],

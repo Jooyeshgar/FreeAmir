@@ -2599,6 +2599,12 @@ class FiscalYearService
                 continue;
             }
 
+            // Backups created before the discount rename use unit_discount.
+            if (! array_key_exists('discount', $invoiceItemData) && array_key_exists('unit_discount', $invoiceItemData)) {
+                $invoiceItemData['discount'] = $invoiceItemData['unit_discount'];
+            }
+            unset($invoiceItemData['unit_discount']);
+
             $newInvoiceItem = new InvoiceItem;
             $newInvoiceItem->fill(collect($invoiceItemData)->except(['id', 'invoice_id', 'itemable_id', 'warehouse_id'])->toArray());
             $newInvoiceItem->invoice_id = $invoiceMapping[$oldInvoiceId];

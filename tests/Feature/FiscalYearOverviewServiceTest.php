@@ -311,7 +311,7 @@ class FiscalYearOverviewServiceTest extends TestCase
             'itemable_id' => $product->id,
             'quantity' => $quantity,
             'unit_price' => $amount,
-            'unit_discount' => 0,
+            'discount' => 0,
             'vat' => 0,
             'amount' => $amount,
             'quantity_at' => $quantityAt,

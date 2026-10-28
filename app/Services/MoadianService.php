@@ -238,7 +238,7 @@ class MoadianService
         $header->bpc = $this->invoice->customer->postal_code;
 
         $amount = $this->invoice->amount;
-        $discount = $this->invoice->items->sum('unit_discount');
+        $discount = $this->invoice->items->sum('discount');
         $header->tprdis = $amount + $discount - $this->invoice->vat;
         $header->tdis = $discount;
         $header->tadis = $amount - $this->invoice->vat;
@@ -254,7 +254,7 @@ class MoadianService
     private function moadianInvoiceItems(): void
     {
         foreach ($this->invoice->items as $item) {
-            $amountAfterDiscount = $item->unit_price * $item->quantity - $item->unit_discount;
+            $amountAfterDiscount = $item->unit_price * $item->quantity - $item->discount;
 
             $body = new InvoiceItem;
             $body->sstid = $item->itemable->sstid;
@@ -262,7 +262,7 @@ class MoadianService
             $body->am = $item->quantity;
             $body->fee = $item->unit_price;
             $body->prdis = $item->unit_price * $item->quantity;
-            $body->dis = $item->unit_discount;
+            $body->dis = $item->discount;
             $body->adis = $amountAfterDiscount;
             $body->vra = $amountAfterDiscount > 0 ? ($item->vat / ($amountAfterDiscount)) * 100 : 0.0;
             $body->vam = $item->vat;

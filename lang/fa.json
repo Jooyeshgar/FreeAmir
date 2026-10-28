@@ -2789,7 +2789,7 @@
     "The subtractions must be a number.": "کسریات باید عددی باشد.",
     "The sum of transactions must be zero.": "مجموع معاملات باید صفر باشد.",
     "The transaction field must be a valid array.": "قسمت معامله باید یک آرایه معتبر باشد.",
-    "The unit discount may not be greater than the calculated line amount.": "تخفیف واحد ممکن است از مقدار خط محاسبه شده بیشتر نباشد.",
+    "The discount may not be greater than the calculated line amount.": "تخفیف ممکن است از مقدار خط محاسبه شده بیشتر نباشد.",
     "The uploaded file does not match the selected \":format\" format.": "فایل بارگذاری‌شده با فرمت انتخاب‌شده «:format» مطابقت ندارد.",
     "The user is already linked to an employee.": "این کاربر از قبل به یک کارمند متصل شده است.",
     "The verification code is invalid or has expired.": "کد تأیید نامعتبر است یا منقضی شده است.",
