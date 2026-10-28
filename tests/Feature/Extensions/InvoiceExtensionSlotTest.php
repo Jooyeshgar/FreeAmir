@@ -88,6 +88,60 @@ class InvoiceExtensionSlotTest extends TestCase
         self::assertSame('', trim($this->renderSlot('invoice.show.panels')));
     }
 
+    public function test_invoice_csv_export_applies_registered_extension_query(): void
+    {
+        $year = FiscalYear::factory()->create();
+        $user = User::factory()->create();
+        $user->fiscalYears()->attach($year);
+        $this->actingAs($user);
+        config(['active-fiscal-year-id' => $year->id]);
+
+        $matched = Invoice::create([
+            'number' => 9001,
+            'date' => '2026-10-26',
+            'invoice_type' => InvoiceType::BUY,
+            'status' => InvoiceStatus::PRE_INVOICE,
+            'creator_id' => $user->id,
+            'subtraction' => 0,
+            'vat' => 0,
+            'amount' => 0,
+            'fiscal_year_id' => $year->id,
+        ]);
+        $unmatched = Invoice::create([
+            'number' => 9002,
+            'date' => '2026-10-26',
+            'invoice_type' => InvoiceType::BUY,
+            'status' => InvoiceStatus::PRE_INVOICE,
+            'creator_id' => $user->id,
+            'subtraction' => 0,
+            'vat' => 0,
+            'amount' => 0,
+            'fiscal_year_id' => $year->id,
+        ]);
+
+        $extension = new class implements \App\Extensions\Contracts\InvoiceExtension {
+            public function validate(array $input, ?\Illuminate\Database\Eloquent\Model $invoice = null): array { return []; }
+            public function persist(\Illuminate\Database\Eloquent\Model $invoice, array $data): void {}
+            public function extendQuery(\Illuminate\Database\Eloquent\Builder $query, \Illuminate\Http\Request $request): void {
+                if ($request->input('filter_key') === 'only_9001') {
+                    $query->where('number', 9001);
+                }
+            }
+        };
+
+        $this->app->instance(get_class($extension), $extension);
+        app(\App\Extensions\InvoiceExtensionRegistry::class)->register('test_filter', get_class($extension));
+
+        $exportService = app(\App\Services\ReportExportService::class);
+        $result = $exportService->generate('invoices_csv', ['filter_key' => 'only_9001']);
+
+        self::assertArrayHasKey('content', $result);
+        $csvContent = $result['content'];
+
+        self::assertStringContainsString('9001', $csvContent);
+        self::assertStringNotContainsString('9002', $csvContent);
+    }
+
     private function renderSlot(string $slot, ?Invoice $invoice = null): string
     {
         return (new ExtensionSlot(app(ViewSlotRegistry::class), $slot, $invoice))->render()->render();

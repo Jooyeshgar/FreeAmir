@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Extensions\InvoiceExtensionRegistry;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Employee;
@@ -47,6 +48,7 @@ class ReportExportService
         private readonly DocumentImportExportService $documentExportService,
         private readonly TrialBalanceService $trialBalanceService,
         private readonly InventoryTurnoverService $inventoryTurnoverService,
+        private readonly ?InvoiceExtensionRegistry $invoiceExtensionRegistry = null,
     ) {}
 
     public function generate(string $export, array $filters): array
@@ -208,6 +210,7 @@ class ReportExportService
         $type = InvoiceType::tryFromName($request->invoice_type);
         $status = InvoiceStatus::tryFromName($request->status);
         $query = Invoice::with(['customer', 'document', 'items'])->orderByDesc('date')->orderByDesc('number');
+        ($this->invoiceExtensionRegistry ?? app(InvoiceExtensionRegistry::class))->extendQuery($query, $request);
         $this->applyInvoiceFilters($query, $request, $type);
         $query->when($status !== null, fn ($invoice) => $invoice->where('status', $status));
         $headers = [__('Invoice Number'), __('Customer Name'), __('Date'), __('Document Number'), __('Before discounts and tax'),
