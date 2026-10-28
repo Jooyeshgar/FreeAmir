@@ -146,7 +146,7 @@ class InvoiceDiscountTest extends TestCase
 
     public function test_print_templates_and_tax_export_keep_line_discount_amounts(): void
     {
-        $product = $this->createProduct(['quantity' => 10, 'average_cost' => 100]);
+        $product = $this->createProduct(['quantity' => 10, 'average_cost' => 100, 'sstid' => '1234567890123']);
         $invoice = $this->sell([[...$this->productItem($product, 2, 500), 'discount' => 50, 'vat' => 10]])['invoice'];
         $invoice->update(['description' => 'Discount test']);
         foreach (['invoices.print', 'invoices.pdf-print', 'invoices.draft', 'invoices.pdf-draft'] as $template) {
