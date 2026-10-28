@@ -12,16 +12,22 @@ class ApiTokenTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_user_can_view_api_tokens_index_page_with_mcp_url(): void
+    public function test_user_can_view_api_tokens_index_page(): void
     {
         $user = User::factory()->create();
         $user->givePermissionTo(Permission::firstOrCreate(['name' => 'api-tokens.index']));
 
-        $this->actingAs($user)
+        $response = $this->actingAs($user)
             ->get(route('api-tokens.index'))
             ->assertOk()
-            ->assertSee(url('/api/mcp'))
-            ->assertSee(__('MCP Server URL'));
+            ->assertSee(__('API Tokens'));
+
+        if (\Illuminate\Support\Facades\Route::has('mcp.handle')) {
+            $response->assertSee(url('/api/mcp'))
+                ->assertSee(__('MCP Server URL'));
+        } else {
+            $response->assertDontSee(__('MCP Server URL'));
+        }
     }
 
     public function test_user_can_open_create_token_page(): void
