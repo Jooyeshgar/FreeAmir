@@ -61,6 +61,60 @@ class FiscalYearOverviewServiceTest extends TestCase
         $this->assertSame(0, array_sum($this->service()->getMonthlyWarehouse()));
     }
 
+    public function test_warehouse_chart_includes_esfand_30_in_a_leap_fiscal_year(): void
+    {
+        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail($this->fiscalYearId);
+        $fiscalYear->update(['year' => 1403]);
+
+        $product = $this->makeProduct();
+        $invoice = $this->makeInvoice('2025-03-20');
+        $this->makeInvoiceItem($invoice, $product, quantityAt: 42);
+
+        $this->assertSame(42, $this->service()->getMonthlyWarehouse()['اسفند']);
+    }
+
+    public function test_warehouse_chart_uses_inclusive_boundaries_from_the_selected_record(): void
+    {
+        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail($this->fiscalYearId);
+        $fiscalYear->update(['year' => 1403]);
+        [$start, $end] = $fiscalYear->range();
+
+        foreach ([
+            [$start->copy()->subDay(), 100],
+            [$start, 10],
+            [$end, 20],
+            [$end->copy()->addDay(), 200],
+        ] as [$date, $quantity]) {
+            $invoice = $this->makeInvoice($date->toDateString());
+            $this->makeInvoiceItem($invoice, $this->makeProduct(), quantityAt: $quantity);
+        }
+
+        $this->assertSame(30, array_sum($this->service()->getMonthlyWarehouse()));
+    }
+
+    public function test_balance_includes_the_last_day_of_common_and_leap_fiscal_years(): void
+    {
+        $this->travelTo(now()->setDate(2026, 4, 1));
+
+        foreach ([1403, 1404] as $year) {
+            $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail($this->fiscalYearId);
+            $fiscalYear->update(['year' => $year]);
+            [$start, $end] = $fiscalYear->range();
+            $subject = Subject::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
+
+            foreach ([[$start, 10], [$end, 20], [$end->copy()->addDay(), 200]] as [$date, $value]) {
+                $document = $this->makeDocument($date->toDateString());
+                Transaction::create(['value' => $value, 'subject_id' => $subject->id, 'document_id' => $document->id, 'user_id' => $this->user->id, 'desc' => 'boundary']);
+            }
+
+            $data = $this->balanceData([$subject->id], 4, false);
+
+            $this->assertSame(30, $data['sum']);
+            $this->assertSame($year.'/01/01', $data['start_date']);
+            $this->assertSame($year.($year === 1403 ? '/12/30' : '/12/29'), $data['end_date']);
+        }
+    }
+
     public function test_warehouse_chart_uses_latest_product_snapshot_per_month(): void
     {
         $product = $this->makeProduct();

@@ -127,7 +127,7 @@ class CrmDashboardTest extends TestCase
     {
         // 1403 is a Jalali leap year, so Esfand has 30 days. Esfand 30, 1403
         // maps to 2025-03-20; the old fixed Esfand-29 end date excluded it.
-        config(['active-company-fiscal-year' => 1403]);
+        FiscalYear::withoutGlobalScopes()->whereKey($this->fiscalYearId)->update(['year' => 1403]);
 
         $this->makeSellInvoice('2025-03-20', 1000);
 

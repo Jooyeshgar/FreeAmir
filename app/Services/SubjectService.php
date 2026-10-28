@@ -6,6 +6,7 @@ use App\Enums\SubjectType;
 use App\Models\BankAccount;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\Transaction;
 use Illuminate\Support\Collection;
@@ -539,8 +540,7 @@ class SubjectService
             throw new \InvalidArgumentException(__('Cannot transfer to a descendant of the source subject.'));
         }
 
-        $year = (int) (config('active-company-fiscal-year') ?? toEnglish(jdate('Y')));
-        $startDate = jalali_to_gregorian($year, 1, 1, '-');
+        [$startDate] = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear())->range();
         $endDate = now()->format('Y-m-d');
 
         $result = DB::transaction(function () use ($source, $destination, $startDate, $endDate, $transferSubjectable) {
@@ -620,8 +620,7 @@ class SubjectService
                 $source->save();
             }
 
-            $year = (int) (config('active-company-fiscal-year') ?? toEnglish(jdate('Y')));
-            $startDate = jalali_to_gregorian($year, 1, 1, '-');
+            [$startDate] = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear())->range();
             $endDate = now()->format('Y-m-d');
 
             $query = Transaction::where('subject_id', $source->id)->whereHas('document', function ($q) use ($startDate, $endDate) {
