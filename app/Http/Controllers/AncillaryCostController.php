@@ -225,7 +225,7 @@ class AncillaryCostController extends Controller
                 'id' => $product->id,
                 'name' => $product->name,
                 'quantity' => (float) $items->sum('quantity'),
-                'value' => (float) $items->sum(fn ($item) => $item->quantity * $item->unit_price - $item->unit_discount),
+                'value' => (float) $items->sum(fn ($item) => $item->quantity * $item->unit_price - $item->discount),
                 'weight' => (float) $product->weight,
             ];
         })->values();
