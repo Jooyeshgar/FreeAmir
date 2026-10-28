@@ -110,7 +110,7 @@ class InvoiceFactory extends Factory
                         'itemable_id' => $product->id,
                         'quantity' => $quantity,
                         'unit' => $unit,
-                        'unit_discount' => 0,
+                        'discount' => 0,
                         'vat' => 0,
                         'vat_is_value' => false,
                     ];
@@ -143,7 +143,7 @@ class InvoiceFactory extends Factory
                         'itemable_id' => $service->id,
                         'quantity' => 1,
                         'unit' => $unit,
-                        'unit_discount' => 0,
+                        'discount' => 0,
                         'vat' => 0,
                         'vat_is_value' => false,
                     ];
@@ -158,9 +158,9 @@ class InvoiceFactory extends Factory
             foreach ($items as $item) {
                 $quantity = (float) ($item['quantity'] ?? 1);
                 $unitPrice = (float) ($item['unit'] ?? 0);
-                $unitDiscount = (float) ($item['unit_discount'] ?? 0);
+                $itemDiscount = (float) ($item['discount'] ?? 0);
                 $vat = (float) ($item['vat'] ?? 0);
-                $lineAmount = $quantity * $unitPrice - $unitDiscount + $vat;
+                $lineAmount = $quantity * $unitPrice - $itemDiscount + $vat;
 
                 if ($item['itemable_type'] === 'product') {
                     $product = Product::withoutGlobalScopes()->find($item['itemable_id']);
@@ -183,7 +183,7 @@ class InvoiceFactory extends Factory
                         'itemable_type' => $item['itemable_type'] === 'product' ? Product::class : Service::class,
                         'quantity' => $quantity,
                         'unit_price' => $unitPrice,
-                        'unit_discount' => $unitDiscount,
+                        'discount' => $itemDiscount,
                         'vat' => $vat,
                         'amount' => $lineAmount,
                         'description' => null,

@@ -300,7 +300,7 @@ class InvoiceBookmarkTest extends TestCase
             'itemable_type' => $serviceBuy ? Service::class : Product::class,
             'quantity' => 1,
             'unit_price' => 100,
-            'unit_discount' => 0,
+            'discount' => 0,
             'vat' => 0,
             'amount' => 100,
         ]);

@@ -2804,7 +2804,7 @@
     "The subtractions must be a number.": "The subtractions must be a number.",
     "The sum of transactions must be zero.": "The sum of transactions must be zero.",
     "The transaction field must be a valid array.": "The transaction field must be a valid array.",
-    "The unit discount may not be greater than the calculated line amount.": "The unit discount may not be greater than the calculated line amount.",
+    "The discount may not be greater than the calculated line amount.": "The discount may not be greater than the calculated line amount.",
     "The uploaded file does not match the selected \":format\" format.": "The uploaded file does not match the selected \":format\" format.",
     "The user is already linked to an employee.": "The user is already linked to an employee.",
     "The verification code is invalid or has expired.": "The verification code is invalid or has expired.",

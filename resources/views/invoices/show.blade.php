@@ -117,7 +117,7 @@
                         <div class="stat-title whitespace-normal text-xs md:text-sm text-amber-500 dark:text-amber-300">{{ __('Discounts') }}
                             ({{ config('amir.currency') ?? __('Rial') }})</div>
                         <div class="stat-value whitespace-normal text-amber-600 dark:text-amber-200 text-xl md:text-2xl lg:text-3xl break-all tabular-nums">
-                            {{ formatNumber($invoice->items->reduce(fn($carry, $item) => $carry + ($item->unit_discount ?? 0), 0)) }}
+                            {{ formatNumber($invoice->items->reduce(fn($carry, $item) => $carry + ($item->discount ?? 0), 0)) }}
                         </div>
                         <div class="stat-desc whitespace-normal text-amber-400 dark:text-amber-400/80">{{ __('Total deductions') }}</div>
                     </div>
@@ -282,11 +282,11 @@
                                     <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">{{ $item->description }}</td>
                                     <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ formatNumber($item->quantity ?? 0) }}</td>
                                     <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ formatNumber($item->unit_price ?? 0) }}</td>
-                                    <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ formatNumber($item->unit_discount ?? 0) }}
+                                    <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ formatNumber($item->discount ?? 0) }}
                                     </td>
                                     <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ formatNumber($item->vat ?? 0) }}</td>
                                     <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">
-                                        {{ formatNumber(($item->quantity ?? 0) * ($item->unit_price ?? 0) - ($item->unit_discount ?? 0) + ($item->vat ?? 0)) }}
+                                        {{ formatNumber(($item->quantity ?? 0) * ($item->unit_price ?? 0) - ($item->discount ?? 0) + ($item->vat ?? 0)) }}
                                     </td>
                                 </tr>
                             @empty
@@ -415,7 +415,7 @@
                                 <div class="stat-title whitespace-normal text-xs md:text-sm text-amber-500 dark:text-amber-300">{{ __('Discounts') }}
                                     ({{ config('amir.currency') ?? __('Rial') }})</div>
                                 <div class="stat-value whitespace-normal text-amber-600 dark:text-amber-200 text-xl md:text-2xl lg:text-3xl break-all tabular-nums">
-                                    {{ formatNumber($invoice->getReturnedInvoice()?->items->reduce(fn($carry, $item) => $carry + ($item->unit_discount ?? 0), 0)) }}
+                                    {{ formatNumber($invoice->getReturnedInvoice()?->items->reduce(fn($carry, $item) => $carry + ($item->discount ?? 0), 0)) }}
                                 </div>
                                 <div class="stat-desc whitespace-normal text-amber-400 dark:text-amber-400/80">
                                     {{ __('Total deductions') }}</div>
@@ -485,10 +485,10 @@
                                         <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ formatNumber($item->unit_price ?? 0) }}
                                         </td>
                                         <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">
-                                            {{ formatNumber($item->unit_discount ?? 0) }}</td>
+                                            {{ formatNumber($item->discount ?? 0) }}</td>
                                         <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">{{ formatNumber($item->vat ?? 0) }}</td>
                                         <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3 text-right">
-                                            {{ formatNumber(($item->quantity ?? 0) * ($item->unit_price ?? 0) - ($item->unit_discount ?? 0) + ($item->vat ?? 0)) }}
+                                            {{ formatNumber(($item->quantity ?? 0) * ($item->unit_price ?? 0) - ($item->discount ?? 0) + ($item->vat ?? 0)) }}
                                         </td>
                                     </tr>
                                 @empty

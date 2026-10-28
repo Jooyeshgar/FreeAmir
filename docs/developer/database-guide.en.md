@@ -352,7 +352,7 @@ CREATE TABLE invoice_items (
     transaction_id BIGINT UNSIGNED NULL,
     quantity DECIMAL(10,2) NOT NULL,
     unit_price DECIMAL(10,2) NOT NULL,
-    unit_discount DECIMAL(10,2) NOT NULL,
+    discount DECIMAL(18,2) NOT NULL, -- Absolute discount for the complete invoice line
     vat DECIMAL(10,2) NOT NULL,
     amount DECIMAL(10,2) NOT NULL,
     description TEXT NULL,

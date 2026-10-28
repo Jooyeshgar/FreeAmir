@@ -26,7 +26,7 @@ class InvoiceService
      * The document and transactions are generated automatically from invoice data.
      *
      * @param  array  $invoiceData  - Invoice details including customer_id, date, invoice_type, etc.
-     * @param  array  $items  - Invoice items with product_id, quantity, unit_discount, etc.
+     * @param  array  $items  - Invoice items with product_id, quantity, discount, etc.
      * @return array ['document' => Document, 'invoice' => Invoice]
      *
      * @throws ValidationException
@@ -488,7 +488,7 @@ class InvoiceService
      *                        - itemable_id
      *                        - quantity
      *                        - unit  (unit price)
-     *                        - unit_discount  (optional, defaults to 0)
+     *                        - discount  (optional, defaults to 0)
      *                        - vat            (optional, defaults to 0)
      *                        - vat_is_value   (optional bool – if true, vat is an absolute amount)
      *                        - description    (optional)
@@ -510,13 +510,13 @@ class InvoiceService
 
             $quantity = $item['quantity'] ?? 1;
             $unitPrice = $item['unit'];
-            $unitDiscount = $item['unit_discount'] ?? 0;
+            $itemDiscount = $item['discount'] ?? 0;
 
             $vatIsValue = $item['vat_is_value'] ?? false;
-            $itemVat = $vatIsValue ? floatval($item['vat'] ?? 0) : (($item['vat'] ?? 0) / 100) * ($quantity * $unitPrice - $unitDiscount);
+            $itemVat = $vatIsValue ? floatval($item['vat'] ?? 0) : (($item['vat'] ?? 0) / 100) * ($quantity * $unitPrice - $itemDiscount);
 
             // Calculate item amount (price - discount, VAT is separate but included in total)
-            $itemAmount = $quantity * $unitPrice - $unitDiscount + $itemVat;
+            $itemAmount = $quantity * $unitPrice - $itemDiscount + $itemVat;
 
             $itemableType = $type === 'product' ? Product::class : Service::class;
             $itemableId = $item['itemable_id'];
@@ -537,7 +537,7 @@ class InvoiceService
                 'cog_after' => $product?->average_cost ?? $unitPrice,                                            // must be updated after creating invoice
                 'quantity_at' => $quantityAt,                                                                    // stock level before this invoice was applied
                 'unit_price' => $unitPrice,
-                'unit_discount' => $unitDiscount,
+                'discount' => $itemDiscount,
                 'vat' => $itemVat,
                 'description' => $item['description'] ?? null,
                 'amount' => $itemAmount,
@@ -774,7 +774,7 @@ class InvoiceService
                 'itemable_type' => $t->itemable_type === Product::class ? 'product' : 'service',
                 'quantity' => $t->quantity,
                 'description' => $t->description,
-                'unit_discount' => $t->unit_discount,
+                'discount' => $t->discount,
                 'vat' => $t->vat,
                 'vat_is_value' => true,
                 'unit' => $t->unit_price,
@@ -1362,7 +1362,7 @@ class InvoiceService
             'itemable_type' => $t['item_type'],
             'quantity' => $t['quantity'] ?? 1,
             'description' => $t['desc'] ?? null,
-            'unit_discount' => $t['unit_discount'] ?? 0,
+            'discount' => $t['discount'] ?? 0,
             'vat' => $t['vat'] ?? 0,
             'vat_is_value' => $vatIsValue,
             'unit' => $t['unit'] ?? 0,
@@ -1426,7 +1426,7 @@ class InvoiceService
                 'desc' => $item->description,
                 'quantity' => $item->quantity,
                 'unit' => $item->unit_price,
-                'off' => $item->unit_discount,
+                'off' => $item->discount,
                 'vat' => $item->vat,
                 'total' => $item->amount,
                 'inventory_subject_id' => $item->itemable->inventory_subject_id ?? $item->itemable->subject_id ?? null,
@@ -1510,7 +1510,7 @@ class InvoiceService
                     'itemable_id' => $item->itemable_id,
                     'quantity' => $item->quantity,
                     'unit_price' => $item->unit_price,
-                    'unit_discount' => $item->unit_discount,
+                    'discount' => $item->discount,
                     'cog_after' => $item->itemable_type === Product::class ? $item->cog_after : 0.0,
                     'quantity_at' => $item->itemable_type === Product::class ? $item->itemable->quantity : 0,
                     'price' => $item->price,

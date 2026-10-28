@@ -640,7 +640,7 @@ class InvoiceController extends Controller
                 'vat' => $item->vat,
                 'quantity' => $item->quantity,
                 'unit' => $item->unit_price,
-                'off' => $item->unit_discount,
+                'off' => $item->discount,
                 'total' => $item->amount,
                 'desc' => $item->description,
                 'warehouse_id' => $item->invoice->warehouse_id,

@@ -264,7 +264,7 @@ class FiscalYearTransferService
             $newItem->itemable_id = $targetItemableId;
             $newItem->quantity = $item->quantity;
             $newItem->unit_price = $item->unit_price;
-            $newItem->unit_discount = $item->unit_discount;
+            $newItem->discount = $item->discount;
             $newItem->vat = $item->vat;
             $newItem->amount = $item->amount;
             $newItem->description = $item->description;

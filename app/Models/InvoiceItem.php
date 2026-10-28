@@ -17,7 +17,7 @@ class InvoiceItem extends Model
         'invoice_id',
         'quantity',
         'unit_price',
-        'unit_discount',
+        'discount',
         'cog_after',
         'quantity_at', // quantity before this invoice
         'vat',
