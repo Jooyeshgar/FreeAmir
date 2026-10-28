@@ -238,6 +238,16 @@ class LabelsExtension implements InvoiceExtension
             $query->where('number', '>=', (int) $request->input('minimum_number'));
         }
     }
+
+    public function csvHeaders(): array
+    {
+        return ['Labels'];
+    }
+
+    public function csvRow(Model $invoice): array
+    {
+        return ['label-val'];
+    }
 }
 
 class ReferenceExtension implements InvoiceExtension
@@ -259,5 +269,15 @@ class ReferenceExtension implements InvoiceExtension
         if ($request->filled('creator_id')) {
             $query->where('creator_id', (int) $request->input('creator_id'));
         }
+    }
+
+    public function csvHeaders(): array
+    {
+        return [];
+    }
+
+    public function csvRow(Model $invoice): array
+    {
+        return [];
     }
 }

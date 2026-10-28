@@ -127,6 +127,8 @@ class InvoiceExtensionSlotTest extends TestCase
                     $query->where('number', 9001);
                 }
             }
+            public function csvHeaders(): array { return ['Tag']; }
+            public function csvRow(\Illuminate\Database\Eloquent\Model $invoice): array { return ['vip-tag']; }
         };
 
         $this->app->instance(get_class($extension), $extension);
@@ -140,6 +142,8 @@ class InvoiceExtensionSlotTest extends TestCase
 
         self::assertStringContainsString('9001', $csvContent);
         self::assertStringNotContainsString('9002', $csvContent);
+        self::assertStringContainsString('Tag', $csvContent);
+        self::assertStringContainsString('vip-tag', $csvContent);
     }
 
     private function renderSlot(string $slot, ?Invoice $invoice = null): string
