@@ -140,28 +140,11 @@ function initializeMainMenuDropdowns() {
 document.addEventListener('DOMContentLoaded', initializeMainMenuDropdowns);
 
 function initializeMonthlyBudgetStyles() {
-    document.querySelectorAll('[data-budget-width]').forEach((element) => {
-        const value = element.dataset.budgetWidth;
-        const width = Number(value);
-
-        if (Number.isFinite(width) && width >= 0 && width <= 100) {
-            element.style.setProperty('--budget-width', `${value}%`);
-        }
-    });
-
     document.querySelectorAll('[data-budget-gradient]').forEach((element) => {
         const gradient = element.dataset.budgetGradient;
 
-        if (gradient === 'var(--bw-line)' || gradient.startsWith('conic-gradient(')) {
+        if (gradient === 'var(--color-base-300)' || gradient.startsWith('conic-gradient(')) {
             element.style.setProperty('--budget-donut-gradient', gradient);
-        }
-    });
-
-    document.querySelectorAll('[data-budget-color]').forEach((element) => {
-        const color = element.dataset.budgetColor;
-
-        if (/^#[\da-f]{6}$/i.test(color)) {
-            element.style.setProperty('--budget-kpi-color', color);
         }
     });
 }

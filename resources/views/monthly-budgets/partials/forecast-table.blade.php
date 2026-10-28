@@ -1,5 +1,5 @@
 <div class="overflow-x-auto">
-    <table class="table budget-table">
+    <table class="table table-sm w-full whitespace-nowrap tabular-nums [&_thead]:bg-base-200/50 [&_a]:text-primary [&_a:hover]:underline">
         <thead>
             <tr>
                 <th>{{ __('Subject') }}</th>
@@ -24,7 +24,7 @@
                                     <span class="badge badge-info badge-outline badge-xs">{{ __('Included in parent total') }}</span>
                                 @endif
                             </div>
-                            <div class="mt-0.5 font-mono text-[11px] text-base-content/45">{{ formatCode($line['subject']->code) }}</div>
+                            <div class="mt-0.5 font-mono text-xs text-base-content/45">{{ formatCode($line['subject']->code) }}</div>
                         </div>
                     </td>
                     <td>
@@ -40,7 +40,7 @@
                             </span>
                         </div>
                         @if ($line['source'] === 'manual')
-                            <div class="mt-1 text-[11px] text-base-content/50">{{ __('System forecast') }}: {{ formatNumber($line['systemForecast']) }}</div>
+                            <div class="mt-1 text-xs text-base-content/50">{{ __('System forecast') }}: {{ formatNumber($line['systemForecast']) }}</div>
                         @endif
                     </td>
                     <td class="text-end tabular-nums">
@@ -55,7 +55,7 @@
                             <span class="text-base-content/35">—</span>
                         @else
                             <div class="font-semibold tabular-nums {{ $line['variance'] >= 0 ? 'text-success' : 'text-error' }}">{{ formatNumber($line['variance']) }}</div>
-                            <div class="text-[11px] text-base-content/45">{{ is_null($line['variancePercent']) ? '—' : localizeNumber(number_format($line['variancePercent'], 1)).'%' }}</div>
+                            <div class="text-xs text-base-content/45">{{ is_null($line['variancePercent']) ? '—' : localizeNumber(number_format($line['variancePercent'], 1)).'%' }}</div>
                         @endif
                     </td>
                     <td>

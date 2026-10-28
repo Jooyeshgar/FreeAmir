@@ -5,7 +5,9 @@
         ? null
         : (($compact ?? false) ? formatCompactCurrency($change, $currency ?? null) : formatNumber($change));
 @endphp
-<span class="budget-change" data-direction="{{ $direction }}">
+<span class="inline-flex items-center gap-1 text-xs font-bold whitespace-nowrap
+    [&[data-direction='up']]:text-success [&[data-direction='down']]:text-error
+    [&[data-direction='neutral']]:text-base-content/60" data-direction="{{ $direction }}">
     @if (is_null($change))
         <span>{{ __('Comparison unavailable') }}</span>
     @else

@@ -180,14 +180,20 @@
             <span class="min-w-0 text-right text-xs font-medium leading-5 text-base-content/60 dark:text-slate-300/70">{{ $title }}</span>
         </div>
 
-        <div class="min-w-0">
-            <div class="truncate text-xl font-bold leading-8 text-base-content tabular-nums dark:text-slate-50">
-                {{ $displayValue }}
+        @isset($valueContent)
+            {{ $valueContent }}
+        @else
+            <div class="min-w-0">
+                <div class="truncate text-xl font-bold leading-8 text-base-content tabular-nums dark:text-slate-50">
+                    {{ $displayValue }}
+                </div>
+                @if (filled($suffix))
+                    <div class="text-xs text-base-content/60 dark:text-slate-400">{{ $suffix }}</div>
+                @endif
             </div>
-            @if (filled($suffix))
-                <div class="text-xs text-base-content/60 dark:text-slate-400">{{ $suffix }}</div>
-            @endif
-        </div>
+        @endisset
+
+        {{ $slot }}
 
         @if ($progress !== null)
             <div class="flex items-center gap-2">
@@ -199,19 +205,23 @@
             </div>
         @endif
 
-        <div class="mt-auto flex items-center justify-between gap-2 text-xs">
-            @if ($change !== null)
-                <span class="shrink-0 font-semibold {{ $change >= 0 ? 'text-success' : 'text-error' }}">
-                    {{ $change >= 0 ? '↑' : '↓' }}
-                    {{ formatNumber(abs($change)) }}{{ __('Percent sign') }}
-                </span>
-            @else
-                <span></span>
-            @endif
+        @isset($footer)
+            {{ $footer }}
+        @else
+            <div class="mt-auto flex items-center justify-between gap-2 text-xs">
+                @if ($change !== null)
+                    <span class="shrink-0 font-semibold {{ $change >= 0 ? 'text-success' : 'text-error' }}">
+                        {{ $change >= 0 ? '↑' : '↓' }}
+                        {{ formatNumber(abs($change)) }}{{ __('Percent sign') }}
+                    </span>
+                @else
+                    <span></span>
+                @endif
 
-            @if (filled($detail))
-                <span class="min-w-0 truncate text-base-content/50 dark:text-slate-400/80">{{ $detail }}</span>
-            @endif
-        </div>
+                @if (filled($detail))
+                    <span class="min-w-0 truncate text-base-content/50 dark:text-slate-400/80">{{ $detail }}</span>
+                @endif
+            </div>
+        @endisset
     </div>
 </article>
