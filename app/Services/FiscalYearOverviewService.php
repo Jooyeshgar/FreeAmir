@@ -315,7 +315,7 @@ class FiscalYearOverviewService
 
     public function getMonthlyWarehouse()
     {
-        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        $fiscalYear = FiscalYear::findOrFail(getActiveFiscalYear());
         [$startDate, $endDate] = $fiscalYear->range();
 
         $invoiceItems = \DB::table('invoice_items')
@@ -376,7 +376,7 @@ class FiscalYearOverviewService
 
     public function balanceForSubjectIds(array $subjectIds, int $duration, bool $inverse = true)
     {
-        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        $fiscalYear = FiscalYear::findOrFail(getActiveFiscalYear());
         [$firstDayOfFiscalYear, $lastDayOfFiscalYear] = $fiscalYear->range();
 
         $endDate = now();

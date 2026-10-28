@@ -17,7 +17,7 @@ class CrmDashboardService
 
     public function dashboard(): array
     {
-        $fiscalYearModel = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        $fiscalYearModel = FiscalYear::findOrFail(getActiveFiscalYear());
         $fiscalYear = (int) $fiscalYearModel->year;
         $currentJalaliMonth = (int) toEnglish(jdate('m'));
 

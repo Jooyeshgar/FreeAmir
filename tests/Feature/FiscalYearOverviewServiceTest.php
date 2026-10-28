@@ -63,7 +63,7 @@ class FiscalYearOverviewServiceTest extends TestCase
 
     public function test_warehouse_chart_includes_esfand_30_in_a_leap_fiscal_year(): void
     {
-        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail($this->fiscalYearId);
+        $fiscalYear = FiscalYear::findOrFail($this->fiscalYearId);
         $fiscalYear->update(['year' => 1403]);
 
         $product = $this->makeProduct();
@@ -75,7 +75,7 @@ class FiscalYearOverviewServiceTest extends TestCase
 
     public function test_warehouse_chart_uses_inclusive_boundaries_from_the_selected_record(): void
     {
-        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail($this->fiscalYearId);
+        $fiscalYear = FiscalYear::findOrFail($this->fiscalYearId);
         $fiscalYear->update(['year' => 1403]);
         [$start, $end] = $fiscalYear->range();
 
@@ -97,7 +97,7 @@ class FiscalYearOverviewServiceTest extends TestCase
         $this->travelTo(now()->setDate(2026, 4, 1));
 
         foreach ([1403, 1404] as $year) {
-            $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail($this->fiscalYearId);
+            $fiscalYear = FiscalYear::findOrFail($this->fiscalYearId);
             $fiscalYear->update(['year' => $year]);
             [$start, $end] = $fiscalYear->range();
             $subject = Subject::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);

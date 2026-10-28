@@ -22,7 +22,7 @@ function getActiveFiscalYear(): int
     // first persisted fiscal year deterministically; fresh databases still use 1
     // until the fiscal years table is available.
     try {
-        return (int) (FiscalYear::withoutGlobalScopes()->orderBy('id')->value('id') ?? 1);
+        return (int) (FiscalYear::orderBy('id')->value('id') ?? 1);
     } catch (Throwable) {
         return 1;
     }

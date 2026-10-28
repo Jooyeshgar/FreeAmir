@@ -540,7 +540,7 @@ class SubjectService
             throw new \InvalidArgumentException(__('Cannot transfer to a descendant of the source subject.'));
         }
 
-        [$startDate] = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear())->range();
+        [$startDate] = FiscalYear::findOrFail(getActiveFiscalYear())->range();
         $endDate = now()->format('Y-m-d');
 
         $result = DB::transaction(function () use ($source, $destination, $startDate, $endDate, $transferSubjectable) {
@@ -620,7 +620,7 @@ class SubjectService
                 $source->save();
             }
 
-            [$startDate] = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear())->range();
+            [$startDate] = FiscalYear::findOrFail(getActiveFiscalYear())->range();
             $endDate = now()->format('Y-m-d');
 
             $query = Transaction::where('subject_id', $source->id)->whereHas('document', function ($q) use ($startDate, $endDate) {
