@@ -28,7 +28,7 @@
                         [&[data-direction='up']]:text-success [&[data-direction='down']]:text-error" data-direction="{{ $changeDirection }}">
                         @if ($changeIsKnown)
                             <span aria-hidden="true">{{ $changeIsUp ? '↑' : ($changeIsDown ? '↓' : '→') }}</span> {{ localizeNumber(number_format(abs($driver['percent']), 1)) }}%
-                        @elseif (! $profitability['comparisonUnavailable'] && ($driver['previous'] ?? 0) <= 0)
+                        @elseif (! is_null($driver['previous']) && $driver['previous'] <= 0)
                             {{ __('New') }}
                         @else
                             —

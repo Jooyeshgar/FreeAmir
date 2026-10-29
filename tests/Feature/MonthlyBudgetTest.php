@@ -26,6 +26,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -473,6 +474,46 @@ class MonthlyBudgetTest extends TestCase
             ->assertSee(__('Upcoming month'))->assertDontSee(__('Month to date'));
         $this->actingAs($this->user)->get(route('budgets.index', ['month' => 1]))->assertOk()
             ->assertSee(__('Previous month comparison is unavailable for the first month of the fiscal year.'));
+    }
+
+    public function test_product_changes_show_unavailable_and_zero_as_neutral(): void
+    {
+        $this->travelTo(Carbon::parse(jalali_to_gregorian(1405, 8, 15, '-').' 12:00:00', 'Asia/Tehran'));
+        $product = Product::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'name' => 'Steady product']);
+        $this->productInvoice($product, InvoiceType::SELL, 1, 1000, 0, 400);
+        $this->productInvoice($product, InvoiceType::SELL, 4, 1000, 0, 400);
+        $this->productInvoice($product, InvoiceType::SELL, 5, 1000, 0, 400);
+        $this->grant('budgets.index');
+
+        $this->actingAs($this->user)->get(route('budgets.index', ['month' => 1]))->assertOk()
+            ->assertViewHas('profitability', fn (array $metrics) => is_null($metrics['products']->sole()['salesChange']))
+            ->assertSeeInOrder(['Steady product', 'data-direction="neutral"', '—', 'data-direction="neutral"', '—'], false);
+        $this->actingAs($this->user)->get(route('budgets.index', ['month' => 5]))->assertOk()
+            ->assertViewHas('profitability', fn (array $metrics) => $metrics['products']->sole()['salesChange'] === 0.0)
+            ->assertSeeInOrder(['Steady product', 'data-direction="neutral"', '→', 'data-direction="neutral"', '→'], false);
+    }
+
+    public function test_drivers_without_previous_month_documents_are_unavailable_not_new(): void
+    {
+        $this->travelTo(Carbon::parse(jalali_to_gregorian(1405, 8, 15, '-').' 12:00:00', 'Asia/Tehran'));
+        $root = $this->temporarySubject('Driver income root', SubjectType::CREDITOR);
+        $existing = $this->childSubject($root, 'Existing driver', SubjectType::CREDITOR);
+        $added = $this->childSubject($root, 'Added driver', SubjectType::CREDITOR);
+        $this->transaction($existing, 100, 5);
+        $this->transaction($existing, 100, 6);
+        $this->transaction($existing, 100, 7);
+        $this->transaction($added, 50, 7);
+        $this->grant('budgets.index');
+
+        $response = $this->actingAs($this->user)->get(route('budgets.index', ['month' => 5]))->assertOk()
+            ->assertViewHas('categoryDrivers', fn (array $drivers) => is_null($drivers['income']->sole()['previous']));
+        $this->assertStringNotContainsString(__('New'), Str::between($response->getContent(), 'Existing driver', '</article>'));
+        $this->actingAs($this->user)->get(route('budgets.index', ['month' => 7]))->assertOk()
+            ->assertViewHas('categoryDrivers', function (array $drivers) use ($added) {
+                $driver = $drivers['income']->first(fn (array $driver) => $driver['subject']->is($added));
+
+                return $driver['previous'] === 0.0 && is_null($driver['percent']);
+            })->assertSeeInOrder(['Added driver', __('New')]);
     }
 
     public function test_actual_category_comparison_stays_stable_when_forecast_hierarchy_changes(): void

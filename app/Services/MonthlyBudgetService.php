@@ -119,8 +119,9 @@ class MonthlyBudgetService
     /** Module amounts are compared with accounting expenses, never added to them again. */
     public function moduleCostShares(int $month, ?float $actualExpense, ?int $dayLimit = null): array
     {
-        $snapshot = new self;
+        $snapshot = $this;
         if ($dayLimit !== null) {
+            $snapshot = new self;
             $snapshot->actualDayLimits[$month] = $dayLimit;
         }
         $year = (int) FiscalYear::query()->findOrFail(getActiveFiscalYear())->year;
@@ -500,7 +501,10 @@ class MonthlyBudgetService
         ];
 
         $categoryLines = $this->driverActuals($month, $dayLimit);
-        $previousLines = $previousAnalysis === null ? collect() : $this->driverActuals($month - 1, $dayLimit)->keyBy(fn (array $line) => (int) $line['subject']->id);
+        $previousAvailable = (bool) ($previousAnalysis['hasDocuments'] ?? false);
+        $previousLines = $previousAvailable
+            ? $this->driverActuals($month - 1, $dayLimit)->keyBy(fn (array $line) => (int) $line['subject']->id)
+            : collect();
         $categoryDrivers = [];
         foreach (['income' => 'actualIncome', 'expense' => 'actualExpense'] as $type => $totalKey) {
             $total = abs((float) ($analysis[$totalKey] ?? 0));
@@ -508,14 +512,17 @@ class MonthlyBudgetService
                 ->filter(fn (array $line) => $line['type'] === $type && $line['actual'] != 0)
                 ->sortByDesc(fn (array $line) => abs((float) $line['actual']))
                 ->take(5)
-                ->map(function (array $line) use ($previousLines, $total, $absolute) {
+                ->map(function (array $line) use ($previousAvailable, $previousLines, $total) {
                     $amount = abs((float) $line['actual']);
+                    $previous = $previousAvailable
+                        ? abs((float) ($previousLines->get((int) $line['subject']->id)['actual'] ?? 0))
+                        : null;
 
                     return [
                         'subject' => $line['subject'],
                         'amount' => $amount,
                         'share' => $total > 0 ? ($amount / $total) * 100 : null,
-                        ...$this->comparison($amount, $absolute($previousLines->get((int) $line['subject']->id)['actual'] ?? null)),
+                        ...$this->comparison($amount, $previous),
                     ];
                 })->values();
         }

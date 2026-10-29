@@ -36,6 +36,9 @@
             <table class="table table-sm w-full whitespace-nowrap tabular-nums [&_thead]:bg-base-200/50 [&_a]:text-primary [&_a:hover]:underline">
                 <thead><tr><th scope="col">{{ __('Product') }}</th><th scope="col" class="[direction:ltr] [unicode-bidi:isolate] text-left">{{ __('Net Product Sales') }}</th><th scope="col" class="[direction:ltr] [unicode-bidi:isolate] text-left">{{ __('Cost of Goods Sold') }}</th><th scope="col" class="[direction:ltr] [unicode-bidi:isolate] text-left">{{ __('Gross Profit') }}</th><th scope="col" class="[direction:ltr] [unicode-bidi:isolate] text-left">{{ __('Gross margin') }}</th></tr></thead>
                 <tbody>
+                    @php
+                        $changeDirection = fn (?float $change) => is_null($change) || $change == 0 ? 'neutral' : ($change > 0 ? 'up' : 'down');
+                    @endphp
                     @forelse ($displayProducts as $index => $product)
                         <tr class="hover:bg-base-200/40" x-show="matches(@js($product['name'].' '.($product['group'] ?? '')), @js($product['grossProfit']))">
                             <td>
@@ -46,12 +49,24 @@
                             </td>
                             <td class="[direction:ltr] [unicode-bidi:isolate] text-left">
                                 <strong>{{ formatNumber($product['sales']) }}</strong>
-                                <div class="text-xs [&[data-direction='up']]:text-success [&[data-direction='down']]:text-error" data-direction="{{ ($product['salesChange'] ?? 0) >= 0 ? 'up' : 'down' }}">{{ ($product['salesChange'] ?? 0) > 0 ? '↑' : (($product['salesChange'] ?? 0) < 0 ? '↓' : '→') }} {{ formatNumber(abs($product['salesChange'] ?? 0)) }}</div>
+                                <div class="text-xs text-base-content/60 [&[data-direction='up']]:text-success [&[data-direction='down']]:text-error" data-direction="{{ $changeDirection($product['salesChange']) }}">
+                                    @if (is_null($product['salesChange']))
+                                        —
+                                    @else
+                                        {{ $product['salesChange'] > 0 ? '↑' : ($product['salesChange'] < 0 ? '↓' : '→') }} {{ formatNumber(abs($product['salesChange'])) }}
+                                    @endif
+                                </div>
                             </td>
                             <td class="[direction:ltr] [unicode-bidi:isolate] text-left text-base-content/60!">{{ formatNumber($product['cogs']) }}</td>
                             <td class="[direction:ltr] [unicode-bidi:isolate] text-left">
                                 <strong class="{{ $product['grossProfit'] < 0 ? 'text-error!' : '' }}">{{ formatNumber($product['grossProfit']) }}</strong>
-                                <div class="text-xs [&[data-direction='up']]:text-success [&[data-direction='down']]:text-error" data-direction="{{ ($product['grossProfitChange'] ?? 0) >= 0 ? 'up' : 'down' }}">{{ ($product['grossProfitChange'] ?? 0) > 0 ? '↑' : (($product['grossProfitChange'] ?? 0) < 0 ? '↓' : '→') }} {{ formatNumber(abs($product['grossProfitChange'] ?? 0)) }}</div>
+                                <div class="text-xs text-base-content/60 [&[data-direction='up']]:text-success [&[data-direction='down']]:text-error" data-direction="{{ $changeDirection($product['grossProfitChange']) }}">
+                                    @if (is_null($product['grossProfitChange']))
+                                        —
+                                    @else
+                                        {{ $product['grossProfitChange'] > 0 ? '↑' : ($product['grossProfitChange'] < 0 ? '↓' : '→') }} {{ formatNumber(abs($product['grossProfitChange'])) }}
+                                    @endif
+                                </div>
                             </td>
                             <td class="[direction:ltr] [unicode-bidi:isolate] text-left"><span class="inline-block px-2 py-1 rounded-lg text-xs font-bold {{ ! is_null($product['grossMargin']) && $product['grossMargin'] < 10 ? 'text-error bg-error/10' : 'text-success bg-success/10' }}">{{ is_null($product['grossMargin']) ? '—' : localizeNumber(number_format($product['grossMargin'], 1)).'%' }}</span></td>
                         </tr>
