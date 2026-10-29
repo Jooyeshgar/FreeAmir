@@ -5,6 +5,7 @@
     'suffix' => null,
     'detail' => null,
     'change' => null,
+    'increaseIsGood' => null,
     'sparkline' => null,
     'series' => null,
     'tone' => null,
@@ -19,6 +20,7 @@
     $suffix = $suffix ?? (data_get($card, 'suffix') ?? data_get($card, 'unit'));
     $detail = $detail ?? data_get($card, 'detail');
     $change = $change ?? data_get($card, 'change');
+    $increaseIsGood = $increaseIsGood ?? data_get($card, 'increaseIsGood', true);
     $sparkline = $sparkline ?? data_get($card, 'sparkline');
     $series = $series ?? data_get($card, 'series');
     $tone = $tone ?? data_get($card, 'tone', 'info');
@@ -180,20 +182,14 @@
             <span class="min-w-0 text-right text-xs font-medium leading-5 text-base-content/60 dark:text-slate-300/70">{{ $title }}</span>
         </div>
 
-        @isset($valueContent)
-            {{ $valueContent }}
-        @else
-            <div class="min-w-0">
-                <div class="truncate text-xl font-bold leading-8 text-base-content tabular-nums dark:text-slate-50">
-                    {{ $displayValue }}
-                </div>
-                @if (filled($suffix))
-                    <div class="text-xs text-base-content/60 dark:text-slate-400">{{ $suffix }}</div>
-                @endif
+        <div class="min-w-0">
+            <div class="truncate text-xl font-bold leading-8 text-base-content tabular-nums dark:text-slate-50">
+                {{ $displayValue }}
             </div>
-        @endisset
-
-        {{ $slot }}
+            @if (filled($suffix))
+                <div class="text-xs text-base-content/60 dark:text-slate-400">{{ $suffix }}</div>
+            @endif
+        </div>
 
         @if ($progress !== null)
             <div class="flex items-center gap-2">
@@ -205,23 +201,19 @@
             </div>
         @endif
 
-        @isset($footer)
-            {{ $footer }}
-        @else
-            <div class="mt-auto flex items-center justify-between gap-2 text-xs">
-                @if ($change !== null)
-                    <span class="shrink-0 font-semibold {{ $change >= 0 ? 'text-success' : 'text-error' }}">
-                        {{ $change >= 0 ? '↑' : '↓' }}
-                        {{ formatNumber(abs($change)) }}{{ __('Percent sign') }}
-                    </span>
-                @else
-                    <span></span>
-                @endif
+        <div class="mt-auto flex items-center justify-between gap-2 text-xs">
+            @if ($change !== null)
+                <span class="shrink-0 font-semibold {{ $change == 0 || ($change > 0) === (bool) $increaseIsGood ? 'text-success' : 'text-error' }}">
+                    {{ $change >= 0 ? '↑' : '↓' }}
+                    {{ formatNumber(abs($change)) }}{{ __('Percent sign') }}
+                </span>
+            @else
+                <span></span>
+            @endif
 
-                @if (filled($detail))
-                    <span class="min-w-0 truncate text-base-content/50 dark:text-slate-400/80">{{ $detail }}</span>
-                @endif
-            </div>
-        @endisset
+            @if (filled($detail))
+                <span class="min-w-0 truncate text-base-content/50 dark:text-slate-400/80">{{ $detail }}</span>
+            @endif
+        </div>
     </div>
 </article>

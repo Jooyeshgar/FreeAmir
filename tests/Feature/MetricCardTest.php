@@ -18,26 +18,16 @@ class MetricCardTest extends TestCase
             ->assertSee(formatNumber(5));
     }
 
-    public function test_monthly_cards_can_supply_an_unavailable_value_and_favorable_expense_comparison(): void
+    public function test_increase_is_marked_as_unfavorable_when_increase_is_not_good(): void
     {
-        $this->blade(<<<'BLADE'
-            <x-metric-card title="Expense" value="1234" detail="Default detail">
-                <x-slot:valueContent><div dir="ltr">—</div></x-slot:valueContent>
-                <p>Monthly context</p>
-                <x-slot:footer>
-                    @include('monthly-budgets.partials.change', [
-                        'comparison' => ['change' => -100, 'percent' => -10],
-                        'increaseIsGood' => false,
-                    ])
-                </x-slot:footer>
-            </x-metric-card>
-            BLADE)
-            ->assertSee('Expense')
-            ->assertSee('<div dir="ltr">—</div>', false)
-            ->assertSee('Monthly context')
-            ->assertSee('data-direction="up"', false)
-            ->assertSee('↓')
-            ->assertDontSee(formatNumber(1234))
-            ->assertDontSee('Default detail');
+        $this->blade('<x-metric-card title="Expense" :value="1200" :change="10" :increase-is-good="false" />')
+            ->assertSee('text-error', false)
+            ->assertDontSee('text-success', false)
+            ->assertSee('↑');
+
+        $this->blade('<x-metric-card title="Expense" :value="1200" :change="-10" :increase-is-good="false" />')
+            ->assertSee('text-success', false)
+            ->assertDontSee('text-error', false)
+            ->assertSee('↓');
     }
 }
