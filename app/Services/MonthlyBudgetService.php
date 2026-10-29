@@ -476,69 +476,108 @@ class MonthlyBudgetService
         ];
     }
 
+    /** Accounting results, invoice profitability and leading accounts for the monthly workbench, each compared with the previous month. */
+    public function workbench(int $month): array
+    {
+        $profitability = $this->profitabilityAnalysis($month);
+        $dayLimit = $profitability['elapsedDay'];
+        $accountingFor = fn (int $month) => $dayLimit === null ? $this->analysis($month) : $this->analysisThroughDay($month, $dayLimit);
+        $analysis = $accountingFor($month);
+        $previousAnalysis = $month > 1 ? $accountingFor($month - 1) : null;
+        $net = fn (?array $analysis) => is_null($analysis['actualIncome'] ?? null) || is_null($analysis['actualExpense'] ?? null)
+            ? null
+            : (float) $analysis['actualIncome'] + (float) $analysis['actualExpense'];
+        $absolute = fn ($amount) => is_null($amount) ? null : abs((float) $amount);
+
+        $profitability['accountingNet'] = $net($analysis);
+        $profitability['accountingMargin'] = ! is_null($profitability['accountingNet']) && (float) $analysis['actualIncome'] != 0
+            ? $profitability['accountingNet'] / (float) $analysis['actualIncome'] * 100
+            : null;
+        $profitability['accountingComparisons'] = [
+            'income' => $this->comparison($absolute($analysis['actualIncome']), $absolute($previousAnalysis['actualIncome'] ?? null)),
+            'expense' => $this->comparison($absolute($analysis['actualExpense']), $absolute($previousAnalysis['actualExpense'] ?? null)),
+            'accountingNet' => $this->comparison($profitability['accountingNet'], $net($previousAnalysis)),
+        ];
+
+        $categoryLines = $this->driverActuals($month, $dayLimit);
+        $previousLines = $previousAnalysis === null ? collect() : $this->driverActuals($month - 1, $dayLimit)->keyBy(fn (array $line) => (int) $line['subject']->id);
+        $categoryDrivers = [];
+        foreach (['income' => 'actualIncome', 'expense' => 'actualExpense'] as $type => $totalKey) {
+            $total = abs((float) ($analysis[$totalKey] ?? 0));
+            $categoryDrivers[$type] = $categoryLines
+                ->filter(fn (array $line) => $line['type'] === $type && $line['actual'] != 0)
+                ->sortByDesc(fn (array $line) => abs((float) $line['actual']))
+                ->take(5)
+                ->map(function (array $line) use ($previousLines, $total, $absolute) {
+                    $amount = abs((float) $line['actual']);
+
+                    return [
+                        'subject' => $line['subject'],
+                        'amount' => $amount,
+                        'share' => $total > 0 ? ($amount / $total) * 100 : null,
+                        ...$this->comparison($amount, $absolute($previousLines->get((int) $line['subject']->id)['actual'] ?? null)),
+                    ];
+                })->values();
+        }
+
+        return [
+            'analysis' => $analysis,
+            'profitability' => $profitability,
+            'categoryDrivers' => $categoryDrivers,
+            'moduleCostShares' => $this->moduleCostShares($month, $analysis['actualExpense'], $dayLimit),
+        ];
+    }
+
     /** Invoice movement metrics use approved accounting documents and line snapshots, never today's product cost. */
     public function profitabilityAnalysis(int $month): array
     {
-        $fiscalYear = (int) FiscalYear::query()->findOrFail(getActiveFiscalYear())->year;
+        $fiscalYear = $this->activeFiscalYear ??= (int) FiscalYear::query()->findOrFail(getActiveFiscalYear())->year;
         [$currentYear, $currentMonth, $currentDay] = array_map('intval', explode('-', jdate('Y-n-j', now()->timestamp, '', 'Asia/Tehran', 'en')));
         $isCurrentMonth = $fiscalYear === $currentYear && $month === $currentMonth;
-        $current = $this->invoiceMetricsForMonth($month, $isCurrentMonth ? $currentDay : null);
-        $previous = $month > 1 ? $this->invoiceMetricsForMonth($month - 1, $isCurrentMonth ? $currentDay : null) : null;
-        $comparisons = [];
+        $dayLimit = $isCurrentMonth ? $currentDay : null;
+        $current = $this->invoiceMetricsForMonth($month, $dayLimit);
+        $previous = $month > 1 ? $this->invoiceMetricsForMonth($month - 1, $dayLimit) : null;
 
         $current['grossProfit'] = $current['sales'] - $current['cogs'];
         if ($previous !== null) {
             $previous['grossProfit'] = $previous['sales'] - $previous['cogs'];
         }
 
-        foreach (['sales', 'purchases', 'cogs', 'grossProfit'] as $metric) {
-            $value = $current[$metric];
-            $prior = $previous[$metric] ?? null;
-            $comparisons[$metric] = [
-                'previous' => $prior,
-                'change' => is_null($prior) ? null : $value - $prior,
-                'percent' => is_null($prior) || $prior <= 0 ? null : (($value - $prior) / $prior) * 100,
-            ];
-        }
-
-        $previousGrossProfit = is_null($previous) ? null : $previous['sales'] - $previous['cogs'];
-        $previousGrossMargin = is_null($previous) || $previous['sales'] == 0 ? null : $previousGrossProfit / $previous['sales'] * 100;
-
+        $current['comparisons'] = collect(['sales', 'purchases', 'cogs', 'grossProfit'])
+            ->mapWithKeys(fn (string $metric) => [$metric => $this->comparison($current[$metric], $previous[$metric] ?? null)])
+            ->all();
         $current['grossMargin'] = $current['sales'] != 0 ? $current['grossProfit'] / $current['sales'] * 100 : null;
-        $current['previousMonth'] = $previous;
-        $current['comparisons'] = $comparisons;
-        $current['comparisons']['grossMargin'] = [
-            'previous' => $previousGrossMargin,
-            'change' => is_null($previousGrossMargin) || is_null($current['grossMargin']) ? null : $current['grossMargin'] - $previousGrossMargin,
-            'percent' => null,
-        ];
         $current['isComplete'] = $fiscalYear < $currentYear || ($fiscalYear === $currentYear && $month < $currentMonth);
         $current['isCurrentMonth'] = $isCurrentMonth;
-        $current['elapsedDay'] = $isCurrentMonth ? $currentDay : null;
+        $current['elapsedDay'] = $dayLimit;
         $current['isFuture'] = $fiscalYear > $currentYear || ($fiscalYear === $currentYear && $month > $currentMonth);
         $current['comparisonUnavailable'] = $month === 1;
-        $current['products'] = collect($current['products'])->sortByDesc('grossProfit')->values();
         $previousProducts = collect($previous['products'] ?? [])->keyBy('id');
-        $current['products'] = $current['products']->map(function (array $product) use ($previousProducts, $month) {
-            $prior = $previousProducts->get($product['id']);
-            $product['previousSales'] = $month === 1 ? null : (float) ($prior['sales'] ?? 0);
-            $product['salesChange'] = is_null($product['previousSales']) ? null : $product['sales'] - $product['previousSales'];
-            $product['previousGrossProfit'] = $month === 1 ? null : (float) ($prior['grossProfit'] ?? 0);
-            $product['grossProfitChange'] = is_null($product['previousGrossProfit']) ? null : $product['grossProfit'] - $product['previousGrossProfit'];
+        $current['products'] = collect($current['products'])->sortByDesc('grossProfit')->values()
+            ->map(function (array $product) use ($previousProducts, $previous) {
+                $prior = $previousProducts->get($product['id']);
+                $product['salesChange'] = is_null($previous) ? null : $product['sales'] - (float) ($prior['sales'] ?? 0);
+                $product['grossProfitChange'] = is_null($previous) ? null : $product['grossProfit'] - (float) ($prior['grossProfit'] ?? 0);
 
-            return $product;
-        });
+                return $product;
+            });
 
         return $current;
     }
 
+    /** @return array{previous: ?float, change: ?float, percent: ?float} */
+    private function comparison(?float $current, ?float $previous): array
+    {
+        return [
+            'previous' => $previous,
+            'change' => is_null($current) || is_null($previous) ? null : $current - $previous,
+            'percent' => is_null($current) || is_null($previous) || $previous <= 0 ? null : (($current - $previous) / $previous) * 100,
+        ];
+    }
+
     private function invoiceMetricsForMonth(int $month, ?int $dayLimit = null): array
     {
-        [$startDate, $endDate] = $this->monthDateRange($month);
-        if ($dayLimit !== null) {
-            $lastDay = min($dayLimit, $month <= 6 ? 31 : ($month <= 11 ? 30 : (jcheckdate(12, 30, (int) FiscalYear::query()->findOrFail(getActiveFiscalYear())->year) ? 30 : 29)));
-            $endDate = jalali_to_gregorian((int) FiscalYear::query()->findOrFail(getActiveFiscalYear())->year, $month, $lastDay, '-');
-        }
+        [$startDate, $endDate] = $this->monthDateRange($month, $dayLimit);
         $invoices = Invoice::query()->with(['voidedInvoice', 'items' => fn ($query) => $query->where('itemable_type', Product::class)->with('itemable.productGroup')])
             ->whereHas('document', fn ($query) => $query->whereNotNull('approved_at')->whereBetween('date', [$startDate, $endDate]))
             ->whereIn('status', InvoiceStatus::approvedOrSettled())
@@ -928,7 +967,7 @@ class MonthlyBudgetService
         return $this->monthlyDocumentCounts[$month] = Document::query()->where('fiscal_year_id', getActiveFiscalYear())->whereNotNull('approved_at')->whereBetween('date', [$startDate, $endDate])->count();
     }
 
-    private function monthDateRange(int $month): array
+    private function monthDateRange(int $month, ?int $dayLimit = null): array
     {
         $fiscalYear = $this->activeFiscalYear ??= (int) FiscalYear::query()->findOrFail(getActiveFiscalYear())->year;
         $lastDay = match (true) {
@@ -937,7 +976,7 @@ class MonthlyBudgetService
             jcheckdate(12, 30, $fiscalYear) => 30,
             default => 29,
         };
-        $lastDay = min($lastDay, $this->actualDayLimits[$month] ?? $lastDay);
+        $lastDay = min($lastDay, $dayLimit ?? $this->actualDayLimits[$month] ?? $lastDay);
 
         return [
             jalali_to_gregorian($fiscalYear, $month, 1, '-'),

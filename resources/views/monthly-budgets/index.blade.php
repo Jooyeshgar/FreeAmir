@@ -197,10 +197,10 @@
                                 aria-hidden="true">←</span></a>
                     </div>
                     <div class="flex flex-col items-center gap-5 p-4 sm:flex-row">
-                        <div class="bg-[image:var(--budget-donut-gradient)] grid shrink-0 place-items-center w-32 h-32
+                        <div class="grid shrink-0 place-items-center w-32 h-32
                             rounded-full relative after:content-[''] after:absolute after:inset-4
                             after:rounded-full after:bg-base-100" role="img" aria-label="{{ __('Expense composition') }}"
-                            data-budget-gradient="{{ $expenseDonutGradient }}">
+                            style="background-image: {{ $expenseDonutGradient }}">
                             <div class="z-[1] text-center [&_strong]:block [&_strong]:text-xl [&_span]:text-base-content/60 [&_span]:text-xs">
                                 <strong>{{ $expenseDonutCenter }}</strong><span>{{ $expenseDonutAmountParts['unit'] }}</span>
                             </div>

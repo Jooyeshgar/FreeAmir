@@ -28,73 +28,7 @@ class MonthlyBudgetController extends Controller
         $subjects = $this->subjectService->buildSubjectTreeFromCollection($this->service->selectableSubjects($subjectRestrictions));
         $oldSubjectId = (int) $request->old('subject_id');
         $selectedSubject = $oldSubjectId && ! in_array($oldSubjectId, $subjectRestrictions, true) ? Subject::query()->where('is_permanent', false)->find($oldSubjectId) : null;
-        $profitability = $this->service->profitabilityAnalysis($selectedMonth);
-        $analysis = $profitability['isCurrentMonth']
-            ? $this->service->analysisThroughDay($selectedMonth, $profitability['elapsedDay'])
-            : $this->service->analysis($selectedMonth);
-        $previousAccounting = $selectedMonth > 1
-            ? ($profitability['isCurrentMonth']
-                ? $this->service->analysisThroughDay($selectedMonth - 1, $profitability['elapsedDay'])
-                : $this->service->analysis($selectedMonth - 1))
-            : null;
-        $dayLimit = $profitability['isCurrentMonth'] ? $profitability['elapsedDay'] : null;
-        $categoryLines = $this->service->driverActuals($selectedMonth, $dayLimit);
-        $previousLines = $previousAccounting === null ? collect() : $this->service->driverActuals($selectedMonth - 1, $dayLimit)->keyBy(fn (array $line) => (int) $line['subject']->id);
-        $categoryDrivers = [];
-        foreach (['income', 'expense'] as $type) {
-            $total = abs((float) ($type === 'income' ? ($analysis['actualIncome'] ?? 0) : ($analysis['actualExpense'] ?? 0)));
-            $categoryDrivers[$type] = $categoryLines
-                ->filter(fn (array $line) => $line['type'] === $type && $line['actual'] != 0)
-                ->sortByDesc(fn (array $line) => abs((float) $line['actual']))
-                ->take(5)
-                ->map(function (array $line) use ($previousLines, $total) {
-                    $priorLine = $previousLines->get((int) $line['subject']->id);
-                    $prior = is_null($priorLine['actual'] ?? null) ? null : abs((float) $priorLine['actual']);
-                    $amount = abs((float) $line['actual']);
-
-                    return [
-                        'subject' => $line['subject'],
-                        'amount' => $amount,
-                        'share' => $total > 0 ? ($amount / $total) * 100 : null,
-                        'previous' => $prior,
-                        'change' => is_null($prior) ? null : $amount - $prior,
-                        'percent' => is_null($prior) || $prior <= 0 ? null : (($amount - $prior) / $prior) * 100,
-                    ];
-                })->values();
-        }
-        $profitability['accountingNet'] = is_null($analysis['actualIncome']) || is_null($analysis['actualExpense'])
-            ? null
-            : (float) $analysis['actualIncome'] + (float) $analysis['actualExpense'];
-        $profitability['accountingMargin'] = ! is_null($profitability['accountingNet']) && (float) $analysis['actualIncome'] != 0
-            ? $profitability['accountingNet'] / (float) $analysis['actualIncome'] * 100
-            : null;
-        $profitability['accountingComparisons'] = collect(['income' => 'actualIncome', 'expense' => 'actualExpense'])
-            ->mapWithKeys(function (string $key, string $metric) use ($analysis, $previousAccounting) {
-                $previous = $previousAccounting[$key] ?? null;
-                $current = $analysis[$key];
-
-                return [$metric => [
-                    'previous' => is_null($previous) ? null : abs((float) $previous),
-                    'change' => is_null($previous) || is_null($current) ? null : abs((float) $current) - abs((float) $previous),
-                    'percent' => is_null($previous) || is_null($current) || abs((float) $previous) <= 0 ? null : ((abs((float) $current) - abs((float) $previous)) / abs((float) $previous)) * 100,
-                ]];
-            })->all();
-        $previousNet = is_null($previousAccounting['actualIncome'] ?? null) || is_null($previousAccounting['actualExpense'] ?? null)
-            ? null
-            : (float) $previousAccounting['actualIncome'] + (float) $previousAccounting['actualExpense'];
-        $previousAccountingMargin = ! is_null($previousNet) && (float) $previousAccounting['actualIncome'] != 0
-            ? $previousNet / (float) $previousAccounting['actualIncome'] * 100
-            : null;
-        $profitability['accountingComparisons']['accountingMargin'] = [
-            'previous' => $previousAccountingMargin,
-            'change' => is_null($previousAccountingMargin) || is_null($profitability['accountingMargin']) ? null : $profitability['accountingMargin'] - $previousAccountingMargin,
-            'percent' => null,
-        ];
-        $profitability['accountingComparisons']['accountingNet'] = [
-            'previous' => $previousNet,
-            'change' => is_null($previousNet) || is_null($profitability['accountingNet']) ? null : $profitability['accountingNet'] - $previousNet,
-            'percent' => is_null($previousNet) || is_null($profitability['accountingNet']) || $previousNet <= 0 ? null : (($profitability['accountingNet'] - $previousNet) / $previousNet) * 100,
-        ];
+        ['analysis' => $analysis, 'profitability' => $profitability, 'categoryDrivers' => $categoryDrivers, 'moduleCostShares' => $moduleCostShares] = $this->service->workbench($selectedMonth);
         $currency = config('amir.currency') ?? __('Rial');
         $incomeAchievement = $analysis['actualsCalculated'] && $analysis['forecastIncome'] > 0 ? max(0, ($analysis['actualIncome'] / $analysis['forecastIncome']) * 100) : 0;
         $expenseUtilization = $analysis['actualsCalculated'] && $analysis['forecastExpense'] < 0 ? max(0, ($analysis['actualExpense'] / $analysis['forecastExpense']) * 100) : 0;
@@ -122,7 +56,7 @@ class MonthlyBudgetController extends Controller
                 'comparisonDatasets' => $comparisonDatasets,
                 'profitability' => $profitability,
                 'categoryDrivers' => $categoryDrivers,
-                'moduleCostShares' => $this->service->moduleCostShares($selectedMonth, $analysis['actualExpense'], $dayLimit),
+                'moduleCostShares' => $moduleCostShares,
             ],
             $analysis
         ))->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);

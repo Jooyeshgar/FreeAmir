@@ -139,18 +139,6 @@ function initializeMainMenuDropdowns() {
 
 document.addEventListener('DOMContentLoaded', initializeMainMenuDropdowns);
 
-function initializeMonthlyBudgetStyles() {
-    document.querySelectorAll('[data-budget-gradient]').forEach((element) => {
-        const gradient = element.dataset.budgetGradient;
-
-        if (gradient === 'var(--color-base-300)' || gradient.startsWith('conic-gradient(')) {
-            element.style.setProperty('--budget-donut-gradient', gradient);
-        }
-    });
-}
-
-initializeMonthlyBudgetStyles();
-
 function convertToJalali(gy, gm, gd) {
     // Implementation of gregorian_to_jalali function in JavaScript
     gy = parseInt(gy);
