@@ -6,7 +6,7 @@
             <div class="card w-full max-w-sm bg-white p-4 shadow-xl sm:p-7">
                 <form method="POST" action="{{ route('password.update') }}">
                     @csrf
-                    <input type="hidden" name="token" value="{{ $token }}">
+                    <x-input type="hidden" name="token" :value="$token" hidden />
                     <h1 class="font-bold text-center">{{ __('Reset Password') }}</h1>
                     <x-show-message-bags />
 

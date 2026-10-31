@@ -17,7 +17,7 @@
                             :options="[['headerGroup' => 'product', 'options' => $products]]"
                             x-model="selectedValue" x-init="selectedValue = '{{ $productValue }}'"
                             x-on:selected="productId = $event.detail.id" placeholder="{{ __('Select Product') }}" :disabled="$productLocked" />
-                        <input type="hidden" name="product_id" x-bind:value="productId">
+                        <x-input type="hidden" name="product_id" x-bind:value="productId" hidden />
                     </div>
                     <div>
                         <x-input name="quantity" title="{{ __('Quantity') }}" />
@@ -31,7 +31,7 @@
                             @endforeach
                         </select>
                         @if ($selectedWarehouse)
-                            <input type="hidden" name="from_warehouse_id" value="{{ $selectedWarehouse->id }}">
+                            <x-input type="hidden" name="from_warehouse_id" :value="$selectedWarehouse->id" hidden />
                         @endif
                     </div>
                     <div>

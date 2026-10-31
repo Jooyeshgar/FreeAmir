@@ -32,9 +32,11 @@
                     </div>
                     <fieldset class="sm:col-span-2 border p-4">
                         <legend>{{ __('Select Tables to Copy') }}</legend>
-                        <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                        <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 [&>.fieldset]:p-0 [&>.fieldset]:gap-0
+                            [&>.fieldset>label]:flex [&>.fieldset>label]:flex-row-reverse [&>.fieldset>label]:items-center [&>.fieldset>label]:justify-end [&>.fieldset>label]:gap-2 [&_.label]:p-0 [&_.label]:text-base [&_.label]:text-base-content">
                             @foreach (FiscalYearSection::ui() as $key => $label)
-                                <label class="flex items-center gap-2"><input type="checkbox" name="tables_to_copy[]" value="{{ $key }}" class="checkbox checkbox-sm" @checked(in_array($key, old('tables_to_copy', array_column(FiscalYearSection::cases(), 'value'))))>{{ $label }}</label>
+                                <x-checkbox name="tables_to_copy[]" :id="'copy-table-'.$key" :value="$key" :title="$label"
+                                    class="checkbox checkbox-sm" :checked="in_array($key, old('tables_to_copy', array_column(FiscalYearSection::cases(), 'value')))" />
                             @endforeach
                         </div>
                         @error('tables_to_copy.*') <p class="text-error text-sm">{{ $message }}</p> @enderror

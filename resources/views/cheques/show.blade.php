@@ -171,7 +171,7 @@
                                 class="rounded-xl border border-base-200 bg-base-200/25 p-4 transition hover:border-primary/25 hover:shadow-sm
                                     [&_.input]:h-10 [&_.input]:min-h-10 [&_.input]:max-h-10">
                                 @csrf
-                                <input type="hidden" name="fee_action" value="{{ $action }}">
+                                <x-input type="hidden" name="fee_action" :value="$action" hidden />
                                 <h3 class="mb-3 font-bold">{{ $actionLabels[$action] }}</h3>
                                 @if ($action === 'deposit')
                                     <select name="bank_account_id" class="select select-sm w-full border-slate-400"

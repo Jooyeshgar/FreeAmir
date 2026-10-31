@@ -24,7 +24,7 @@
 
             <form id="service-csv-export-form" action="{{ route('services.export') }}" method="GET">
                 @csrf
-                <input type="hidden" name="export" value="services_csv">
+                <x-input type="hidden" name="export" value="services_csv" hidden />
                 <x-input name="cols_submitted" value="1" hidden />
 
                 <div class="mt-2 text-info">{{ __('The name column is always exported.') }}</div>

@@ -74,13 +74,14 @@
                         <fieldset>
                             <legend class="mb-2 text-[.8125rem] font-semibold text-base-content lg:text-sm">{{ __('Months') }}</legend>
                             <p class="mb-3 text-xs text-base-content/50">{{ __('The current month and following months are selected by default.') }}</p>
-                            <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                            <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 [&>.fieldset]:p-0 [&>.fieldset]:gap-0
+                                [&>.fieldset>label]:flex [&>.fieldset>label]:flex-row-reverse [&>.fieldset>label]:items-center [&>.fieldset>label]:justify-end [&>.fieldset>label]:gap-2
+                                [&>.fieldset>label]:rounded-lg [&>.fieldset>label]:border [&>.fieldset>label]:border-base-300 [&>.fieldset>label]:bg-base-100 [&>.fieldset>label]:px-3 [&>.fieldset>label]:py-2
+                                [&>.fieldset>label]:transition-colors [&>.fieldset>label:hover]:border-primary/50 [&>.fieldset>label:hover]:bg-primary/5
+                                [&_.label]:p-0 [&_.label]:text-base-content [&_.label]:text-[.8125rem] lg:[&_.label]:text-sm">
                                 @foreach ($forecastMonths as $monthNumber => $monthName)
-                                    <label class="flex cursor-pointer items-center gap-2 rounded-lg border border-base-300 bg-base-100 px-3 py-2 transition-colors hover:border-primary/50 hover:bg-primary/5">
-                                        <input type="checkbox" name="months[]" value="{{ $monthNumber }}" class="checkbox checkbox-primary checkbox-sm"
-                                            @checked(in_array($monthNumber, old('months', $defaultForecastMonths)))>
-                                        <span class="text-[.8125rem] lg:text-sm">{{ $monthName }}</span>
-                                    </label>
+                                    <x-checkbox name="months[]" :id="'forecast-month-'.$monthNumber" :value="$monthNumber" :title="$monthName"
+                                        class="checkbox checkbox-primary checkbox-sm" :checked="in_array($monthNumber, old('months', $defaultForecastMonths))" />
                                 @endforeach
                             </div>
                         </fieldset>

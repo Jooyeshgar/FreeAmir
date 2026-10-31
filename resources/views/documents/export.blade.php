@@ -2,7 +2,7 @@
     <div class="card bg-base-100 shadow-xl max-w-2xl mx-auto">
         <form id="document-csv-export-form" action="{{ route('documents.export.download') }}" method="POST">
             @csrf
-            <input type="hidden" name="export" value="documents_csv">
+            <x-input type="hidden" name="export" value="documents_csv" hidden />
             <div class="card-body">
                 <h2 class="card-title">{{ __('Export Documents') }}</h2>
                 <x-show-message-bags />

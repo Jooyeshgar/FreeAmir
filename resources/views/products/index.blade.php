@@ -31,7 +31,7 @@
 
             <form id="product-csv-export-form" action="{{ route('products.export') }}" method="GET">
                 @csrf
-                <input type="hidden" name="export" value="products_csv">
+                <x-input type="hidden" name="export" value="products_csv" hidden />
                 <x-input name="cols_submitted" value="1" hidden />
 
                 <div class="mt-2 text-info">{{ __('The name column is always exported.') }}</div>
@@ -81,7 +81,7 @@
 
                 <form id="warehouse-pdf-export-form" action="{{ route('products.report') }}" method="GET" target="_blank">
                     @csrf
-                    <input type="hidden" name="export" value="warehouse_pdf">
+                    <x-input type="hidden" name="export" value="warehouse_pdf" hidden />
                     <x-input name="name" value="{{ request('name') }}" hidden />
                     <x-input name="group_name" value="{{ request('group_name') }}" hidden />
                     <x-input name="min_quantity" value="{{ request('min_quantity') }}" hidden />

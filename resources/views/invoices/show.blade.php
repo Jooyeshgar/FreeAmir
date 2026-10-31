@@ -947,14 +947,14 @@
                             @endphp
                             <form method="POST" :action="action" class="space-y-4" @submit="if (@js($fiscalYearClosed)) $event.preventDefault()">
                                 @csrf
-                                <input type="hidden" name="_method" value="PUT" :disabled="!editing">
-                                <input type="hidden" name="payment_id" :value="paymentId">
-                                <input type="hidden" name="payment_mode" :value="editing ? 'edit' : 'create'">
+                                <x-input type="hidden" name="_method" value="PUT" x-bind:disabled="!editing" hidden />
+                                <x-input type="hidden" name="payment_id" x-bind:value="paymentId" hidden />
+                                <x-input type="hidden" name="payment_mode" x-bind:value="editing ? 'edit' : 'create'" hidden />
                                 <div>
                                     <label class="label"><span
                                             class="label-text">{{ __('Settlement Account') }}</span></label>
                                     <div x-data="settlementSelect(@js($settlementGroups), @js(route('invoices.payments.search-subjects', $invoice)), @js($paymentModalState['subjectId']), @js($paymentModalState['subjectName']))" @click.outside="open = false" class="relative">
-                                        <input type="hidden" name="subject_id" :value="selectedId">
+                                        <x-input type="hidden" name="subject_id" x-bind:value="selectedId" hidden />
                                         <button type="button" @click="toggle()"
                                             class="input input-bordered w-full flex items-center justify-between text-left">
                                             <span class="block truncate" :class="{ 'text-gray-400': !selectedLabel }"
@@ -1058,9 +1058,9 @@
                                 </div>
                                 <form method="POST" :action="action" @submit="if (@js($fiscalYearClosed)) $event.preventDefault()">
                                     @csrf
-                                    <input type="hidden" name="_method" value="PUT" :disabled="!editing">
-                                    <input type="hidden" name="cheque_payment_mode" :value="editing ? 'edit' : 'create'">
-                                    <input type="hidden" name="cheque_payment_id" :value="paymentId">
+                                    <x-input type="hidden" name="_method" value="PUT" x-bind:disabled="!editing" hidden />
+                                    <x-input type="hidden" name="cheque_payment_mode" x-bind:value="editing ? 'edit' : 'create'" hidden />
+                                    <x-input type="hidden" name="cheque_payment_id" x-bind:value="paymentId" hidden />
                                     <div class="alert alert-info p-1 mb-2 text-sm">
                                         {{ __('If you select a chequebook, it must belong to the selected bank account.') }}
                                     </div>

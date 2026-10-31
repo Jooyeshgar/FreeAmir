@@ -32,7 +32,7 @@
                     direction: @js($selectedDirectionValue),
                     bankAccountId: @js((string) $selectedBankAccountId),
                 }">
-                    <input type="hidden" name="direction" x-model="direction">
+                    <x-input type="hidden" name="direction" x-model="direction" hidden />
 
                     <div class="col-span-2 md:col-span-1">
                         <fieldset class="w-full">

@@ -597,8 +597,8 @@ class AuthLifecycleTest extends TestCase
 
     public function test_login_form_displays_a_remember_me_checkbox(): void
     {
-        $this->get(route('login'))
-            ->assertOk()
+        $response = $this->get(route('login'));
+        $response->assertOk()
             ->assertSee('name="email"', false)
             ->assertSee('type="email"', false)
             ->assertSee('autocomplete="username"', false)
@@ -607,13 +607,19 @@ class AuthLifecycleTest extends TestCase
             ->assertSee('autocomplete="current-password"', false)
             ->assertSee('name="remember"', false)
             ->assertSee('id="remember"', false)
-            ->assertSee('type="hidden" name="remember" value="0"', false)
             ->assertSee('flex-col gap-2 sm:flex-row', false)
             ->assertSee('btn btn-sm w-full', false)
             ->assertSee('sm:w-auto sm:shrink-0', false)
             ->assertSee('sm:min-w-0 sm:flex-1', false)
             ->assertSee('md:btn-md', false)
             ->assertSee(__('Remember Me'));
+
+        $document = new \DOMDocument;
+        @$document->loadHTML($response->getContent());
+        $xpath = new \DOMXPath($document);
+        $this->assertSame(1, $xpath->query('//input[@type="hidden" and @name="remember" and @value="0"]')->length);
+        $this->assertSame(1, $xpath->query('//input[@type="checkbox" and @name="remember" and @id="remember" and @value="1"]')->length);
+        $this->assertSame(1, $xpath->query('//*[@id="remember"]')->length);
     }
 
     public function test_user_can_be_remembered_after_login(): void

@@ -42,7 +42,7 @@
                         x-model="selectedProductGroup" x-init="selectedValue = selectedProductGroup"
                         placeholder="{{ __('All Groups') }}"
                         @selected="productGroupId = String($event.detail.id)" />
-                    <input type="hidden" name="product_group" x-bind:value="productGroupId">
+                    <x-input type="hidden" name="product_group" x-bind:value="productGroupId" hidden />
                 </div>
                 <div class="form-control w-48" x-data="{
                     warehouseId: @js($selectedWarehouseId),
@@ -54,7 +54,7 @@
                         x-model="selectedWarehouse" x-init="selectedValue = selectedWarehouse"
                         placeholder="{{ __('All Warehouses') }}"
                         @selected="warehouseId = String($event.detail.id)" />
-                    <input type="hidden" name="warehouse_id" x-bind:value="warehouseId">
+                    <x-input type="hidden" name="warehouse_id" x-bind:value="warehouseId" hidden />
                 </div>
                 <button type="submit" class="btn btn-sm btn-neutral">{{ __('Search') }}</button>
                 <a href="{{ route('reports.inventory-turnover') }}"

@@ -14,7 +14,7 @@
                     <x-text-input class="mx-auto mt-1 w-full max-w-xs" :title="__('Password')" input_name="password" id_input="password"
                         type="password" :placeholder="__('Enter your password')" autocomplete="current-password" required />
                     <div class="mt-3">
-                        <input type="hidden" name="remember" value="0">
+                        <x-text-input type="hidden" input_name="remember" input_value="0" id_input="remember-default" hidden />
                         <x-checkbox name="remember" id="remember" value="1" :title="__('Remember Me')" :checked="old('remember', '0')" />
                     </div>
                     <div class="mx-auto mt-4 flex w-full max-w-xs flex-col gap-2 sm:flex-row sm:items-center">
