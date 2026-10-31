@@ -1,4 +1,4 @@
-<div class="card-actions">
+<div class="card-actions flex flex-wrap gap-2">
     @can('invoices.create')
         @if ($canCreateBeginningInventory)
             <a href="{{ route('invoices.create', ['invoice_type' => 'beginning_inventory']) }}" class="btn btn-primary">
@@ -9,6 +9,15 @@
                 {{ __('Create Beginning Inventory') }}
             </button>
         @endif
+    @endcan
+    @can('invoices.sort-numbers')
+        <form method="POST" action="{{ route('invoices.sort-numbers') }}"
+            onsubmit="return confirm(@js(__('Sort all invoice numbers in the active fiscal year? Existing printed invoice numbers will change.')))">
+            @csrf
+            <button class="btn btn-secondary" type="submit" @disabled(\App\Models\FiscalYear::find(getActiveFiscalYear())?->isClosed())>
+                {{ __('Sort invoice numbers') }}
+            </button>
+        </form>
     @endcan
 </div>
 

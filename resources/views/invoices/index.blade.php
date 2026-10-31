@@ -1,14 +1,5 @@
 <x-app-layout :title="__('Invoices')">
     <x-show-message-bags />
-    @can('invoices.sort-numbers')
-        <form method="POST" action="{{ route('invoices.sort-numbers') }}" class="mb-4"
-            onsubmit="return confirm(@js(__('Sort all invoice numbers in the active fiscal year? Existing printed invoice numbers will change.')))">
-            @csrf
-            <button class="btn btn-secondary" type="submit" @disabled(\App\Models\FiscalYear::find(getActiveFiscalYear())?->isClosed())>
-                {{ __('Sort invoice numbers') }}
-            </button>
-        </form>
-    @endcan
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             @switch(request('invoice_type'))
