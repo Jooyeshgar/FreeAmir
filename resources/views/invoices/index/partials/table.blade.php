@@ -103,7 +103,7 @@
                                     <a data-tip="{{ $invoice->changeStatusValidation->toText() }}" href="{{ route('invoices.conflicts', $invoice) }}"
                                         class="btn btn-sm btn-accent inline-flex tooltip {{ $loop->first ? 'tooltip-bottom' : '' }}">{{ __('Fix Conflict') }}</a>
                                 @elseif ($isVoided)
-                                    <span class="lg:tooltip" data-tip="{{ __('To change the status, first unapprove the voiding invoice.') }}">
+                                    <span class="lg:tooltip {{ $loop->first ? 'lg:tooltip-bottom' : '' }}" data-tip="{{ __('To change the status, first unapprove the voiding invoice.') }}">
                                         <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed">{{ __('Unapprove') }}</button>
                                     </span>
                                 @else
@@ -112,17 +112,17 @@
                                         data-confirm-message="{{ $isSettled ? __('Deactivating this paid or partially paid invoice will remove its payment accounting documents while keeping the payment records. Are you sure?') : __('This invoice has warnings for change its status, are you sure to change status?') }}">
                                         @csrf
                                         <button type="submit" x-data="{}" data-tip="{{ $invoice->changeStatusValidation->toText() }}"
-                                            class="btn btn-sm inline-flex tooltip {{ $canUnapprove ? 'btn-warning' : 'btn-success' }} {{ $canApprove && $invoice->changeStatusValidation->hasWarning() ? 'btn-outline' : '' }}">
+                                            class="btn btn-sm inline-flex tooltip {{ $loop->first ? 'tooltip-bottom' : '' }} {{ $canUnapprove ? 'btn-warning' : 'btn-success' }} {{ $canApprove && $invoice->changeStatusValidation->hasWarning() ? 'btn-outline' : '' }}">
                                             {{ $canUnapprove ? __('Unapprove') : __('Approve') }}
                                         </button>
                                     </form>
                                 @endif
                             @elseif ($fiscalYearClosed)
-                                <span class="lg:tooltip" data-tip="{{ $fiscalYearClosedMessage }}">
+                                <span class="lg:tooltip {{ $loop->first ? 'lg:tooltip-bottom' : '' }}" data-tip="{{ $fiscalYearClosedMessage }}">
                                     <button class="btn btn-sm btn-warning btn-disabled cursor-not-allowed" disabled>{{ __('Change status') }}</button>
                                 </span>
                             @elseif ($isSettled)
-                                <span class="lg:tooltip" data-tip="{{ $settledTooltip }}">
+                                <span class="lg:tooltip {{ $loop->first ? 'lg:tooltip-bottom' : '' }}" data-tip="{{ $settledTooltip }}">
                                     <button class="btn btn-sm btn-warning btn-disabled cursor-not-allowed">{{ __('Unapprove') }}</button>
                                 </span>
                             @endif
@@ -131,7 +131,7 @@
                         @if (!$editDisabled)
                             <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                         @else
-                            <span class="lg:tooltip" data-tip="{{ $editTooltip }}">
+                            <span class="lg:tooltip lg:tooltip-right" data-tip="{{ $editTooltip }}">
                                 <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed">{{ __('Edit') }}</button>
                             </span>
                         @endif
@@ -143,7 +143,7 @@
                                 <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
                             </form>
                         @else
-                            <span class="lg:tooltip" data-tip="{{ $deleteTooltip }}">
+                            <span class="lg:tooltip lg:tooltip-right" data-tip="{{ $deleteTooltip }}">
                                 <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed">{{ __('Delete') }}</button>
                             </span>
                         @endif
