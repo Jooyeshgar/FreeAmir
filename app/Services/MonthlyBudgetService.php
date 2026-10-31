@@ -611,7 +611,7 @@ class MonthlyBudgetService
                 if (! $product) {
                     continue;
                 }
-                $itemSales = ((float) $item->unit_price * (float) $item->quantity) - (float) $item->unit_discount;
+                $itemSales = ((float) $item->unit_price * (float) $item->quantity) - (float) $item->discount;
                 $itemCogs = (float) $item->cog_after * (float) $item->quantity;
                 $salesSign = $reversedType?->isSell() ? $direction : 0;
                 $purchaseSign = $reversedType?->isBuy() ? $direction : 0;
