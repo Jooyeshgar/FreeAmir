@@ -101,7 +101,7 @@
                             @if ($canChangeStatus)
                                 @if ($invoice->changeStatusValidation->hasErrors())
                                     <a data-tip="{{ $invoice->changeStatusValidation->toText() }}" href="{{ route('invoices.conflicts', $invoice) }}"
-                                        class="btn btn-sm btn-accent inline-flex tooltip">{{ __('Fix Conflict') }}</a>
+                                        class="btn btn-sm btn-accent inline-flex tooltip {{ $loop->first ? 'tooltip-bottom' : '' }}">{{ __('Fix Conflict') }}</a>
                                 @elseif ($isVoided)
                                     <span class="lg:tooltip" data-tip="{{ __('To change the status, first unapprove the voiding invoice.') }}">
                                         <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed">{{ __('Unapprove') }}</button>
