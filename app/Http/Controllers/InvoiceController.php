@@ -21,8 +21,10 @@ use App\Models\Subject;
 use App\Models\Warehouse;
 use App\Services\AncillaryCostService;
 use App\Services\ChequeService;
+use App\Services\FiscalYearMutationGuard;
 use App\Services\FiscalYearTransferService;
 use App\Services\GroupActionService;
+use App\Services\InvoiceNumberService;
 use App\Services\InvoiceService;
 use App\Services\MoadianService;
 use App\Services\PaymentService;
@@ -983,5 +985,13 @@ class InvoiceController extends Controller
         [$msgType, $msg] = $this->invoiceMessage($voidInvoice, 'voided', true);
 
         return redirect()->route('invoices.show', $invoice)->with($msgType, $msg);
+    }
+
+    public function sortNumbers(InvoiceNumberService $invoiceNumberService): RedirectResponse
+    {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+        $invoiceNumberService->sort();
+
+        return redirect()->back()->with('success', __('Invoice numbers sorted successfully.'));
     }
 }
