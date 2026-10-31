@@ -146,7 +146,7 @@ class MonthlyBudgetTest extends TestCase
             'itemable_id' => $product->id,
             'quantity' => 1,
             'unit_price' => $price,
-            'unit_discount' => $discount,
+            'discount' => $discount,
             'vat' => 0,
             'amount' => $price - $discount,
             'cog_after' => $cost,
