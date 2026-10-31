@@ -5,6 +5,7 @@
     'suffix' => null,
     'detail' => null,
     'change' => null,
+    'increaseIsGood' => null,
     'sparkline' => null,
     'series' => null,
     'tone' => null,
@@ -19,6 +20,7 @@
     $suffix = $suffix ?? (data_get($card, 'suffix') ?? data_get($card, 'unit'));
     $detail = $detail ?? data_get($card, 'detail');
     $change = $change ?? data_get($card, 'change');
+    $increaseIsGood = $increaseIsGood ?? data_get($card, 'increaseIsGood', true);
     $sparkline = $sparkline ?? data_get($card, 'sparkline');
     $series = $series ?? data_get($card, 'series');
     $tone = $tone ?? data_get($card, 'tone', 'info');
@@ -201,7 +203,7 @@
 
         <div class="mt-auto flex items-center justify-between gap-2 text-xs">
             @if ($change !== null)
-                <span class="shrink-0 font-semibold {{ $change >= 0 ? 'text-success' : 'text-error' }}">
+                <span class="shrink-0 font-semibold {{ $change == 0 || ($change > 0) === (bool) $increaseIsGood ? 'text-success' : 'text-error' }}">
                     {{ $change >= 0 ? '↑' : '↓' }}
                     {{ formatNumber(abs($change)) }}{{ __('Percent sign') }}
                 </span>
