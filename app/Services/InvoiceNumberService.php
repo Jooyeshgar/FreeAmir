@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\InvoiceType;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -13,7 +14,8 @@ class InvoiceNumberService
     public function sort(): array
     {
         return DB::transaction(function (): array {
-            app(FiscalYearMutationGuard::class)->ensureOpen();
+            $fiscalYear = FiscalYear::query()->whereKey(getActiveFiscalYear())->lockForUpdate()->firstOrFail();
+            app(FiscalYearMutationGuard::class)->ensureOpen($fiscalYear);
             $invoices = Invoice::query()->lockForUpdate()->orderBy('date')->orderBy('id')->get();
 
             $byId = $invoices->keyBy('id');

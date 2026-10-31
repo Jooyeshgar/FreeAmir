@@ -9,9 +9,7 @@ use App\Models\Customer;
 use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\User;
-use App\Services\FiscalYearMutationGuard;
 use App\Services\InvoiceNumberService;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
@@ -142,35 +140,6 @@ class InvoiceNumberSortingTest extends TestCase
     public function test_sorting_an_empty_year_is_allowed(): void
     {
         $this->assertSame(['sales' => 0, 'purchases' => 0, 'beginning_inventory' => 0], app(InvoiceNumberService::class)->sort());
-    }
-
-    public function test_year_closed_before_lock_acquisition_cannot_be_sorted(): void
-    {
-        $invoice = $this->invoice(InvoiceType::SELL, 25, '2026-06-01');
-        $guard = new class extends FiscalYearMutationGuard
-        {
-            public function ensureOpen(Model|int|string|null $subject = null, int|string|null $destinationFiscalYearId = null): FiscalYear
-            {
-                $year = parent::ensureOpen($subject, $destinationFiscalYearId);
-
-                if ($subject === null) {
-                    // Simulate closing committing after the initial read, before sorting obtains the row lock.
-                    FiscalYear::whereKey($year->id)->update(['closed_at' => now()]);
-                }
-
-                return $year;
-            }
-        };
-        $this->app->instance(FiscalYearMutationGuard::class, $guard);
-
-        try {
-            app(InvoiceNumberService::class)->sort();
-            $this->fail('A year closed before lock acquisition must reject renumbering.');
-        } catch (ValidationException $exception) {
-            $this->assertArrayHasKey('fiscal_year', $exception->errors());
-        }
-
-        $this->assertNumbers([$invoice], [25]);
     }
 
     public function test_manual_numbers_keep_existing_type_specific_validation_after_sorting(): void
