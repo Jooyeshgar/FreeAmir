@@ -1,3 +1,13 @@
+@can('invoices.sort-numbers')
+    <form method="POST" action="{{ route('invoices.sort-numbers') }}"
+        onsubmit="return confirm(@js(__('Sort all invoice numbers in the active fiscal year? Existing printed invoice numbers will change.')))">
+        @csrf
+        <button class="btn btn-secondary" type="submit" @disabled(\App\Models\FiscalYear::find(getActiveFiscalYear())?->isClosed())>
+            {{ __('Sort invoice numbers') }}
+        </button>
+    </form>
+@endcan
+
 <div class="card-actions flex flex-col items-stretch gap-3 lg:flex-row lg:items-start">
     @include('invoices.index.partials.search-form', [
         'invoiceType' => 'void',
