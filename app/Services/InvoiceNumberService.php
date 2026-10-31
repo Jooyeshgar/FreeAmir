@@ -13,9 +13,7 @@ class InvoiceNumberService
     public function sort(): array
     {
         return DB::transaction(function (): array {
-            $year = app(FiscalYearMutationGuard::class)->ensureOpen();
-            $year = $year->newQuery()->whereKey($year->id)->lockForUpdate()->firstOrFail();
-            app(FiscalYearMutationGuard::class)->ensureOpen($year);
+            app(FiscalYearMutationGuard::class)->ensureOpen();
             $invoices = Invoice::query()->lockForUpdate()->orderBy('date')->orderBy('id')->get();
 
             $byId = $invoices->keyBy('id');
