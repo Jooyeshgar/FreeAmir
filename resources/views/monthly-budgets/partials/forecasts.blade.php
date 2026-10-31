@@ -8,7 +8,7 @@
         ->values();
 @endphp
 
-<section id="monthly-forecasts" class="scroll-mt-4 print:break-inside-avoid" aria-labelledby="monthly-forecasts-title"
+<section id="monthly-forecasts" class="scroll-mt-4" aria-labelledby="monthly-forecasts-title"
     x-data="{ search: '', type: 'all', matches(name, lineType) { const query = $store.utils.convertToEnglish(this.search).trim().toLocaleLowerCase(); return (this.type === 'all' || this.type === lineType) && $store.utils.convertToEnglish(name).toLocaleLowerCase().includes(query); } }">
     <div class="mb-3 flex flex-col justify-between gap-3 md:flex-row [&_h2]:text-base [&_h2]:lg:text-lg [&_h2]:leading-normal [&_h2]:font-bold
         [&_p]:mt-1 [&_p]:text-base-content/60 [&_p]:text-xs items-center max-md:items-start">
@@ -16,7 +16,7 @@
             <h2 id="monthly-forecasts-title"><span class="sr-only">{{ __('Forecasts') }}</span>{{ __('Forecasts and performance') }}</h2>
             <p>{{ __('Compare the plan with actual results and manage forecasts for :month.', ['month' => $selectedMonthLabel]) }}</p>
         </div>
-        <div class="flex items-center gap-2 print:hidden max-md:w-full max-md:flex-wrap max-md:justify-end">
+        <div class="flex items-center gap-2 max-md:w-full max-md:flex-wrap max-md:justify-end">
             @can('budgets.rollover')
                 <form method="POST" action="{{ route('budgets.rollover') }}" onsubmit="return confirm({{ Illuminate\Support\Js::from(__('Copy the previous month forecast into :month. Existing values for this month will be replaced.', ['month' => $selectedMonthLabel])) }})">
                     @csrf
@@ -35,8 +35,7 @@
         </div>
     </div>
 
-    <div class="card min-w-0 overflow-hidden border border-base-300 bg-base-100/90 shadow-sm
-        print:shadow-none print:break-inside-avoid">
+    <div class="card min-w-0 overflow-hidden border border-base-300 bg-base-100/90 shadow-sm">
         <div class="grid grid-cols-3 gap-3 p-4 max-md:grid-cols-2 max-sm:grid-cols-1">
             @foreach ([['income', __('Income'), $forecastIncome, $actualIncome, $incomeAchievement], ['expense', __('Expense'), $forecastExpense, $actualExpense, $expenseUtilization]] as [$type, $label, $forecast, $actual, $progress])
                 <article class="px-3.5 py-3 border border-base-300 rounded-box [&>span]:text-base-content/60
@@ -62,22 +61,26 @@
         @if ($manualForecastsCount === 0)
             <p class="px-4 pb-3 text-base-content/60 text-xs">{{ __('No manual forecast is set. Completed months use actuals as the system forecast; other months inherit the previous forecast.') }}</p>
         @endif
-        <div class="flex items-center gap-3 px-4 py-3 border-b border-b-base-300 max-md:items-stretch max-md:flex-wrap">
-            <label class="input input-sm flex w-full min-w-0 max-w-80 flex-1 items-center gap-2 max-md:max-w-none print:hidden">
+        <div class="flex items-center gap-3 px-4 py-3 border-b border-b-base-300 max-md:flex-col max-md:items-stretch">
+            <label class="input flex w-full min-w-0 max-w-80 flex-1 items-center gap-2 max-md:max-w-none">
                 <span class="sr-only">{{ __('Search forecasts') }}</span>
                 <svg class="shrink-0 text-base-content/60" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4" stroke-linecap="round"/></svg>
                 <input id="forecast-search" type="search" class="min-w-0 grow" x-model="search" placeholder="{{ __('Subject name or code') }}">
             </label>
-            <label class="flex items-center gap-2 text-xs text-base-content/60 print:hidden"><span>{{ __('Type') }}</span>
-                <select id="forecast-type" class="select select-sm w-auto min-w-28" x-model="type">
-                    <option value="all">{{ __('All types') }}</option><option value="income">{{ __('Income') }}</option><option value="expense">{{ __('Expense') }}</option>
+
+            <label class="flex items-center gap-2 text-xs text-base-content/60">
+                <span>{{ __('Type') }}</span>
+                <select id="forecast-type" class="select select-sm w-auto" x-model="type">
+                    <option value="all">{{ __('All') }}</option>
+                    <option value="income">{{ __('Income') }}</option>
+                    <option value="expense">{{ __('Expense') }}</option>
                 </select>
             </label>
             <span class="ms-auto text-base-content/60 text-xs whitespace-nowrap">{{ trans_choice(':count manual forecasts', $manualForecastsCount, ['count' => localizeNumber($manualForecastsCount)]) }}</span>
         </div>
         @include('monthly-budgets.partials.forecast-table', ['visibleBudgetLines' => $visibleBudgetLines])
         <p x-cloak x-show="@js($visibleBudgetLines->map(fn ($line) => ['name' => $line['subject']->name.' '.$line['subject']->code, 'type' => $line['type']])->values()).filter(line => matches(line.name, line.type)).length === 0 && (search !== '' || type !== 'all')" class="px-4 py-8 text-base-content/60 text-center text-xs">{{ __('No forecasts match these filters.') }}</p>
-        <details class="px-4 py-3 border-t border-t-base-300 text-base-content/60 print:hidden [&_summary]:list-none
+        <details class="px-4 py-3 border-t border-t-base-300 text-base-content/60 [&_summary]:list-none
             [&_summary]:cursor-pointer [&_summary]:text-xs [&_summary]:font-semibold [&_summary]:after:content-['+']
             [&_summary]:after:float-end [&_summary]:after:text-base [&[open]_summary]:after:content-['−'] [&_dl]:grid
             [&_dl]:grid-cols-2 [&_dl]:gap-x-4 [&_dl]:gap-y-3 [&_dl]:mt-3 [&_dl]:text-xs

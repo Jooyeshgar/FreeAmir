@@ -1,6 +1,4 @@
-<div id="monthly-module-costs" class="card min-w-0 overflow-hidden border border-base-300 bg-base-100/90 shadow-sm
-    print:shadow-none print:break-inside-avoid grid-cols-3 grid mt-4 pt-1.5
-    border-t border-t-base-300 max-md:grid-cols-1" aria-label="{{ __('Module share of total expenses') }}">
+<div id="monthly-module-costs" class="card min-w-0 overflow-hidden border border-base-300 bg-base-100/90 shadow-sm grid-cols-3 grid mt-4 pt-1.5 border-t border-t-base-300 max-md:grid-cols-1" aria-label="{{ __('Module share of total expenses') }}">
     @foreach ([
         'cogs' => [__('Cost of Goods Sold'), __('Share of total expenses')],
         'payroll' => [__('Payroll'), __('Approved payslips in this month')],

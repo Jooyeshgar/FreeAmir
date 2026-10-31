@@ -21,7 +21,6 @@
                         [&_small]:font-mono [&_small]:block [&_small]:text-base-content/60
                         [&_small]:[direction:ltr] [&_small]:text-right [&_small]:text-xs">
                         <a href="{{ route('transactions.index', ['subject_id' => $driver['subject']->id]) }}">{{ $driver['subject']->name }}</a>
-                        <small>{{ formatCode($driver['subject']->code) }}</small>
                     </div>
                     <div class="ms-auto min-w-0 [direction:ltr] text-left text-xs font-bold tabular-nums wrap-anywhere">{{ formatNumber($driver['amount']) }}</div>
                     <div class="w-20 [direction:ltr] text-left text-base-content/60 text-xs whitespace-nowrap

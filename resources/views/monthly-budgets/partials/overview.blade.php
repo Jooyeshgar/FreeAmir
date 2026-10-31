@@ -13,7 +13,7 @@
         :detail="$previousDetail($profitability['accountingComparisons']['accountingNet']['previous'] ?? null, $compactCurrency)"
         :progress="is_null($profitability['accountingMargin']) ? null : $profitability['accountingMargin']"
         :progress-label="__('Net margin').': '.$formatPercent($profitability['accountingMargin'])"
-        class="md:col-span-2 print:break-inside-avoid print:shadow-none" />
+        class="md:col-span-2" />
 
     @foreach ([['income', __('Actual Income'), $actualIncome], ['expense', __('Actual Expense'), $actualExpense]] as [$metric, $label, $actual])
         <x-metric-card :title="$label" :icon="$metric === 'income' ? 'income' : 'cost'"
@@ -22,7 +22,7 @@
             :change="$profitability['accountingComparisons'][$metric]['percent'] ?? null"
             :increase-is-good="$metric === 'income'"
             :detail="$previousDetail($profitability['accountingComparisons'][$metric]['previous'] ?? null, $compactCurrency)"
-            class="print:break-inside-avoid print:shadow-none" />
+        />
     @endforeach
 </div>
 
@@ -40,6 +40,6 @@
             :detail="$previousDetail($profitability['comparisons'][$key]['previous'] ?? null, 'formatNumber')"
             :progress="$key === 'grossProfit' && ! is_null($profitability['grossMargin']) ? $profitability['grossMargin'] : null"
             :progress-label="$key === 'grossProfit' ? __('Gross margin').': '.$formatPercent($profitability['grossMargin']) : null"
-            class="print:break-inside-avoid print:shadow-none" />
+        />
     @endforeach
 </div>

@@ -35,7 +35,7 @@
             : '—';
     @endphp
 
-    <div dir="{{ app()->isLocale('fa') ? 'rtl' : 'ltr' }}" class="mx-auto w-full max-w-7xl space-y-6 px-3 py-4 text-sm leading-relaxed text-base-content sm:px-4 print:space-y-4 print:p-0">
+    <div dir="{{ app()->isLocale('fa') ? 'rtl' : 'ltr' }}" class="mx-auto w-full max-w-7xl space-y-6 px-3 py-4 text-sm leading-relaxed text-base-content sm:px-4">
         <header class="flex items-center justify-between gap-4 max-lg:flex-col max-lg:items-start">
             <div class="min-w-0">
                 <div class="mb-1 flex flex-wrap items-center gap-2 text-xs text-base-content/60 [&_a]:link [&_a]:link-primary">
@@ -51,22 +51,20 @@
                     {{ $periodStatus }}
                 </p>
             </div>
-            <div class="flex items-center gap-2 print:hidden max-lg:w-full max-lg:justify-between">
-                <form method="GET" action="{{ route('budgets.index') }}" class="join border border-base-300 bg-base-100 shadow-sm max-lg:flex-1">
+            <div class="flex items-center gap-2 whitespace-nowrap">
+                <form method="GET" action="{{ route('budgets.index') }}" class="flex items-center gap-2 flex-nowrap">
                     @if ($selectedMonth < 12)
                         <a class="btn btn-ghost btn-sm join-item text-base-content/60 hover:text-primary" href="{{ route('budgets.index', ['month' => $selectedMonth + 1]) }}"
                             aria-label="{{ __('Next month') }}" title="{{ __('Next month') }}">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="m9 6 6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
                             </svg>
                         </a>
                     @endif
                     <label class="sr-only" for="budget-month">{{ __('Month') }} · {{ $fiscalYearLabel }}</label>
-                    <select id="budget-month" name="month" onchange="this.form.submit()" class="select select-sm join-item min-w-32 border-0 bg-transparent text-center font-semibold">
+                    <select id="budget-month" name="month" onchange="this.form.submit()" class="select select-sm w-28 md:select-md">
                         @foreach ($months as $monthNumber => $monthName)
-                            <option value="{{ $monthNumber }}" @selected($selectedMonth === $monthNumber)>{{ $monthName }}
-                            </option>
+                            <option value="{{ $monthNumber }}" @selected($selectedMonth === $monthNumber)>{{ $monthName }}</option>
                         @endforeach
                     </select>
                     @if ($selectedMonth > 1)
@@ -78,17 +76,10 @@
                             </svg>
                         </a>
                     @endif
-                    <noscript><button class="btn btn-ghost btn-sm join-item" type="submit">{{ __('View') }}</button></noscript>
+                    <noscript>
+                        <button class="btn btn-ghost btn-sm join-item" type="submit">{{ __('View') }}</button>
+                    </noscript>
                 </form>
-                <button class="btn btn-outline btn-sm gap-2" type="button" onclick="window.print()">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                        stroke-width="1.8">
-                        <path
-                            d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z"
-                            stroke-linejoin="round" />
-                    </svg>
-                    {{ __('Export PDF') }}
-                </button>
             </div>
         </header>
 
@@ -103,7 +94,7 @@
             @include('monthly-budgets.partials.overview')
         </section>
 
-        <section id="monthly-analysis" class="scroll-mt-4 print:break-inside-avoid" aria-labelledby="monthly-analysis-title">
+        <section id="monthly-analysis" class="scroll-mt-4" aria-labelledby="monthly-analysis-title">
             <div class="flex items-end justify-between gap-4 mb-3 [&_h2]:text-base [&_h2]:lg:text-lg [&_h2]:leading-normal
                 [&_h2]:font-bold [&_p]:mt-1 [&_p]:text-base-content/60 [&_p]:text-xs">
                 <div>
@@ -122,8 +113,7 @@
                 $marginValue = $profitability['accountingMargin'];
             @endphp
             <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <article class="card min-w-0 overflow-hidden border border-base-300 bg-base-100/90 shadow-sm
-                    print:shadow-none print:break-inside-avoid">
+                <article class="card min-w-0 overflow-hidden border border-base-300 bg-base-100/90 shadow-sm">
                     <div class="flex items-center justify-between gap-2 px-5 py-4 border-b border-b-base-300
                         [&_h3]:text-sm [&_h3]:font-bold [&_p]:mt-0.5 [&_p]:text-base-content/60 [&_p]:text-xs">
                         <div>
@@ -185,8 +175,7 @@
                         @endif
                     </div>
                 </article>
-                <article class="card min-w-0 overflow-hidden border border-base-300 bg-base-100/90 shadow-sm
-                    print:shadow-none print:break-inside-avoid">
+                <article class="card min-w-0 overflow-hidden border border-base-300 bg-base-100/90 shadow-sm">
                     <div class="flex items-center justify-between gap-2 px-5 py-4 border-b border-b-base-300
                         [&_h3]:text-sm [&_h3]:font-bold [&_p]:mt-0.5 [&_p]:text-base-content/60 [&_p]:text-xs">
                         <div>
@@ -238,7 +227,7 @@
             </div>
         </section>
 
-        <section id="monthly-drivers" class="scroll-mt-4 print:break-inside-avoid" aria-labelledby="monthly-drivers-title">
+        <section id="monthly-drivers" class="scroll-mt-4" aria-labelledby="monthly-drivers-title">
             <div class="flex items-end justify-between gap-4 mb-3 [&_h2]:text-base [&_h2]:lg:text-lg [&_h2]:leading-normal
                 [&_h2]:font-bold [&_p]:mt-1 [&_p]:text-base-content/60 [&_p]:text-xs">
                 <div>
@@ -258,7 +247,7 @@
         @include('monthly-budgets.partials.products')
         @include('monthly-budgets.partials.forecasts')
 
-        <details class="mt-5 border border-base-300 rounded-xl bg-base-100 print:shadow-none print:break-inside-avoid
+        <details class="mt-5 border border-base-300 rounded-xl bg-base-100
             [&_summary]:px-4 [&_summary]:py-3.5 [&_summary]:list-none [&_summary]:cursor-pointer
             [&_summary]:text-base-content/60 [&_summary]:text-xs [&_summary]:font-semibold
             [&_summary]:after:content-['+'] [&_summary]:after:float-end [&_summary]:after:text-base
