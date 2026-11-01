@@ -100,7 +100,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function canBeImpersonated(): bool
     {
-        return $this->fiscalYears()->exists() && ! $this->can('access-super-admin-panel');
+        return $this->fiscalYears()->exists() && ! $this->hasRole('Super-Admin') && ! $this->getAllPermissions()->contains('name', 'access-super-admin-panel');
     }
 
     public function canImpersonateUser(User $user): bool

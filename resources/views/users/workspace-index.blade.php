@@ -27,9 +27,6 @@
                                 <td class="px-4 py-2">{{ $user->email }}</td>
                                 <td class="px-4 py-2">
                                     <div class="inline-flex gap-2">
-                                        @can('access-super-admin-panel')
-                                            <a href="{{ route('users.show', $user) }}" class="btn btn-sm btn-ghost text-blue-600 hover:text-blue-900">{{ __('View') }}</a>
-                                        @endcan
                                         @can('users.edit')
                                             <a href="{{ route('users.edit', $user) }}" class="btn btn-sm btn-ghost text-yellow-600 hover:text-yellow-900">{{ __('Edit') }}</a>
                                         @endcan

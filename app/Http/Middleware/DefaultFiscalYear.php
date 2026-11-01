@@ -49,9 +49,6 @@ class DefaultFiscalYear
     {
         if (Auth::check()) {
             $fiscalYear = Auth::user()->fiscalYears()->where('year', toEnglish(jdate('Y')))->first();
-            if (! $fiscalYear && Auth::user()->can('access-super-admin-panel')) {
-                $fiscalYear = Auth::user()->fiscalYears()->orderByDesc('year')->orderByDesc('fiscal_years.id')->first();
-            }
             if ($fiscalYear) {
                 Cookie::queue('active-fiscal-year-id', $fiscalYear->id, 362 * 24 * 60);
 

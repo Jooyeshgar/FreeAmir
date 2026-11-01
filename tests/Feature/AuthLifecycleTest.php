@@ -4,18 +4,15 @@ namespace Tests\Feature;
 
 use App\Models\Company;
 use App\Models\Config;
-use App\Models\Document;
 use App\Models\FiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use App\Models\User;
 use App\Notifications\ResetPasswordNotification;
 use App\Notifications\UserVerificationNotification;
 use App\Services\GlobalConfigService;
-use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Password;
@@ -69,17 +66,17 @@ class AuthLifecycleTest extends TestCase
         $otherUser = User::factory()->create(['name' => 'Other Company User']);
         $otherUser->fiscalYears()->attach($otherFiscalYear);
 
-        $this->actingAs($admin)->get(route('roles.index'))->assertForbidden();
-        $this->actingAs($admin)->get(route('permissions.index'))->assertForbidden();
-        $this->actingAs($admin)->put(route('update-global-configs'), [
+        $this->actingAs($admin)->get(url('/management/roles'))->assertNotFound();
+        $this->actingAs($admin)->get(url('/management/permissions'))->assertNotFound();
+        $this->actingAs($admin)->put(url('/management/settings'), [
             'app_debug' => 'true',
-        ])->assertForbidden();
+        ])->assertNotFound();
 
         $about = $this->actingAs($admin)->get(route('about'));
         $about->assertOk();
-        $about->assertDontSee(route('update-global-configs'), false);
-        $about->assertDontSee(route('roles.index'), false);
-        $about->assertDontSee(route('permissions.index'), false);
+        $about->assertDontSee(url('/management/settings'), false);
+        $about->assertDontSee(url('/management/roles'), false);
+        $about->assertDontSee(url('/management/permissions'), false);
 
         $companies = $this->actingAs($admin)->get(route('companies.index'));
         $companies->assertOk();
@@ -128,364 +125,11 @@ class AuthLifecycleTest extends TestCase
 
         $workspace = $this->actingAs($viewer)->get(route('about'));
         $workspace->assertOk();
-        $workspace->assertDontSee(route('roles.index'), false);
-        $workspace->assertDontSee(route('permissions.index'), false);
+        $workspace->assertDontSee(url('/management/roles'), false);
+        $workspace->assertDontSee(url('/management/permissions'), false);
 
-        $this->get(route('roles.index'))->assertForbidden();
-        $this->get(route('permissions.index'))->assertForbidden();
-    }
-
-    public function test_platform_management_routes_use_the_management_prefix(): void
-    {
-        foreach ([
-            'management.dashboard',
-            'management.settings',
-            'update-global-configs',
-            'companies.index',
-            'users.index',
-            'roles.index',
-            'permissions.index',
-            'configs.index',
-        ] as $routeName) {
-            $this->assertStringStartsWith('/management', parse_url(route($routeName), PHP_URL_PATH));
-        }
-    }
-
-    public function test_platform_admin_can_change_language_from_the_management_header(): void
-    {
-        $user = User::factory()->create();
-        $user->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
-
-        $management = $this->actingAs($user)->get(route('management.dashboard'));
-
-        $management->assertOk()
-            ->assertSee('id="management-locale-fa-form"', false)
-            ->assertSee('id="management-locale-en-form"', false)
-            ->assertSee('action="'.route('locale').'"', false);
-
-        $this->post(route('locale'), ['locale' => 'en'])->assertRedirect(route('management.dashboard'))->assertSessionHas('locale', 'en');
-
-        $this->get(route('management.dashboard'))->assertOk()->assertSee('<html lang="en"', false);
-    }
-
-    public function test_platform_admin_can_switch_between_management_and_current_workspace(): void
-    {
-        $user = User::factory()->create();
-        $user->givePermissionTo(
-            Permission::firstOrCreate(['name' => 'access-super-admin-panel']),
-            Permission::firstOrCreate(['name' => 'home']),
-            Permission::firstOrCreate(['name' => 'customers.index']),
-            Permission::firstOrCreate(['name' => 'companies.index']),
-            Permission::firstOrCreate(['name' => 'users.index']),
-            Permission::firstOrCreate(['name' => 'roles.index']),
-            Permission::firstOrCreate(['name' => 'permissions.index']),
-        );
-
-        $fiscalYear = $this->fiscalYear(1405);
-        $user->fiscalYears()->attach($fiscalYear);
-
-        $workspace = $this->actingAs($user)
-            ->withCookie('active-fiscal-year-id', (string) $fiscalYear->id)
-            ->get(route('home'));
-
-        $workspace->assertOk();
-        $workspace->assertSee(route('management.dashboard'), false);
-        $workspace->assertSee('id="workspace-drawer"', false);
-        $workspace->assertSee('class="drawer-side z-50 xl:hidden"', false);
-        $workspace->assertSee('w-[min(18rem,calc(100vw-1rem))]', false);
-        $workspace->assertDontSee(route('roles.index'), false);
-        $workspace->assertDontSee(route('permissions.index'), false);
-        $this->assertSame($fiscalYear->id, config('active-fiscal-year-id'));
-
-        $about = $this->get(route('about'));
-        $about->assertOk();
-        $about->assertDontSee(route('update-global-configs'), false);
-        $about->assertDontSee('gc_modal_', false);
-
-        $sharedIndexRoutes = [
-            'companies.index' => __('Companies and fiscal years'),
-            'users.index' => __('Platform users'),
-        ];
-
-        foreach ($sharedIndexRoutes as $routeName => $managementHeading) {
-            $this->get(route($routeName))
-                ->assertOk()
-                ->assertDontSee($managementHeading);
-        }
-
-        foreach ([
-            'roles.index' => __('Roles and access policies'),
-            'permissions.index' => __('Permission catalog'),
-        ] as $routeName => $managementHeading) {
-            $this->get(route($routeName))
-                ->assertOk()
-                ->assertSee($managementHeading);
-        }
-
-        $management = $this->get(route('management.dashboard'));
-        $management->assertSee('class="drawer md:drawer-open"', false);
-        $management->assertSee('id="management-drawer"', false);
-        $management->assertSee('class="drawer-side z-50"', false);
-        $management->assertOk();
-        $management->assertSee(route('home'), false);
-
-        foreach ($sharedIndexRoutes as $routeName => $managementHeading) {
-            $this->get(route($routeName))
-                ->assertOk()
-                ->assertSee($managementHeading);
-        }
-
-        $fiscalYear->update(['year' => (int) toEnglish(jdate('Y')) - 1]);
-
-        $this->get(route('home'))->assertok();
-    }
-
-    public function test_super_admin_is_hidden_from_workspace_users_but_visible_in_management_users(): void
-    {
-        $actor = User::factory()->create();
-        $actor->givePermissionTo(
-            Permission::firstOrCreate(['name' => 'access-super-admin-panel']),
-            Permission::firstOrCreate(['name' => 'users.index']),
-        );
-
-        $superAdmin = User::factory()->create(['email' => 'hidden-super-admin@example.com']);
-        $superAdmin->assignRole(Role::create(['name' => 'Super-Admin']));
-
-        $this->actingAs($actor)->withSession(['interface_mode' => 'workspace'])->get(route('users.index'))->assertOk()
-            ->assertDontSee('hidden-super-admin@example.com');
-
-        $this->withSession(['interface_mode' => 'management'])->get(route('users.index'))->assertOk()
-            ->assertSee('hidden-super-admin@example.com');
-    }
-
-    public function test_super_admin_dashboard_links_users_and_uses_edit_actions(): void
-    {
-        $actor = User::factory()->create();
-        $actor->assignRole(Role::create(['name' => 'Super-Admin']));
-        $fiscalYear = $this->fiscalYear(1405);
-        $target = User::factory()->unverified()->create(['name' => 'Recent Unverified User']);
-        $target->fiscalYears()->attach($fiscalYear);
-        $companylessTarget = User::factory()->create(['name' => 'Recent Companyless User']);
-
-        $dashboard = $this->actingAs($actor)->get(route('management.dashboard'))->assertOk();
-
-        $dashboard->assertSee('Recent Unverified User')
-            ->assertSee(route('users.show', $target), false)
-            ->assertSee(route('users.verify', $target), false)
-            ->assertSee(route('users.impersonate', $target), false)
-            ->assertSee(route('users.edit', $target), false)
-            ->assertSee(route('companies.edit', $fiscalYear->company), false)
-            ->assertSee('Recent Companyless User')
-            ->assertSee(__('User has no company'))
-            ->assertDontSee(route('users.impersonate', $companylessTarget), false)
-            ->assertSee(__('Edit'))
-            ->assertDontSee('>'.__('Manage').'</a>', false);
-
-        $this->get(route('users.index'))->assertOk()
-            ->assertSee(route('users.show', $target), false)
-            ->assertSee(route('users.verify', $target), false)
-            ->assertSee('Recent Companyless User')
-            ->assertSee(__('User has no assigned fiscal year'))
-            ->assertDontSee(route('users.impersonate', $companylessTarget), false);
-    }
-
-    public function test_super_admin_dashboard_exposes_managerial_statistics_and_trends(): void
-    {
-        $actor = User::factory()->create(['created_at' => now()->subDays(45)]);
-        $actor->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
-        User::factory()->count(2)->create(['created_at' => now()->subDays(5)]);
-        $openCompany = $this->fiscalYear(1405);
-        $closedCompany = $this->fiscalYear(1404);
-        $closedCompany->update(['closed_at' => now()]);
-
-        $response = $this->actingAs($actor)->get(route('management.dashboard'));
-
-        $response->assertOk()
-            ->assertSee(__('User growth'))
-            ->assertSee(__('Activity trend'))
-            ->assertSee(__('Active businesses'))
-            ->assertSee(__('Welcome back, :name', ['name' => $actor->name]))
-            ->assertSee(__('A live overview of the platform during the last 30 days.'))
-            ->assertSee('id="management-welcome"', false)
-            ->assertSee('id="management-growth-chart"', false)
-            ->assertSee('data-chart-tab="registrations"', false)
-            ->assertSee('data-chart-tab="companies"', false)
-            ->assertSee('data-chart-tab="documents"', false)
-            ->assertSee('id="management-active-users-chart"', false)
-            ->assertSee("type: 'line'", false)
-            ->assertSee("type: 'doughnut'", false)
-            ->assertSee('group relative overflow-hidden', false)
-            ->assertSee(route('management.dashboard'), false)
-            ->assertViewHas('metrics', fn (array $metrics): bool => $metrics['newUsers'] === 2
-                && $metrics['activeBusinesses'] === 1
-                && $metrics['closedFiscalYears'] === 1)
-            ->assertSee(__('Company creation'))
-            ->assertSee(__('First document'))
-            ->assertViewHas('userGrowth', fn ($trend): bool => $trend->count() === 6 && $trend->sum('count') === 3
-                && $trend->every(fn (array $month): bool => array_key_exists('companies', $month) && array_key_exists('documents', $month)))
-            ->assertViewHas('activityTrend', fn ($trend): bool => $trend->count() === 7);
-
-        $this->assertTrue($openCompany->exists);
-    }
-
-    public function test_super_admin_dashboard_shows_usage_depth_and_role_chart_data(): void
-    {
-        $actor = User::factory()->create();
-        $actor->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
-        $role = Role::create(['name' => 'Dashboard Operator']);
-        $actor->assignRole($role);
-        $growingFiscalYear = $this->fiscalYear(1405, 'Growing Usage Company');
-        $fallingFiscalYear = $this->fiscalYear(1404, 'Falling Usage Company');
-
-        foreach (range(1, 3) as $number) {
-            Document::withoutGlobalScopes()->create([
-                'number' => $number,
-                'date' => now()->toDateString(),
-                'creator_id' => $actor->id,
-                'fiscal_year_id' => $growingFiscalYear->id,
-                'created_at' => now()->subDays($number),
-            ]);
-        }
-
-        foreach (range(4, 7) as $number) {
-            $document = Document::withoutGlobalScopes()->create([
-                'number' => $number,
-                'date' => now()->subDays(35)->toDateString(),
-                'creator_id' => $actor->id,
-                'fiscal_year_id' => $fallingFiscalYear->id,
-            ]);
-            $document->timestamps = false;
-            $document->forceFill(['created_at' => now()->subDays(35)])->save();
-        }
-
-        Document::withoutGlobalScopes()->create([
-            'number' => 8,
-            'date' => now()->toDateString(),
-            'creator_id' => $actor->id,
-            'fiscal_year_id' => $fallingFiscalYear->id,
-            'created_at' => now()->subDays(2),
-        ]);
-
-        $this->actingAs($actor)->get(route('management.dashboard'))
-            ->assertOk()
-            ->assertSee(__('Highest usage'))
-            ->assertSee(__('Usage decline compared with last month'))
-            ->assertSee('Growing Usage Company')
-            ->assertSee('Falling Usage Company')
-            ->assertSee('id="management-users-by-role-chart"', false)
-            ->assertSee('Dashboard Operator')
-            ->assertViewHas('topUsageCompanies', fn ($companies): bool => $companies->contains(fn (array $company): bool => $company['name'] === 'Growing Usage Company'
-                && $company['documents'] === 3))
-            ->assertViewHas('fallingUsageCompanies', fn ($companies): bool => $companies->contains(fn (array $company): bool => $company['name'] === 'Falling Usage Company'
-                && $company['drop'] === 75.0));
-    }
-
-    public function test_user_show_displays_profile_roles_company_and_account_timestamps(): void
-    {
-        $actor = User::factory()->create();
-        $actor->assignRole(Role::create(['name' => 'Super-Admin']));
-        $fiscalYear = $this->fiscalYear(1405, 'Profile Company');
-        $fiscalYear->company->update([
-            'currency' => 'Rial',
-            'address' => 'Profile Street',
-            'phone_number' => '02112345678',
-            'national_code' => '1234567890',
-            'economical_code' => '987654321',
-            'postal_code' => '1111111111',
-        ]);
-        $createdAt = now()->subDays(5)->startOfMinute();
-        $updatedAt = now()->subDays(2)->startOfMinute();
-        $verifiedAt = now()->subDay()->startOfMinute();
-        $target = User::factory()->create([
-            'name' => 'Profile User',
-            'email' => 'profile@example.com',
-            'created_at' => $createdAt,
-            'updated_at' => $updatedAt,
-            'email_verified_at' => $verifiedAt,
-        ]);
-        $target->assignRole(Role::create(['name' => 'Profile Auditor']));
-        $target->fiscalYears()->attach($fiscalYear);
-
-        $this->actingAs($actor)->get(route('users.show', $target))->assertOk()
-            ->assertSee('<table', false)
-            ->assertSee('Profile User')
-            ->assertSee('profile@example.com')
-            ->assertSee('bg-indigo-100', false)
-            ->assertSee('text-indigo-700', false)
-            ->assertSee('text-slate-600 dark:text-slate-100/80', false)
-            ->assertSee('Profile Auditor')
-            ->assertSee('Profile Company')
-            ->assertSee('Profile Street')
-            ->assertSee('1234567890')
-            ->assertSee('987654321')
-            ->assertSee('1111111111')
-            ->assertSee('02112345678')
-            ->assertSee(route('users.destroy', $target), false)
-            ->assertSee(localizeNumber(1405))
-            ->assertSee(formatDateTime($createdAt))
-            ->assertSee(formatDateTime($updatedAt))
-            ->assertSee(formatDateTime($verifiedAt))
-            ->assertSee(__('Verified'));
-    }
-
-    public function test_user_show_requires_super_admin_panel_access(): void
-    {
-        $target = User::factory()->create();
-        $workspaceViewer = User::factory()->create();
-        $workspaceViewer->givePermissionTo(Permission::firstOrCreate(['name' => 'users.show']));
-
-        $this->actingAs($workspaceViewer)->get(route('users.show', $target))->assertForbidden();
-
-        $platformViewer = User::factory()->create();
-        $platformViewer->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
-
-        $this->actingAs($platformViewer)->get(route('users.show', $target))->assertOk();
-    }
-
-    public function test_user_show_displays_pending_and_empty_assignment_states(): void
-    {
-        $actor = User::factory()->create();
-        $actor->assignRole(Role::create(['name' => 'Super-Admin']));
-        $target = User::factory()->unverified()->create(['name' => 'Pending Profile User']);
-
-        $this->actingAs($actor)->get(route('users.show', $target))->assertOk()
-            ->assertSee('Pending Profile User')
-            ->assertSee(__('Pending'))
-            ->assertSee(__('Never'))
-            ->assertSee(__('No companies assigned'))
-            ->assertSee(__('No roles assigned'));
-    }
-
-    public function test_super_admin_can_verify_an_unverified_user_from_another_company(): void
-    {
-        Event::fake([Verified::class]);
-
-        $actorCompany = $this->fiscalYear(1405);
-        $otherCompany = $this->fiscalYear(1404);
-        $actor = User::factory()->create();
-        $actor->fiscalYears()->attach($actorCompany);
-        $actor->assignRole(Role::create(['name' => 'Super-Admin']));
-        $target = User::factory()->unverified()->create();
-        $target->fiscalYears()->attach($otherCompany);
-
-        $this->actingAs($actor)
-            ->from(route('management.dashboard'))
-            ->post(route('users.verify', $target))
-            ->assertRedirect(route('management.dashboard'))
-            ->assertSessionHas('success', __('User verified successfully.'));
-
-        $this->assertTrue($target->fresh()->hasVerifiedEmail());
-        Event::assertDispatched(Verified::class, fn (Verified $event) => $event->user->is($target));
-    }
-
-    public function test_non_super_admin_cannot_verify_another_user(): void
-    {
-        $actor = User::factory()->create();
-        $target = User::factory()->unverified()->create();
-
-        $this->actingAs($actor)->post(route('users.verify', $target))->assertForbidden();
-
-        $this->assertFalse($target->fresh()->hasVerifiedEmail());
+        $this->get(url('/management/roles'))->assertNotFound();
+        $this->get(url('/management/permissions'))->assertNotFound();
     }
 
     public function test_super_admin_can_assign_super_admin_and_inherited_admin_roles(): void
@@ -496,6 +140,7 @@ class AuthLifecycleTest extends TestCase
         $actor->assignRole(Role::create(['name' => 'Super-Admin']));
         Role::create(['name' => __('Admin')]);
         $fiscalYear = $this->fiscalYear(1405);
+        $actor->fiscalYears()->attach($fiscalYear);
 
         $this->actingAs($actor)->get(route('users.create'))->assertOk()->assertSee('Super-Admin');
 
@@ -529,6 +174,8 @@ class AuthLifecycleTest extends TestCase
         Role::create(['name' => 'Super-Admin']);
         $adminRole = Role::create(['name' => __('Admin')]);
         $fiscalYear = $this->fiscalYear(1405);
+        $actor->fiscalYears()->attach($fiscalYear);
+        config(['active-fiscal-year-id' => $fiscalYear->id]);
         $target = User::factory()->create();
         $target->assignRole($adminRole);
         $target->fiscalYears()->attach($fiscalYear);

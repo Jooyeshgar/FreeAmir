@@ -7,6 +7,7 @@ use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Services\DocumentImportExport\DocumentImportExportService;
+use App\Services\FiscalYearDemoService;
 use App\Services\FiscalYearOverviewService;
 use App\Services\InventoryTurnoverService;
 use App\Services\ReportExportService;
@@ -16,7 +17,6 @@ use Database\Seeders\DemoSeeder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -32,19 +32,6 @@ class ReportsController extends Controller
     public function companyOverview(Request $request)
     {
         $user = auth()->user();
-
-        if ($user->can('access-super-admin-panel')) {
-            $hasCurrentWorkspace = $user->fiscalYears()->whereKey(getActiveFiscalYear())->where('year', toEnglish(jdate('Y')))->exists();
-
-            if (! $hasCurrentWorkspace) {
-                return redirect()->route('management.dashboard');
-            }
-        }
-
-        $request->session()->put('interface_mode', 'workspace');
-
-        // Use can() (not Spatie's hasAnyPermission) so AppServiceProvider's
-        // platform-access capability hook is honored.
 
         $BUSINESS_PERMISSIONS = [
             'documents.show',
@@ -185,7 +172,7 @@ class ReportsController extends Controller
         $fiscalYearId = (int) getActiveFiscalYear();
         $user = auth()->user();
 
-        abort_unless($user->can('access-super-admin-panel') || $user->fiscalYears()->whereKey($fiscalYearId)->exists(), 403);
+        abort_unless($user->fiscalYears()->whereKey($fiscalYearId)->exists(), 403);
 
         if (! FiscalYear::whereKey($fiscalYearId)->exists()) {
             return redirect()->route('home')->with('error', __('Please select a valid company first.'));
@@ -211,8 +198,13 @@ class ReportsController extends Controller
     {
         abort_if(! config('app.debug') || config('app.env') === 'production', 404);
 
+        $fiscalYearId = (int) getActiveFiscalYear();
+        $fiscalYear = FiscalYear::findOrFail($fiscalYearId);
+        abort_unless(auth()->user()->fiscalYears()->whereKey($fiscalYearId)->exists(), 403);
+        abort_if($fiscalYear->isClosed(), 422, __('This fiscal year is already closed.'));
+
         try {
-            Artisan::call('migrate:fresh', ['--seed' => true]);
+            app(FiscalYearDemoService::class)->refresh($fiscalYearId);
         } catch (\Exception $e) {
             return redirect()->route('home')->with('error', __('An error occurred while refreshing the database.'));
         }
