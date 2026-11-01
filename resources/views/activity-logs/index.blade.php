@@ -180,7 +180,7 @@
 
         <section class="space-y-3 sm:space-y-4" aria-label="{{ __('Activity') }}">
             @forelse ($activities as $activity)
-                <article x-data="{ detailsOpen: false, requestInputOpen: false, detailsLoaded: false, detailsLoading: false, detailsHtml: '' }"
+                <article x-data="{ detailsOpen: false, requestInputOpen: false, detailsLoaded: false, detailsLoading: false, detailsError: false, detailsHtml: '' }"
                     class="group min-w-0 max-w-full overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition duration-200 hover:border-slate-300 hover:shadow-md sm:p-4 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-slate-700">
                     <div
                         class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4 md:flex-col md:items-stretch lg:flex-row lg:items-center">
@@ -243,7 +243,7 @@
                         @if ($activity['hasDetails'] && auth()->user()->can('activity-logs.details'))
                             <button type="button"
                                 class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20 transition hover:bg-emerald-100 sm:h-7 sm:w-7 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-950/70"
-                                @click="detailsOpen = ! detailsOpen; if (! detailsLoaded && ! detailsLoading) { detailsLoading = true; fetch('{{ route('activity-logs.details', $activity['detailsActivityId'] ?? $activity['id']) }}', { headers: { Accept: 'application/json' } }).then(response => response.json()).then(data => { detailsHtml = data.html; detailsLoaded = true; detailsOpen = true; }).finally(() => detailsLoading = false); }"
+                                @click="detailsOpen = ! detailsOpen; if (detailsOpen && ! detailsLoaded && ! detailsLoading) { detailsLoading = true; detailsError = false; fetch('{{ route('activity-logs.details', $activity['detailsActivityId'] ?? $activity['id']) }}', { headers: { Accept: 'application/json' } }).then(response => { if (! response.ok) throw new Error(); return response.json(); }).then(data => { if (typeof data.html !== 'string') throw new Error(); detailsHtml = data.html; detailsLoaded = true; }).catch(() => { detailsError = true; }).finally(() => detailsLoading = false); }"
                                 :aria-expanded="detailsOpen" aria-controls="activity-details-{{ $activity['id'] }}"
                                 aria-label="{{ __('Details') }}" title="{{ __('Details') }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
@@ -276,6 +276,9 @@
                             <template x-if="detailsLoading">
                                 <p class="text-sm text-slate-500">{{ __('Loading...') }}</p>
                             </template>
+                            <p x-cloak x-show="detailsError" role="alert" class="text-sm text-rose-600 dark:text-rose-400">
+                                {{ __('An error occurred, try again.') }}
+                            </p>
                             <div x-show="detailsLoaded" x-html="detailsHtml"></div>
                         </div>
                     @endif

@@ -58,7 +58,14 @@ class ActivityLogController extends Controller
     public function details(Activity $activity): JsonResponse
     {
         abort_unless(in_array($activity->source, ['request', 'model'], true), 404);
-        $activity = $this->activityLogService->findVisible($activity->id);
+        $allowedFiscalYearIds = auth()->user()?->fiscalYears()->pluck('fiscal_years.id')->map(fn ($id): int => (int) $id) ?? collect();
+        $details = $activity->details ?? collect();
+        $activityFiscalYearIds = collect([
+            $details->get('fiscal_year_id'),
+            ...$details->get('fiscal_year_ids', []),
+            ...collect($details->get('models', []))->pluck('fiscal_year_id')->all(),
+        ])->filter()->map(fn ($id): int => (int) $id)->unique();
+        abort_unless($activityFiscalYearIds->isNotEmpty() && $activityFiscalYearIds->every(fn (int $id): bool => $allowedFiscalYearIds->contains($id)), 404);
 
         $modelType = request()->query('model_type');
         $modelId = request()->query('model_id');

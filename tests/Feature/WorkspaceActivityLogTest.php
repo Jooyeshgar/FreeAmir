@@ -128,9 +128,11 @@ class WorkspaceActivityLogTest extends TestCase
 
         $this->actingAs($viewer);
         $this->get(route('activity-logs.index'))->assertOk()
+            ->assertViewHas('fiscalYears', fn ($years) => $years->pluck('id')->sort()->values()->all() === collect([$first->id, $second->id])->sort()->values()->all())
             ->assertViewHas('users', fn ($users) => $users->pluck('id')->sort()->values()->all() === collect([$viewer->id, $firstUser->id, $secondUser->id])->sort()->values()->all());
         foreach ([$first->id => $firstUser, $second->id => $secondUser] as $yearId => $user) {
             $this->get(route('activity-logs.index', ['fiscal_year_id' => $yearId]))->assertOk()
+                ->assertViewHas('fiscalYears', fn ($years) => $years->pluck('id')->sort()->values()->all() === collect([$first->id, $second->id])->sort()->values()->all())
                 ->assertViewHas('users', fn ($users) => $users->pluck('id')->sort()->values()->all() === collect([$viewer->id, $user->id])->sort()->values()->all());
         }
         $this->get(route('activity-logs.index', ['fiscal_year_id' => $hidden->id]))->assertOk()

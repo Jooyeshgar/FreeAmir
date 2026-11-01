@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Activity;
-use App\Models\Company;
 use App\Models\FiscalYear;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -34,8 +33,6 @@ class ActivityLogService
 
     /** @var array<string, array<string, mixed>> */
     private array $pendingModelEvents = [];
-
-    private array $fiscalYearColumnCache = [];
 
     private ?Request $activeRequest = null;
 
@@ -185,8 +182,7 @@ class ActivityLogService
             ...$changes,
             'model_label' => $this->modelLabel($model),
             'model_number' => $this->modelNumber($model),
-            'fiscal_year_id' => $this->modelFiscalYearId($model),
-            'company_id' => $model instanceof Company ? (int) $model->getKey() : null,
+            'fiscal_year_id' => $this->modelFiscalYearId($model, $request),
             'route' => $request->route()?->getName(),
             'method' => $request->method(),
             'ip_address' => $request->ip(),
@@ -202,10 +198,7 @@ class ActivityLogService
      */
     public function index(array $filters): array
     {
-        $visibleFiscalYearIds = $this->visibleFiscalYearIds();
-        $visibility = $this->visibleActivityIds($visibleFiscalYearIds, isset($filters['fiscal_year_id']) ? (int) $filters['fiscal_year_id'] : null, null);
-        $visible = Activity::query()->whereIntegerInRaw('id', $visibility['all']);
-        $query = Activity::query()->whereIntegerInRaw('id', $visibility['filtered']);
+        $query = Activity::query()->selectRaw("activity_log.*, CASE WHEN source = 'request' THEN JSON_REMOVE(details, '$.models') ELSE details END AS details");
 
         $query->when($filters['search'] ?? null, function ($query, string $search) {
             $query->where(function ($query) use ($search) {
@@ -238,160 +231,29 @@ class ActivityLogService
                         ->orWhereRaw('CAST(details AS CHAR) LIKE ?', ["%{$reference}%"]);
                 });
             })
-            ->when($filters['date_from'] ?? null, fn ($query, string $date) => $query->where('created_at', '>=', Carbon::parse($date)->startOfDay()))
-            ->when($filters['date_to'] ?? null, fn ($query, string $date) => $query->where('created_at', '<', Carbon::parse($date)->addDay()->startOfDay()));
+            ->when($filters['fiscal_year_id'] ?? null, fn ($query, int|string $fiscalYearId) => $query->where(function ($query) use ($fiscalYearId) {
+                $query->where('details->fiscal_year_id', (int) $fiscalYearId)->orWhereJsonContains('details->fiscal_year_ids', (int) $fiscalYearId);
+            }))
+            ->when($filters['date_from'] ?? null, fn ($query, string $date) => $query->whereDate('created_at', '>=', $date))
+            ->when($filters['date_to'] ?? null, fn ($query, string $date) => $query->whereDate('created_at', '<=', $date));
 
         $activities = $this->paginateGroupedActivities($query);
         $impersonatedUserIds = $activities->getCollection()
             ->map(fn (Activity $activity) => $activity->details?->get('impersonated_user_id'))->filter()->unique();
-        $filterFiscalYearIds = empty($filters['fiscal_year_id']) ? $visibleFiscalYearIds : $visibleFiscalYearIds->intersect([(int) $filters['fiscal_year_id']]);
+        $accessibleFiscalYearIds = auth()->user()?->fiscalYears()->pluck('fiscal_years.id') ?? collect();
+        $filterFiscalYearIds = empty($filters['fiscal_year_id'])
+            ? $accessibleFiscalYearIds
+            : $accessibleFiscalYearIds->intersect([(int) $filters['fiscal_year_id']]);
 
         return [
             'activities' => $activities,
-            'metrics' => $this->metrics(clone $visible),
+            'metrics' => $this->metrics(),
             'users' => User::query()->whereHas('fiscalYears', fn (Builder $query) => $query->whereIn('fiscal_years.id', $filterFiscalYearIds))->orderBy('name')->get(['id', 'name', 'email']),
             'impersonatedUsers' => User::query()->whereIn('id', $impersonatedUserIds)->get(['id', 'name', 'email'])->keyBy('id'),
-            'fiscalYears' => FiscalYear::query()->with('company:id,name')->whereIn('id', $visibleFiscalYearIds)->orderByDesc('year')->get(['id', 'company_id', 'year']),
-            'modelTypes' => $this->availableModelTypes(clone $visible),
+            'fiscalYears' => FiscalYear::query()->with('company:id,name')->whereIn('id', $accessibleFiscalYearIds)->orderByDesc('year')->get(['id', 'company_id', 'year']),
+            'modelTypes' => $this->availableModelTypes(),
             'filters' => $filters,
         ];
-    }
-
-    public function findVisible(int|string $id): Activity
-    {
-        $visibility = $this->visibleActivityIds($this->visibleFiscalYearIds(), null, $id);
-
-        return Activity::query()->whereIntegerInRaw('id', $visibility['all'])->findOrFail($id);
-    }
-
-    /**
-     * Resolve ownership from the affected model snapshots.
-     * The selected fiscal year is request context, never proof of tenant ownership.
-     * Every model in an aggregate must be validated before any part of the request is exposed.
-     *
-     * @param  Collection<int, int|string>  $fiscalYearIds
-     * @return array{all: array<int>, filtered: array<int>}
-     */
-    private function visibleActivityIds(Collection $fiscalYearIds, ?int $filterFiscalYearId, int|string|null $activityId): array
-    {
-        $allowed = $fiscalYearIds->map(fn ($id): int => (int) $id)->values();
-        if ($allowed->isEmpty()) {
-            return ['all' => [], 'filtered' => []];
-        }
-
-        $companyYears = FiscalYear::query()->whereIn('id', $allowed)->get(['id', 'company_id'])
-            ->groupBy('company_id')->map(fn (Collection $years): Collection => $years->pluck('id'));
-        $ids = [];
-        $filteredIds = [];
-
-        Activity::query()->when($activityId !== null, fn (Builder $query) => $query->whereKey($activityId))
-            ->chunkById(500, function (EloquentCollection $activities) use ($allowed, $companyYears, $filterFiscalYearId, &$ids, &$filteredIds): void {
-                $modelsByActivity = $activities->mapWithKeys(function (Activity $activity): array {
-                    $details = $activity->details ?? collect();
-                    $models = $activity->source === 'model' ? [[
-                        'model_type' => $activity->model_type,
-                        'model_id' => $activity->model_id,
-                        'fiscal_year_id' => $details->get('fiscal_year_id'),
-                        'attributes' => $details->get('attributes', []),
-                        'old' => $details->get('old', []),
-                    ]] : $details->get('models', []);
-
-                    return [$activity->id => collect($models)];
-                });
-                $ownership = $this->loadModelOwnership($modelsByActivity->flatten(1));
-                $belongs = fn (array $model, Collection $years): bool => $this->modelBelongsToFiscalYears($model, $years, $ownership, $companyYears);
-
-                foreach ($modelsByActivity as $id => $models) {
-                    // Context alone cannot prove ownership; every affected model must be authorized.
-                    if ($models->isEmpty() || ! $models->every(fn (mixed $model): bool => is_array($model) && $belongs($model, $allowed))) {
-                        continue;
-                    }
-
-                    $ids[] = (int) $id;
-                    if ($filterFiscalYearId === null || ($allowed->contains($filterFiscalYearId)
-                        && $models->contains(fn (array $model): bool => $belongs($model, collect([$filterFiscalYearId]))))) {
-                        $filteredIds[] = (int) $id;
-                    }
-                }
-            });
-
-        return ['all' => $ids, 'filtered' => $filteredIds];
-    }
-
-    /**
-     * Load only current ownership, once per model type in each chunk.
-     * Missing records remain distinguishable from records with null ownership.
-     *
-     * @return array<class-string<Model>, Collection>
-     */
-    private function loadModelOwnership(Collection $models): array
-    {
-        $ownership = [];
-        $validModels = $models->filter(function (mixed $model): bool {
-            $type = is_array($model) ? ($model['model_type'] ?? null) : null;
-
-            return is_string($type) && str_starts_with($type, 'App\\Models\\') && class_exists($type) && is_subclass_of($type, Model::class) && isset($model['model_id']);
-        });
-
-        foreach ($validModels->groupBy('model_type') as $type => $records) {
-            if (in_array($type, [FiscalYear::class, Company::class], true)) {
-                continue;
-            }
-
-            $instance = new $type;
-            $table = $instance->getTable();
-            $hasFiscalYear = $this->fiscalYearColumnCache[$table] ??= $instance->getConnection()->getSchemaBuilder()->hasColumn($table, 'fiscal_year_id');
-            if ($hasFiscalYear) {
-                $ownership[$type] = $type::withoutGlobalScopes()->whereKey($records->pluck('model_id')->unique()->all())
-                    ->pluck('fiscal_year_id', $instance->getKeyName());
-            }
-        }
-
-        return $ownership;
-    }
-
-    /**
-     * Unknown ownership fails closed. Deleted models may use their recorded fiscal-year snapshot.
-     */
-    private function modelBelongsToFiscalYears(array $model, Collection $allowedFiscalYearIds, array $ownership, Collection $companyYears): bool
-    {
-        $type = $model['model_type'] ?? null;
-        $id = $model['model_id'] ?? null;
-
-        if (! is_string($type) || $id === null) {
-            return false;
-        }
-
-        if ($type === FiscalYear::class) {
-            return $allowedFiscalYearIds->contains((int) $id);
-        }
-
-        if ($type === Company::class) {
-            return $companyYears->get($id, collect())->intersect($allowedFiscalYearIds)->isNotEmpty();
-        }
-
-        if (! isset($ownership[$type])) {
-            return false;
-        }
-
-        $exists = $ownership[$type]->has($id);
-        $snapshotFiscalYearIds = collect([
-            data_get($model, 'attributes.fiscal_year_id'),
-            data_get($model, 'old.fiscal_year_id'),
-            $exists ? $ownership[$type]->get($id) : data_get($model, 'fiscal_year_id'),
-        ])->filter()->map(fn ($id): int => (int) $id);
-
-        // A current record with null ownership must never fall back to legacy request context.
-        if ($exists && ! $ownership[$type]->get($id)) {
-            return false;
-        }
-
-        return $snapshotFiscalYearIds->isNotEmpty() && $snapshotFiscalYearIds->every(fn (int $id): bool => $allowedFiscalYearIds->contains($id));
-    }
-
-    private function visibleFiscalYearIds(): Collection
-    {
-        return auth()->user()?->fiscalYears()->pluck('fiscal_years.id') ?? collect();
     }
 
     private function paginateGroupedActivities(Builder $query): LengthAwarePaginator
@@ -446,11 +308,7 @@ class ActivityLogService
             $pendingModels = collect();
         };
 
-        // Grouping needs only request identity, not the audit snapshots or request input.
-        $groupingQuery = (clone $query)->select(['id', 'source', 'user_id', 'created_at'])
-            ->selectRaw("JSON_OBJECT('route', JSON_EXTRACT(details, '$.route')) AS details");
-
-        foreach ($groupingQuery->lazyByIdDesc(500) as $activity) {
+        foreach ((clone $query)->lazyByIdDesc(500) as $activity) {
             if ($activity->source === 'request') {
                 $flushRequest();
                 $pendingRequest = $activity;
@@ -466,11 +324,7 @@ class ActivityLogService
         }
 
         $flushRequest();
-        $pageActivities = Activity::query()->whereKey($selectedActivities->modelKeys())
-            ->select(['id', 'source', 'description', 'action', 'user_id', 'model_type', 'model_id', 'created_at'])
-            ->selectRaw("CASE WHEN source = 'request' THEN JSON_REMOVE(details, '$.models') ELSE details END AS details")
-            ->with('user:id,name,email')->get()->keyBy('id');
-        $selectedActivities = new EloquentCollection($selectedActivities->map(fn (Activity $activity): Activity => $pageActivities->get($activity->id))->all());
+        $selectedActivities->load('user:id,name,email');
 
         return (new LengthAwarePaginator(
             $selectedActivities,
@@ -494,23 +348,27 @@ class ActivityLogService
     /**
      * @return array{total: int, today: int, model: int, request: int}
      */
-    private function metrics(Builder $activities): array
+    private function metrics(): array
     {
         return [
-            'total' => (clone $activities)->count(),
-            'today' => (clone $activities)->where('created_at', '>=', Carbon::today())->where('created_at', '<', Carbon::tomorrow())->count(),
-            'model' => (clone $activities)->where('source', 'model')->count()
-                + (clone $activities)->where('source', 'request')->whereJsonLength('details->models', '>', 0)->count(),
-            'request' => (clone $activities)->where('source', 'request')->count(),
+            'total' => Activity::query()->count(),
+            'today' => Activity::query()->whereDate('created_at', Carbon::today())->count(),
+            'model' => Activity::query()->where('source', 'model')->count()
+                + Activity::query()->where('source', 'request')->whereJsonLength('details->models', '>', 0)->count(),
+            'request' => Activity::query()->where('source', 'request')->count(),
         ];
     }
 
-    private function availableModelTypes(Builder $visible): Collection
+    private function availableModelTypes(): Collection
     {
-        $directTypes = (clone $visible)->whereNotNull('model_type')->distinct()->pluck('model_type');
-        $aggregatedTypes = (clone $visible)->where('source', 'request')->whereNotNull('details')
-            ->selectRaw("JSON_EXTRACT(details, '$.model_types') AS model_types")->pluck('model_types')
-            ->flatMap(fn (mixed $types): array => (array) (is_string($types) ? json_decode($types, true) : $types));
+        $directTypes = Activity::query()->whereNotNull('model_type')->distinct()->pluck('model_type');
+        $aggregatedTypes = Activity::query()->where('source', 'request')->whereNotNull('details')
+            ->pluck('details')
+            ->flatMap(fn (mixed $details): array => (array) data_get(
+                is_string($details) ? json_decode($details, true) : $details,
+                'model_types',
+                [],
+            ));
 
         return $directTypes->merge($aggregatedTypes)->filter()->unique()->sort()->values();
     }
@@ -576,8 +434,7 @@ class ActivityLogService
             'event' => $event,
             'model_label' => $this->modelLabel($model),
             'model_number' => $this->modelNumber($model),
-            'fiscal_year_id' => $this->modelFiscalYearId($model),
-            'company_id' => $model instanceof Company ? (int) $model->getKey() : null,
+            'fiscal_year_id' => $this->modelFiscalYearId($model, $request),
             'old' => $changes['old'] ?? [],
             'attributes' => $changes['attributes'] ?? [],
         ];
@@ -667,7 +524,7 @@ class ActivityLogService
         return is_scalar($number) && (string) $number !== '' ? $number : null;
     }
 
-    private function modelFiscalYearId(Model $model): ?int
+    private function modelFiscalYearId(Model $model, Request $request): ?int
     {
         if ($model instanceof FiscalYear) {
             return (int) $model->getKey();
@@ -679,7 +536,7 @@ class ActivityLogService
             return $fiscalYearId ? (int) $fiscalYearId : null;
         }
 
-        return null;
+        return $this->requestFiscalYearId($request);
     }
 
     private function requestFiscalYearId(Request $request): ?int
