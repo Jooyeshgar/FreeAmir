@@ -1013,7 +1013,7 @@ class BeginningInventoryTest extends TestCase
             'itemable_id' => $product->id,
             'quantity' => $quantity,
             'unit' => $unit,
-            'unit_discount' => 0,
+            'discount' => 0,
             'vat' => 0,
         ];
     }

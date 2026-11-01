@@ -389,7 +389,7 @@ class InventoryTurnoverReportTest extends TestCase
             'quantity' => $quantity,
             'unit_price' => $quantity > 0 ? abs($balance) / $quantity : 0,
             'cog_after' => $cogAfter ?? ($quantity > 0 ? abs($balance) / $quantity : 0),
-            'unit_discount' => 0,
+            'discount' => 0,
             'vat' => 0,
             'amount' => abs($balance),
         ]);

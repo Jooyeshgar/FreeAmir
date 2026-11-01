@@ -63,7 +63,7 @@ class WarehouseDashboardService
     public function dashboard(array $rawFilters = []): array
     {
         $filters = $this->normalizeFilters($rawFilters);
-        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        $fiscalYear = FiscalYear::findOrFail(getActiveFiscalYear());
         [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
         [$from, $to] = $this->periodRange($filters['period'], $fiscalStart, $fiscalEnd);
 
@@ -902,7 +902,7 @@ class WarehouseDashboardService
 
     private function fiscalYearToDate(): array
     {
-        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        $fiscalYear = FiscalYear::findOrFail(getActiveFiscalYear());
         [$from, $fiscalEnd] = $fiscalYear->range();
         $to = Carbon::now()->endOfDay();
 

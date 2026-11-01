@@ -12,7 +12,7 @@ class DocumentFactory extends Factory
     public function definition(): array
     {
         $creator = User::inRandomOrder()->first() ?? User::factory()->create();
-        $fiscalYear = FiscalYear::withoutGlobalScopes()->find(getActiveFiscalYear());
+        $fiscalYear = FiscalYear::find(getActiveFiscalYear());
 
         if (! $fiscalYear) {
             throw new \LogicException('An active fiscal year is required to create a document.');

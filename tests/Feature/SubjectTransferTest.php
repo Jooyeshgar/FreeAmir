@@ -173,6 +173,33 @@ class SubjectTransferTest extends TestCase
         $this->assertEquals(2, Transaction::withoutGlobalScopes()->where('subject_id', $destination->id)->count());
     }
 
+    public function test_both_transfer_paths_use_the_selected_fiscal_year_start(): void
+    {
+        $this->travelTo(now()->setDate(2025, 4, 1));
+        config(['active-company-fiscal-year' => 1404]);
+
+        foreach ([false, true] as $createChild) {
+            $source = $this->makeSubject(['code' => $createChild ? '003' : '001']);
+            $destination = $this->makeSubject(['code' => $createChild ? '004' : '002']);
+
+            $before = $this->makeTransaction($source, $this->makeDocument(['date' => '2024-03-19']), 100);
+            $first = $this->makeTransaction($source, $this->makeDocument(['date' => '2024-03-20']), 10);
+            $last = $this->makeTransaction($source, $this->makeDocument(['date' => '2025-03-20']), 20);
+            $future = $this->makeTransaction($source, $this->makeDocument(['date' => '2025-04-02']), 200);
+
+            $result = $createChild
+                ? $this->subjectService->transferSubjectToNewUnderParent($source, $destination)
+                : $this->subjectService->transferSubject($source, $destination);
+
+            $this->assertEquals(2, $result['count']);
+            $this->assertEquals(30, $result['sum']);
+            $this->assertEquals($result['destination']->id, $first->fresh()->subject_id);
+            $this->assertEquals($result['destination']->id, $last->fresh()->subject_id);
+            $this->assertEquals($source->id, $before->fresh()->subject_id);
+            $this->assertEquals($source->id, $future->fresh()->subject_id);
+        }
+    }
+
     public function test_transfers_subjectable_when_flag_is_true()
     {
         $source = $this->makeSubject(['code' => '001']);

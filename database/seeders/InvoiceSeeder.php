@@ -11,7 +11,7 @@ class InvoiceSeeder extends Seeder
 {
     public function run(): void
     {
-        $fiscalYear = FiscalYear::withoutGlobalScopes()->find(getActiveFiscalYear());
+        $fiscalYear = FiscalYear::find(getActiveFiscalYear());
 
         if (! $fiscalYear) {
             return;

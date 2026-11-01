@@ -146,7 +146,7 @@ class InvoiceGroupActionTest extends TestCase
             'warehouse_id' => $product->warehouseStocks()->orderBy('warehouse_id')->value('warehouse_id'),
             'quantity' => $qty,
             'unit' => $unit,
-            'unit_discount' => 0,
+            'discount' => 0,
             'vat' => 0,
         ];
     }

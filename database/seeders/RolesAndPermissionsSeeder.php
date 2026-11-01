@@ -106,7 +106,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'dashboard', 'print', 'export', 'change-status', 'search', 'approve', 'get-items',
                 'moadian-form', 'moadian-histories.index', 'moadian-histories.show', 'send-moadian', 'moadian-check-status',
                 'search-customer', 'search-product-service',
-                'inactive', 'inactive.approve',
+                'inactive', 'inactive.approve', 'sort-numbers',
                 'conflicts', 'conflicts.more',
                 'group-action', 'void-form', 'void', 'transfer',
             ],

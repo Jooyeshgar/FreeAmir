@@ -30,14 +30,14 @@ class InvoiceTransactionBuilder
      * - `itemable_id` (int)          : The id of the product or service in the database. Required when `itemable_type` is set.
      * - `quantity` (int|float)       : Quantity of the item. Optional, defaults to `1` when omitted.
      * - `unit` (int|float)           : Unit price for the item (required for amount calculations).
-     * - `unit_discount` (int|float)  : Discount amount applied to this item line (optional, default `0`). Note: this is treated as an absolute amount for the line.
+     * - `discount` (int|float)  : Discount amount applied to this item line (optional, default `0`). Note: this is treated as an absolute amount for the line.
      * - `vat` (int|float)           : VAT percentage (e.g. `9` for 9%), or VAT value when `vat_is_value` is true.
      * - `vat_is_value` (bool)       : When true, treat `vat` as a value instead of a percentage.
      *
      * Example:
      * ```php
      * [
-     *   ['itemable_type' => 'product', 'itemable_id' => 123, 'quantity' => 2, 'unit' => 15000, 'unit_discount' => 1000, 'vat' => 9],
+     *   ['itemable_type' => 'product', 'itemable_id' => 123, 'quantity' => 2, 'unit' => 15000, 'discount' => 1000, 'vat' => 9],
      *   ['itemable_type' => 'service', 'itemable_id' => 5, 'quantity' => 1, 'unit' => 30000],
      * ]
      * ```
@@ -135,7 +135,7 @@ class InvoiceTransactionBuilder
     {
         $quantity = $item['quantity'] ?? 1;
         $unitPrice = $item['unit'];
-        $itemDiscount = $item['unit_discount'] ?? 0;
+        $itemDiscount = $item['discount'] ?? 0;
         $vatIsValue = $item['vat_is_value'] ?? false;
         $itemVat = $vatIsValue
             ? floatval($item['vat'] ?? 0)

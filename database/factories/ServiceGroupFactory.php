@@ -11,7 +11,7 @@ class ServiceGroupFactory extends Factory
 {
     public function definition(): array
     {
-        $fiscalYearId = FiscalYear::withoutGlobalScopes()->inRandomOrder()->value('id') ?? getActiveFiscalYear() ?? FiscalYear::factory()->create()->id;
+        $fiscalYearId = FiscalYear::inRandomOrder()->value('id') ?? getActiveFiscalYear() ?? FiscalYear::factory()->create()->id;
 
         return [
             'name' => $this->faker?->persianServiceGroupName(),

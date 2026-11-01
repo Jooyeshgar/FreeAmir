@@ -53,7 +53,7 @@ class ClosedYearNestedOperationControlsTest extends TestCase
         $product = Product::factory()->create();
         $this->invoice->items()->create([
             'itemable_type' => Product::class, 'itemable_id' => $product->id,
-            'quantity' => 1, 'unit_price' => 100, 'unit_discount' => 0, 'amount' => 100, 'vat' => 0,
+            'quantity' => 1, 'unit_price' => 100, 'discount' => 0, 'amount' => 100, 'vat' => 0,
         ]);
         $cost = AncillaryCost::create([
             'fiscal_year_id' => $this->year->id, 'invoice_id' => $this->invoice->id,

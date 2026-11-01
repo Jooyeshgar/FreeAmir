@@ -25,7 +25,7 @@ class InvoiceDashboardController extends Controller
             }
         }
 
-        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        $fiscalYear = FiscalYear::findOrFail(getActiveFiscalYear());
         [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
 
         $start = isset($validated['start_date']) ? $validated['start_date'] : $fiscalStart->toDateString();

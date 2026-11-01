@@ -44,7 +44,7 @@ class InvoiceDashboardService
 
     private function activeFiscalYearRange(): array
     {
-        return FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear())->range();
+        return FiscalYear::findOrFail(getActiveFiscalYear())->range();
     }
 
     private function normalizeFilters(array $raw, Carbon $fiscalStart, Carbon $fiscalEnd): array

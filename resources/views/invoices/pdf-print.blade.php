@@ -144,7 +144,7 @@
                     $unitPrice = $invoiceItem->unit_price;
                     $totalPrice = $itemQuantity * $unitPrice;
                     $invoiceTotalPrice += $totalPrice;
-                    $discountPrice = $invoiceItem->unit_discount ?? 0;
+                    $discountPrice = $invoiceItem->discount ?? 0;
                     $invoiceTotalDiscount += $discountPrice;
                     $totalPriceAfterDiscount = $totalPrice - $discountPrice;
                     $invoiceTotalPriceAfterDiscount += $totalPriceAfterDiscount;

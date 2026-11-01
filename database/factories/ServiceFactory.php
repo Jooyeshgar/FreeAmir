@@ -15,7 +15,7 @@ class ServiceFactory extends Factory
     public function definition(): array
     {
         $fiscalYearId = (int) getActiveFiscalYear();
-        if (! FiscalYear::withoutGlobalScopes()->whereKey($fiscalYearId)->exists()) {
+        if (! FiscalYear::whereKey($fiscalYearId)->exists()) {
             throw new \LogicException('An active fiscal year is required to create a service.');
         }
 
@@ -45,7 +45,7 @@ class ServiceFactory extends Factory
     public function withGroup(?ServiceGroup $group = null): static
     {
         return $this->state(function (array $attributes) use ($group) {
-            $fiscalYearId = $attributes['fiscal_year_id'] ?? FiscalYear::withoutGlobalScopes()->inRandomOrder()->value('id') ?? FiscalYear::factory()->create()->id;
+            $fiscalYearId = $attributes['fiscal_year_id'] ?? FiscalYear::inRandomOrder()->value('id') ?? FiscalYear::factory()->create()->id;
 
             $groupToUse = $group;
 

@@ -143,7 +143,7 @@ class FiscalYearTransferTest extends TestCase
             'itemable_id' => $product->id,
             'quantity' => $qty,
             'unit_price' => $unit,
-            'unit_discount' => 0,
+            'discount' => 0,
             'vat' => 0,
             'amount' => $qty * $unit,
         ]);
@@ -157,7 +157,7 @@ class FiscalYearTransferTest extends TestCase
             'itemable_id' => $service->id,
             'quantity' => 1,
             'unit_price' => $unit,
-            'unit_discount' => 0,
+            'discount' => 0,
             'vat' => 0,
             'amount' => $unit,
         ]);

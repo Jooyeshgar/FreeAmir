@@ -216,8 +216,8 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3 text-center">
-                                    @if ($item->unit_discount > 0)
-                                        <span class="badge badge-warning">{{ formatNumber($item->unit_discount) }}</span>
+                                    @if ($item->discount > 0)
+                                        <span class="badge badge-warning">{{ formatNumber($item->discount) }}</span>
                                     @else
                                         <span class="text-gray-400">-</span>
                                     @endif

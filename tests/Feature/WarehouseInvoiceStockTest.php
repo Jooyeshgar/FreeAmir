@@ -244,7 +244,7 @@ class WarehouseInvoiceStockTest extends TestCase
                 'itemable_id' => $secondProduct->id,
                 'quantity' => 3,
                 'unit' => 800,
-                'unit_discount' => 0,
+                'discount' => 0,
                 'vat' => 0,
             ]],
             true
@@ -303,7 +303,7 @@ class WarehouseInvoiceStockTest extends TestCase
             'itemable_type' => Product::class,
             'quantity' => 1,
             'unit_price' => 100,
-            'unit_discount' => 0,
+            'discount' => 0,
             'vat' => 0,
             'amount' => 100,
         ]);
@@ -313,7 +313,7 @@ class WarehouseInvoiceStockTest extends TestCase
             'itemable_type' => Service::class,
             'quantity' => 1,
             'unit_price' => 100,
-            'unit_discount' => 0,
+            'discount' => 0,
             'vat' => 0,
             'amount' => 100,
         ]);
@@ -491,7 +491,7 @@ class WarehouseInvoiceStockTest extends TestCase
                 'itemable_id' => $service->id,
                 'quantity' => 2,
                 'unit' => 100,
-                'unit_discount' => 0,
+                'discount' => 0,
                 'vat' => 0,
             ]]
         )['invoice'];
@@ -649,7 +649,7 @@ class WarehouseInvoiceStockTest extends TestCase
                 'itemable_id' => $product->id,
                 'quantity' => $quantity,
                 'unit' => $unit,
-                'unit_discount' => 0,
+                'discount' => 0,
                 'vat' => 0,
             ]],
             true
@@ -699,7 +699,7 @@ class WarehouseInvoiceStockTest extends TestCase
             'itemable_id' => $this->product->id,
             'quantity' => $quantity,
             'unit' => $unit,
-            'unit_discount' => 0,
+            'discount' => 0,
             'vat' => 0,
         ];
     }

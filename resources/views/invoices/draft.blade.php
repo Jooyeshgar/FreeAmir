@@ -82,7 +82,7 @@
                         <td class="item-name">{{ $item->itemable?->name ?? __('Removed product/service') }}</td>
                         <td>{{ formatNumber($item->quantity) }}</td>
                         <td>{{ formatNumber($item->unit_price) }}</td>
-                        <td>{{ formatNumber($item->unit_discount) }}</td>
+                        <td>{{ formatNumber($item->discount) }}</td>
                         <td>{{ formatNumber($lineTotal) }}</td>
                     </tr>
                 @endforeach

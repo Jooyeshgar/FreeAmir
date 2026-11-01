@@ -382,7 +382,7 @@ class AncillaryCostService
                 'product_id' => $item->product_id,
                 'quantity' => $item->quantity,
                 'unit' => $item->unit_price,
-                'unit_discount' => $item->unit_discount,
+                'discount' => $item->discount,
                 'description' => $item->description,
                 'amount' => $item->amount,
             ])->toArray(),

@@ -222,7 +222,7 @@ class ReportExportService
             $query->chunk(200, function ($invoices) use ($file, $extensionRegistry): void {
                 foreach ($invoices as $invoice) {
                     $subtotal = $invoice->items->sum(fn ($item) => (float) $item->quantity * (float) $item->unit_price);
-                    $discounts = (float) $invoice->items->sum('unit_discount');
+                    $discounts = (float) $invoice->items->sum('discount');
                     $extensionValues = $extensionRegistry->csvRow($invoice);
                     fputcsv($file, [$invoice->number, $invoice->customer?->name, formatDate($invoice->date), $invoice->document?->number,
                         $subtotal, $discounts, (float) $invoice->items->sum('vat'), (float) $invoice->amount - (float) $invoice->subtraction, $subtotal - $discounts, ...$extensionValues]);
@@ -271,7 +271,7 @@ class ReportExportService
             }
         })->validate();
 
-        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        $fiscalYear = FiscalYear::findOrFail(getActiveFiscalYear());
         [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
         $startDate = $this->reportDate($validated['start_date'] ?? null, 'start_date') ?? $fiscalStart->toDateString();
         $endDate = $this->reportDate($validated['end_date'] ?? null, 'end_date') ?? $fiscalEnd->toDateString();

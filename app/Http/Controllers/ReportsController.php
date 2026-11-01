@@ -147,7 +147,7 @@ class ReportsController extends Controller
             }
         }
 
-        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        $fiscalYear = FiscalYear::findOrFail(getActiveFiscalYear());
         [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
         $startDate = $validated['start_date'] ?? $fiscalStart->toDateString();
         $endDate = $validated['end_date'] ?? $fiscalEnd->toDateString();
@@ -187,7 +187,7 @@ class ReportsController extends Controller
 
         abort_unless($user->can('access-super-admin-panel') || $user->fiscalYears()->whereKey($fiscalYearId)->exists(), 403);
 
-        if (! FiscalYear::withoutGlobalScopes()->whereKey($fiscalYearId)->exists()) {
+        if (! FiscalYear::whereKey($fiscalYearId)->exists()) {
             return redirect()->route('home')->with('error', __('Please select a valid company first.'));
         }
 
@@ -335,7 +335,7 @@ class ReportsController extends Controller
             }
         })->validate();
 
-        $fiscalYear = FiscalYear::withoutGlobalScopes()->findOrFail(getActiveFiscalYear());
+        $fiscalYear = FiscalYear::findOrFail(getActiveFiscalYear());
         [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
         $startDate = isset($validated['start_date']) ? jalaliInputToGregorian($validated['start_date'], 'start_date') : $fiscalStart->toDateString();
         $endDate = isset($validated['end_date']) ? jalaliInputToGregorian($validated['end_date'], 'end_date') : $fiscalEnd->toDateString();
