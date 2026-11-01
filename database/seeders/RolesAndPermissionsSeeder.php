@@ -101,7 +101,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'access-super-admin-panel',
             'api.*',
             'change-company',
-            'update-global-configs',
             'report',
         ];
     }

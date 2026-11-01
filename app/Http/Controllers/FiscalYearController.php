@@ -46,12 +46,7 @@ class FiscalYearController extends Controller
             ->paginate(12)
             ->withQueryString();
 
-        $view = $request->session()->get('interface_mode') === 'management'
-            && $request->user()->can('access-super-admin-panel')
-                ? 'fiscal-years.index'
-                : 'fiscal-years.workspace-index';
-
-        return view($view, ['years' => $years]);
+        return view('fiscal-years.workspace-index', ['years' => $years]);
     }
 
     public function create(Request $request): View
@@ -166,18 +161,16 @@ class FiscalYearController extends Controller
 
     private function accessibleYears(Request $request)
     {
-        return $request->user()->can('access-super-admin-panel') ? FiscalYear::query() : $request->user()->fiscalYears();
+        return $request->user()->fiscalYears();
     }
 
     private function accessibleCompanies(Request $request)
     {
-        return $request->user()->can('access-super-admin-panel')
-            ? Company::query()
-            : Company::whereHas('fiscalYears.users', fn ($query) => $query->whereKey($request->user()->id));
+        return Company::whereHas('fiscalYears.users', fn ($query) => $query->whereKey($request->user()->id));
     }
 
     private function authorizeYear(Request $request, FiscalYear $fiscalYear): void
     {
-        abort_unless($request->user()->can('access-super-admin-panel') || $request->user()->fiscalYears()->whereKey($fiscalYear->id)->exists(), 403);
+        abort_unless($request->user()->fiscalYears()->whereKey($fiscalYear->id)->exists(), 403);
     }
 }

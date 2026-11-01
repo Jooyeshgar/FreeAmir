@@ -99,6 +99,8 @@ class FiscalYearControllerTest extends TestCase
         $company = Company::factory()->create();
         $year = FiscalYear::create(['company_id' => $company->id, 'year' => 1402, 'closed_at' => now()]);
 
+        $year->users()->attach($user);
+
         $this->withoutMiddleware(CheckPermission::class)->actingAs($user);
 
         $this->patch(route('fiscal-years.update', $year), ['year' => 1403])->assertSessionHasErrors('fiscal_year', __('This fiscal year is already closed.'));

@@ -6,7 +6,6 @@
         <div class="flex min-w-0 items-center gap-3">
             <span class="inline-flex size-12 shrink-0 items-center justify-center rounded-2xl shadow-sm ring-1 ring-current/10 sm:size-14 bg-info/15 text-info">
                 @switch($homeVariant)
-                    @case('platform')
                     @case('admin')
                         <svg xmlns="http://www.w3.org/2000/svg" class="size-7 sm:size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3 4 7v5c0 4.7 3.2 7.7 8 9 4.8-1.3 8-4.3 8-9V7l-8-4Zm-3 9 2 2 4-4" />
@@ -61,7 +60,6 @@
                 </div>
                 @php
                     $homeProfilesDesc = [
-                        'platform' => __('Move between management and the active company workspace.'),
                         'accounting' => __('Continue with documents, accounts, and financial reports.'),
                         'sales' => __('Continue with customers, sales invoices, and CRM.'),
                         'inventory' => __('Continue with stock, products, and warehouse operations.'),

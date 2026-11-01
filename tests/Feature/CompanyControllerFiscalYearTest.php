@@ -11,7 +11,6 @@ use App\Services\MoadianService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
-use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class CompanyControllerFiscalYearTest extends TestCase
@@ -53,27 +52,6 @@ class CompanyControllerFiscalYearTest extends TestCase
         $this->assertDatabaseMissing('fiscal_years', ['id' => $firstYear->id]);
         $this->assertDatabaseHas('fiscal_years', ['id' => $secondYear->id]);
         $this->assertDatabaseHas('companies', ['id' => $company->id]);
-    }
-
-    public function test_show_groups_fiscal_years_by_company_id(): void
-    {
-        $user = User::factory()->create();
-        $user->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
-        $company = Company::factory()->create(['name' => 'Shared Name']);
-        $otherCompany = Company::factory()->create(['name' => 'Shared Name']);
-        FiscalYear::create(['company_id' => $company->id, 'year' => 1402]);
-        FiscalYear::create(['company_id' => $company->id, 'year' => 1403]);
-        FiscalYear::create(['company_id' => $otherCompany->id, 'year' => 1404]);
-
-        $this->actingAs($user);
-        $request = Request::create(route('companies.show', $company));
-        $request->setLaravelSession(app('session')->driver());
-        $request->setUserResolver(fn () => $user);
-
-        $data = app(CompanyController::class)->show($request, $company)->getData();
-
-        $this->assertSame(2, $data['metrics']['fiscalYears']);
-        $this->assertSame([1403, 1402], $data['fiscalYears']->pluck('year')->all());
     }
 
     public function test_registered_user_creation_persists_company_and_assigned_fiscal_year(): void

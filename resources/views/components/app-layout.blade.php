@@ -45,11 +45,6 @@
                         <span aria-hidden="true" class="text-lg">&times;</span>
                     </label>
                 </div>
-                @can('access-super-admin-panel')
-                    <a href="{{ route('management.dashboard') }}" class="btn btn-ghost mt-3 w-full justify-start text-sm font-medium">
-                        {{ __('Admin panel') }}
-                    </a>
-                @endcan
                 <ul class="app-mobile-menu menu mt-2 w-full gap-1 border-t border-base-content/10 text-sm" data-main-menu>
                     <x-menu />
                 </ul>
