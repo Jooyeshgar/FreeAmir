@@ -7,6 +7,7 @@ use App\Models\FiscalYear;
 use App\Models\User;
 use App\Services\ActivityLogService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Blade;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -111,6 +112,10 @@ class WorkspaceActivityLogTest extends TestCase
         $this->actingAs($viewer)->get(route('activity-logs.index'))->assertOk()
             ->assertSee(route('activity-logs.index'), false)
             ->assertDontSee('aria-controls="activity-details-', false);
+        $this->assertStringContainsString(
+            route('activity-logs.index'),
+            Blade::render('<x-menu />'),
+        );
         $this->getJson(route('activity-logs.details', $activity))->assertForbidden();
         $viewer->syncPermissions([Permission::firstOrCreate(['name' => 'activity-logs.details'])]);
         $this->get(route('activity-logs.index'))->assertForbidden();
