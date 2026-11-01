@@ -7,7 +7,6 @@ use App\Http\Middleware\EncryptCookies;
 use App\Http\Middleware\EnsureEmployee;
 use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureFiscalYearOpen;
-use App\Http\Middleware\InvalidateImpersonationSession;
 use App\Http\Middleware\LogUserActivity;
 use App\Http\Middleware\PreventRequestsDuringMaintenance;
 use App\Http\Middleware\SetApiFiscalYear;
@@ -48,7 +47,6 @@ return Application::configure(basePath: dirname(__DIR__))
             EncryptCookies::class,
             AddQueuedCookiesToResponse::class,
             StartSession::class,
-            InvalidateImpersonationSession::class,
             ConfigLoader::class,
             ShareErrorsFromSession::class,
             VerifyCsrfToken::class,
