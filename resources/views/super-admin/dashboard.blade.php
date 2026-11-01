@@ -437,19 +437,6 @@
                                                 <button class="btn btn-sm md:btn-sm text-emerald-600">{{ __('Verify') }}</button>
                                             </form>
                                         @endunless
-                                        @if (auth()->user()->canImpersonateUser($recentUser))
-                                            <form action="{{ route('users.impersonate', $recentUser) }}"
-                                                method="post">
-                                                @csrf
-                                                <button
-                                                    class="btn btn-sm md:btn-sm whitespace-nowrap text-violet-600">{{ __('Impersonate') }}</button>
-                                            </form>
-                                        @else
-                                            <span class="btn btn-sm md:btn-sm whitespace-nowrap text-slate-300"
-                                                title="{{ (int) $recentUser->fiscal_years_count === 0 ? __('User has no company') : __('Impersonation is not available for this user.') }}">
-                                                {{ (int) $recentUser->fiscal_years_count === 0 ? __('User has no company') : __('Impersonate') }}
-                                            </span>
-                                        @endif
                                         <a href="{{ route('users.edit', $recentUser) }}"
                                             class="btn btn-sm md:btn-sm text-[#16a394]">{{ __('Edit') }}</a>
                                     </div>

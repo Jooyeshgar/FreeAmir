@@ -137,12 +137,6 @@
                         </div>
                     </div>
 
-                    @if (auth()->user()->canImpersonateUser($user))
-                        <form action="{{ route('users.impersonate', $user) }}" method="post" onsubmit="return confirm('{{ __('Are you sure you want to impersonate this user?') }}')">
-                            @csrf
-                            <button type="submit" class="btn btn-ghost btn-xs shrink-0 rounded-lg text-indigo-700 dark:text-indigo-300">{{ __('Impersonate') }}</button>
-                        </form>
-                    @endif
                 </article>
             @empty
                 <div class="bg-white px-6 py-14 text-center text-sm text-slate-500 dark:bg-slate-900 dark:text-slate-400 sm:col-span-2 xl:col-span-3">

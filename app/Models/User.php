@@ -11,13 +11,12 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Hash;
-use Lab404\Impersonate\Models\Impersonate;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
-    use HasApiTokens, HasFactory, HasRoles, Impersonate, MustVerifyEmailTrait, Notifiable;
+    use HasApiTokens, HasFactory, HasRoles, MustVerifyEmailTrait, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -91,20 +90,5 @@ class User extends Authenticatable implements MustVerifyEmail
     public function employee(): HasOne
     {
         return $this->hasOne(Employee::class, 'user_id');
-    }
-
-    public function canImpersonate(): bool
-    {
-        return $this->can('users.impersonate') || $this->can('users.*');
-    }
-
-    public function canBeImpersonated(): bool
-    {
-        return $this->fiscalYears()->exists() && ! $this->can('access-super-admin-panel');
-    }
-
-    public function canImpersonateUser(User $user): bool
-    {
-        return $this->canImpersonate() && ! $this->is($user) && $user->canBeImpersonated();
     }
 }

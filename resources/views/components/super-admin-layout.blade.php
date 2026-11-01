@@ -160,7 +160,6 @@
                         </details>
                     </div>
                 </div>
-                <x-impersonation-banner within-sticky-header />
             </header>
             <main class="relative w-full min-w-0 px-6 pb-7 pt-6 sm:px-6 sm:pt-10 lg:px-8 xl:px-10 xl:pb-10">
                 {{ $slot }}</main>

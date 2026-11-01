@@ -33,12 +33,6 @@
                                         @can('users.edit')
                                             <a href="{{ route('users.edit', $user) }}" class="btn btn-sm btn-ghost text-yellow-600 hover:text-yellow-900">{{ __('Edit') }}</a>
                                         @endcan
-                                        @if (auth()->user()->canImpersonateUser($user))
-                                            <form action="{{ route('users.impersonate', $user) }}" method="post" onsubmit="return confirm('{{ __('Are you sure you want to impersonate this user?') }}')">
-                                                @csrf
-                                                <button type="submit" class="whitespace-nowrap btn btn-sm btn-ghost text-violet-600 hover:text-violet-900">{{ __('Impersonate') }}</button>
-                                            </form>
-                                        @endif
                                         @if ($user->employee)
                                             @canany(['hr.employees.show', 'users.show'])
                                                 <a href="{{ route('hr.employees.show', $user->employee) }}" class="btn btn-sm btn-outline btn-success">{{ __('View Employee') }}</a>

@@ -15,7 +15,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use Lab404\Impersonate\Services\ImpersonateManager;
 use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
@@ -215,26 +214,6 @@ class UserController extends Controller
         return redirect()->route('users.index')->with('success', __('User deleted successfully!'));
     }
 
-    public function impersonate(Request $request, User $user, ImpersonateManager $impersonateManager): RedirectResponse
-    {
-        $actor = $request->user();
-
-        abort_if($impersonateManager->isImpersonating(), 403);
-        abort_if($actor->is($user), 403);
-        abort_unless($actor->canImpersonateUser($user), 403);
-
-        $this->ensureUserAccess($user);
-
-        if (! $actor->impersonate($user)) {
-            $impersonateManager->clear();
-            abort(500, __('Unable to start impersonation.'));
-        }
-
-        $request->session()->regenerate();
-
-        return redirect()->to($this->impersonationLandingPage($user))->with('success', __('You are now impersonating :name.', ['name' => $user->name]));
-    }
-
     public function verify(Request $request, User $user): RedirectResponse
     {
         abort_unless($request->user()->can('access-super-admin-panel'), 403);
@@ -244,20 +223,6 @@ class UserController extends Controller
         }
 
         return back()->with('success', __('User verified successfully.'));
-    }
-
-    public function leaveImpersonation(Request $request, ImpersonateManager $impersonateManager): RedirectResponse
-    {
-        abort_unless($impersonateManager->isImpersonating(), 403);
-        abort_unless($impersonateManager->leave(), 500, __('Unable to stop impersonation.'));
-
-        $request->session()->regenerate();
-
-        if ($request->user()->can('access-super-admin-panel')) {
-            $request->session()->put('interface_mode', 'management');
-        }
-
-        return redirect()->route('users.index')->with('success', __('Impersonation ended.'));
     }
 
     public function createEmployee(Request $request, User $user): RedirectResponse
@@ -377,19 +342,6 @@ class UserController extends Controller
         }
 
         return [$firstName, $lastName];
-    }
-
-    private function impersonationLandingPage(User $user): string
-    {
-        if ($user->fiscalYears()->exists() && $user->can('home')) {
-            return route('home');
-        }
-
-        if ($user->employee && $user->can('employee-portal.dashboard')) {
-            return route('employee-portal.dashboard');
-        }
-
-        return route('about');
     }
 
     private function uniqueEmployeeCode(int $userId): string

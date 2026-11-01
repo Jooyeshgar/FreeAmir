@@ -107,5 +107,4 @@
         </nav>
     </div>
 
-    <x-impersonation-banner within-sticky-header />
 </header>

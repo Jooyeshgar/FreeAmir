@@ -141,7 +141,6 @@ class EnsureFiscalYearOpen
             'api-tokens.store',
             'api-tokens.destroy',
             'users.verify',
-            'users.impersonate',
             'users.store',
             'users.update',
             'users.destroy',

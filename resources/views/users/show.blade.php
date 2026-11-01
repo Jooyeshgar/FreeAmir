@@ -44,15 +44,6 @@
                         </button>
                     </form>
                 @endif
-                @if (auth()->user()->canImpersonateUser($user))
-                    <form action="{{ route('users.impersonate', $user) }}" method="post" onsubmit="return confirm('{{ __('Are you sure you want to impersonate this user?') }}')">
-                        @csrf
-                        <button type="submit" class="btn btn-sm gap-1.5 border-indigo-500 bg-indigo-500 text-white shadow-sm shadow-indigo-950/20 hover:border-indigo-400 hover:bg-indigo-400">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M15 19a6 6 0 0 0-12 0m6-8a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm12 8a6 6 0 0 0-9-5.2M17 3.1a4 4 0 0 1 0 7.8" /></svg>
-                            {{ __('Impersonate') }}
-                        </button>
-                    </form>
-                @endif
                 @can('users.edit')
                     <a href="{{ route('users.edit', $user) }}" class="btn btn-sm gap-1.5 border border-slate-200 bg-slate-100 text-slate-800 shadow-sm hover:border-white hover:bg-white">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="m16.9 3.1 4 4L7.5 20.5 3 21l.5-4.5L16.9 3.1Z" /></svg>

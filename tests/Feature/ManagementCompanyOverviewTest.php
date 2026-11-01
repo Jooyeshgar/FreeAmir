@@ -30,7 +30,7 @@ class ManagementCompanyOverviewTest extends TestCase
 
     public function test_super_admin_sees_grouped_fiscal_year_usage_users_roles_and_actions(): void
     {
-        $admin = $this->platformAdmin(['fiscal-years.edit', 'users.impersonate']);
+        $admin = $this->platformAdmin(['fiscal-years.edit']);
         $newFiscalYear = $this->fiscalYear(1404);
         $newFiscalYear->company->update(['name' => 'Grouped Business']);
         $oldFiscalYear = $this->fiscalYear(1403, ['company_id' => $newFiscalYear->company_id, 'closed_at' => now()]);
@@ -71,7 +71,7 @@ class ManagementCompanyOverviewTest extends TestCase
             ->assertSee('Roleless Operator')
             ->assertSee(__('No roles assigned'))
             ->assertSee(route('users.show', $accountant), false)
-            ->assertSee(route('users.impersonate', $accountant), false)
+            ->assertDontSee('/impersonate', false)
             ->assertSee(route('fiscal-years.edit', $newFiscalYear), false)
             ->assertDontSee('Outside User');
     }

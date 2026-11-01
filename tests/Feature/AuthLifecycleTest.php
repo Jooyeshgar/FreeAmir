@@ -272,12 +272,11 @@ class AuthLifecycleTest extends TestCase
         $dashboard->assertSee('Recent Unverified User')
             ->assertSee(route('users.show', $target), false)
             ->assertSee(route('users.verify', $target), false)
-            ->assertSee(route('users.impersonate', $target), false)
+            ->assertDontSee('/impersonate', false)
             ->assertSee(route('users.edit', $target), false)
             ->assertSee(route('companies.edit', $fiscalYear->company), false)
             ->assertSee('Recent Companyless User')
-            ->assertSee(__('User has no company'))
-            ->assertDontSee(route('users.impersonate', $companylessTarget), false)
+            ->assertDontSee('/impersonate', false)
             ->assertSee(__('Edit'))
             ->assertDontSee('>'.__('Manage').'</a>', false);
 
@@ -285,8 +284,7 @@ class AuthLifecycleTest extends TestCase
             ->assertSee(route('users.show', $target), false)
             ->assertSee(route('users.verify', $target), false)
             ->assertSee('Recent Companyless User')
-            ->assertSee(__('User has no assigned fiscal year'))
-            ->assertDontSee(route('users.impersonate', $companylessTarget), false);
+            ->assertDontSee('/impersonate', false);
     }
 
     public function test_super_admin_dashboard_exposes_managerial_statistics_and_trends(): void
