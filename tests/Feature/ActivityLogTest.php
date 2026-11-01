@@ -274,7 +274,7 @@ class ActivityLogTest extends TestCase
         $this->assertDatabaseCount('activity_log', 0);
     }
 
-    public function test_activity_log_listing_does_not_load_request_model_snapshots(): void
+    public function test_document_duplication_stores_and_displays_one_activity_with_all_created_models(): void
     {
         $actor = User::factory()->create();
         Activity::create([
@@ -282,7 +282,7 @@ class ActivityLogTest extends TestCase
             'description' => 'POST test',
             'event' => 'post',
             'user_id' => $actor->id,
-            'properties' => ['route' => 'test', 'models' => [['model_type' => FiscalYear::class, 'model_id' => 1]]],
+            'properties' => ['fiscal_year_id' => config('active-fiscal-year-id'), 'route' => 'test', 'models' => [['model_type' => FiscalYear::class, 'model_id' => config('active-fiscal-year-id')]]],
         ]);
 
         $service = app(ActivityLogService::class);
@@ -502,5 +502,28 @@ class ActivityLogTest extends TestCase
 
         $this->actingAs($firstUser)->get('/test/activity-log/resolved-actor')->assertOk()->assertJsonPath('actor_id', $firstUser->id);
         $this->actingAs($secondUser)->get('/test/activity-log/resolved-actor')->assertOk()->assertJsonPath('actor_id', $secondUser->id);
+    }
+
+    private function workspaceCompany(User $user, array $attributes = []): Company
+    {
+        $company = Company::factory()->create($attributes);
+        $year = FiscalYear::factory()->create(['company_id' => $company->id]);
+        $user->fiscalYears()->attach($year);
+
+        return $company;
+    }
+
+    private function workspaceUser(): User
+    {
+        $user = User::factory()->create();
+        $year = FiscalYear::factory()->create(['year' => 1405]);
+        $user->fiscalYears()->attach($year);
+        $user->givePermissionTo([
+            Permission::firstOrCreate(['name' => 'activity-logs.index']),
+            Permission::firstOrCreate(['name' => 'activity-logs.details']),
+        ]);
+        config(['active-fiscal-year-id' => $year->id]);
+
+        return $user;
     }
 }
