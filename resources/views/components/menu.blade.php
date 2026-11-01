@@ -320,7 +320,7 @@
             @endcanany
 
             {{-- System --}}
-            @canany(['companies.index', 'fiscal-years.index', 'users.index', 'configs.index', 'backups.create'])
+            @canany(['companies.index', 'fiscal-years.index', 'users.index', 'configs.index', 'backups.create', 'activity-logs.index'])
                 <li>
                     <details>
                         <summary>{{ __('System') }}</summary>
