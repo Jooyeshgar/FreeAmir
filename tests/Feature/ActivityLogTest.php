@@ -14,11 +14,9 @@ use App\Models\User;
 use App\Services\ActivityLogService;
 use App\Services\DocumentService;
 use App\Services\SubjectService;
-use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
@@ -489,83 +487,6 @@ class ActivityLogTest extends TestCase
             'value' => null,
             'fiscal_year_id' => null,
         ]);
-    }
-
-    public function test_impersonated_activity_is_attributed_to_the_real_user(): void
-    {
-        $impersonator = User::factory()->create();
-        $impersonated = User::factory()->create();
-
-        $this->actingAs($impersonator);
-        $this->assertTrue($impersonator->impersonate($impersonated));
-
-        $this->post(route('locale'), ['locale' => 'fa'])->assertRedirect();
-
-        $requestActivity = Activity::query()
-            ->where('source', 'request')
-            ->where('details->route', 'locale')
-            ->latest('id')
-            ->firstOrFail();
-
-        $this->assertSame($impersonator->id, $requestActivity->user_id);
-        $this->assertNotSame($impersonated->id, $requestActivity->user_id);
-        $this->assertSame($impersonated->id, $requestActivity->details->get('impersonated_user_id'));
-
-        $company = Company::factory()->create();
-        $modelActivity = Activity::query()
-            ->where('source', 'model')
-            ->where('model_type', Company::class)
-            ->where('model_id', $company->id)
-            ->latest('id')
-            ->firstOrFail();
-
-        $this->assertSame($impersonator->id, $modelActivity->user_id);
-        $this->assertSame($impersonated->id, $modelActivity->details->get('impersonated_user_id'));
-
-        $this->post(route('impersonation.leave'))->assertRedirect(route('users.index'));
-
-        $leaveActivity = Activity::query()
-            ->where('source', 'request')
-            ->where('details->route', 'impersonation.leave')
-            ->latest('id')
-            ->firstOrFail();
-
-        $this->assertSame($impersonator->id, $leaveActivity->user_id);
-        $this->assertSame($impersonated->id, $leaveActivity->details->get('impersonated_user_id'));
-    }
-
-    public function test_impersonator_is_loaded_at_most_once_when_a_request_triggers_multiple_model_events(): void
-    {
-        $impersonator = User::factory()->create();
-        $impersonated = User::factory()->create();
-
-        $this->actingAs($impersonator);
-        $this->assertTrue($impersonator->impersonate($impersonated));
-
-        Route::post('/test/activity-log/multiple-model-events', function () {
-            Company::factory()->count(3)->create();
-
-            return response()->noContent();
-        })->middleware('web');
-
-        $impersonatorLookupCount = 0;
-        DB::listen(function (QueryExecuted $query) use ($impersonator, &$impersonatorLookupCount): void {
-            $normalizedSql = str_replace(['"', '`', '[', ']'], '', strtolower($query->sql));
-
-            if (preg_match('/\bfrom\s+(?:\w+\.)?users\b/', $normalizedSql) === 1
-                && collect($query->bindings)->contains(fn (mixed $binding): bool => (string) $binding === (string) $impersonator->id)) {
-                $impersonatorLookupCount++;
-            }
-        });
-
-        $this->post('/test/activity-log/multiple-model-events')->assertNoContent();
-
-        $activity = Activity::query()->where('source', 'request')->latest('id')->firstOrFail();
-
-        $this->assertCount(3, $activity->details->get('models'));
-        $this->assertSame($impersonator->id, (int) $activity->user_id);
-        $this->assertSame($impersonated->id, (int) $activity->details->get('impersonated_user_id'));
-        $this->assertLessThanOrEqual(1, $impersonatorLookupCount);
     }
 
     public function test_actor_cache_is_reset_between_requests(): void

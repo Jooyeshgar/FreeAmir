@@ -140,7 +140,6 @@ class EnsureFiscalYearOpen
             'companies.test-moadian-connection',
             'api-tokens.store',
             'api-tokens.destroy',
-            'users.impersonate',
             'users.store',
             'users.update',
             'users.destroy',
