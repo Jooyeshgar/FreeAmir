@@ -10,12 +10,68 @@ use App\Models\User;
 use App\Services\ActivityLogService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class WorkspaceActivityLogTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_ownership_queries_are_batched_as_activity_history_grows(): void
+    {
+        $viewer = $this->viewer();
+        $year = FiscalYear::factory()->create();
+        $viewer->fiscalYears()->sync([$year->id]);
+        config(['active-fiscal-year-id' => $year->id]);
+
+        foreach (range(1, 520) as $number) {
+            $document = Document::create([
+                'number' => $number, 'date' => '2026-11-01', 'title' => 'Audit query fixture',
+                'creator_id' => $viewer->id, 'fiscal_year_id' => $year->id,
+            ]);
+            Activity::create([
+                'source' => 'model', 'user_id' => $viewer->id, 'action' => 'created',
+                'description' => 'Created document', 'model_type' => Document::class,
+                'model_id' => $document->id, 'details' => ['fiscal_year_id' => $year->id],
+            ]);
+        }
+
+        $this->actingAs($viewer);
+        foreach ([[], ['fiscal_year_id' => $year->id]] as $filters) {
+            DB::enableQueryLog();
+            DB::flushQueryLog();
+            try {
+                $data = app(ActivityLogService::class)->index($filters);
+                $queries = collect(DB::getQueryLog());
+            } finally {
+                DB::disableQueryLog();
+            }
+
+            $this->assertSame(520, $data['activities']->total());
+            $this->assertCount(25, $data['activities']);
+            $ownershipQueries = $queries->filter(fn (array $query): bool => preg_match('/from ["`]documents["`]/i', $query['query']) === 1);
+            $this->assertCount(2, $ownershipQueries, 'Current model ownership should be loaded once per chunk, not once per document or again for a selected fiscal year.');
+        }
+    }
+
+    public function test_date_filters_include_the_whole_day_and_exclude_adjacent_days(): void
+    {
+        $viewer = $this->viewer();
+        $year = FiscalYear::factory()->create();
+        $viewer->fiscalYears()->sync([$year->id]);
+        $activities = collect(['2026-10-31 23:59:59', '2026-11-01 00:00:00', '2026-11-01 23:59:59', '2026-11-02 00:00:00'])
+            ->map(function (string $date) use ($viewer, $year): Activity {
+                $activity = $this->activity($viewer, ['fiscal_year_id' => $year->id]);
+                $activity->forceFill(['created_at' => $date])->save();
+
+                return $activity;
+            });
+
+        $this->actingAs($viewer);
+        $data = app(ActivityLogService::class)->index(['date_from' => '2026-11-01', 'date_to' => '2026-11-01']);
+        $this->assertEqualsCanonicalizing($activities->slice(1, 2)->pluck('id')->all(), $data['activities']->pluck('id')->all());
+    }
 
     public function test_listing_metrics_and_filter_options_only_include_accessible_fiscal_years(): void
     {
