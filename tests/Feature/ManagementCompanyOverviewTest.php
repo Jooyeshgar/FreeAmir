@@ -102,8 +102,9 @@ class ManagementCompanyOverviewTest extends TestCase
 
     public function test_management_company_references_link_to_the_grouped_overview(): void
     {
-        $admin = $this->platformAdmin(['companies.index']);
+        $admin = $this->platformAdmin(['companies.index', 'activity-logs.index']);
         $fiscalYear = $this->fiscalYear(1404);
+        $admin->fiscalYears()->attach($fiscalYear);
         $target = User::factory()->create(['name' => 'Linked User']);
         $target->fiscalYears()->attach($fiscalYear);
         $this->document($fiscalYear, $admin, 1);
@@ -122,7 +123,7 @@ class ManagementCompanyOverviewTest extends TestCase
         $this->actingAs($admin)->withSession(['interface_mode' => 'management'])
             ->get(route('companies.index'))->assertOk()->assertSee($overviewUrl, false);
         $this->get(route('management.dashboard'))->assertOk()->assertSee($overviewUrl, false);
-        $this->get(route('management.activity-logs.index'))->assertOk()->assertSee($overviewUrl, false);
+        $this->get(route('activity-logs.index'))->assertOk()->assertSee($overviewUrl, false);
         $this->get(route('users.show', $target))->assertOk()->assertSee($overviewUrl, false);
     }
 

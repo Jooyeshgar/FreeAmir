@@ -29,17 +29,19 @@ class ActivityLogTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_activity_log_page_is_limited_to_super_admin_panel_users(): void
+    public function test_activity_log_page_requires_workspace_permission(): void
     {
         $regularUser = User::factory()->create();
         $superAdmin = User::factory()->create();
-        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'activity-logs.index']));
 
-        $this->get(route('management.activity-logs.index'))->assertRedirect(route('login'));
-        $this->actingAs($regularUser)->get(route('management.activity-logs.index'))->assertForbidden();
-        $this->actingAs($superAdmin)->get(route('management.activity-logs.index'))
+        $this->get(route('activity-logs.index'))->assertRedirect(route('login'));
+        $this->actingAs($regularUser)->get(route('activity-logs.index'))->assertForbidden();
+        $this->actingAs($superAdmin)->get(route('activity-logs.index'))
             ->assertOk()
-            ->assertViewIs('super-admin.activity-logs.index')
+            ->assertViewIs('activity-logs.index')
+            ->assertSee('workspace-drawer', false)
+            ->assertSessionMissing('interface_mode')
             ->assertSee(__('Activity log'))
             ->assertDontSee('name="source"', false)
             ->assertSee('name="action"', false)
@@ -183,13 +185,14 @@ class ActivityLogTest extends TestCase
 
     public function test_activity_log_listing_does_not_load_request_model_snapshots(): void
     {
-        $actor = User::factory()->create();
+        $actor = $this->workspaceUser();
+        $this->actingAs($actor);
         Activity::create([
             'log_name' => 'request',
             'description' => 'POST test',
             'event' => 'post',
             'user_id' => $actor->id,
-            'properties' => ['route' => 'test', 'models' => [['model_type' => FiscalYear::class, 'model_id' => 1]]],
+            'properties' => ['fiscal_year_id' => config('active-fiscal-year-id'), 'route' => 'test', 'models' => [['model_type' => FiscalYear::class, 'model_id' => 1]]],
         ]);
 
         $service = app(ActivityLogService::class);
@@ -202,14 +205,13 @@ class ActivityLogTest extends TestCase
 
     public function test_request_activity_details_are_fetched_on_demand(): void
     {
-        $actor = User::factory()->create();
-        $actor->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+        $actor = $this->workspaceUser();
         $activity = Activity::create([
             'log_name' => 'request',
             'description' => 'POST test',
             'event' => 'post',
             'user_id' => $actor->id,
-            'properties' => [
+            'properties' => ['fiscal_year_id' => config('active-fiscal-year-id'),
                 'route' => 'test',
                 'models' => [[
                     'model_type' => FiscalYear::class,
@@ -221,15 +223,14 @@ class ActivityLogTest extends TestCase
             ],
         ]);
 
-        $response = $this->actingAs($actor)->getJson(route('management.activity-logs.details', $activity));
+        $response = $this->actingAs($actor)->getJson(route('activity-logs.details', $activity));
 
         $response->assertOk()->assertJsonPath('html', fn (string $html): bool => str_contains($html, 'Acme'));
     }
 
     public function test_model_activity_details_are_fetched_on_demand(): void
     {
-        $actor = User::factory()->create();
-        $actor->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+        $actor = $this->workspaceUser();
         $fiscalYear = FiscalYear::factory()->create(['year' => 1405]);
 
         $activity = Activity::create([
@@ -239,13 +240,13 @@ class ActivityLogTest extends TestCase
             'user_id' => $actor->id,
             'subject_type' => FiscalYear::class,
             'subject_id' => $fiscalYear->id,
-            'properties' => [
+            'properties' => ['fiscal_year_id' => config('active-fiscal-year-id'),
                 'model_label' => 'Seeded fiscal year',
                 'attributes' => ['year' => $fiscalYear->year],
             ],
         ]);
 
-        $response = $this->actingAs($actor)->getJson(route('management.activity-logs.details', $activity));
+        $response = $this->actingAs($actor)->getJson(route('activity-logs.details', $activity));
 
         $response->assertOk()->assertJsonPath('html', fn (string $html): bool => str_contains($html, 'year'));
     }
@@ -403,16 +404,16 @@ class ActivityLogTest extends TestCase
 
     public function test_activity_log_can_be_filtered_by_action_company_and_date(): void
     {
-        $superAdmin = User::factory()->create();
-        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+        $superAdmin = $this->workspaceUser();
         $fiscalYear = FiscalYear::factory()->create(['year' => 1403]);
+        $superAdmin->fiscalYears()->attach($fiscalYear);
         $fiscalYear->company->update(['name' => 'Audit Company']);
 
         activity('model')
             ->causedBy($superAdmin)
             ->performedOn($fiscalYear->company)
             ->event('created')
-            ->withProperties([
+            ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'),
                 'fiscal_year_id' => $fiscalYear->id,
                 'model_label' => $fiscalYear->company->name,
                 'attributes' => ['name' => $fiscalYear->company->name],
@@ -421,11 +422,11 @@ class ActivityLogTest extends TestCase
         activity('request')
             ->causedBy($superAdmin)
             ->event('post')
-            ->withProperties(['route' => 'locale'])
+            ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'), 'route' => 'locale'])
             ->log('POST locale');
 
         $this->actingAs($superAdmin)
-            ->get(route('management.activity-logs.index', ['action' => 'created', 'fiscal_year_id' => $fiscalYear->id]))
+            ->get(route('activity-logs.index', ['action' => 'created', 'fiscal_year_id' => $fiscalYear->id]))
             ->assertOk()
             ->assertSee('Audit Company')
             ->assertSee(__('Company').' #'.$fiscalYear->company->id)
@@ -436,7 +437,7 @@ class ActivityLogTest extends TestCase
                 'label' => __('Company'),
             ]));
 
-        $this->get(route('management.activity-logs.index', ['action' => 'created']))
+        $this->get(route('activity-logs.index', ['action' => 'created']))
             ->assertOk()
             ->assertSee('Audit Company')
             ->assertSee('locale')
@@ -449,31 +450,30 @@ class ActivityLogTest extends TestCase
             ->assertDontSee('HTTP POST')
             ->assertDontSee(__('Request details'));
 
-        $this->get(route('management.activity-logs.index', ['search' => $superAdmin->email]))
+        $this->get(route('activity-logs.index', ['search' => $superAdmin->email]))
             ->assertOk()
             ->assertSee('Audit Company');
 
         $today = jdate('Y/m/d', now()->timestamp, tr_num: 'en');
 
-        $this->get(route('management.activity-logs.index', ['date_from' => $today, 'date_to' => $today]))
+        $this->get(route('activity-logs.index', ['date_from' => $today, 'date_to' => $today]))
             ->assertOk()
             ->assertSee('Audit Company');
     }
 
     public function test_activity_log_is_paginated(): void
     {
-        $superAdmin = User::factory()->create();
-        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+        $superAdmin = $this->workspaceUser();
 
         foreach (range(1, 26) as $index) {
             activity('request')
                 ->causedBy($superAdmin)
                 ->event('post')
-                ->log("POST audit.page.{$index}");
+                ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id')])->log("POST audit.page.{$index}");
         }
 
         $this->actingAs($superAdmin)
-            ->get(route('management.activity-logs.index'))
+            ->get(route('activity-logs.index'))
             ->assertOk()
             ->assertViewHas('activities', fn ($activities): bool => $activities->count() === 25 && $activities->lastPage() === 2)
             ->assertSee('page=2', false);
@@ -481,15 +481,14 @@ class ActivityLogTest extends TestCase
 
     public function test_request_and_its_model_change_are_shown_as_one_activity(): void
     {
-        $superAdmin = User::factory()->create();
-        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+        $superAdmin = $this->workspaceUser();
         $company = Company::factory()->create(['name' => 'Merged Company']);
 
         activity('model')
             ->causedBy($superAdmin)
             ->performedOn($company)
             ->event('updated')
-            ->withProperties([
+            ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'),
                 'route' => 'companies.update',
                 'model_label' => $company->name,
                 'attributes' => ['name' => 'Merged Company'],
@@ -499,7 +498,7 @@ class ActivityLogTest extends TestCase
         activity('request')
             ->causedBy($superAdmin)
             ->event('put')
-            ->withProperties([
+            ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'),
                 'route' => 'companies.update',
                 'method' => 'PUT',
                 'path' => "/companies/{$company->id}",
@@ -508,7 +507,7 @@ class ActivityLogTest extends TestCase
             ->log('PUT companies.update');
 
         $this->actingAs($superAdmin)
-            ->get(route('management.activity-logs.index'))
+            ->get(route('activity-logs.index'))
             ->assertOk()
             ->assertViewHas('activities', function ($activities): bool {
                 $row = $activities->getCollection()->first();
@@ -521,20 +520,19 @@ class ActivityLogTest extends TestCase
             ->assertSee('companies.update')
             ->assertSee(__('Company').' #'.$company->id);
         $requestActivity = Activity::query()->where('source', 'request')->latest('id')->firstOrFail();
-        $this->actingAs($superAdmin)->getJson(route('management.activity-logs.details', $requestActivity))->assertOk();
+        $this->actingAs($superAdmin)->getJson(route('activity-logs.details', $requestActivity))->assertOk();
     }
 
     public function test_store_activity_keeps_request_details_and_renders_created_fields_as_changes(): void
     {
-        $superAdmin = User::factory()->create();
-        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+        $superAdmin = $this->workspaceUser();
         $company = Company::factory()->create(['name' => 'Created Company']);
 
         activity('model')
             ->causedBy($superAdmin)
             ->performedOn($company)
             ->event('created')
-            ->withProperties([
+            ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'),
                 'route' => 'companies.store',
                 'model_label' => $company->name,
                 'attributes' => ['name' => $company->name, 'fiscal_year' => 1405],
@@ -543,7 +541,7 @@ class ActivityLogTest extends TestCase
         activity('request')
             ->causedBy($superAdmin)
             ->event('post')
-            ->withProperties([
+            ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'),
                 'route' => 'companies.store',
                 'method' => 'POST',
                 'path' => '/companies',
@@ -553,7 +551,7 @@ class ActivityLogTest extends TestCase
             ->log('POST companies.store');
 
         $this->actingAs($superAdmin)
-            ->get(route('management.activity-logs.index'))
+            ->get(route('activity-logs.index'))
             ->assertOk()
             ->assertViewHas('activities', function ($activities) use ($company): bool {
                 $row = $activities->getCollection()->first();
@@ -572,7 +570,7 @@ class ActivityLogTest extends TestCase
             ->assertSee(__('Company').' #'.$company->id)
             ->assertSee('127.0.0.1');
         $requestActivity = Activity::query()->where('source', 'request')->latest('id')->firstOrFail();
-        $this->actingAs($superAdmin)->getJson(route('management.activity-logs.details', $requestActivity))
+        $this->actingAs($superAdmin)->getJson(route('activity-logs.details', $requestActivity))
             ->assertOk()
             ->assertJsonPath('html', fn (string $html): bool => str_contains($html, 'Created Company'));
     }
@@ -595,12 +593,11 @@ class ActivityLogTest extends TestCase
 
     public function test_numbered_models_do_not_show_the_database_id_in_the_activity_header(): void
     {
-        $superAdmin = User::factory()->create();
-        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+        $superAdmin = $this->workspaceUser();
         $this->actingAs($superAdmin);
         $document = Document::create(['number' => 123]);
 
-        $this->get(route('management.activity-logs.index'))
+        $this->get(route('activity-logs.index'))
             ->assertOk()
             ->assertViewHas('activities', function ($activities) use ($document): bool {
                 $row = $activities->getCollection()->first(fn (array $activity): bool => $activity['modelId'] === $document->id);
@@ -611,8 +608,7 @@ class ActivityLogTest extends TestCase
 
     public function test_request_and_all_of_its_model_events_are_shown_as_one_activity(): void
     {
-        $superAdmin = User::factory()->create();
-        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+        $superAdmin = $this->workspaceUser();
         $firstCompany = Company::factory()->create(['name' => 'First related model']);
         $secondCompany = Company::factory()->create(['name' => 'Second related model']);
 
@@ -621,7 +617,7 @@ class ActivityLogTest extends TestCase
                 ->causedBy($superAdmin)
                 ->performedOn($company)
                 ->event('created')
-                ->withProperties([
+                ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'),
                     'route' => 'companies.store',
                     'model_label' => $company->name,
                     'attributes' => ['name' => $company->name],
@@ -632,7 +628,7 @@ class ActivityLogTest extends TestCase
         activity('request')
             ->causedBy($superAdmin)
             ->event('post')
-            ->withProperties([
+            ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'),
                 'route' => 'companies.store',
                 'method' => 'POST',
                 'path' => '/companies',
@@ -641,7 +637,7 @@ class ActivityLogTest extends TestCase
             ->log('POST companies.store');
 
         $this->actingAs($superAdmin)
-            ->get(route('management.activity-logs.index'))
+            ->get(route('activity-logs.index'))
             ->assertOk()
             ->assertViewHas('activities', function ($activities) use ($firstCompany, $secondCompany): bool {
                 $row = $activities->getCollection()->first();
@@ -655,14 +651,13 @@ class ActivityLogTest extends TestCase
             ->assertSee(__('Company').' #'.$firstCompany->id)
             ->assertSee(__('Company').' #'.$secondCompany->id);
         $requestActivity = Activity::query()->where('source', 'request')->latest('id')->firstOrFail();
-        $this->actingAs($superAdmin)->getJson(route('management.activity-logs.details', $requestActivity))
+        $this->actingAs($superAdmin)->getJson(route('activity-logs.details', $requestActivity))
             ->assertOk()->assertJsonPath('html', fn (string $html): bool => str_contains($html, 'Parent request'));
     }
 
     public function test_merged_changes_identify_their_affected_model(): void
     {
-        $superAdmin = User::factory()->create();
-        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+        $superAdmin = $this->workspaceUser();
         $firstCompany = Company::factory()->create();
         $secondCompany = Company::factory()->create();
 
@@ -671,7 +666,7 @@ class ActivityLogTest extends TestCase
                 ->causedBy($superAdmin)
                 ->performedOn($company)
                 ->event('updated')
-                ->withProperties([
+                ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'),
                     'route' => 'companies.update',
                     'attributes' => ['name' => "After {$company->id}"],
                     'old' => ['name' => "Before {$company->id}"],
@@ -682,11 +677,11 @@ class ActivityLogTest extends TestCase
         activity('request')
             ->causedBy($superAdmin)
             ->event('put')
-            ->withProperties(['route' => 'companies.update', 'method' => 'PUT'])
+            ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'), 'route' => 'companies.update', 'method' => 'PUT'])
             ->log('PUT companies.update');
 
         $response = $this->actingAs($superAdmin)
-            ->get(route('management.activity-logs.index'));
+            ->get(route('activity-logs.index'));
 
         $response
             ->assertOk()
@@ -706,8 +701,7 @@ class ActivityLogTest extends TestCase
 
     public function test_request_and_model_events_are_merged_before_pagination(): void
     {
-        $superAdmin = User::factory()->create();
-        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+        $superAdmin = $this->workspaceUser();
         $firstCompany = Company::factory()->create();
         $secondCompany = Company::factory()->create();
 
@@ -716,26 +710,26 @@ class ActivityLogTest extends TestCase
                 ->causedBy($superAdmin)
                 ->performedOn($company)
                 ->event('created')
-                ->withProperties(['route' => 'companies.store'])
+                ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'), 'route' => 'companies.store'])
                 ->log('created');
         }
 
         activity('request')
             ->causedBy($superAdmin)
             ->event('post')
-            ->withProperties(['route' => 'companies.store', 'method' => 'POST'])
+            ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'), 'route' => 'companies.store', 'method' => 'POST'])
             ->log('POST companies.store');
 
         foreach (range(1, 24) as $index) {
             activity('request')
                 ->causedBy($superAdmin)
                 ->event('post')
-                ->withProperties(['route' => "audit.page.{$index}", 'method' => 'POST'])
+                ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'), 'route' => "audit.page.{$index}", 'method' => 'POST'])
                 ->log("POST audit.page.{$index}");
         }
 
         $this->actingAs($superAdmin)
-            ->get(route('management.activity-logs.index'))
+            ->get(route('activity-logs.index'))
             ->assertOk()
             ->assertViewHas('activities', function ($activities) use ($firstCompany, $secondCompany): bool {
                 $row = $activities->getCollection()->last();
@@ -751,24 +745,23 @@ class ActivityLogTest extends TestCase
 
     public function test_unrelated_request_and_model_rows_are_not_merged(): void
     {
-        $superAdmin = User::factory()->create();
-        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+        $superAdmin = $this->workspaceUser();
         $company = Company::factory()->create();
 
         activity('model')
             ->causedBy($superAdmin)
             ->performedOn($company)
             ->event('updated')
-            ->withProperties(['route' => 'companies.update', 'attributes' => ['name' => 'Changed'], 'old' => ['name' => 'Before']])
+            ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'), 'route' => 'companies.update', 'attributes' => ['name' => 'Changed'], 'old' => ['name' => 'Before']])
             ->log('updated');
         activity('request')
             ->causedBy($superAdmin)
             ->event('put')
-            ->withProperties(['route' => 'users.update', 'method' => 'PUT'])
+            ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'), 'route' => 'users.update', 'method' => 'PUT'])
             ->log('PUT users.update');
 
         $this->actingAs($superAdmin)
-            ->get(route('management.activity-logs.index'))
+            ->get(route('activity-logs.index'))
             ->assertOk()
             ->assertViewHas('activities', fn ($activities): bool => $activities->count() === 2)
             ->assertSee('companies.update')
@@ -777,19 +770,18 @@ class ActivityLogTest extends TestCase
 
     public function test_activity_details_have_responsive_mobile_and_desktop_change_layouts(): void
     {
-        $superAdmin = User::factory()->create();
-        $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+        $superAdmin = $this->workspaceUser();
         $company = Company::factory()->create();
 
         activity('model')
             ->causedBy($superAdmin)
             ->performedOn($company)
             ->event('updated')
-            ->withProperties(['attributes' => ['name' => 'After'], 'old' => ['name' => 'Before']])
+            ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'), 'attributes' => ['name' => 'After'], 'old' => ['name' => 'Before']])
             ->log('updated');
 
         $this->actingAs($superAdmin)
-            ->get(route('management.activity-logs.index'))
+            ->get(route('activity-logs.index'))
             ->assertOk()
             ->assertSee('aria-controls="activity-details-', false)
             ->assertSee('aria-controls="activity-details-', false);
@@ -854,7 +846,7 @@ class ActivityLogTest extends TestCase
             ->assertOk()
             ->assertSee(__('Activity records'))
             ->assertDontSee(__('Recent activity'))
-            ->assertSee(route('management.activity-logs.index'), false)
+            ->assertDontSee(route('activity-logs.index'), false)
             ->assertViewHas('activityMetrics', fn (array $metrics): bool => $metrics === [
                 'total' => 2,
             ])
@@ -980,5 +972,19 @@ class ActivityLogTest extends TestCase
 
         $this->actingAs($firstUser)->get('/test/activity-log/resolved-actor')->assertOk()->assertJsonPath('actor_id', $firstUser->id);
         $this->actingAs($secondUser)->get('/test/activity-log/resolved-actor')->assertOk()->assertJsonPath('actor_id', $secondUser->id);
+    }
+
+    private function workspaceUser(): User
+    {
+        $user = User::factory()->create();
+        $year = FiscalYear::factory()->create(['year' => 1405]);
+        $user->fiscalYears()->attach($year);
+        $user->givePermissionTo([
+            Permission::firstOrCreate(['name' => 'activity-logs.index']),
+            Permission::firstOrCreate(['name' => 'activity-logs.details']),
+        ]);
+        config(['active-fiscal-year-id' => $year->id]);
+
+        return $user;
     }
 }

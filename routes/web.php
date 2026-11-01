@@ -31,12 +31,6 @@ Route::middleware(['auth', 'ensure-feature-enabled:email_verification'])->group(
 
 Route::middleware(['auth', 'permission:access-super-admin-panel', 'ensure-feature-enabled:email_verification'])->prefix('management')->group(function () {
     Route::get('/', [Controllers\HomeController::class, 'managementDashboard'])->name('management.dashboard');
-    Route::get('/activity-logs', [Controllers\Management\ActivityLogController::class, 'index'])
-        ->middleware('permission:access-super-admin-panel|activity-logs.index')
-        ->name('management.activity-logs.index');
-    Route::get('/activity-logs/{activity}/details', [Controllers\Management\ActivityLogController::class, 'details'])
-        ->middleware('permission:access-super-admin-panel|activity-logs.details')
-        ->whereNumber('activity')->name('management.activity-logs.details');
     Route::get('/settings', [Controllers\AboutController::class, 'index'])->name('management.settings');
     Route::get('/users/{user}', [Controllers\Management\UserController::class, 'show'])->whereNumber('user')->name('users.show');
     Route::post('/users/{user}/verify', [Controllers\Management\UserController::class, 'verify'])->name('users.verify');
@@ -67,6 +61,9 @@ Route::group(['middleware' => ['auth', 'ensure-employee', 'ensure-feature-enable
 });
 
 Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabled:email_verification', 'fiscal-year-open']], function () {
+    Route::get('activity-logs', [Controllers\ActivityLogController::class, 'index'])->name('activity-logs.index');
+    Route::get('activity-logs/{activity}/details', [Controllers\ActivityLogController::class, 'details'])
+        ->whereNumber('activity')->name('activity-logs.details');
     Route::get('api-tokens', [Controllers\ApiTokenController::class, 'index'])->name('api-tokens.index');
     Route::get('api-tokens/create', [Controllers\ApiTokenController::class, 'create'])->name('api-tokens.create');
     Route::post('api-tokens', [Controllers\ApiTokenController::class, 'store'])->name('api-tokens.store');

@@ -42,12 +42,6 @@
             'M15 7a4 4 0 1 0-7.9 1H3v4h3v3h3v-3h2.1A4 4 0 0 0 15 7Z',
         ],
         [
-            __('Activity log'),
-            route('management.activity-logs.index'),
-            request()->routeIs('management.activity-logs.*'),
-            'M4 19V9m5 10V5m5 14v-7m5 7V3',
-        ],
-        [
             __('Settings'),
             route('management.settings'),
             request()->routeIs('management.settings'),

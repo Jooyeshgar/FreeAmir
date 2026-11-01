@@ -1,14 +1,14 @@
-<x-super-admin-layout :title="__('Activity log')">
+<x-app-layout :title="__('Activity log')">
     <div class="min-w-0 max-w-full overflow-x-clip">
         <section class="mb-6 px-2 flex flex-col justify-between gap-4 sm:flex-row sm:items-end mt-2">
             <div>
                 <p class="text-xs font-bold uppercase tracking-[0.16em] text-emerald-600 dark:text-emerald-400">
-                    {{ __('System') }}</p>
+                    {{ __('Workspace') }}</p>
                 <h1 class="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
                     {{ __('Activity log') }}
                 </h1>
                 <p class="mt-2 max-w-2xl text-sm text-slate-500 dark:text-slate-400">
-                    {{ __('Review user actions and model changes across every company.') }}</p>
+                    {{ __('Review user actions and model changes in your accessible companies.') }}</p>
             </div>
 
             <div
@@ -22,10 +22,7 @@
                     ])></span>
                     {{ $recordingStatusLabel }}
                 </span>
-                <a href="{{ route('management.settings') }}"
-                    class="btn btn-outline btn-sm w-full sm:w-auto md:w-full lg:w-auto">
-                    {{ __('Settings') }}
-                </a>
+
             </div>
         </section>
 
@@ -69,12 +66,12 @@
                         {{ __('Narrow activity by user, company, model, action, or date.') }}</p>
                 </div>
                 @if ($activeFilterCount > 0)
-                    <a href="{{ route('management.activity-logs.index') }}"
+                    <a href="{{ route('activity-logs.index') }}"
                         class="btn btn-ghost btn-sm w-full sm:w-auto md:w-full lg:w-auto">{{ __('Clear filters') }}</a>
                 @endif
             </header>
 
-            <form action="{{ route('management.activity-logs.index') }}" method="GET"
+            <form action="{{ route('activity-logs.index') }}" method="GET"
                 class="grid gap-x-4 gap-y-4 p-4 sm:grid-cols-2 sm:p-5 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-5"
                 x-data>
                 <label class="form-control sm:col-span-2 md:col-span-1 lg:col-span-2 xl:col-span-1">
@@ -176,7 +173,7 @@
                         {{ __('Apply filters') }}
                     </button>
                     @if ($activeFilterCount > 0)
-                        <a href="{{ route('management.activity-logs.index') }}"
+                        <a href="{{ route('activity-logs.index') }}"
                             class="btn btn-ghost w-full sm:w-auto md:w-full lg:w-auto">{{ __('Reset') }}</a>
                     @endif
                 </div>
@@ -245,10 +242,10 @@
                                 class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">{{ __('Impersonated account') }}:
                                 {{ $activity['impersonatedUserName'] }}</span>
                         @endif
-                        @if ($activity['hasDetails'])
+                        @if ($activity['hasDetails'] && auth()->user()->can('activity-logs.details'))
                             <button type="button"
                                 class="inline-flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20 transition hover:bg-emerald-100 sm:h-7 sm:w-7 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-950/70"
-                                @click="detailsOpen = ! detailsOpen; if (! detailsLoaded && ! detailsLoading) { detailsLoading = true; fetch('{{ route('management.activity-logs.details', $activity['detailsActivityId'] ?? $activity['id']) }}', { headers: { Accept: 'application/json' } }).then(response => response.json()).then(data => { detailsHtml = data.html; detailsLoaded = true; detailsOpen = true; }).finally(() => detailsLoading = false); }"
+                                @click="detailsOpen = ! detailsOpen; if (! detailsLoaded && ! detailsLoading) { detailsLoading = true; fetch('{{ route('activity-logs.details', $activity['detailsActivityId'] ?? $activity['id']) }}', { headers: { Accept: 'application/json' } }).then(response => response.json()).then(data => { detailsHtml = data.html; detailsLoaded = true; detailsOpen = true; }).finally(() => detailsLoading = false); }"
                                 :aria-expanded="detailsOpen" aria-controls="activity-details-{{ $activity['id'] }}"
                                 aria-label="{{ __('Details') }}" title="{{ __('Details') }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
@@ -262,7 +259,7 @@
                         @endif
                     </div>
 
-                    @if ($activity['hasDetails'])
+                    @if ($activity['hasDetails'] && auth()->user()->can('activity-logs.details'))
                         <div id="activity-details-{{ $activity['id'] }}" x-cloak x-show="detailsOpen"
                             class="border-slate-100 pt-4 dark:border-slate-800">
                             @if ($activity['requestContext'])
@@ -301,7 +298,7 @@
                         {{ $activeFilterCount > 0 ? __('Try changing or clearing your filters.') : __('New user actions and model changes will appear here.') }}
                     </p>
                     @if ($activeFilterCount > 0)
-                        <a href="{{ route('management.activity-logs.index') }}"
+                        <a href="{{ route('activity-logs.index') }}"
                             class="btn btn-outline btn-sm mt-5">{{ __('Clear filters') }}</a>
                     @endif
                 </div>
@@ -314,4 +311,4 @@
                 {{ $activities->links() }}</div>
         @endif
     </div>
-</x-super-admin-layout>
+</x-app-layout>

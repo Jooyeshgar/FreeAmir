@@ -198,7 +198,7 @@ class ActivityLogService
      */
     public function index(array $filters): array
     {
-        $query = Activity::query()->selectRaw("activity_log.*, CASE WHEN source = 'request' THEN JSON_REMOVE(details, '$.models') ELSE details END AS details");
+        $query = $this->visibleActivities()->selectRaw("activity_log.*, CASE WHEN source = 'request' THEN JSON_REMOVE(details, '$.models') ELSE details END AS details");
 
         $query->when($filters['search'] ?? null, function ($query, string $search) {
             $query->where(function ($query) use ($search) {
@@ -244,12 +244,56 @@ class ActivityLogService
         return [
             'activities' => $activities,
             'metrics' => $this->metrics(),
-            'users' => User::query()->whereIn('id', Activity::query()->whereNotNull('user_id')->select('user_id'))->orderBy('name')->get(['id', 'name', 'email']),
+            'users' => User::query()->whereIn('id', $this->visibleActivities()->whereNotNull('user_id')->select('user_id'))->orderBy('name')->get(['id', 'name', 'email']),
             'impersonatedUsers' => User::query()->whereIn('id', $impersonatedUserIds)->get(['id', 'name', 'email'])->keyBy('id'),
-            'fiscalYears' => FiscalYear::query()->with('company:id,name')->orderByDesc('year')->get(['id', 'company_id', 'year']),
+            'fiscalYears' => FiscalYear::query()->with('company:id,name')->whereIn('id', $this->visibleFiscalYearIds())->orderByDesc('year')->get(['id', 'company_id', 'year']),
             'modelTypes' => $this->availableModelTypes(),
             'filters' => $filters,
         ];
+    }
+
+    public function findVisible(int|string $id): Activity
+    {
+        return $this->visibleActivities()->findOrFail($id);
+    }
+
+    private function visibleActivities(): Builder
+    {
+        $query = Activity::query();
+        $user = auth()->user();
+
+        if (! $user) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        $fiscalYearIds = $this->visibleFiscalYearIds();
+
+        if ($fiscalYearIds->isEmpty()) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        // Request snapshots and input cannot be separated safely across tenants.
+        // Only expose an aggregate when every recorded fiscal year is accessible.
+        $allowed = $fiscalYearIds->map(fn ($id): int => (int) $id)->values()->toJson();
+        if ($query->getConnection()->getDriverName() === 'sqlite') {
+            $query->whereRaw("NOT EXISTS (SELECT 1 FROM json_each(details, '$.fiscal_year_ids') AS fiscal_year WHERE fiscal_year.value NOT IN (SELECT value FROM json_each(?)))", [$allowed]);
+        } else {
+            $query->whereRaw("JSON_CONTAINS(?, COALESCE(JSON_EXTRACT(details, '$.fiscal_year_ids'), JSON_ARRAY()))", [$allowed]);
+        }
+
+        return $query->where(function (Builder $query) use ($fiscalYearIds): void {
+            foreach ($fiscalYearIds as $id) {
+                $query->orWhere('details->fiscal_year_id', $id)
+                    ->orWhereJsonContains('details->fiscal_year_ids', $id);
+            }
+        })->where(function (Builder $query) use ($fiscalYearIds): void {
+            $query->whereNull('details->fiscal_year_id')->orWhereIn('details->fiscal_year_id', $fiscalYearIds);
+        });
+    }
+
+    private function visibleFiscalYearIds(): Collection
+    {
+        return auth()->user()?->fiscalYears()->pluck('fiscal_years.id') ?? collect();
     }
 
     private function paginateGroupedActivities(Builder $query): LengthAwarePaginator
@@ -346,19 +390,22 @@ class ActivityLogService
      */
     private function metrics(): array
     {
+        $activities = $this->visibleActivities();
+
         return [
-            'total' => Activity::query()->count(),
-            'today' => Activity::query()->whereDate('created_at', Carbon::today())->count(),
-            'model' => Activity::query()->where('source', 'model')->count()
-                + Activity::query()->where('source', 'request')->whereJsonLength('details->models', '>', 0)->count(),
-            'request' => Activity::query()->where('source', 'request')->count(),
+            'total' => (clone $activities)->count(),
+            'today' => (clone $activities)->whereDate('created_at', Carbon::today())->count(),
+            'model' => (clone $activities)->where('source', 'model')->count()
+                + (clone $activities)->where('source', 'request')->whereJsonLength('details->models', '>', 0)->count(),
+            'request' => (clone $activities)->where('source', 'request')->count(),
         ];
     }
 
     private function availableModelTypes(): Collection
     {
-        $directTypes = Activity::query()->whereNotNull('model_type')->distinct()->pluck('model_type');
-        $aggregatedTypes = Activity::query()->where('source', 'request')->whereNotNull('details')
+        $visible = $this->visibleActivities();
+        $directTypes = (clone $visible)->whereNotNull('model_type')->distinct()->pluck('model_type');
+        $aggregatedTypes = (clone $visible)->where('source', 'request')->whereNotNull('details')
             ->pluck('details')
             ->flatMap(fn (mixed $details): array => (array) data_get(
                 is_string($details) ? json_decode($details, true) : $details,

@@ -350,3 +350,7 @@
         </ul>
     </details>
 </li>
+
+@can('activity-logs.index')
+    <li><a href="{{ route('activity-logs.index') }}">{{ __('Activity log') }}</a></li>
+@endcan
