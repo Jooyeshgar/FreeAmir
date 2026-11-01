@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\GlobalConfigService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class AboutController extends Controller
 {
-    public function index(Request $request)
+    public function __construct(private readonly GlobalConfigService $globalConfigService) {}
+
+    public function index()
     {
         $dbConnected = false;
         $dbDriver = config('database.default');
@@ -15,6 +19,23 @@ class AboutController extends Controller
             DB::connection()->getPdo();
             $dbConnected = true;
         } catch (\Exception $e) {
+        }
+
+        $stored = $this->globalConfigService->all();
+        $options = [
+            'app_env' => ['local' => __('local'), 'production' => __('production')],
+            'app_debug' => ['true' => __('Enabled'), 'false' => __('Disabled')],
+            'app_locale' => ['fa' => __('Persian'), 'en' => __('English')],
+            'app_registration' => ['true' => __('Enabled'), 'false' => __('Disabled')],
+            'app_email_verification' => ['true' => __('Enabled'), 'false' => __('Disabled')],
+        ];
+        $gcSettings = [];
+        foreach ($this->settingTitles() as $key => $title) {
+            $gcSettings[$key] = [
+                'title' => $title,
+                'current' => $stored[$key],
+                'options' => $options[$key],
+            ];
         }
 
         return view('about', [
@@ -28,6 +49,35 @@ class AboutController extends Controller
             'locale' => app()->getLocale(),
             'timezone' => config('app.timezone'),
             'serverOs' => PHP_OS,
+            'gcSettings' => $gcSettings,
         ]);
+    }
+
+    public function updateGlobalConfigs(Request $request)
+    {
+        $validated = $request->validate([
+            'app_env' => ['nullable', Rule::in($this->globalConfigService::SETTINGS['app_env'])],
+            'app_locale' => ['nullable', Rule::in($this->globalConfigService::SETTINGS['app_locale'])],
+            'app_debug' => ['nullable', Rule::in($this->globalConfigService::SETTINGS['app_debug'])],
+            'app_registration' => ['nullable', Rule::in($this->globalConfigService::SETTINGS['app_registration'])],
+            'app_email_verification' => ['nullable', Rule::in($this->globalConfigService::SETTINGS['app_email_verification'])],
+        ]);
+
+        $this->globalConfigService->update($validated);
+
+        $updated = implode(', ', array_intersect_key($this->settingTitles(), $validated));
+
+        return redirect()->route('about')->with('success', __(':setting updated successfully.', ['setting' => $updated]));
+    }
+
+    private function settingTitles(): array
+    {
+        return [
+            'app_env' => __('about.environment'),
+            'app_debug' => __('about.debug_mode'),
+            'app_locale' => __('about.locale'),
+            'app_registration' => __('about.registration'),
+            'app_email_verification' => __('about.email_verification'),
+        ];
     }
 }
