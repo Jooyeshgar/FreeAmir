@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Unit\Extensions;
+namespace Tests\Feature\Extensions;
 
 use App\Extensions\Contracts\InvoiceExtension;
 use App\Extensions\InvoiceExtensionRegistry;
