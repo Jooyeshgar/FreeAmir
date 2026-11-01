@@ -349,6 +349,7 @@ class ActivityLogService
         }
 
         $snapshotFiscalYearIds = collect([
+            data_get($model, 'fiscal_year_id'),
             data_get($model, 'attributes.fiscal_year_id'),
             data_get($model, 'old.fiscal_year_id'),
         ])->filter()->map(fn ($id): int => (int) $id);
