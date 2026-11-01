@@ -10,7 +10,7 @@ use RuntimeException;
 
 class ConfigSeeder extends Seeder
 {
-    public function run(?int $fiscalYearId = null): void
+    public function run(?int $fiscalYearId = null, bool $includeGlobalSettings = true): void
     {
         $fiscalYearId ??= (int) getActiveFiscalYear();
         $configs = [
@@ -56,6 +56,10 @@ class ConfigSeeder extends Seeder
         Config::upsert($configs, ['key', 'fiscal_year_id'], ['type', 'category', 'value', 'desc']);
         foreach ($configs as $config) {
             config(['amir.'.$config['key'] => $config['value']]);
+        }
+
+        if (! $includeGlobalSettings) {
+            return;
         }
 
         foreach (['app_env', 'app_locale', 'app_debug', 'app_registration', 'app_email_verification', 'app_activity_logger_enabled'] as $key) {

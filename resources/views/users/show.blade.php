@@ -35,15 +35,6 @@
             </div>
 
             <div class="flex flex-wrap gap-2">
-                @if (! $user->hasVerifiedEmail() && auth()->user()->can('access-super-admin-panel'))
-                    <form action="{{ route('users.verify', $user) }}" method="post" onsubmit="return confirm('{{ __('Are you sure you want to verify this user?') }}')">
-                        @csrf
-                        <button type="submit" class="btn btn-sm gap-1.5 border-emerald-500 bg-emerald-500 text-white shadow-sm shadow-emerald-950/20 hover:border-emerald-400 hover:bg-emerald-400">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m5 12 4 4L19 6" /></svg>
-                            {{ __('Verify') }}
-                        </button>
-                    </form>
-                @endif
                 @if (auth()->user()->canImpersonateUser($user))
                     <form action="{{ route('users.impersonate', $user) }}" method="post" onsubmit="return confirm('{{ __('Are you sure you want to impersonate this user?') }}')">
                         @csrf
@@ -135,7 +126,7 @@
                         @forelse ($user->fiscalYears as $fiscalYear)
                             <tr class="border-slate-200 align-top transition-colors odd:bg-white even:bg-slate-50/70 hover:bg-indigo-50/70 dark:border-slate-800 dark:odd:bg-slate-900 dark:even:bg-slate-950/40 dark:hover:bg-indigo-950/25">
                                 <td class="min-w-52">
-                                    <a href="{{ route('companies.show', $fiscalYear->company) }}" class="font-medium text-slate-900 transition hover:text-indigo-700 hover:underline dark:text-slate-100 dark:hover:text-indigo-300">{{ $fiscalYear->company->name }}</a>
+                                    <a href="{{ route('companies.index') }}" class="font-medium text-slate-900 transition hover:text-indigo-700 hover:underline dark:text-slate-100 dark:hover:text-indigo-300">{{ $fiscalYear->company->name }}</a>
                                     <p class="mt-1 max-w-56 truncate text-xs text-slate-500">{{ $fiscalYear->company->address ? localizeNumber($fiscalYear->company->address) : __('No address') }}</p>
                                 </td>
                                 <td class="whitespace-nowrap font-medium">{{ localizeNumber($fiscalYear->year) }}</td>

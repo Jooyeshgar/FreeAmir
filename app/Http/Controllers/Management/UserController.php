@@ -4,11 +4,9 @@ namespace App\Http\Controllers\Management;
 
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
-use App\Models\FiscalYear;
 use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
-use Illuminate\Auth\Events\Verified;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,16 +26,15 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $actor = auth()->user();
-        $isManagementUserIndex = $request->session()->get('interface_mode') === 'management' && $actor->can('access-super-admin-panel');
 
         $users = User::query()
-            ->unless($actor->can('access-super-admin-panel'), function ($query) use ($actor) {
+            ->where(function ($query) use ($actor) {
                 $fiscalYearIds = $actor->fiscalYears()->pluck('fiscal_years.id');
 
                 $query->whereHas('fiscalYears', fn ($query) => $query->where('fiscal_years.id', getActiveFiscalYear()))
                     ->whereDoesntHave('fiscalYears', fn ($query) => $query->whereNotIn('fiscal_years.id', $fiscalYearIds));
             })
-            ->unless($isManagementUserIndex, fn ($query) => $query
+            ->where(fn ($query) => $query
                 ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'Super-Admin'))
                 ->whereDoesntHave('permissions', fn ($query) => $query->where('name', 'access-super-admin-panel'))
                 ->whereDoesntHave('roles.permissions', fn ($query) => $query->where('name', 'access-super-admin-panel')))
@@ -56,9 +53,7 @@ class UserController extends Controller
             ->paginate(12)
             ->withQueryString();
 
-        $view = $isManagementUserIndex ? 'users.index' : 'users.workspace-index';
-
-        return view($view, compact('users'));
+        return view('users.workspace-index', compact('users'));
     }
 
     /**
@@ -115,12 +110,10 @@ class UserController extends Controller
     }
 
     /**
-     * Display the specified resource.
+     * Display a workspace-scoped user profile.
      */
     public function show(User $user)
     {
-        abort_unless(auth()->user()->can('access-super-admin-panel'), 403);
-
         $this->ensureUserAccess($user);
         $user->load([
             'roles:id,name',
@@ -235,27 +228,12 @@ class UserController extends Controller
         return redirect()->to($this->impersonationLandingPage($user))->with('success', __('You are now impersonating :name.', ['name' => $user->name]));
     }
 
-    public function verify(Request $request, User $user): RedirectResponse
-    {
-        abort_unless($request->user()->can('access-super-admin-panel'), 403);
-
-        if (! $user->hasVerifiedEmail() && $user->markEmailAsVerified()) {
-            event(new Verified($user));
-        }
-
-        return back()->with('success', __('User verified successfully.'));
-    }
-
     public function leaveImpersonation(Request $request, ImpersonateManager $impersonateManager): RedirectResponse
     {
         abort_unless($impersonateManager->isImpersonating(), 403);
         abort_unless($impersonateManager->leave(), 500, __('Unable to stop impersonation.'));
 
         $request->session()->regenerate();
-
-        if ($request->user()->can('access-super-admin-panel')) {
-            $request->session()->put('interface_mode', 'management');
-        }
 
         return redirect()->route('users.index')->with('success', __('Impersonation ended.'));
     }
@@ -320,7 +298,7 @@ class UserController extends Controller
     {
         $user = auth()->user();
 
-        return ($user->can('access-super-admin-panel') ? FiscalYear::query() : $user->fiscalYears())->get();
+        return $user->fiscalYears()->get();
     }
 
     private function validateAssignments(Request $request): void
@@ -349,10 +327,6 @@ class UserController extends Controller
     private function ensureUserAccess(User $user): void
     {
         $actor = auth()->user();
-
-        if ($actor->can('access-super-admin-panel')) {
-            return;
-        }
 
         $fiscalYearIds = $actor->fiscalYears()->pluck('fiscal_years.id');
         $hasActiveFiscalYear = $user->fiscalYears()->where('fiscal_years.id', getActiveFiscalYear())->exists();
