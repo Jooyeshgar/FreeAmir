@@ -1,8 +1,3 @@
-@php
-    $filterKeys = ['q', 'direction', 'purpose', 'status', 'amount_min', 'amount_max', 'due_from', 'due_to', 'customer_id'];
-    $activeFilters = array_filter(request()->only($filterKeys), static fn ($value) => filled($value));
-@endphp
-
 <x-app-layout :title="__('Cheque Management')">
     <x-show-message-bags />
 
@@ -114,13 +109,6 @@
                 @if ($cheques->count())
                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                         @foreach ($cheques as $cheque)
-                            @php
-                                $isOverdue = $cheque->due_date->isPast() && ! in_array($cheque->status, [
-                                    \App\Enums\ChequeType::CLEARED,
-                                    \App\Enums\ChequeType::CANCELLED,
-                                    \App\Enums\ChequeType::RETURNED,
-                                ], true);
-                            @endphp
                             <div class="card rounded-lg border border-base-200 bg-base-100 shadow-sm transition hover:border-primary/30 hover:shadow-md dark:bg-base-200/40">
                                 <div class="card-body gap-4 p-4">
                                     <div class="flex items-start justify-between gap-3">
@@ -156,7 +144,7 @@
                                         </div>
                                         <div class="flex items-center justify-between gap-3">
                                             <span>{{ __('Due date') }}</span>
-                                            <span class="font-medium {{ $isOverdue ? 'text-error' : 'text-base-content' }}">{{ formatDate($cheque->due_date) }}</span>
+                                            <span class="font-medium {{ $overdueByChequeId[$cheque->id] ? 'text-error' : 'text-base-content' }}">{{ formatDate($cheque->due_date) }}</span>
                                         </div>
                                         <div class="flex items-center justify-between gap-3 border-t border-base-200 pt-2">
                                             <span>{{ __('Amount') }}</span>
@@ -176,15 +164,13 @@
                                             </a>
 
                                             @can('cheques.edit')
-                                                @if (! $cheque->has_lifecycle_actions)
-                                                    <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('cheques.edit', $cheque) }}"
-                                                        class="btn btn-ghost btn-square btn-xs" title="{{ __('Edit') }}">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                                d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L8.582 18.07a4.5 4.5 0 0 1-1.897 1.13L3 20.25l1.05-3.685a4.5 4.5 0 0 1 1.13-1.897l11.682-11.681Z" />
-                                                        </svg>
-                                                    </x-closed-year-action-link>
-                                                @endif
+                                                <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('cheques.edit', $cheque) }}"
+                                                    class="btn btn-ghost btn-square btn-xs" title="{{ __('Edit') }}">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                            d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L8.582 18.07a4.5 4.5 0 0 1-1.897 1.13L3 20.25l1.05-3.685a4.5 4.5 0 0 1 1.13-1.897l11.682-11.681Z" />
+                                                    </svg>
+                                                </x-closed-year-action-link>
                                             @endcan
 
                                             @can('cheques.destroy')

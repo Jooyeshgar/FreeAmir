@@ -1,0 +1,210 @@
+@php
+    $invoiceTitle = match ($invoice->invoice_type) {
+        App\Enums\InvoiceType::BUY => 'صورتحساب خرید کالا و خدمات',
+        App\Enums\InvoiceType::SELL => 'صورتحساب فروش کالا و خدمات',
+        App\Enums\InvoiceType::RETURN_BUY => 'صورتحساب برگشت از خرید',
+        App\Enums\InvoiceType::RETURN_SELL => 'صورتحساب برگشت از فروش',
+        App\Enums\InvoiceType::VOID => 'صورتحساب ابطال فروش',
+        default => __('Beginning Inventory'),
+    };
+@endphp
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>{{ $invoiceTitle }}</title>
+    <style>
+        {!! preg_replace('/\bsize\s*:\s*A4\s+(portrait|landscape)\s*;/i', 'size: $1;', Illuminate\Support\Facades\File::get(resource_path('css/invoice.css'))) !!}
+    </style>
+</head>
+
+<body>
+    @php
+        $company = $invoice->fiscalYear?->company;
+        $companyLogo = null;
+
+        if ($company?->logo && Illuminate\Support\Facades\Storage::disk('public')->exists($company->logo)) {
+            $logoExtension = strtolower(pathinfo($company->logo, PATHINFO_EXTENSION));
+            $logoMimeType = match ($logoExtension) {
+                'jpg', 'jpeg' => 'image/jpeg',
+                'png' => 'image/png',
+                'svg' => 'image/svg+xml',
+                default => 'application/octet-stream',
+            };
+            $companyLogo = 'data:'.$logoMimeType.';base64,'.base64_encode(
+                Illuminate\Support\Facades\Storage::disk('public')->get($company->logo)
+            );
+        }
+    @endphp
+
+    <table width="100%">
+        <tbody>
+            <tr>
+                <td class="invoiceInfo">{{ $invoice->taxID }}</td>
+                <td class="invoiceType" rowspan="2">
+                    {{ $invoiceTitle }}
+                </td>
+            </tr>
+            <tr>
+                <td class="invoiceInfo">
+                    شماره: <span class="red">{{ formatDocumentNumber($invoice->number) }}</span> -
+                    <span> تاریخ: {{ formatDate($invoice->date) }}</span>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <table class="contractTable" cellspacing="0" cellpadding="4">
+        <tbody>
+            <tr>
+                <td class="contractTitle" colspan="4">
+                    @if ($invoice->invoice_type == App\Enums\InvoiceType::BUY || $invoice->invoice_type == App\Enums\InvoiceType::RETURN_BUY)
+                        مشخصات خریدار
+                    @else
+                        مشخصات فروشنده
+                    @endif
+                </td>
+            </tr>
+            <tr>
+                <td class="contractSection" width="33%">
+                    شماره ملی: {{ localizeNumber($company?->national_code ?? '') }}<br />
+                    شماره تلفن: <bdo dir="ltr">{{ $invoice->customer->mobile ? localizeNumber($invoice->customer->mobile) : ($invoice->customer->phone ? localizeNumber($invoice->customer->phone) : '') }}</bdo>
+                </td>
+                <td class="contractSection" width="30%">
+                    شماره اقتصادی: {{ localizeNumber($company?->economical_code ?? '') }}<br />
+                    کد پستی ۱۰ رقمی: {{ localizeNumber($company?->postal_code ?? '') }}
+                </td>
+                <td class="contractSection" width="30%">
+                    {{ $company?->name }}<br />
+                    {{ $company?->address }}
+                </td>
+                <td class="logo" width="7%">
+                    @if ($companyLogo)
+                        <img src="{{ $companyLogo }}" width="70" height="70" align="left">
+                    @endif
+                </td>
+            </tr>
+
+            <tr>
+                <td class="contractTitle" colspan="4">
+                    @if ($invoice->invoice_type == App\Enums\InvoiceType::BUY || $invoice->invoice_type == App\Enums\InvoiceType::RETURN_BUY)
+                        مشخصات فروشنده
+                    @else
+                        مشخصات خریدار
+                    @endif
+                </td>
+            </tr>
+            <tr>
+                <td class="contractSection">
+                    شماره ملی:
+                    {{ isset($invoice->customer->personal_code) ? localizeNumber($invoice->customer->personal_code) : '' }}<br />
+                    شماره تلفن: <bdo
+                        dir="ltr">{{ isset($invoice->customer->phone) ? localizeNumber($invoice->customer->phone) : '' }}</bdo>
+                </td>
+                <td class="contractSection">
+                    شماره اقتصادی:
+                    {{ isset($invoice->customer->ecnmcs_code) ? localizeNumber($invoice->customer->ecnmcs_code) : '' }}<br />
+                    کد پستی ۱۰ رقمی:
+                    {{ isset($invoice->customer->postal_code) ? localizeNumber($invoice->customer->postal_code) : '' }}
+                </td>
+                <td class="contractSection">
+                    {{ $invoice->customer->name }}<br />
+                    {{ $invoice->customer->address }}
+                </td>
+                <td class="contractSection"></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <table class="transactionsTable" cellspacing="0">
+        <tbody>
+            <tr>
+                <td class="transactionsHeader" width="12%">جمع مبلغ کل بعلاوه جمع مالیات و عوارض (ریال)</td>
+                <td class="transactionsHeader" width="12%">جمع مالیات و عوارض (ریال)</td>
+                <td class="transactionsHeader" width="12%">مبلغ کل پس از تخفیف (ریال)</td>
+                <td class="transactionsHeader" width="9%">مبلغ تخفیف</td>
+                <td class="transactionsHeader" width="9%">مبلغ کل (ریال)</td>
+                <td class="transactionsHeader" width="9%">مبلغ واحد (ریال)</td>
+                <td class="transactionsHeader" width="4%">واحد اندازه گیری</td>
+                <td class="transactionsHeader" width="5%">تعداد مقدار</td>
+                <td class="transactionsHeader" width="21%">شرح کالا یا خدمات</td>
+                <td class="transactionsHeader" width="6%">کد کالا</td>
+                <td class="transactionsHeaderIndex" width="2.5%">ردیف</td>
+            </tr>
+            @php
+                $invoiceTotalPrice = 0;
+                $invoiceTotalPriceAfterDiscount = 0;
+                $invoiceTotalDiscount = 0;
+            @endphp
+
+            @foreach ($invoice->items as $index => $invoiceItem)
+                @php
+                    $itemQuantity = $invoiceItem->quantity;
+                    $unitPrice = $invoiceItem->unit_price;
+                    $totalPrice = $itemQuantity * $unitPrice;
+                    $invoiceTotalPrice += $totalPrice;
+                    $discountPrice = $invoiceItem->unit_discount ?? 0;
+                    $invoiceTotalDiscount += $discountPrice;
+                    $totalPriceAfterDiscount = $totalPrice - $discountPrice;
+                    $invoiceTotalPriceAfterDiscount += $totalPriceAfterDiscount;
+                    $vatPrice = $invoiceItem->vat ?? 0;
+                    $total = $totalPriceAfterDiscount + $vatPrice ?? 0;
+                    $code = $invoiceItem->itemable->code ?? '';
+                @endphp
+                <tr>
+                    <td class="transactionsRow">{{ formatNumber($total) }}</td>
+                    <td class="transactionsRow">{{ formatNumber($vatPrice) }}</td>
+                    <td class="transactionsRow">{{ formatNumber($totalPriceAfterDiscount) }}</td>
+                    <td class="transactionsRow">{{ formatNumber($discountPrice) }}</td>
+                    <td class="transactionsRow">{{ formatNumber($totalPrice) }}</td>
+                    <td class="transactionsRow">{{ formatNumber($unitPrice) }}</td>
+                    <td class="transactionsRow"></td>
+                    <td class="transactionsRow">{{ formatNumber((int) $itemQuantity) }}</td>
+                    <td class="transactionsRow">
+                        {{ $invoiceItem->description ?? ($invoiceItem->itemable?->name ?? '') }}
+                    </td>
+                    <td class="transactionsRow">{{ localizeNumber($code) }}</td>
+                    <td class="transactionsRow transactionsRowIndex">{{ localizeNumber($index + 1) }}</td>
+                </tr>
+            @endforeach
+
+            <tr>
+                <td class="transactionsRow">{{ formatNumber($invoice->amount) }}</td>
+                <td class="transactionsRow">{{ formatNumber(abs($invoice->vat)) }}</td>
+                <td class="transactionsRow">{{ formatNumber($invoiceTotalPriceAfterDiscount) }}</td>
+                <td class="transactionsRow">{{ formatNumber($invoiceTotalDiscount) }}</td>
+                <td class="transactionsRow">{{ formatNumber($invoiceTotalPrice) }}</td>
+                <td colspan="6" class="totalInvoiceTransactions">جمع کل (ریال): {{ formatNumber($invoice->amount) }}
+                </td>
+            </tr>
+
+            <tr>
+                <td colspan="2" class="signature">مهر و امضاء خریدار</td>
+                <td colspan="3" class="signature">مهر و امضای فروشنده</td>
+                <td colspan="2" class="cashType">
+                    <label><span>غیر نقدی</span> <input type="checkbox" /></label>
+                </td>
+
+                <td class="cashType leftBorder">
+                    <label><span>نقدی</span> <input type="checkbox" /></label>
+                </td>
+
+                <td colspan="3" class="payType">:شرایط و نحوه فروش</td>
+            </tr>
+
+            <tr>
+                <td colspan="5"></td>
+                <td colspan="6" class="invoiceDesc">
+                    @if (strlen($invoice->description) < 3)
+                        :توضیحات
+                    @else
+                        توضیحات: {{ $invoice->description }}
+                    @endif
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+
+</html>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ChequeType;
+use App\Models\Cheque;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Services\ChequeService;
@@ -60,7 +61,15 @@ class PaymentController extends Controller
 
     public function update(Request $request, Invoice $invoice, Payment $payment)
     {
-        abort_unless($payment->invoice_id === $invoice->id && ! $payment->cheque_id, 404);
+        abort_unless($payment->invoice_id === $invoice->id, 404);
+
+        if ($payment->cheque_id) {
+            $cheque = Cheque::query()->findOrFail($payment->cheque_id);
+            $data = $this->chequeService->validateInvoiceCheque($request->all(), $invoice, $cheque);
+            $this->chequeService->update($cheque, $request->user(), $data);
+
+            return redirect()->route('invoices.show', $invoice)->with('success', __('Invoice payment cheque updated successfully.'));
+        }
 
         $normalized = array_replace($request->all(), [
             'amount' => convertToFloat($request->input('amount', 0)),
@@ -98,6 +107,7 @@ class PaymentController extends Controller
         abort_unless($direction, 422, __('This invoice type cannot be settled by cheque.'));
 
         $normalized = [
+            'title' => filled($request->input('title')) ? trim((string) $request->input('title')) : null,
             'amount' => convertToFloat($request->input('amount', 0)),
             'bank_service_fee' => $this->normalizeBankServiceFee($request),
             'sayad_number' => preg_replace('/\D/', '', toEnglish((string) $request->input('sayad_number'))),
@@ -112,6 +122,7 @@ class PaymentController extends Controller
         }
 
         $validated = Validator::make(array_replace($request->all(), $normalized), [
+            'title' => ['nullable', 'string', 'min:2', 'max:255'],
             'amount' => ['required', 'numeric', 'gt:0'],
             'bank_service_fee' => ['required', 'numeric', 'min:0'],
             'issue_date' => ['required', 'date'],

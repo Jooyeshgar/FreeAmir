@@ -1,12 +1,31 @@
-<!DOCTYPE html>
-<html>
+@php
+    $invoiceTitle = match ($invoice->invoice_type) {
+        App\Enums\InvoiceType::BUY => 'صورتحساب خرید کالا و خدمات',
+        App\Enums\InvoiceType::SELL => 'صورتحساب فروش کالا و خدمات',
+        App\Enums\InvoiceType::RETURN_BUY => 'صورتحساب برگشت از خرید',
+        App\Enums\InvoiceType::RETURN_SELL => 'صورتحساب برگشت از فروش',
+        App\Enums\InvoiceType::VOID => 'صورتحساب ابطال فروش',
+        default => __('Beginning Inventory'),
+    };
+@endphp
+<x-report-layout :title="$invoiceTitle">
+    @push('styles')
+        @vite('resources/css/invoice.css')
+        <style>
+            .printable main {
+                background-color: white;
+                width: auto;
+                max-width: 287mm;
+                direction: ltr;
+            }
 
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <link rel="stylesheet" href="{{ resource_path('css/invoice.css') }}">
-</head>
+            .printable td {
+                white-space: normal;
+                overflow: visible;
+            }
+        </style>
+    @endpush
 
-<body>
     @php
         $company = $invoice->fiscalYear?->company;
         $companyLogo = null;
@@ -25,22 +44,12 @@
         }
     @endphp
 
-    <table width="100%">
+    <table class="invoiceInfoTable">
         <tbody>
             <tr>
                 <td class="invoiceInfo">{{ $invoice->taxID }}</td>
                 <td class="invoiceType" rowspan="2">
-                    @if ($invoice->invoice_type == App\Enums\InvoiceType::BUY)
-                        صورتحساب خرید کالا و خدمات
-                    @elseif ($invoice->invoice_type == App\Enums\InvoiceType::SELL)
-                        صورتحساب فروش کالا و خدمات
-                    @elseif ($invoice->invoice_type == App\Enums\InvoiceType::RETURN_BUY)
-                        صورتحساب برگشت از خرید
-                    @elseif ($invoice->invoice_type == App\Enums\InvoiceType::RETURN_SELL)
-                        صورتحساب برگشت از فروش
-                    @elseif ($invoice->invoice_type == App\Enums\InvoiceType::VOID)
-                        صورتحساب ابطال فروش
-                    @endif
+                    {{ $invoiceTitle }}
                 </td>
             </tr>
             <tr>
@@ -180,13 +189,11 @@
                 <td colspan="2" class="signature">مهر و امضاء خریدار</td>
                 <td colspan="3" class="signature">مهر و امضای فروشنده</td>
                 <td colspan="2" class="cashType">
-                    <span>غیر نقدی</span>
-                    <input type="checkbox" />
+                    <label><span>غیر نقدی</span> <input type="checkbox" /></label>
                 </td>
 
                 <td class="cashType leftBorder">
-                    <span>نقدی</span>
-                    <input type="checkbox" />
+                    <label><span>نقدی</span> <input type="checkbox" /></label>
                 </td>
 
                 <td colspan="3" class="payType">:شرایط و نحوه فروش</td>
@@ -204,6 +211,12 @@
             </tr>
         </tbody>
     </table>
-</body>
-
-</html>
+    @push('scripts')
+        <script>
+            window.addEventListener('load', async () => {
+                await document.fonts.ready;
+                window.print();
+            });
+        </script>
+    @endpush
+</x-report-layout>

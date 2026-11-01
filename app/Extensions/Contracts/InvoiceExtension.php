@@ -29,4 +29,18 @@ interface InvoiceExtension
      * Add this extension's filters to the invoice query.
      */
     public function extendQuery(Builder $query, Request $request): void;
+
+    /**
+     * Return additional CSV column headers contributed by this extension.
+     *
+     * @return array<int, string>
+     */
+    public function csvHeaders(): array;
+
+    /**
+     * Return CSV column values for the given invoice matching the headers.
+     *
+     * @return array<int, string>
+     */
+    public function csvRow(Model $invoice): array;
 }

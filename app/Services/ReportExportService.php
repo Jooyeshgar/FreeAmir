@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Extensions\InvoiceExtensionRegistry;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Employee;
@@ -47,6 +48,7 @@ class ReportExportService
         private readonly DocumentImportExportService $documentExportService,
         private readonly TrialBalanceService $trialBalanceService,
         private readonly InventoryTurnoverService $inventoryTurnoverService,
+        private readonly ?InvoiceExtensionRegistry $invoiceExtensionRegistry = null,
     ) {}
 
     public function generate(string $export, array $filters): array
@@ -208,18 +210,22 @@ class ReportExportService
         $type = InvoiceType::tryFromName($request->invoice_type);
         $status = InvoiceStatus::tryFromName($request->status);
         $query = Invoice::with(['customer', 'document', 'items'])->orderByDesc('date')->orderByDesc('number');
+        $extensionRegistry = $this->invoiceExtensionRegistry ?? app(InvoiceExtensionRegistry::class);
+        $extensionRegistry->extendQuery($query, $request);
         $this->applyInvoiceFilters($query, $request, $type);
         $query->when($status !== null, fn ($invoice) => $invoice->where('status', $status));
+        $extensionHeaders = $extensionRegistry->csvHeaders();
         $headers = [__('Invoice Number'), __('Customer Name'), __('Date'), __('Document Number'), __('Before discounts and tax'),
-            __('Discounts'), __('Tax'), __('Amount'), __('Amount - Discounts')];
+            __('Discounts'), __('Tax'), __('Amount'), __('Amount - Discounts'), ...$extensionHeaders];
 
-        return $this->csv('invoices_'.now()->format('YmdHis').'.csv', $headers, function ($file) use ($query): void {
-            $query->chunk(200, function ($invoices) use ($file): void {
+        return $this->csv('invoices_'.now()->format('YmdHis').'.csv', $headers, function ($file) use ($query, $extensionRegistry): void {
+            $query->chunk(200, function ($invoices) use ($file, $extensionRegistry): void {
                 foreach ($invoices as $invoice) {
                     $subtotal = $invoice->items->sum(fn ($item) => (float) $item->quantity * (float) $item->unit_price);
                     $discounts = (float) $invoice->items->sum('unit_discount');
+                    $extensionValues = $extensionRegistry->csvRow($invoice);
                     fputcsv($file, [$invoice->number, $invoice->customer?->name, formatDate($invoice->date), $invoice->document?->number,
-                        $subtotal, $discounts, (float) $invoice->items->sum('vat'), (float) $invoice->amount - (float) $invoice->subtraction, $subtotal - $discounts]);
+                        $subtotal, $discounts, (float) $invoice->items->sum('vat'), (float) $invoice->amount - (float) $invoice->subtraction, $subtotal - $discounts, ...$extensionValues]);
                 }
             });
         });
@@ -348,12 +354,11 @@ class ReportExportService
 
     private function invoicePdf(array $filters): array
     {
-        $invoice = Invoice::with('fiscalYear', 'customer', 'items')->findOrFail($filters['invoice_id'] ?? null);
-        if (! $invoice->status->isApprovedOrSettled()) {
-            throw ValidationException::withMessages(['invoice_id' => __('Only approved and paid invoices can be emailed as PDF.')]);
-        }
+        $invoice = Invoice::with('fiscalYear.company', 'customer', 'items.itemable')->findOrFail($filters['invoice_id'] ?? null);
+        $draft = $invoice->invoice_type->isBeginningInventory() || ! $invoice->status->isApprovedOrSettled();
+        $view = $draft ? 'invoices.pdf-draft' : 'invoices.pdf-print';
 
-        return ['content' => PDF::loadView('invoices.print', compact('invoice'))->output(),
+        return ['content' => PDF::loadView($view, compact('invoice'), [], ['format' => 'A4', 'orientation' => $draft ? 'P' : 'L'])->output(),
             'filename' => 'invoice-'.formatDocumentNumber($invoice->number ?? $invoice->id).'.pdf', 'mime' => 'application/pdf'];
     }
 

@@ -1,14 +1,3 @@
-@php
-    $selectedDirectionValue = (string) old('direction', $cheque?->direction->value ?? $selectedDirection->value);
-    $payableDirectionValue = (string) \App\Enums\ChequeType::PAYABLE->value;
-    $directionTitle = $selectedDirectionValue === $payableDirectionValue ? __('Issue cheque') : __('Receive cheque');
-    $formTitle = $cheque ? __('Edit cheque') : $directionTitle;
-    $selectedBankAccountId = old('bank_account_id', $cheque?->bank_account_id ?? request('bank_account_id'));
-    $initialHistory = $cheque?->histories()->whereNull('from_status')->oldest('id')->first();
-    $initialFee = (float) $initialHistory?->bank_service_fee ?: ($initialHistory?->payment?->bank_service_fee ?? 0);
-    $selectedChequebookId = old('chequebook_id', $cheque?->chequebook_id ?? request('chequebook_id'));
-@endphp
-
 <x-app-layout :title="$formTitle">
     <x-show-message-bags />
 
@@ -50,7 +39,7 @@
                             <label for="purpose" class="label">{{ __('Purpose') }}</label>
                             <select id="purpose" name="purpose" class="select w-full border-slate-400">
                                 @foreach (\App\Enums\ChequeType::purposes() as $purpose)
-                                    <option value="{{ $purpose->value }}" @selected((string) old('purpose', $cheque?->purpose->value ?? \App\Enums\ChequeType::SETTLEMENT->value) === (string) $purpose->value)>
+                                    <option value="{{ $purpose->value }}" @selected((string) old('purpose', $selectedPurpose->value) === (string) $purpose->value)>
                                         {{ $purpose->label() }}
                                     </option>
                                 @endforeach
@@ -63,10 +52,6 @@
                         label_text_class="text-sm text-gray-500"></x-text-input>
 
                     <div class="col-span-2 md:col-span-1">
-                        @php
-                            $initialAccountSideId = old('customer_id', $cheque?->customer_id);
-                            $initialAccountSideValue = $initialAccountSideId ? "customer-{$initialAccountSideId}" : '';
-                        @endphp
                         <div class="w-full" x-data="{
                             accountSideId: @js((string) $initialAccountSideId),
                             selectedAccountSide: @js($initialAccountSideValue),

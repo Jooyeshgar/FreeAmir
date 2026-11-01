@@ -38,7 +38,10 @@
                 <tr class="{{ $isVoided ? 'text-gray-500' : '' }}">
                     <td class="px-4 py-2"><x-invoice-bookmark :invoice="$invoice" /></td>
                     <td class="px-4 py-2">
-                        <a href="{{ route('invoices.show', $invoice) }}" class="link link-hover">{{ formatDocumentNumber($invoice->number) }}</a>
+                        <div class="inline-flex items-center gap-1.5">
+                            <a href="{{ route('invoices.show', $invoice) }}" class="link link-hover">{{ formatDocumentNumber($invoice->number) }}</a>
+                            <x-extension-slot slot="invoice.index.row.badges" :invoice="$invoice" />
+                        </div>
                     </td>
                     <td class="px-4 py-2">
                         <a href="{{ route('customers.show', $invoice->customer) }}">{{ $invoice->customer->name ?? '' }}</a>

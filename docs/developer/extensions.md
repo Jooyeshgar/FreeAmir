@@ -51,7 +51,7 @@ checked by package endpoints.
 The host renders these registered package locations:
 
 - Navigation areas: `navigation.workspace.invoices` in the Invoices menu and `navigation.management` in the Management menu. Both are rendered by the host component.
-- View slots: `invoice.create.fields`, `invoice.edit.fields`, `invoice.show.panels`, `invoice.index.filters`.
+- View slots: `invoice.create.fields`, `invoice.edit.fields`, `invoice.show.panels`, `invoice.index.filters`, `invoice.index.row.badges`.
 
 Navigation registered in either area is rendered by the host's generic
 `<x-extension-navigation>` component. A package provides a stable `id`, translated `label`, named `route`,
@@ -93,6 +93,5 @@ Category-only operations must not change accounting amounts, postings, statuses,
 8. Transactional fiscal-year definition copying and derived-invoice inheritance.
 9. Package archive installation, integration verification, and delivery documentation.
 
-Each checkpoint is verified and committed separately. Installation from Nexus and an exact-head CI result
-are recorded only when they have actually been observed. See [local development](enterprise-development.md)
-for the Sail mount and database isolation commands.
+Each checkpoint is verified and committed separately. Installation and CI results are recorded only when
+they have actually been observed.
