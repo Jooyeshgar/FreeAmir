@@ -37,6 +37,66 @@ The `extendQuery()` handlers modify the same Eloquent builder. The host calls th
 and pagination are computed. Handlers should append constraints without discarding the host's fiscal-year or
 permission restrictions.
 
+## Navigation tree foundation (issue #453)
+
+The registry also accepts an immutable `App\Extensions\MenuItem` definition:
+
+```php
+$registry->register(new \App\Extensions\MenuItem(
+    id: 'example.categories',
+    label: 'example::messages.title',
+    route: 'example.index',
+    parent: 'core.management.system',
+    priority: 150,
+    permissions: ['example.view'],
+    permissionMode: 'any',
+    visible: static fn (array $context): bool => $context['fiscal_year_id'] !== null,
+    routeParameters: ['mode' => 'categories'],
+));
+```
+
+`parent: null` declares a root. Core IDs use the stable `core.*` namespace, including
+`core.invoices`, `core.management`, and `core.management.system`. Routes remain trusted
+named routes; route existence is checked by the renderer after providers finish booting.
+`routeParameters` contains fixed, named scalar or null values. It cannot retain request or
+model objects in the singleton. Permissions are a list; `permissionMode` accepts `any` or
+`all`. These are definitions: registration and `tree()` do not evaluate authorization or
+visibility callbacks, resolve the user, or cache a filtered tree.
+
+`tree()` assembles a fresh array of `['item' => MenuItem, 'children' => [...]]` nodes.
+Children can be registered before their parents. Siblings sort by priority, then ID.
+An unknown parent, self-reference, or disconnected parent cycle raises `LogicException`
+outside production. In production, the invalid branch and its descendants are omitted;
+valid roots remain available. Definitions remain registered and can be read again after
+a missing parent is registered. Null labels are retained in the definition tree for the
+renderer to filter; they are not an instruction to display an untitled group.
+
+The version 1 `register($id, $array)` / `items($area)` API retains its array fields,
+single permission, callback, metadata, defaults and ordering. The existing Blade
+component continues to consume it. In the new tree, legacy entries use these placements:
+
+| Legacy area | Parent | Core slot priority | Intended position |
+|---|---|---:|---|
+| `navigation.workspace.invoices` | `core.invoices` | 700 | After the existing invoice items at priorities 100–600 |
+| `navigation.management` | `core.management` | 400 | After the three existing groups at 100–300 and before About at 500 |
+
+The legacy item's own priority sorts only within that area's slot. It cannot move an old
+item across core siblings, even at an extreme integer priority. A new typed sibling at the
+slot's exact priority sorts before that legacy block. A legacy area outside these two
+names maps to its area string as a parent ID, without a special slot priority; that parent
+must also be registered when reading the tree.
+
+This checkpoint implements definitions and tree assembly. Core provider registration,
+permission filtering, recursive Blade rendering and active matching are later migration
+steps. Until that migration, typed items are available through the registry but are not
+displayed by the old area component. Reading `tree()` requires its parents to have been
+registered; the core parent definitions will be added in the provider step.
+
+The agreed active rule for the later renderer is to match the route and menu discriminator
+parameters exactly, including absence of `service_buy` for the ordinary Buy variant, while
+ignoring non-menu filters such as pagination and search. Merely matching the route name
+or a subset of the query would incorrectly activate several invoice variants at once.
+
 ## Host context
 
 Packages resolve `App\Extensions\Contracts\HostContext` for the current authenticated user and selected
