@@ -1,8 +1,7 @@
 <?php
 
-namespace App\Http\Controllers\Management;
+namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
 use App\Models\Activity;
 use App\Models\FiscalYear;
 use App\Services\ActivityLogService;
@@ -27,8 +26,6 @@ class ActivityLogController extends Controller
 
     public function index(Request $request): View
     {
-        $request->session()->put('interface_mode', 'management');
-
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
             'action' => ['nullable', Rule::in(['created', 'updated', 'deleted'])],
@@ -52,7 +49,7 @@ class ActivityLogController extends Controller
             ]);
         }
 
-        return view('super-admin.activity-logs.index', $this->viewData(
+        return view('activity-logs.index', $this->viewData(
             $this->activityLogService->index($filters),
             $request,
         ));
@@ -61,7 +58,7 @@ class ActivityLogController extends Controller
     public function details(Activity $activity): JsonResponse
     {
         abort_unless(in_array($activity->source, ['request', 'model'], true), 404);
-        $activity = Activity::query()->findOrFail($activity->id);
+        $activity = $this->activityLogService->findVisible($activity->id);
 
         $modelType = request()->query('model_type');
         $modelId = request()->query('model_id');
@@ -75,7 +72,7 @@ class ActivityLogController extends Controller
         $row = $this->activityRow($activity->load('user:id,name,email'), FiscalYear::query()->get()->keyBy('id'), collect());
 
         return response()->json([
-            'html' => view('super-admin.activity-logs._details', ['activity' => $row])->render(),
+            'html' => view('activity-logs._details', ['activity' => $row])->render(),
         ]);
     }
 
