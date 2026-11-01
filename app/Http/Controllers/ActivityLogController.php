@@ -26,6 +26,8 @@ class ActivityLogController extends Controller
 
     public function index(Request $request): View
     {
+        $request->session()->put('interface_mode', 'workspace');
+
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
             'action' => ['nullable', Rule::in(['created', 'updated', 'deleted'])],
@@ -69,7 +71,7 @@ class ActivityLogController extends Controller
             $activity->setAttribute('details', $details->put('models', $models->all()));
         }
 
-        $row = $this->activityRow($activity->load('user:id,name,email'), FiscalYear::query()->get()->keyBy('id'), collect());
+        $row = $this->activityRow($activity->load('user:id,name,email'), request()->user()->fiscalYears()->with('company:id,name')->get()->keyBy('id'), collect());
 
         return response()->json([
             'html' => view('activity-logs._details', ['activity' => $row])->render(),

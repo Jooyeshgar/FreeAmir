@@ -41,7 +41,7 @@ class ActivityLogTest extends TestCase
             ->assertOk()
             ->assertViewIs('activity-logs.index')
             ->assertSee('workspace-drawer', false)
-            ->assertSessionMissing('interface_mode')
+            ->assertSessionHas('interface_mode', 'workspace')
             ->assertSee(__('Activity log'))
             ->assertDontSee('name="source"', false)
             ->assertSee('name="action"', false)
