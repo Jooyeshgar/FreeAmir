@@ -341,6 +341,9 @@
                                 <li><a href="{{ route('backups.create') }}">{{ __('Backup') }}</a></li>
                                 <li><a href="{{ route('backups.upload') }}">{{ __('Upload Backup') }}</a></li>
                             @endcan
+                            @can('activity-logs.index')
+                                <li><a href="{{ route('activity-logs.index') }}">{{ __('Activity log') }}</a></li>
+                            @endcan
                         </ul>
                     </details>
                 </li>
@@ -350,7 +353,3 @@
         </ul>
     </details>
 </li>
-
-@can('activity-logs.index')
-    <li><a href="{{ route('activity-logs.index') }}">{{ __('Activity log') }}</a></li>
-@endcan
