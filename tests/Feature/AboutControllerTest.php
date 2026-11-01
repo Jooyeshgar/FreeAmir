@@ -117,4 +117,40 @@ class AboutControllerTest extends TestCase
         $this->assertDatabaseHas('configs', ['key' => 'app_registration', 'value' => 'false', 'fiscal_year_id' => null]);
         $this->assertDatabaseHas('configs', ['key' => 'app_email_verification', 'value' => 'false', 'fiscal_year_id' => null]);
     }
+
+    public function test_changing_global_locale_replaces_the_current_session_language(): void
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo(Permission::create(['name' => 'configs.update']));
+
+        $this->actingAs($user)->withSession(['locale' => 'fa'])
+            ->put(route('configs.global-update'), ['app_locale' => 'en'])
+            ->assertRedirect(route('about'))->assertSessionMissing('locale');
+
+        $this->get(route('about'))->assertOk()
+            ->assertViewHas('locale', 'en')
+            ->assertSee(__('about.about_freeamir', [], 'en'));
+    }
+
+    public function test_resetting_global_locale_clears_the_current_session_language(): void
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo(Permission::create(['name' => 'configs.update']));
+
+        $this->actingAs($user)->withSession(['locale' => 'en'])
+            ->put(route('configs.global-update'), ['app_locale' => ''])
+            ->assertRedirect(route('about'))->assertSessionMissing('locale');
+
+        $this->assertDatabaseHas('configs', ['key' => 'app_locale', 'value' => null, 'fiscal_year_id' => null]);
+    }
+
+    public function test_updating_another_setting_preserves_the_session_language(): void
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo(Permission::create(['name' => 'configs.update']));
+
+        $this->actingAs($user)->withSession(['locale' => 'fa'])
+            ->put(route('configs.global-update'), ['app_debug' => 'false'])
+            ->assertRedirect(route('about'))->assertSessionHas('locale', 'fa');
+    }
 }
