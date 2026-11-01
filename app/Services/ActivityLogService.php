@@ -348,12 +348,13 @@ class ActivityLogService
             return false;
         }
 
+        $current = $type::withoutGlobalScopes()->find($id);
         $snapshotFiscalYearIds = collect([
-            data_get($model, 'fiscal_year_id'),
             data_get($model, 'attributes.fiscal_year_id'),
             data_get($model, 'old.fiscal_year_id'),
+            ...($current ? [] : [data_get($model, 'fiscal_year_id')]),
         ])->filter()->map(fn ($id): int => (int) $id);
-        $current = $type::withoutGlobalScopes()->find($id);
+
         if ($current) {
             $snapshotFiscalYearIds->push((int) $current->getAttribute('fiscal_year_id'));
         }

@@ -261,6 +261,24 @@ class WorkspaceActivityLogTest extends TestCase
         $this->getJson(route('activity-logs.details', $records[1]))->assertNotFound();
     }
 
+    public function test_existing_fiscal_scoped_models_use_their_current_year_over_legacy_context(): void
+    {
+        $allowed = FiscalYear::factory()->create();
+        $legacyContext = FiscalYear::factory()->create();
+        $viewer = $this->viewer();
+        $viewer->fiscalYears()->sync([$allowed->id]);
+        config(['active-fiscal-year-id' => $allowed->id]);
+        $document = Document::factory()->create(['fiscal_year_id' => $allowed->id]);
+        $activity = Activity::create([
+            'source' => 'model', 'user_id' => $viewer->id, 'action' => 'updated',
+            'description' => 'Legacy document update', 'model_type' => Document::class,
+            'model_id' => $document->id,
+            'details' => ['fiscal_year_id' => $legacyContext->id, 'attributes' => ['title' => 'Updated']],
+        ]);
+
+        $this->actingAs($viewer)->getJson(route('activity-logs.details', $activity))->assertOk();
+    }
+
     public function test_fiscal_scope_changes_require_access_to_both_old_and_new_ownership(): void
     {
         $viewer = $this->viewer();
