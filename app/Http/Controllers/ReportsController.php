@@ -7,7 +7,6 @@ use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Services\DocumentImportExport\DocumentImportExportService;
-use App\Services\FiscalYearDemoService;
 use App\Services\FiscalYearOverviewService;
 use App\Services\InventoryTurnoverService;
 use App\Services\ReportExportService;
@@ -17,6 +16,7 @@ use Database\Seeders\DemoSeeder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -198,13 +198,8 @@ class ReportsController extends Controller
     {
         abort_if(! config('app.debug') || config('app.env') === 'production', 404);
 
-        $fiscalYearId = (int) getActiveFiscalYear();
-        $fiscalYear = FiscalYear::findOrFail($fiscalYearId);
-        abort_unless(auth()->user()->fiscalYears()->whereKey($fiscalYearId)->exists(), 403);
-        abort_if($fiscalYear->isClosed(), 422, __('This fiscal year is already closed.'));
-
         try {
-            app(FiscalYearDemoService::class)->refresh($fiscalYearId);
+            Artisan::call('migrate:fresh', ['--seed' => true]);
         } catch (\Exception $e) {
             return redirect()->route('home')->with('error', __('An error occurred while refreshing the database.'));
         }
