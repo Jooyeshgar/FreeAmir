@@ -240,13 +240,15 @@ class ActivityLogService
         $activities = $this->paginateGroupedActivities($query);
         $impersonatedUserIds = $activities->getCollection()
             ->map(fn (Activity $activity) => $activity->details?->get('impersonated_user_id'))->filter()->unique();
+        $visibleFiscalYearIds = $this->visibleFiscalYearIds();
+        $filterFiscalYearIds = empty($filters['fiscal_year_id']) ? $visibleFiscalYearIds : $visibleFiscalYearIds->intersect([(int) $filters['fiscal_year_id']]);
 
         return [
             'activities' => $activities,
             'metrics' => $this->metrics(),
-            'users' => User::query()->whereIn('id', $this->visibleActivities()->whereNotNull('user_id')->select('user_id'))->orderBy('name')->get(['id', 'name', 'email']),
+            'users' => User::query()->whereHas('fiscalYears', fn (Builder $query) => $query->whereIn('fiscal_years.id', $filterFiscalYearIds))->orderBy('name')->get(['id', 'name', 'email']),
             'impersonatedUsers' => User::query()->whereIn('id', $impersonatedUserIds)->get(['id', 'name', 'email'])->keyBy('id'),
-            'fiscalYears' => FiscalYear::query()->with('company:id,name')->whereIn('id', $this->visibleFiscalYearIds())->orderByDesc('year')->get(['id', 'company_id', 'year']),
+            'fiscalYears' => FiscalYear::query()->with('company:id,name')->whereIn('id', $visibleFiscalYearIds)->orderByDesc('year')->get(['id', 'company_id', 'year']),
             'modelTypes' => $this->availableModelTypes(),
             'filters' => $filters,
         ];
@@ -263,17 +265,16 @@ class ActivityLogService
         $user = auth()->user();
 
         if (! $user) {
-            return $query->whereRaw('1 = 0');
+            return $this->noActivitiesQuery();
         }
 
         $fiscalYearIds = $this->visibleFiscalYearIds();
 
         if ($fiscalYearIds->isEmpty()) {
-            return $query->whereRaw('1 = 0');
+            return $this->noActivitiesQuery();
         }
 
-        // Request snapshots and input cannot be separated safely across tenants.
-        // Only expose an aggregate when every recorded fiscal year is accessible.
+        // Request snapshots and input cannot be separated safely across tenants. Only expose an aggregate when every recorded fiscal year is accessible.
         $allowed = $fiscalYearIds->map(fn ($id): int => (int) $id)->values()->toJson();
         if ($query->getConnection()->getDriverName() === 'sqlite') {
             $query->whereRaw("NOT EXISTS (SELECT 1 FROM json_each(details, '$.fiscal_year_ids') AS fiscal_year WHERE fiscal_year.value NOT IN (SELECT value FROM json_each(?)))", [$allowed]);
@@ -289,6 +290,11 @@ class ActivityLogService
         })->where(function (Builder $query) use ($fiscalYearIds): void {
             $query->whereNull('details->fiscal_year_id')->orWhereIn('details->fiscal_year_id', $fiscalYearIds);
         });
+    }
+
+    private function noActivitiesQuery(): Builder
+    {
+        return Activity::query()->whereKey([]);
     }
 
     private function visibleFiscalYearIds(): Collection

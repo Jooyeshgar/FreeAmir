@@ -2,8 +2,6 @@
     <div class="min-w-0 max-w-full overflow-x-clip">
         <section class="mb-6 px-2 flex flex-col justify-between gap-4 sm:flex-row sm:items-end mt-2">
             <div>
-                <p class="text-xs font-bold uppercase tracking-[0.16em] text-emerald-600 dark:text-emerald-400">
-                    {{ __('Workspace') }}</p>
                 <h1 class="mt-1 text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
                     {{ __('Activity log') }}
                 </h1>

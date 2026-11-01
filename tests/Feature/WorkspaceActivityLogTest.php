@@ -26,6 +26,7 @@ class WorkspaceActivityLogTest extends TestCase
         $viewer->fiscalYears()->attach([$first->id, $second->id]);
         $visibleActor = User::factory()->create();
         $hiddenActor = User::factory()->create();
+        $visibleActor->fiscalYears()->attach([$first->id, $second->id]);
         $visible = collect([$first, $second])->map(fn ($year) => $this->activity($visibleActor, ['fiscal_year_id' => $year->id]));
         $hidden = collect([$sameCompanyHidden, $otherCompanyHidden])->map(fn ($year) => $this->activity($hiddenActor, ['fiscal_year_id' => $year->id], User::class));
         $global = $this->activity($hiddenActor, []);
@@ -35,7 +36,7 @@ class WorkspaceActivityLogTest extends TestCase
         $data = app(ActivityLogService::class)->index([]);
         $this->assertEqualsCanonicalizing($visible->pluck('id')->all(), $data['activities']->pluck('id')->all());
         $this->assertSame(['total' => 2, 'today' => 2, 'model' => 2, 'request' => 0], $data['metrics']);
-        $this->assertSame([$visibleActor->id], $data['users']->pluck('id')->all());
+        $this->assertEqualsCanonicalizing([$viewer->id, $visibleActor->id], $data['users']->pluck('id')->all());
         $this->assertEqualsCanonicalizing([$first->id, $second->id], $data['fiscalYears']->pluck('id')->all());
         $this->assertSame([FiscalYear::class], $data['modelTypes']->all());
 
@@ -48,6 +49,34 @@ class WorkspaceActivityLogTest extends TestCase
         $this->get(route('activity-logs.index', ['fiscal_year_id' => $sameCompanyHidden->id]))
             ->assertOk()->assertViewHas('activities', fn ($activities) => $activities->isEmpty());
         $this->assertSame(5, Activity::query()->count());
+    }
+
+    public function test_performed_by_options_follow_selected_fiscal_year_access_even_without_activity(): void
+    {
+        $viewer = $this->viewer();
+        $first = FiscalYear::factory()->create();
+        $second = FiscalYear::factory()->create();
+        $hidden = FiscalYear::factory()->create();
+        $viewer->fiscalYears()->sync([$first->id, $second->id]);
+        $firstUser = User::factory()->create();
+        $firstUser->fiscalYears()->sync([$first->id]);
+        $secondUser = User::factory()->create();
+        $secondUser->fiscalYears()->sync([$second->id]);
+        $hiddenUser = User::factory()->create();
+        $hiddenUser->fiscalYears()->sync([$hidden->id]);
+        $formerUser = User::factory()->create();
+        $formerUser->fiscalYears()->detach();
+        $this->activity($formerUser, ['fiscal_year_id' => $first->id]);
+
+        $this->actingAs($viewer);
+        $this->get(route('activity-logs.index'))->assertOk()
+            ->assertViewHas('users', fn ($users) => $users->pluck('id')->sort()->values()->all() === collect([$viewer->id, $firstUser->id, $secondUser->id])->sort()->values()->all());
+        foreach ([$first->id => $firstUser, $second->id => $secondUser] as $yearId => $user) {
+            $this->get(route('activity-logs.index', ['fiscal_year_id' => $yearId]))->assertOk()
+                ->assertViewHas('users', fn ($users) => $users->pluck('id')->sort()->values()->all() === collect([$viewer->id, $user->id])->sort()->values()->all());
+        }
+        $this->get(route('activity-logs.index', ['fiscal_year_id' => $hidden->id]))->assertOk()
+            ->assertViewHas('users', fn ($users) => $users->isEmpty());
     }
 
     public function test_aggregated_requests_require_access_to_every_recorded_fiscal_year(): void
