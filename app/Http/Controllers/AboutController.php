@@ -65,6 +65,10 @@ class AboutController extends Controller
 
         $this->globalConfigService->update($validated);
 
+        if (array_key_exists('app_locale', $validated)) {
+            $request->session()->forget('locale');
+        }
+
         $updated = implode(', ', array_intersect_key($this->settingTitles(), $validated));
 
         return redirect()->route('about')->with('success', __(':setting updated successfully.', ['setting' => $updated]));
