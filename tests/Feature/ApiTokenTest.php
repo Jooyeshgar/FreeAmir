@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use App\Services\ApiTokenAbilityService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
@@ -22,7 +24,7 @@ class ApiTokenTest extends TestCase
             ->assertOk()
             ->assertSee(__('API Tokens'));
 
-        if (\Illuminate\Support\Facades\Route::has('mcp.handle')) {
+        if (Route::has('mcp.handle')) {
             $response->assertSee(url('/api/mcp'))
                 ->assertSee(__('MCP Server URL'));
         } else {
@@ -124,5 +126,15 @@ class ApiTokenTest extends TestCase
             ])
             ->assertRedirect(route('api-tokens.index'))
             ->assertSessionHas('plainTextToken');
+    }
+
+    public function test_customer_details_ability_can_be_granted_only_with_user_permission(): void
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo(Permission::findOrCreate('customers.show', 'web'));
+        $service = app(ApiTokenAbilityService::class);
+        $this->assertContains('customers.show', $service->userAbilities($user)->all());
+        $user->revokePermissionTo('customers.show');
+        $this->assertNotContains('customers.show', $service->userAbilities($user)->all());
     }
 }
