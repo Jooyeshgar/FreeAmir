@@ -6,6 +6,7 @@ use App\Faker\PersianProductProvider;
 use App\Faker\PersianServiceProvider;
 use App\Services\ActivityLogService;
 use Faker\Generator;
+use Illuminate\Contracts\Auth\Access\Gate as GateContract;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\App;
@@ -21,6 +22,11 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->scoped(ActivityLogService::class);
+
+        // Register the veto before Spatie's permission callback, including for legacy grants.
+        $this->callAfterResolving(GateContract::class, function (GateContract $gate): void {
+            $gate->before(fn ($user, $ability) => $ability === 'access-super-admin-panel' ? false : null);
+        });
 
         $this->app->afterResolving(Generator::class, function (Generator $faker) {
             $registered = [];

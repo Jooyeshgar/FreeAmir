@@ -7,7 +7,6 @@ use App\Models\Company;
 use App\Models\Document;
 use App\Models\DocumentFile;
 use App\Models\FiscalYear;
-use App\Models\Invoice;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\FiscalYearMutationGuard;
@@ -60,7 +59,7 @@ class CompanyController extends Controller
     public function index(Request $request): View
     {
         $user = auth()->user();
-        $fiscalYears = ($user->can('access-super-admin-panel') ? FiscalYear::query() : $user->fiscalYears())
+        $fiscalYears = $user->fiscalYears()
             ->join('companies', 'companies.id', '=', 'fiscal_years.company_id')
             ->select('fiscal_years.*', 'companies.name', 'companies.address', 'companies.economical_code', 'companies.national_code', 'companies.currency', 'fiscal_years.year as fiscal_year')
             ->with('closedBy:id,name')->withCount('users')->when($request->filled('search'), function ($query) use ($request) {
@@ -79,15 +78,7 @@ class CompanyController extends Controller
             ->paginate(12)
             ->withQueryString();
 
-        $view = $request->session()->get('interface_mode') === 'management'
-            && $user->can('access-super-admin-panel')
-                ? 'companies.index'
-                : 'companies.workspace-index';
-
-        return view($view, [
-            'fiscalYears' => $fiscalYears,
-            'canCreateFirstCompany' => $user->can('access-super-admin-panel') && $user->fiscalYears()->doesntExist(),
-        ]);
+        return view('companies.workspace-index', ['fiscalYears' => $fiscalYears]);
     }
 
     /**
@@ -109,8 +100,6 @@ class CompanyController extends Controller
 
     public function createCompanyForRegisteredUser(Request $request): View|RedirectResponse
     {
-        abort_if($request->user()->can('access-super-admin-panel'), 404);
-
         if ($request->user()->fiscalYears()->exists()) {
             return redirect()->route('home');
         }
@@ -118,61 +107,8 @@ class CompanyController extends Controller
         return view('auth.create-company');
     }
 
-    /**
-     * Display the grouped management overview for a business.
-     */
-    public function show(Request $request, Company $company): View
-    {
-        abort_unless($request->user()->can('access-super-admin-panel'), 403);
-
-        $request->session()->put('interface_mode', 'management');
-
-        $fiscalYears = $company->fiscalYears()
-            ->withCount('users')
-            ->selectSub(
-                Document::withoutGlobalScopes()
-                    ->selectRaw('COUNT(*)')
-                    ->whereColumn('documents.fiscal_year_id', 'fiscal_years.id'),
-                'documents_count'
-            )
-            ->selectSub(
-                Invoice::withoutGlobalScopes()
-                    ->selectRaw('COUNT(*)')
-                    ->whereColumn('invoices.fiscal_year_id', 'fiscal_years.id'),
-                'invoices_count'
-            )
-            ->orderByDesc('year')
-            ->get();
-
-        $users = User::query()
-            ->whereHas('fiscalYears', fn ($query) => $query->where('fiscal_years.company_id', $company->id))
-            ->with('roles:id,name')
-            ->orderBy('name')
-            ->orderBy('id')
-            ->get();
-
-        foreach ($fiscalYears as $fiscalYear) {
-            $fiscalYear->setAttribute('fiscal_year', $fiscalYear->year);
-        }
-
-        return view('companies.show', [
-            'business' => $company,
-            'fiscalYears' => $fiscalYears,
-            'users' => $users,
-            'metrics' => [
-                'fiscalYears' => $fiscalYears->count(),
-                'openFiscalYears' => $fiscalYears->whereNull('closed_at')->count(),
-                'users' => $users->count(),
-                'documents' => (int) $fiscalYears->sum('documents_count'),
-                'invoices' => (int) $fiscalYears->sum('invoices_count'),
-            ],
-        ]);
-    }
-
     public function storeCompanyForRegisteredUser(Request $request): RedirectResponse
     {
-        abort_if($request->user()->can('access-super-admin-panel'), 404);
-
         if ($request->user()->fiscalYears()->exists()) {
             return redirect()->route('home');
         }
@@ -278,9 +214,7 @@ class CompanyController extends Controller
     {
         $this->ensureCompanyAccess($company);
         $user = auth()->user();
-        $testFiscalYear = $user->can('access-super-admin-panel')
-            ? $company->fiscalYears()->first()
-            : $user->fiscalYears()->where('company_id', $company->id)->first();
+        $testFiscalYear = $user->fiscalYears()->where('company_id', $company->id)->first();
 
         return view('companies.edit', [
             'company' => $company,
@@ -477,14 +411,14 @@ class CompanyController extends Controller
     {
         $user = auth()->user();
 
-        abort_unless($user->can('access-super-admin-panel') || $user->fiscalYears()->whereKey($fiscalYear->id)->exists(), 403);
+        abort_unless($user->fiscalYears()->whereKey($fiscalYear->id)->exists(), 403);
     }
 
     private function ensureCompanyAccess(Company $company): void
     {
         $user = auth()->user();
 
-        abort_unless($user->can('access-super-admin-panel') || $user->fiscalYears()->where('company_id', $company->id)->exists(), 403);
+        abort_unless($user->fiscalYears()->where('company_id', $company->id)->exists(), 403);
     }
 
     private function privateKeyRules(): array

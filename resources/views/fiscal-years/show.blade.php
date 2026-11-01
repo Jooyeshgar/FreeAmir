@@ -88,9 +88,6 @@
             <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                     <h2 class="font-bold text-slate-900 dark:text-white">{{ __('Company details') }}</h2>
-                    @if (auth()->user()->can('access-super-admin-panel') && auth()->user()->can('companies.show'))
-                        <a href="{{ route('companies.show', $fiscalYear->company) }}" class="text-xs font-semibold text-emerald-700 hover:underline dark:text-emerald-300">{{ __('Company overview') }}</a>
-                    @endif
                 </div>
                 <p class="mt-4 break-words font-semibold text-slate-900 dark:text-white">{{ $fiscalYear->company->name }}</p>
                 <dl class="mt-4 grid gap-4 sm:grid-cols-2">

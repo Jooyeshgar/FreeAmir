@@ -3724,6 +3724,8 @@
     "Select at least one entry to transfer.": "Select at least one entry to transfer.",
     "This may affect financial reports. Selected source entries will be deleted and approval may be revoked. Continue?": "This may affect financial reports. Selected source entries will be deleted and approval may be revoked. Continue?",
     "This may affect financial reports. Continue transferring the selected entries?": "This may affect financial reports. Continue transferring the selected entries?",
+    "Do you want to refresh data for the active fiscal year?": "Do you want to refresh data for the active fiscal year?",
+    "This will delete data in the active fiscal year and rebuild it with demo data. Continue?": "This will delete data in the active fiscal year and rebuild it with demo data. Continue?",
     "Unauthorized access to this tool.": "Unauthorized access to this tool.",
     "Failed to retrieve report. Please try again or contact support.": "Failed to retrieve report. Please try again or contact support.",
     "Access to fiscal year is not permitted.": "Access to fiscal year is not permitted.",

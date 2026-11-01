@@ -1,4 +1,4 @@
-@can(['reports.company-overview.seed-demo-data', 'reports.company-overview.refresh-database'])
+@can('reports.company-overview.seed-demo-data')
     @if ($isDebugMode && !$hasDocument)
         <div class="alert alert-warning">
             <p>{{ __('Your database tables are empty. Do you want to load demo data into your database?') }}</p>
@@ -8,25 +8,19 @@
             </form>
         </div>
     @endif
+@endcan
 
+@can('reports.company-overview.refresh-database')
     @if ($isDebugMode)
         <div role="alert" class="alert alert-warning flex flex-col mt-4 mb-4">
             <div class="w-full flex items-center gap-2">
-                <p>{{ __('Do you want to refresh your database?') }}</p>
+                <p>{{ __('Do you want to refresh data for the active fiscal year?') }}</p>
                 <form method="POST" action="{{ route('reports.company-overview.refresh-database') }}"
-                    onsubmit="return confirm('{{ __('Are you sure you want to refresh the database? This will delete all current tables and data and rebuild the database with demo data.') }}')">
+                    onsubmit="return confirm('{{ __('This will delete data in the active fiscal year and rebuild it with demo data. Continue?') }}')">
                     @csrf
                     <button type="submit" class="btn btn-error btn-sm text-xs">{{ __('Refresh Database') }}</button>
                 </form>
             </div>
-            @can('update-global-configs')
-                <p class="text-sm opacity-80 w-full">
-                    {!! __('To disable database refresh, disable :debug on the :settings page.', [
-                        'debug' => __('about.debug_mode'),
-                        'settings' => '<a href="' . route('management.settings') . '" class="link">' . __('Settings') . '</a>',
-                    ]) !!}
-                </p>
-            @endcan
         </div>
     @endif
 @endcan
