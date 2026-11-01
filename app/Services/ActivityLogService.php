@@ -15,7 +15,6 @@ use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
-use Lab404\Impersonate\Services\ImpersonateManager;
 
 class ActivityLogService
 {
@@ -75,8 +74,6 @@ class ActivityLogService
         return $deleted;
     }
 
-    public function __construct(private readonly ImpersonateManager $impersonateManager) {}
-
     public function resolveActor(?User $authenticatedUser = null): ?User
     {
         $authenticatedUser ??= auth()->user();
@@ -87,7 +84,7 @@ class ActivityLogService
             return $this->cachedActor;
         }
 
-        $this->cachedActor = $this->impersonateManager->isImpersonating() ? User::query()->find($this->impersonateManager->getImpersonatorId()) : $authenticatedUser;
+        $this->cachedActor = $authenticatedUser;
         $this->actorCached = true;
         $this->actorRequest = $currentRequest;
         $this->actorAuthenticatedUserId = $authenticatedUserId;
@@ -143,7 +140,6 @@ class ActivityLogService
             'model_numbers' => $modelNumbers,
             'fiscal_year_ids' => $fiscalYearIds,
             'request_time' => now()->toAtomString(),
-            ...$this->impersonationProperties($actor, $authenticatedUser),
         ])->log(trim($method.' '.($routeName ?: '/'.ltrim($request->path(), '/'))));
     }
 
@@ -186,7 +182,6 @@ class ActivityLogService
             'route' => $request->route()?->getName(),
             'method' => $request->method(),
             'ip_address' => $request->ip(),
-            ...$this->impersonationProperties($actor, $authenticatedUser),
         ], fn (mixed $value) => $value !== null))->log($event);
     }
 
@@ -544,18 +539,6 @@ class ActivityLogService
         $fiscalYearId = config('active-fiscal-year-id') ?? $request->cookie('active-fiscal-year-id');
 
         return $fiscalYearId ? (int) $fiscalYearId : null;
-    }
-
-    /**
-     * @return array{impersonated_user_id?: int}
-     */
-    private function impersonationProperties(User $actor, ?User $authenticatedUser): array
-    {
-        if (! $authenticatedUser || $actor->is($authenticatedUser)) {
-            return [];
-        }
-
-        return ['impersonated_user_id' => (int) $authenticatedUser->getKey()];
     }
 
     private function sanitize(mixed $value, ?string $key = null): mixed
