@@ -17,6 +17,7 @@ class ApiTokenAbilityService
         'reports.cost-income',
         'reports.company-overview',
         'customers.index',
+        'customers.show',
     ];
 
     /**
