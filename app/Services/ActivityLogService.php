@@ -261,7 +261,7 @@ class ActivityLogService
 
     /**
      * Resolve ownership from the affected model snapshots.
-     * The selected fiscal year is request context, never proof of tenant ownership.
+     * Resolve tenant models from their own ownership; retain recorded context for global events.
      * Every model in an aggregate must be validated before any part of the request is exposed.
      *
      * @param  Collection<int, int|string>  $fiscalYearIds
@@ -310,7 +310,7 @@ class ActivityLogService
 
                     $ids[] = (int) $id;
                     if ($filterFiscalYearId === null || ($allowed->contains($filterFiscalYearId)
-                        && $models->contains(fn (array $model): bool => $belongs($model, collect([$filterFiscalYearId]))))) {
+                        && $models->contains(fn (array $model): bool => $this->modelMatchesFiscalYear($model, $filterFiscalYearId, $ownership, $companyYears)))) {
                         $filteredIds[] = (int) $id;
                     }
                 }
@@ -395,6 +395,29 @@ class ActivityLogService
         }
 
         return $snapshotFiscalYearIds->isNotEmpty() && $snapshotFiscalYearIds->every(fn (int $id): bool => $allowedFiscalYearIds->contains($id));
+    }
+
+    private function modelMatchesFiscalYear(array $model, int $fiscalYearId, array $ownership, Collection $companyYears): bool
+    {
+        $type = $model['model_type'] ?? null;
+        $id = $model['model_id'] ?? null;
+
+        if ($type === Company::class) {
+            return $companyYears->get($id, collect())->contains($fiscalYearId);
+        }
+
+        if ($type === FiscalYear::class) {
+            return (int) $id === $fiscalYearId;
+        }
+
+        $years = collect([
+            data_get($model, 'attributes.fiscal_year_id'),
+            data_get($model, 'old.fiscal_year_id'),
+            isset($ownership[$type ?? '']) && $ownership[$type]->has($id)
+                ? $ownership[$type]->get($id) : ($model['fiscal_year_id'] ?? null),
+        ])->merge($model['fiscal_year_ids'] ?? []);
+
+        return $years->filter()->map(fn ($year): int => (int) $year)->contains($fiscalYearId);
     }
 
     private function visibleFiscalYearIds(): Collection
