@@ -192,7 +192,7 @@ class ActivityLogTest extends TestCase
             'description' => 'POST test',
             'event' => 'post',
             'user_id' => $actor->id,
-            'properties' => ['fiscal_year_id' => config('active-fiscal-year-id'), 'route' => 'test', 'models' => [['model_type' => FiscalYear::class, 'model_id' => 1]]],
+            'properties' => ['fiscal_year_id' => config('active-fiscal-year-id'), 'route' => 'test', 'models' => [['model_type' => FiscalYear::class, 'model_id' => config('active-fiscal-year-id')]]],
         ]);
 
         $service = app(ActivityLogService::class);
@@ -215,7 +215,7 @@ class ActivityLogTest extends TestCase
                 'route' => 'test',
                 'models' => [[
                     'model_type' => FiscalYear::class,
-                    'model_id' => 1,
+                    'model_id' => config('active-fiscal-year-id'),
                     'event' => 'created',
                     'attributes' => ['name' => 'Acme'],
                     'old' => [],
@@ -232,6 +232,7 @@ class ActivityLogTest extends TestCase
     {
         $actor = $this->workspaceUser();
         $fiscalYear = FiscalYear::factory()->create(['year' => 1405]);
+        $actor->fiscalYears()->attach($fiscalYear);
 
         $activity = Activity::create([
             'log_name' => 'model',
@@ -422,7 +423,7 @@ class ActivityLogTest extends TestCase
         activity('request')
             ->causedBy($superAdmin)
             ->event('post')
-            ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'), 'route' => 'locale'])
+            ->withProperties(['models' => [['model_type' => FiscalYear::class, 'model_id' => config('active-fiscal-year-id')]], 'fiscal_year_id' => config('active-fiscal-year-id'), 'route' => 'locale'])
             ->log('POST locale');
 
         $this->actingAs($superAdmin)
@@ -469,7 +470,7 @@ class ActivityLogTest extends TestCase
             activity('request')
                 ->causedBy($superAdmin)
                 ->event('post')
-                ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id')])->log("POST audit.page.{$index}");
+                ->withProperties(['models' => [['model_type' => FiscalYear::class, 'model_id' => config('active-fiscal-year-id')]], 'fiscal_year_id' => config('active-fiscal-year-id')])->log("POST audit.page.{$index}");
         }
 
         $this->actingAs($superAdmin)
@@ -482,7 +483,7 @@ class ActivityLogTest extends TestCase
     public function test_request_and_its_model_change_are_shown_as_one_activity(): void
     {
         $superAdmin = $this->workspaceUser();
-        $company = Company::factory()->create(['name' => 'Merged Company']);
+        $company = $this->workspaceCompany($superAdmin, ['name' => 'Merged Company']);
 
         activity('model')
             ->causedBy($superAdmin)
@@ -498,7 +499,7 @@ class ActivityLogTest extends TestCase
         activity('request')
             ->causedBy($superAdmin)
             ->event('put')
-            ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'),
+            ->withProperties(['models' => [['model_type' => Company::class, 'model_id' => $company->id]], 'fiscal_year_id' => config('active-fiscal-year-id'),
                 'route' => 'companies.update',
                 'method' => 'PUT',
                 'path' => "/companies/{$company->id}",
@@ -526,7 +527,7 @@ class ActivityLogTest extends TestCase
     public function test_store_activity_keeps_request_details_and_renders_created_fields_as_changes(): void
     {
         $superAdmin = $this->workspaceUser();
-        $company = Company::factory()->create(['name' => 'Created Company']);
+        $company = $this->workspaceCompany($superAdmin, ['name' => 'Created Company']);
 
         activity('model')
             ->causedBy($superAdmin)
@@ -541,7 +542,7 @@ class ActivityLogTest extends TestCase
         activity('request')
             ->causedBy($superAdmin)
             ->event('post')
-            ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'),
+            ->withProperties(['models' => [['model_type' => Company::class, 'model_id' => $company->id]], 'fiscal_year_id' => config('active-fiscal-year-id'),
                 'route' => 'companies.store',
                 'method' => 'POST',
                 'path' => '/companies',
@@ -595,7 +596,7 @@ class ActivityLogTest extends TestCase
     {
         $superAdmin = $this->workspaceUser();
         $this->actingAs($superAdmin);
-        $document = Document::create(['number' => 123]);
+        $document = Document::create(['number' => 123, 'fiscal_year_id' => config('active-fiscal-year-id')]);
 
         $this->get(route('activity-logs.index'))
             ->assertOk()
@@ -609,8 +610,8 @@ class ActivityLogTest extends TestCase
     public function test_request_and_all_of_its_model_events_are_shown_as_one_activity(): void
     {
         $superAdmin = $this->workspaceUser();
-        $firstCompany = Company::factory()->create(['name' => 'First related model']);
-        $secondCompany = Company::factory()->create(['name' => 'Second related model']);
+        $firstCompany = $this->workspaceCompany($superAdmin, ['name' => 'First related model']);
+        $secondCompany = $this->workspaceCompany($superAdmin, ['name' => 'Second related model']);
 
         foreach ([$firstCompany, $secondCompany] as $company) {
             activity('model')
@@ -628,7 +629,7 @@ class ActivityLogTest extends TestCase
         activity('request')
             ->causedBy($superAdmin)
             ->event('post')
-            ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'),
+            ->withProperties(['models' => [['model_type' => Company::class, 'model_id' => $firstCompany->id], ['model_type' => Company::class, 'model_id' => $secondCompany->id]], 'fiscal_year_id' => config('active-fiscal-year-id'),
                 'route' => 'companies.store',
                 'method' => 'POST',
                 'path' => '/companies',
@@ -658,8 +659,8 @@ class ActivityLogTest extends TestCase
     public function test_merged_changes_identify_their_affected_model(): void
     {
         $superAdmin = $this->workspaceUser();
-        $firstCompany = Company::factory()->create();
-        $secondCompany = Company::factory()->create();
+        $firstCompany = $this->workspaceCompany($superAdmin);
+        $secondCompany = $this->workspaceCompany($superAdmin);
 
         foreach ([$firstCompany, $secondCompany] as $company) {
             activity('model')
@@ -677,7 +678,7 @@ class ActivityLogTest extends TestCase
         activity('request')
             ->causedBy($superAdmin)
             ->event('put')
-            ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'), 'route' => 'companies.update', 'method' => 'PUT'])
+            ->withProperties(['models' => [['model_type' => Company::class, 'model_id' => $firstCompany->id], ['model_type' => Company::class, 'model_id' => $secondCompany->id]], 'fiscal_year_id' => config('active-fiscal-year-id'), 'route' => 'companies.update', 'method' => 'PUT'])
             ->log('PUT companies.update');
 
         $response = $this->actingAs($superAdmin)
@@ -702,8 +703,8 @@ class ActivityLogTest extends TestCase
     public function test_request_and_model_events_are_merged_before_pagination(): void
     {
         $superAdmin = $this->workspaceUser();
-        $firstCompany = Company::factory()->create();
-        $secondCompany = Company::factory()->create();
+        $firstCompany = $this->workspaceCompany($superAdmin);
+        $secondCompany = $this->workspaceCompany($superAdmin);
 
         foreach ([$firstCompany, $secondCompany] as $company) {
             activity('model')
@@ -717,14 +718,14 @@ class ActivityLogTest extends TestCase
         activity('request')
             ->causedBy($superAdmin)
             ->event('post')
-            ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'), 'route' => 'companies.store', 'method' => 'POST'])
+            ->withProperties(['models' => [['model_type' => Company::class, 'model_id' => $firstCompany->id], ['model_type' => Company::class, 'model_id' => $secondCompany->id]], 'fiscal_year_id' => config('active-fiscal-year-id'), 'route' => 'companies.store', 'method' => 'POST'])
             ->log('POST companies.store');
 
         foreach (range(1, 24) as $index) {
             activity('request')
                 ->causedBy($superAdmin)
                 ->event('post')
-                ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'), 'route' => "audit.page.{$index}", 'method' => 'POST'])
+                ->withProperties(['models' => [['model_type' => Company::class, 'model_id' => $firstCompany->id], ['model_type' => Company::class, 'model_id' => $secondCompany->id]], 'fiscal_year_id' => config('active-fiscal-year-id'), 'route' => "audit.page.{$index}", 'method' => 'POST'])
                 ->log("POST audit.page.{$index}");
         }
 
@@ -746,7 +747,7 @@ class ActivityLogTest extends TestCase
     public function test_unrelated_request_and_model_rows_are_not_merged(): void
     {
         $superAdmin = $this->workspaceUser();
-        $company = Company::factory()->create();
+        $company = $this->workspaceCompany($superAdmin);
 
         activity('model')
             ->causedBy($superAdmin)
@@ -757,7 +758,7 @@ class ActivityLogTest extends TestCase
         activity('request')
             ->causedBy($superAdmin)
             ->event('put')
-            ->withProperties(['fiscal_year_id' => config('active-fiscal-year-id'), 'route' => 'users.update', 'method' => 'PUT'])
+            ->withProperties(['models' => [['model_type' => FiscalYear::class, 'model_id' => config('active-fiscal-year-id')]], 'fiscal_year_id' => config('active-fiscal-year-id'), 'route' => 'users.update', 'method' => 'PUT'])
             ->log('PUT users.update');
 
         $this->actingAs($superAdmin)
@@ -771,7 +772,7 @@ class ActivityLogTest extends TestCase
     public function test_activity_details_have_responsive_mobile_and_desktop_change_layouts(): void
     {
         $superAdmin = $this->workspaceUser();
-        $company = Company::factory()->create();
+        $company = $this->workspaceCompany($superAdmin);
 
         activity('model')
             ->causedBy($superAdmin)
@@ -972,6 +973,15 @@ class ActivityLogTest extends TestCase
 
         $this->actingAs($firstUser)->get('/test/activity-log/resolved-actor')->assertOk()->assertJsonPath('actor_id', $firstUser->id);
         $this->actingAs($secondUser)->get('/test/activity-log/resolved-actor')->assertOk()->assertJsonPath('actor_id', $secondUser->id);
+    }
+
+    private function workspaceCompany(User $user, array $attributes = []): Company
+    {
+        $company = Company::factory()->create($attributes);
+        $year = FiscalYear::factory()->create(['company_id' => $company->id]);
+        $user->fiscalYears()->attach($year);
+
+        return $company;
     }
 
     private function workspaceUser(): User

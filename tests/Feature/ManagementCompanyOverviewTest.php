@@ -110,12 +110,13 @@ class ManagementCompanyOverviewTest extends TestCase
         $this->document($fiscalYear, $admin, 1);
         Activity::create([
             'log_name' => 'request',
-            'description' => 'Viewed linked business',
-            'event' => 'get',
+            'description' => 'Updated linked business',
+            'event' => 'put',
             'user_id' => $admin->id,
             'properties' => [
-                'route' => 'companies.index',
+                'route' => 'companies.update',
                 'fiscal_year_id' => $fiscalYear->id,
+                'models' => [['model_type' => Company::class, 'model_id' => $fiscalYear->company_id]],
             ],
         ]);
         $overviewUrl = route('companies.show', $fiscalYear->company);
