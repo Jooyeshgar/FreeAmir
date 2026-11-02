@@ -252,7 +252,7 @@ class RemainingFiscalYearMutationTest extends TestCase
 
         return ! Str::is([
             'fiscal-years.store', 'companies.store', 'companies.update', 'companies.test-moadian-connection',
-            'api-tokens.store', 'api-tokens.destroy', 'users.impersonate', 'users.store',
+            'api-tokens.store', 'api-tokens.destroy', 'users.store',
             'users.update', 'users.destroy', 'report',
             'backups.export', 'backups.import', 'documents.export.download',
             'reports.documents.export', 'attendance.attendance-logs.import.preview', 'commercial-ledgers.store',

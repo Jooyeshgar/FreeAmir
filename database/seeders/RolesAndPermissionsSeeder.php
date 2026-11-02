@@ -119,7 +119,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'invoices.payments' => ['update', 'store', 'store-cheque', 'destroy', 'create-document', 'destroy-document', 'search-subjects'],
 
             // Users / Roles / Permissions / Configs
-            'users' => [...self::CRUD, 'create-employee', 'impersonate'],
+            'users' => [...self::CRUD, 'create-employee'],
             'configs' => self::CRUD,
 
             // HR
@@ -229,7 +229,7 @@ class RolesAndPermissionsSeeder extends Seeder
             Permission::query()
                 ->where(fn ($query) => $query
                     ->where('name', 'NOT LIKE', 'users.%')
-                    ->orWhereIn('name', ['users.index', 'users.impersonate']))
+                    ->orWhere('name', 'users.index'))
                 ->where('name', 'NOT LIKE', 'roles.%')
                 ->where('name', 'NOT LIKE', 'permissions.%')
                 ->where('name', 'NOT LIKE', 'configs.%')
