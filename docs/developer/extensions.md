@@ -1,8 +1,8 @@
 # Extension API
 
 FreeAmir is introducing a small host API for optional Laravel packages, tracked by GitLab issue #445.
-The registry foundation is available; invoice controllers, page slots, menus, and fiscal-year workflows
-are not connected yet. This document distinguishes the available API from those follow-up integrations.
+The registry foundation, management navigation, invoice form/detail/filter slots, transactional invoice
+extension persistence, list-query extension hook, and fiscal-year transition events are available.
 
 `App\Extensions\ExtensionApi::VERSION` is `1`. Packages target this host API explicitly. FreeAmir is
 an application, not a Composer library; do not invent a dependency on `amir/freeamir`. Package tests cover
@@ -31,11 +31,11 @@ Missing payloads mean no change; an explicitly submitted empty array is passed t
 implement remove-all. Malformed payloads and unknown submitted keys are rejected with validation errors
 instead of silently becoming empty selections. Validation is completed before writes and persistence
 must be called within the same database transaction as the invoice operation. The registry coordinates
-handlers; it does not start a transaction or authorize a request itself. Those callers are follow-up work.
+handlers; it does not start a transaction or authorize a request itself.
 
-The `extendQuery()` handlers modify the same Eloquent builder. The planned list integration calls them
-before statistics, totals, and pagination are computed. Handlers should append constraints without
-discarding the host's fiscal-year or permission restrictions.
+The `extendQuery()` handlers modify the same Eloquent builder. The host calls them before statistics, totals,
+and pagination are computed. Handlers should append constraints without discarding the host's fiscal-year or
+permission restrictions.
 
 ## Navigation tree foundation (issue #453)
 
@@ -86,11 +86,11 @@ slot's exact priority sorts before that legacy block. A legacy area outside thes
 names maps to its area string as a parent ID, without a special slot priority; that parent
 must also be registered when reading the tree.
 
-This checkpoint implements definitions and tree assembly. Core provider registration,
-permission filtering, recursive Blade rendering and active matching are later migration
-steps. Until that migration, typed items are available through the registry but are not
-displayed by the old area component. Reading `tree()` requires its parents to have been
-registered; the core parent definitions will be added in the provider step.
+The core provider registers the complete stable tree, and the shared Blade menu renders
+that tree recursively for both desktop and mobile consumers. Permission and visibility
+callbacks are evaluated on every request; empty groups are omitted. Legacy area
+registrations are still assembled into their original slots, so installed packages keep
+their existing API while typed package items can be placed under any core parent.
 
 The agreed active rule for the later renderer is to match the route and menu discriminator
 parameters exactly, including absence of `service_buy` for the ordinary Buy variant, while
@@ -101,16 +101,30 @@ or a subset of the query would incorrectly activate several invoice variants at 
 
 Packages resolve `App\Extensions\Contracts\HostContext` for the current authenticated user and selected
 fiscal-year ID. The host implementation reads them on each call. It does not use the CLI helper's fallback
-to the first fiscal year when no year is selected. `authorizeFiscalYear()` requires authentication, the
-selected year, and user membership in that year. `ensureFiscalYearOpen()` also delegates to the existing
-host mutation guard. Operation permissions are separate and must still be checked by package endpoints.
+to the first fiscal year when no year is selected. `authorizeFiscalYear()` requires authentication and the
+selected year, then checks membership or the host super-administrator permission. `ensureFiscalYearOpen()`
+also delegates to the existing host mutation guard. Operation permissions are separate and must still be
+checked by package endpoints.
 
 ## Reserved integration locations
 
-The following locations will be wired into the host during the invoice-category implementation:
+The shared navigation tree retains these registered package locations:
 
-- Navigation areas: `navigation.workspace.invoices`, `navigation.management`.
-- View slots: `invoice.create.fields`, `invoice.edit.fields`, `invoice.show.panels`, `invoice.index.filters`.
+- Navigation areas: `navigation.workspace.invoices` in the Invoices menu and `navigation.management` in the Management menu. Both are rendered by the host component.
+- View slots: `invoice.create.fields`, `invoice.edit.fields`, `invoice.show.panels`, `invoice.index.filters`, `invoice.index.row.badges`.
+
+Navigation registered in either legacy area is adapted into its existing slot in the shared
+tree; packages may also register a typed `MenuItem` under a stable core parent. The old
+`<x-extension-navigation>` component remains available to consumers of the version 1 array
+API. Both render paths check the current user, route existence, permission, and callback
+context on every request. They escape labels and ignore missing routes. They never evaluate
+route names, view names, or permissions from request input.
+
+Package Blade views should use the host `<x-app-layout>`, `<x-input>`, `<x-textarea>`, and
+`<x-show-message-bags>` components. Package Tailwind classes are scanned from `vendor/amir`; package views
+must be included in the host's Vite/Tailwind source configuration. Use `@source` for installed package
+views and avoid nested forms inside host slots. Keep interaction local to Alpine data attributes unless a
+shared host behavior is required.
 
 Views and handlers must come from trusted installed package code. Do not use request input as a class,
 view, file path, or registry definition. Fields rendered inside an existing form must not add nested forms.
@@ -118,11 +132,11 @@ The beginning-inventory detail page must render the same detail slot as other in
 
 ## Fiscal-year transitions
 
-`App\Events\FiscalYearTransitioning` carries source and target fiscal-year models. The event class is
-available, but dispatch from the close/open workflow is follow-up work. That integration will dispatch
-after creating the target and before committing the surrounding transaction. Copy listeners must be
-synchronous, use the same database connection, and let failures roll back the transition. Direct year
-creation and recalculation of an existing closing document must not dispatch this event.
+`App\Extensions\Events\FiscalYearCopied` carries source and target fiscal-year models. The host dispatches
+it synchronously after creating the next year and inside the close/open transaction. Package listeners use
+the same connection; failures roll back the transition. Direct year creation and recalculation of an
+existing closing document do not dispatch it. `InvoiceDerived` carries the source and generated invoice
+when the host creates a derived invoice such as a void invoice.
 
 The category package owns its tables and migrations. Its invoice model is configured by the host and its
 dynamic relation is registered by the package provider, without a package trait in `App\Models\Invoice`.
@@ -131,15 +145,14 @@ Category-only operations must not change accounting amounts, postings, statuses,
 ## Implementation checkpoints
 
 1. Local development environment and isolated test command.
-2. Registries, API version, host context, and event contract (current foundation).
+2. Registries, API version, host context, and event contract.
 3. Package schema, discovery, and dynamic invoice relation.
-4. Category management and registered navigation.
+4. Category management UI, routes, validation, and registered navigation.
 5. Invoice form slots and transactional extension persistence.
-6. Detail slot and independent category updates for every invoice type/status.
-7. List filters and consistent statistics/pagination.
-8. Transactional fiscal-year definition copying.
+6. Detail assignment for every invoice type/status, including paid invoices.
+7. List filters integrated before statistics and pagination.
+8. Transactional fiscal-year definition copying and derived-invoice inheritance.
 9. Package archive installation, integration verification, and delivery documentation.
 
-Each checkpoint is verified and committed separately. Installation from Nexus and an exact-head CI result
-are recorded only when they have actually been observed. See [local development](enterprise-development.md)
-for the Sail mount and database isolation commands.
+Each checkpoint is verified and committed separately. Installation and CI results are recorded only when
+they have actually been observed.
