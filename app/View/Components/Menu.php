@@ -6,6 +6,7 @@ use App\Extensions\Contracts\HostContext;
 use App\Extensions\MenuItem;
 use App\Extensions\NavigationRegistry;
 use Closure;
+use Illuminate\Contracts\Routing\UrlRoutable;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Route;
 use Illuminate\View\Component;
@@ -82,7 +83,10 @@ class Menu extends Component
             $parameters += ['invoice_type' => null, 'service_buy' => null];
         }
 
-        $query = request()->query();
+        // route() consumes path parameters before adding the remaining query
+        // parameters. Match the same values, without allowing query overrides.
+        $routeParameters = request()->route()?->parameters ?? [];
+        $query = $routeParameters + request()->query();
         foreach ($parameters as $key => $expected) {
             if ($expected === null) {
                 if (array_key_exists($key, $query)) {
@@ -92,7 +96,12 @@ class Menu extends Component
                 continue;
             }
 
-            if (! array_key_exists($key, $query) || ! is_scalar($query[$key]) || (string) $query[$key] !== (string) $expected) {
+            $actual = $query[$key] ?? null;
+            if ($actual instanceof UrlRoutable) {
+                $actual = $actual->getRouteKey();
+            }
+
+            if (! array_key_exists($key, $query) || ! is_scalar($actual) || (string) $actual !== (string) $expected) {
                 return false;
             }
         }
