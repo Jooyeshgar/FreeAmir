@@ -48,6 +48,58 @@ class CoreNavigationTest extends TestCase
         self::assertSame('core.hr', $this->find($nodes, 'core.hr.payrolls')->parent);
     }
 
+    public function test_portal_and_report_children_keep_the_original_menu_order(): void
+    {
+        $nodes = $this->flatten(app(NavigationRegistry::class)->tree());
+
+        foreach ([
+            'core.portal' => [
+                'core.portal.dashboard', 'core.portal.attendance', 'core.portal.monthly-attendance',
+                'core.portal.payrolls', 'core.portal.requests', 'core.portal.information',
+            ],
+            'core.reports' => [
+                'core.reports.company-overview', 'core.reports.cost-income', 'core.reports.monthly-workbench',
+                'core.reports.commercial-ledgers', 'core.reports.accounting',
+            ],
+            'core.reports.accounting' => [
+                'core.reports.accounting.documents', 'core.reports.accounting.journal', 'core.reports.accounting.ledger',
+                'core.reports.accounting.sub-ledger', 'core.reports.accounting.trial-balance', 'core.reports.accounting.inventory-turnover',
+            ],
+        ] as $parent => $expected) {
+            $children = array_filter($nodes, static fn (MenuItem $item): bool => $item->parent === $parent);
+
+            self::assertSame($expected, array_values(array_map(static fn (MenuItem $item): string => $item->id, $children)), "Menu order under [$parent] must match the inventory.");
+        }
+    }
+
+    public function test_active_invoice_link_highlights_each_parent_summary(): void
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo(Permission::findOrCreate('invoices.index', 'web'));
+        $this->actingAs($user);
+        request()->setRouteResolver(static fn () => Route::getRoutes()->getByName('invoices.index'));
+        request()->query->replace(['invoice_type' => 'buy']);
+
+        $document = new \DOMDocument;
+        $previousErrorHandling = libxml_use_internal_errors(true);
+        try {
+            // DOMDocument's HTML4 parser warns about HTML5 details/summary tags.
+            $document->loadHTML('<meta charset="UTF-8">'.Blade::render('<ul><x-menu /></ul>'));
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previousErrorHandling);
+        }
+        $xpath = new \DOMXPath($document);
+        $activeClass = 'contains(concat(" ", normalize-space(@class), " "), " menu-active ")';
+        $activeLinks = $xpath->query('//a['.$activeClass.']');
+
+        self::assertCount(1, $activeLinks);
+        self::assertStringContainsString('invoice_type=buy', $activeLinks->item(0)->getAttribute('href'));
+        self::assertCount(2, $xpath->query('//a['.$activeClass.']/ancestor::details/summary['.$activeClass.']'));
+        self::assertCount(2, $xpath->query('//summary['.$activeClass.']'));
+        self::assertCount(0, $xpath->query('//details['.$activeClass.']'));
+    }
+
     public function test_rendering_filters_permissions_per_request_and_keeps_legacy_package_slots(): void
     {
         $user = User::factory()->create();
