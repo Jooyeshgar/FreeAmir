@@ -48,6 +48,8 @@ Route::group(['middleware' => ['auth', 'ensure-employee', 'ensure-feature-enable
 });
 
 Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabled:email_verification', 'fiscal-year-open']], function () {
+    Route::get('activity-logs', [Controllers\ActivityLogController::class, 'index'])->name('activity-logs.index');
+    Route::get('activity-logs/{activity}/details', [Controllers\ActivityLogController::class, 'details'])->whereNumber('activity')->name('activity-logs.details');
     Route::get('api-tokens', [Controllers\ApiTokenController::class, 'index'])->name('api-tokens.index');
     Route::get('api-tokens/create', [Controllers\ApiTokenController::class, 'create'])->name('api-tokens.create');
     Route::post('api-tokens', [Controllers\ApiTokenController::class, 'store'])->name('api-tokens.store');
