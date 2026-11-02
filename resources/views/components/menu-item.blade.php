@@ -13,8 +13,8 @@
 
 <li>
     @if ($hasChildren)
-        <details @class([$topDropdownClass => $isTopLevel, 'menu-active' => $active]) @if ($isTopLevel) data-main-menu-dropdown @endif>
-            <summary>{{ __($item->label) }}</summary>
+        <details @class([$topDropdownClass => $isTopLevel]) @if ($isTopLevel) data-main-menu-dropdown @endif>
+            <summary @class(['menu-active' => $active])>{{ __($item->label) }}</summary>
             <ul @class([$topDropdownContentClass => $isTopLevel])>
                 @foreach ($node['children'] as $child)
                     @include('components.menu-item', ['node' => $child, 'depth' => $depth + 1, 'menu' => $menu])

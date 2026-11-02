@@ -36,8 +36,8 @@ class CoreNavigationServiceProvider extends ServiceProvider
             ['payrolls', 'My Payrolls', 'employee-portal.payrolls'],
             ['requests', 'My Requests', 'employee-portal.personnel-requests.index'],
             ['information', 'My Information', 'employee-portal.employee.show'],
-        ] as [$id, $label, $route]) {
-            $link("core.portal.$id", $label, $route, 'core.portal', 100);
+        ] as $index => [$id, $label, $route]) {
+            $link("core.portal.$id", $label, $route, 'core.portal', ($index + 1) * 100);
         }
 
         $group('core.invoices', 'Invoices', null, 300, [
