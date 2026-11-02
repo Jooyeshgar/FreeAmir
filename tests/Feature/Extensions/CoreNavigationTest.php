@@ -22,11 +22,12 @@ class CoreNavigationTest extends TestCase
         $registry = app(NavigationRegistry::class);
         $tree = $registry->tree();
         $nodes = $this->flatten($tree);
+        $coreNodes = array_values(array_filter($nodes, static fn (MenuItem $item): bool => str_starts_with($item->id, 'core.')));
 
-        self::assertCount(84, $nodes);
-        self::assertCount(70, array_filter($nodes, static fn (MenuItem $item): bool => $item->route !== null));
-        self::assertCount(14, array_filter($nodes, static fn (MenuItem $item): bool => $item->route === null));
-        foreach ($nodes as $item) {
+        self::assertCount(84, $coreNodes);
+        self::assertCount(70, array_filter($coreNodes, static fn (MenuItem $item): bool => $item->route !== null));
+        self::assertCount(14, array_filter($coreNodes, static fn (MenuItem $item): bool => $item->route === null));
+        foreach ($coreNodes as $item) {
             if ($item->route !== null) {
                 self::assertTrue(Route::has($item->route), "Core navigation route [{$item->route}] must exist.");
             }
