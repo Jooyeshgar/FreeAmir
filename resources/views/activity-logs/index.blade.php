@@ -232,8 +232,13 @@
                                 dir="ltr">{{ $activity['requestMethod'] }}</span>
                         @endif
                         @if ($activity['companyLabel'])
-                            <a href="{{ $activity['companyUrl'] }}"
-                                class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20 transition hover:bg-amber-100 hover:underline dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-950/70">{{ $activity['companyLabel'] }}</a>
+                            @if ($activity['companyUrl'])
+                                <a href="{{ $activity['companyUrl'] }}"
+                                    class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20 transition hover:bg-amber-100 hover:underline dark:bg-amber-950/40 dark:text-amber-300 dark:hover:bg-amber-950/70">{{ $activity['companyLabel'] }}</a>
+                            @else
+                                <span
+                                    class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20 dark:bg-amber-950/40 dark:text-amber-300">{{ $activity['companyLabel'] }}</span>
+                            @endif
                         @endif
                         @if ($activity['impersonatedUserName'])
                             <span
