@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ThursdayStatus;
 use App\Models\Scopes\FiscalYearScope;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -33,7 +34,6 @@ class WorkShift extends Model
     ];
 
     protected $casts = [
-        'thursday_status' => ThursdayStatus::class,
         'is_active' => 'boolean',
         'float' => 'float',
         'break' => 'integer',
@@ -45,6 +45,14 @@ class WorkShift extends Model
         'undertime_coefficient' => 'float',
         'paid_leave' => 'integer',
     ];
+
+    protected function thursdayStatus(): Attribute
+    {
+        return Attribute::make(
+            get: fn ($value) => ThursdayStatus::tryFromName($value),
+            set: fn ($value) => $value instanceof ThursdayStatus ? $value->value : (ThursdayStatus::tryFromName($value)?->value ?? $value),
+        );
+    }
 
     public function getDurationAttribute(): int
     {
