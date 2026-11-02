@@ -45,22 +45,22 @@ class CoreNavigationServiceProvider extends ServiceProvider
             'ancillary-costs.index', 'invoices.moadian-histories.index',
         ]);
         $link('core.invoices.dashboard', 'Invoice Dashboard', 'invoices.dashboard', 'core.invoices', 100, ['invoices.dashboard']);
-        $group('core.invoices.sales', 'Sales', 'core.invoices', 200, ['invoices.index']);
+        $group('core.invoices.sales', 'Sales', 'core.invoices', 200, ['invoices.index', 'invoices.moadian-histories.index']);
         $link('core.invoices.sales.sell', 'Sell List', 'invoices.index', 'core.invoices.sales', 100, ['invoices.index'], ['invoice_type' => 'sell']);
         $link('core.invoices.sales.return-sell', 'Return Sell List', 'invoices.index', 'core.invoices.sales', 200, ['invoices.index'], ['invoice_type' => 'return_sell']);
         $link('core.invoices.sales.voided-sell', 'Voided Sell', 'invoices.index', 'core.invoices.sales', 300, ['invoices.index'], ['invoice_type' => 'void']);
-        $link('core.invoices.sales.moadian-histories', 'Moadian Histories', 'invoices.moadian-histories.index', 'core.invoices.sales', 400, ['invoices.index']);
+        $link('core.invoices.sales.moadian-histories', 'Moadian Histories', 'invoices.moadian-histories.index', 'core.invoices.sales', 400, ['invoices.moadian-histories.index']);
         $group('core.invoices.purchases', 'Purchases', 'core.invoices', 300, ['invoices.index', 'ancillary-costs.index']);
-        $link('core.invoices.purchases.buy', 'Buy List', 'invoices.index', 'core.invoices.purchases', 100, [], ['invoice_type' => 'buy']);
-        $link('core.invoices.purchases.buy-service', 'Buy Service', 'invoices.index', 'core.invoices.purchases', 200, [], ['invoice_type' => 'buy', 'service_buy' => '1']);
-        $link('core.invoices.purchases.return-buy', 'Return Buy List', 'invoices.index', 'core.invoices.purchases', 300, [], ['invoice_type' => 'return_buy']);
-        $link('core.invoices.purchases.service-buy-return', 'Service Buy Return', 'invoices.index', 'core.invoices.purchases', 400, [], ['invoice_type' => 'return_buy', 'service_buy' => '1']);
+        $link('core.invoices.purchases.buy', 'Buy List', 'invoices.index', 'core.invoices.purchases', 100, ['invoices.index'], ['invoice_type' => 'buy']);
+        $link('core.invoices.purchases.buy-service', 'Buy Service', 'invoices.index', 'core.invoices.purchases', 200, ['invoices.index'], ['invoice_type' => 'buy', 'service_buy' => '1']);
+        $link('core.invoices.purchases.return-buy', 'Return Buy List', 'invoices.index', 'core.invoices.purchases', 300, ['invoices.index'], ['invoice_type' => 'return_buy']);
+        $link('core.invoices.purchases.service-buy-return', 'Service Buy Return', 'invoices.index', 'core.invoices.purchases', 400, ['invoices.index'], ['invoice_type' => 'return_buy', 'service_buy' => '1']);
         $link('core.invoices.purchases.ancillary-costs', 'Ancillary Cost List', 'ancillary-costs.index', 'core.invoices.purchases', 500, ['ancillary-costs.index']);
-        $link('core.invoices.beginning-inventory', 'Beginning Inventory', 'invoices.index', 'core.invoices', 400, ['invoices.index', 'ancillary-costs.index'], ['invoice_type' => 'beginning_inventory']);
+        $link('core.invoices.beginning-inventory', 'Beginning Inventory', 'invoices.index', 'core.invoices', 400, ['invoices.index'], ['invoice_type' => 'beginning_inventory']);
         $link('core.invoices.inactive', 'Activate Confirmed Invoices', 'invoices.inactive', 'core.invoices', 500, ['invoices.inactive']);
         $link('core.invoices.add-customer', 'Add Customer', 'customers.create', 'core.invoices', 600, ['customers.create']);
 
-        $group('core.accounting', 'Accounting', null, 400, ['documents.index', 'documents.create']);
+        $group('core.accounting', 'Accounting', null, 400, ['documents.index', 'documents.create', 'cheques.index']);
         $link('core.accounting.create-document', 'Create Document', 'documents.create', 'core.accounting', 100, ['documents.create']);
         $link('core.accounting.documents', 'Document List', 'documents.index', 'core.accounting', 200, ['documents.index']);
         $link('core.accounting.cheques', 'Cheque Management', 'cheques.index', 'core.accounting', 300, ['cheques.index']);
