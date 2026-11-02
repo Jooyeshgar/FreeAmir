@@ -101,7 +101,7 @@ class UserImpersonationTest extends TestCase
         $this->assertImpersonationSessionIsClear();
     }
 
-    public function test_user_with_management_access_returns_to_management_users_after_impersonation(): void
+    public function test_user_with_legacy_platform_access_returns_to_workspace_users_after_impersonation(): void
     {
         $fiscalYear = $this->fiscalYear(1405);
         $admin = $this->userWithRole('Admin', $fiscalYear, canImpersonate: true, canViewUsers: true);
@@ -115,8 +115,8 @@ class UserImpersonationTest extends TestCase
             ->assertRedirect(route('users.index'))->assertSessionHas('success');
 
         $this->assertAuthenticatedAs($admin);
-        $this->assertSame('management', session('interface_mode'));
-        $this->get(route('users.index'))->assertOk()->assertSee(__('Platform users'));
+        $this->assertSame('workspace', session('interface_mode'));
+        $this->get(route('users.index'))->assertOk()->assertViewIs('users.workspace-index');
     }
 
     public function test_guest_cannot_start_impersonation(): void
@@ -331,7 +331,7 @@ class UserImpersonationTest extends TestCase
         }
 
         $response = $this->withSession(['interface_mode' => 'management'])->get(route('users.index'))->assertOk();
-        $response->assertSee(__('User has no assigned fiscal year'));
+        $response->assertViewIs('users.workspace-index');
 
         foreach ($targets as $target) {
             $response->assertDontSee(route('users.impersonate', $target), false);
@@ -368,27 +368,31 @@ class UserImpersonationTest extends TestCase
         $this->assertSame($admin->id, session('impersonated_by'));
     }
 
-    public function test_super_admin_can_impersonate_admin_without_shared_company(): void
+    public function test_super_admin_cannot_impersonate_admin_without_shared_company(): void
     {
         $superAdmin = $this->userWithRole('Super-Admin', canImpersonate: true);
         $fiscalYear = $this->fiscalYear(1405);
         $admin = $this->userWithRole('Admin', $fiscalYear);
 
-        $this->actingAs($superAdmin)->post(route('users.impersonate', $admin))->assertRedirect(route('about'));
+        $superAdmin->fiscalYears()->detach();
 
-        $this->assertAuthenticatedAs($admin);
+        $this->actingAs($superAdmin)->post(route('users.impersonate', $admin))->assertForbidden();
+
+        $this->assertAuthenticatedAs($superAdmin);
     }
 
-    public function test_super_admin_with_inherited_admin_role_keeps_super_admin_impersonation_access(): void
+    public function test_super_admin_with_inherited_admin_role_cannot_bypass_company_scope(): void
     {
         $superAdmin = $this->userWithRole('Super-Admin', canImpersonate: true);
         $superAdmin->assignRole($this->role('Admin'));
         $fiscalYear = $this->fiscalYear(1405);
         $admin = $this->userWithRole('Admin', $fiscalYear);
 
-        $this->actingAs($superAdmin)->post(route('users.impersonate', $admin))->assertRedirect(route('about'));
+        $superAdmin->fiscalYears()->detach();
 
-        $this->assertAuthenticatedAs($admin);
+        $this->actingAs($superAdmin)->post(route('users.impersonate', $admin))->assertForbidden();
+
+        $this->assertAuthenticatedAs($superAdmin);
     }
 
     public function test_no_user_can_impersonate_a_super_admin(): void
@@ -605,14 +609,16 @@ class UserImpersonationTest extends TestCase
         $this->assertAuthenticatedAs($target);
     }
 
-    public function test_platform_super_admin_bypasses_company_scope_for_eligible_target(): void
+    public function test_retained_super_admin_cannot_bypass_company_scope_for_eligible_target(): void
     {
         $superAdmin = $this->userWithRole('Super-Admin', canImpersonate: true);
         $target = $this->userWithRole('Employee', $this->fiscalYear(1407));
 
-        $this->actingAs($superAdmin)->post(route('users.impersonate', $target))->assertRedirect(route('about'));
+        $superAdmin->fiscalYears()->detach();
 
-        $this->assertAuthenticatedAs($target);
+        $this->actingAs($superAdmin)->post(route('users.impersonate', $target))->assertForbidden();
+
+        $this->assertAuthenticatedAs($superAdmin);
     }
 
     public function test_workspace_admin_list_shows_buttons_for_every_eligible_user(): void
@@ -647,17 +653,17 @@ class UserImpersonationTest extends TestCase
             ->assertDontSee(route('users.impersonate', $accountant), false);
     }
 
-    public function test_management_list_shows_admin_action_but_never_super_admin_action(): void
+    public function test_stale_management_session_cannot_show_users_from_other_companies(): void
     {
         $actor = $this->userWithRole('Super-Admin', canImpersonate: true, canViewUsers: true);
         $admin = $this->userWithRole('Admin', $this->fiscalYear(1405));
         $otherSuperAdmin = $this->userWithRole('Super-Admin');
 
+        $actor->fiscalYears()->detach();
+
         $this->actingAs($actor)->withSession(['interface_mode' => 'management'])->get(route('users.index'))->assertOk()
-            ->assertSee($admin->email)->assertSee($otherSuperAdmin->email)
-            ->assertSee(__('Are you sure you want to impersonate this user?'))
-            ->assertSee(__('Are you sure you want to delete this user?'))
-            ->assertSee(route('users.impersonate', $admin), false)
+            ->assertDontSee($admin->email)->assertDontSee($otherSuperAdmin->email)
+            ->assertDontSee(route('users.impersonate', $admin), false)
             ->assertDontSee(route('users.impersonate', $otherSuperAdmin), false)
             ->assertDontSee(route('users.impersonate', $actor), false);
     }

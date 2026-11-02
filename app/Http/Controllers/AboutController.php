@@ -11,7 +11,7 @@ class AboutController extends Controller
 {
     public function __construct(private readonly GlobalConfigService $globalConfigService) {}
 
-    public function index(Request $request)
+    public function index()
     {
         $dbConnected = false;
         $dbDriver = config('database.default');
@@ -28,7 +28,6 @@ class AboutController extends Controller
             'app_locale' => ['fa' => __('Persian'), 'en' => __('English')],
             'app_registration' => ['true' => __('Enabled'), 'false' => __('Disabled')],
             'app_email_verification' => ['true' => __('Enabled'), 'false' => __('Disabled')],
-            'app_activity_logger_enabled' => ['true' => __('Enabled'), 'false' => __('Disabled')],
         ];
         $gcSettings = [];
         foreach ($this->settingTitles() as $key => $title) {
@@ -39,15 +38,7 @@ class AboutController extends Controller
             ];
         }
 
-        $isManagementSettings = $request->routeIs('management.settings');
-
-        if ($isManagementSettings) {
-            $request->session()->put('interface_mode', 'management');
-        }
-
-        $view = $isManagementSettings ? 'super-admin.settings' : 'about';
-
-        return view($view, [
+        return view('about', [
             'version' => config('app.version'),
             'appEnv' => config('app.env'),
             'debugMode' => config('app.debug'),
@@ -70,14 +61,17 @@ class AboutController extends Controller
             'app_debug' => ['nullable', Rule::in($this->globalConfigService::SETTINGS['app_debug'])],
             'app_registration' => ['nullable', Rule::in($this->globalConfigService::SETTINGS['app_registration'])],
             'app_email_verification' => ['nullable', Rule::in($this->globalConfigService::SETTINGS['app_email_verification'])],
-            'app_activity_logger_enabled' => ['nullable', Rule::in($this->globalConfigService::SETTINGS['app_activity_logger_enabled'])],
         ]);
 
         $this->globalConfigService->update($validated);
 
+        if (array_key_exists('app_locale', $validated)) {
+            $request->session()->forget('locale');
+        }
+
         $updated = implode(', ', array_intersect_key($this->settingTitles(), $validated));
 
-        return redirect()->route('management.settings')->with('success', __(':setting updated successfully.', ['setting' => $updated]));
+        return redirect()->route('about')->with('success', __(':setting updated successfully.', ['setting' => $updated]));
     }
 
     private function settingTitles(): array
@@ -88,7 +82,6 @@ class AboutController extends Controller
             'app_locale' => __('about.locale'),
             'app_registration' => __('about.registration'),
             'app_email_verification' => __('about.email_verification'),
-            'app_activity_logger_enabled' => __('about.activity_logger'),
         ];
     }
 }

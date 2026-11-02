@@ -429,14 +429,14 @@ class HomeServiceChartTest extends TestCase
             ->assertDontSee('data-home-area="inventory"', false);
     }
 
-    public function test_platform_administrator_can_return_to_management(): void
+    public function test_legacy_platform_permission_uses_the_normal_workspace_variant(): void
     {
         $this->signInWith(['access-super-admin-panel', 'customers.index']);
 
         $this->get(route('home'))->assertOk()
-            ->assertViewHas('homeVariant', 'platform')
-            ->assertSee('data-home-variant="platform"', false)
-            ->assertSee(route('management.dashboard'), false);
+            ->assertViewHas('homeVariant', 'crm')
+            ->assertSee('data-home-variant="crm"', false)
+            ->assertDontSee('href="'.url('/management').'"', false);
     }
 
     public function test_company_administrator_gets_the_administration_variant(): void

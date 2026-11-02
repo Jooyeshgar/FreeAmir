@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Services\HomeService;
-use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -27,20 +26,9 @@ class HomeController extends Controller
 
     public function __construct(private readonly HomeService $service) {}
 
-    public function managementDashboard(Request $request): View
-    {
-        $request->session()->put('interface_mode', 'management');
-
-        return view('super-admin.dashboard', $this->service->superAdminOverview());
-    }
-
     public function index(Request $request)
     {
         $user = auth()->user();
-        $request->session()->put('interface_mode', 'workspace');
-
-        // Use can() (not Spatie's hasAnyPermission) so AppServiceProvider's
-        // platform-access capability hook is honored.
         $hasBusinessPerms = collect(self::BUSINESS_PERMISSIONS)->contains(fn ($perm) => $user->can($perm));
         $canSeePersonalPortal = $user->can('employee-portal.dashboard') && ! $hasBusinessPerms;
 
@@ -51,7 +39,6 @@ class HomeController extends Controller
         $canCustomers = $user->can('customers.index');
 
         $homeVariant = match (true) {
-            $user->can('access-super-admin-panel') => 'platform',
             $canFinancial && $user->can('configs.index') => 'admin',
             $canFinancial => 'accounting',
             $canSales && $canInventory => 'operations',

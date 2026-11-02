@@ -25,27 +25,9 @@ Route::get('/verify/{id}/{hash}', [Controllers\Auth\RegisterController::class, '
 
 Route::middleware(['auth', 'ensure-feature-enabled:email_verification'])->group(function () {
     Route::get('/about', [Controllers\AboutController::class, 'index'])->name('about');
+    Route::put('/about/change-global-configs', [Controllers\AboutController::class, 'updateGlobalConfigs'])->middleware('check-permission:configs.update')->name('configs.global-update');
     Route::get('/registered-user/company', [Controllers\CompanyController::class, 'createCompanyForRegisteredUser'])->name('registered-user.company.create');
     Route::post('/registered-user/company', [Controllers\CompanyController::class, 'storeCompanyForRegisteredUser'])->name('registered-user.company.store');
-});
-
-Route::middleware(['auth', 'permission:access-super-admin-panel', 'ensure-feature-enabled:email_verification'])->prefix('management')->group(function () {
-    Route::get('/', [Controllers\HomeController::class, 'managementDashboard'])->name('management.dashboard');
-    Route::get('/activity-logs', [Controllers\Management\ActivityLogController::class, 'index'])
-        ->middleware('permission:access-super-admin-panel|activity-logs.index')
-        ->name('management.activity-logs.index');
-    Route::get('/activity-logs/{activity}/details', [Controllers\Management\ActivityLogController::class, 'details'])
-        ->middleware('permission:access-super-admin-panel|activity-logs.details')
-        ->whereNumber('activity')->name('management.activity-logs.details');
-    Route::get('/settings', [Controllers\AboutController::class, 'index'])->name('management.settings');
-    Route::get('/users/{user}', [Controllers\Management\UserController::class, 'show'])->whereNumber('user')->name('users.show');
-    Route::post('/users/{user}/verify', [Controllers\Management\UserController::class, 'verify'])->name('users.verify');
-
-    Route::middleware('check-permission')->group(function () {
-        Route::put('/settings', [Controllers\AboutController::class, 'updateGlobalConfigs'])->name('update-global-configs');
-        Route::resource('permissions', Controllers\Management\PermissionController::class)->except(['show']);
-        Route::resource('roles', Controllers\Management\RoleController::class)->except(['show']);
-    });
 });
 
 Route::group(['middleware' => ['auth', 'ensure-employee', 'ensure-feature-enabled:email_verification', 'fiscal-year-open'], 'prefix' => 'employee-portal', 'as' => 'employee-portal.'], function () {
@@ -186,7 +168,7 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::group(['prefix' => 'management'], function () {
         Route::post('companies/{fiscalYear}/test-moadian-connection', [Controllers\CompanyController::class, 'testMoadianConnection'])->name('companies.test-moadian-connection');
         Route::resource('fiscal-years', Controllers\FiscalYearController::class);
-        Route::resource('companies', Controllers\CompanyController::class);
+        Route::resource('companies', Controllers\CompanyController::class)->except(['show']);
         Route::post('companies/close-fiscal-year/{fiscalYear}', [Controllers\CompanyController::class, 'closeFiscalYear'])->name('companies.close-fiscal-year');
         Route::get('companies/{fiscalYear}/closing-wizard', [Controllers\CompanyController::class, 'closingWizard'])->name('companies.closing-wizard');
         Route::post('companies/{fiscalYear}/closing-wizard/step1', [Controllers\CompanyController::class, 'closingWizardStep1'])->name('companies.closing-wizard.step1');
@@ -198,6 +180,7 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
         Route::post('users/{user}/impersonate', [Controllers\Management\UserController::class, 'impersonate'])
             ->name('users.impersonate');
         Route::resource('users', Controllers\Management\UserController::class)->except(['show']);
+        Route::get('users/{user}', [Controllers\Management\UserController::class, 'show'])->whereNumber('user')->name('users.show');
         Route::resource('configs', Controllers\ConfigController::class);
     });
 

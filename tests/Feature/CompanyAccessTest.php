@@ -79,13 +79,13 @@ class CompanyAccessTest extends TestCase
         $this->assertTrue($fiscalYear->users()->whereKey($superAdmin->id)->exists());
     }
 
-    public function test_company_index_shows_create_button_to_super_admin_without_companies(): void
+    public function test_company_index_uses_workspace_for_retained_super_admin_without_companies(): void
     {
         $superAdmin = User::factory()->create();
         $superAdmin->assignRole(Role::firstOrCreate(['name' => 'Super-Admin']));
 
         $response = $this->actingAs($superAdmin)->withSession(['interface_mode' => 'management'])->get(route('companies.index'));
-        $response->assertOk()->assertSee('data-testid="create-first-company"', false);
+        $response->assertOk()->assertViewIs('companies.workspace-index')->assertSee(route('companies.create'), false);
     }
 
     public function test_company_index_hides_first_company_button_after_super_admin_has_a_company(): void
