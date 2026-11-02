@@ -86,11 +86,11 @@ slot's exact priority sorts before that legacy block. A legacy area outside thes
 names maps to its area string as a parent ID, without a special slot priority; that parent
 must also be registered when reading the tree.
 
-This checkpoint implements definitions and tree assembly. Core provider registration,
-permission filtering, recursive Blade rendering and active matching are later migration
-steps. Until that migration, typed items are available through the registry but are not
-displayed by the old area component. Reading `tree()` requires its parents to have been
-registered; the core parent definitions will be added in the provider step.
+The core provider registers the complete stable tree, and the shared Blade menu renders
+that tree recursively for both desktop and mobile consumers. Permission and visibility
+callbacks are evaluated on every request; empty groups are omitted. Legacy area
+registrations are still assembled into their original slots, so installed packages keep
+their existing API while typed package items can be placed under any core parent.
 
 The agreed active rule for the later renderer is to match the route and menu discriminator
 parameters exactly, including absence of `service_buy` for the ordinary Buy variant, while
@@ -108,16 +108,17 @@ checked by package endpoints.
 
 ## Reserved integration locations
 
-The host renders these registered package locations:
+The shared navigation tree retains these registered package locations:
 
 - Navigation areas: `navigation.workspace.invoices` in the Invoices menu and `navigation.management` in the Management menu. Both are rendered by the host component.
 - View slots: `invoice.create.fields`, `invoice.edit.fields`, `invoice.show.panels`, `invoice.index.filters`, `invoice.index.row.badges`.
 
-Navigation registered in either area is rendered by the host's generic
-`<x-extension-navigation>` component. A package provides a stable `id`, translated `label`, named `route`,
-optional `permission`, optional `visible` callback, and numeric `priority`. The renderer checks the current
-user, route existence, permission, and callback context on every request. It escapes labels and ignores
-missing routes. It never evaluates route names, view names, or permissions from request input.
+Navigation registered in either legacy area is adapted into its existing slot in the shared
+tree; packages may also register a typed `MenuItem` under a stable core parent. The old
+`<x-extension-navigation>` component remains available to consumers of the version 1 array
+API. Both render paths check the current user, route existence, permission, and callback
+context on every request. They escape labels and ignore missing routes. They never evaluate
+route names, view names, or permissions from request input.
 
 Package Blade views should use the host `<x-app-layout>`, `<x-input>`, `<x-textarea>`, and
 `<x-show-message-bags>` components. Package Tailwind classes are scanned from `vendor/amir`; package views
