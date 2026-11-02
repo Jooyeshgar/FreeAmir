@@ -3688,5 +3688,7 @@
     "percentage points": "واحد درصد",
     "Sort invoice numbers": "مرتب‌سازی شماره فاکتورها",
     "Sort all invoice numbers in the active fiscal year? Existing printed invoice numbers will change.": "شماره همه فاکتورهای سال مالی فعال مرتب شود؟ شماره فاکتورهای چاپ‌شده تغییر خواهد کرد.",
-    "Invoice numbers sorted successfully.": "شماره فاکتورها با موفقیت مرتب شد."
+    "Invoice numbers sorted successfully.": "شماره فاکتورها با موفقیت مرتب شد.",
+    "Do you want to refresh data for the active fiscal year?": "آیا می‌خواهید داده‌های سال مالی فعال را نوسازی کنید؟",
+    "This will delete data in the active fiscal year and rebuild it with demo data. Continue?": "داده‌های سال مالی فعال حذف و با داده‌های نمایشی بازسازی می‌شوند. ادامه می‌دهید؟"
 }

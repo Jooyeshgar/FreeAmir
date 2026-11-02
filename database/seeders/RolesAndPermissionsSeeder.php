@@ -120,8 +120,6 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // Users / Roles / Permissions / Configs
             'users' => [...self::CRUD, 'create-employee', 'impersonate'],
-            'permissions' => self::CRUD_NO_SHOW,
-            'roles' => self::CRUD_NO_SHOW,
             'configs' => self::CRUD,
 
             // HR
@@ -191,12 +189,8 @@ class RolesAndPermissionsSeeder extends Seeder
 
         $extras = [
             'home',
-            'access-super-admin-panel',
-            'activity-logs.index',
-            'activity-logs.details',
             'api.access',
             'change-company',
-            'update-global-configs',
             'report',
         ];
 
@@ -213,7 +207,9 @@ class RolesAndPermissionsSeeder extends Seeder
     private function seedRoles(): void
     {
         $superAdmin = Role::firstOrCreate(['name' => 'Super-Admin']);
-        $superAdmin->syncPermissions(Permission::all());
+        $superAdmin->syncPermissions(Permission::query()->whereNotIn('name', [
+            'access-super-admin-panel', 'update-global-configs', 'activity-logs.index', 'activity-logs.details',
+        ])->where('name', 'NOT LIKE', 'roles.%')->where('name', 'NOT LIKE', 'permissions.%')->get());
 
         $admin = Role::firstOrCreate(['name' => __('Admin')]);
         $admin->syncPermissions(

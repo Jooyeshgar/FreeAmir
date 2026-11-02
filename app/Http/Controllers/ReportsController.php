@@ -33,19 +33,6 @@ class ReportsController extends Controller
     {
         $user = auth()->user();
 
-        if ($user->can('access-super-admin-panel')) {
-            $hasCurrentWorkspace = $user->fiscalYears()->whereKey(getActiveFiscalYear())->where('year', toEnglish(jdate('Y')))->exists();
-
-            if (! $hasCurrentWorkspace) {
-                return redirect()->route('management.dashboard');
-            }
-        }
-
-        $request->session()->put('interface_mode', 'workspace');
-
-        // Use can() (not Spatie's hasAnyPermission) so AppServiceProvider's
-        // platform-access capability hook is honored.
-
         $BUSINESS_PERMISSIONS = [
             'documents.show',
             'products.index',
@@ -185,7 +172,7 @@ class ReportsController extends Controller
         $fiscalYearId = (int) getActiveFiscalYear();
         $user = auth()->user();
 
-        abort_unless($user->can('access-super-admin-panel') || $user->fiscalYears()->whereKey($fiscalYearId)->exists(), 403);
+        abort_unless($user->fiscalYears()->whereKey($fiscalYearId)->exists(), 403);
 
         if (! FiscalYear::whereKey($fiscalYearId)->exists()) {
             return redirect()->route('home')->with('error', __('Please select a valid company first.'));
