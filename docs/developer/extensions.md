@@ -92,7 +92,7 @@ callbacks are evaluated on every request; empty groups are omitted. Legacy area
 registrations are still assembled into their original slots, so installed packages keep
 their existing API while typed package items can be placed under any core parent.
 
-The agreed active rule for the later renderer is to match the route and menu discriminator
+The shared renderer matches the route and menu discriminator
 parameters exactly, including absence of `service_buy` for the ordinary Buy variant, while
 ignoring non-menu filters such as pagination and search. Merely matching the route name
 or a subset of the query would incorrectly activate several invoice variants at once.
