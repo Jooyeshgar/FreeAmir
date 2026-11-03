@@ -65,8 +65,6 @@
     "A verification link and a 6-digit code have been sent to :email.": "یک لینک تایید و یک کد 6 رقمی به :email ارسال شده است.",
     "API Tokens": "توکن های API",
     "MCP Server URL": "آدرس سرور MCP",
-    "MCP connection is unavailable": "اتصال MCP در دسترس نیست",
-    "The MCP service is not enabled on this installation. Ask the administrator to enable it to display the connection URL.": "سرویس MCP در این نصب فعال نیست. برای فعال‌سازی و نمایش آدرس اتصال، با مدیر سامانه تماس بگیرید.",
     "MCP Connection Endpoints": "آدرس‌های اتصال سرور MCP",
     "Copied!": "کپی شد!",
     "Copy Token": "کپی توکن",
