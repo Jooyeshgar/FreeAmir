@@ -12,14 +12,14 @@
                     @if (\Illuminate\Support\Facades\Route::has('mcp.handle'))
                         <!-- MCP Connection Box in the Corner -->
                         <div class="flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/5 px-3 py-1.5 text-xs shadow-sm"
-                             x-data="{ copied: false, endpoint: '{{ url('/api/mcp') }}' }">
+                             x-data="{ copied: false, endpoint: '{{ route('mcp.handle') }}' }">
                             <span class="inline-flex items-center gap-1.5 font-semibold text-primary">
                                 <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                                 </svg>
                                 {{ __('MCP Server URL') }}:
                             </span>
-                            <code class="font-mono text-xs bg-base-100 px-2 py-1 rounded border border-base-300 text-base-content select-all tracking-tight" dir="ltr">{{ url('/api/mcp') }}</code>
+                            <code class="font-mono text-xs bg-base-100 px-2 py-1 rounded border border-base-300 text-base-content select-all tracking-tight" dir="ltr">{{ route('mcp.handle') }}</code>
                             <button type="button"
                                     class="btn btn-xs btn-ghost text-primary hover:bg-primary/20 gap-1 font-normal"
                                     @click="navigator.clipboard.writeText(endpoint); copied = true; setTimeout(() => copied = false, 2000)"
@@ -45,12 +45,8 @@
                                         {{ __('MCP Connection Endpoints') }}
                                     </div>
                                     <div>
-                                        <span class="text-base-content/70 block mb-0.5 font-medium">HTTP Endpoint (POST):</span>
-                                        <code class="block font-mono bg-base-200 p-1.5 rounded text-[11px] select-all break-all" dir="ltr">{{ url('/api/mcp') }}</code>
-                                    </div>
-                                    <div>
-                                        <span class="text-base-content/70 block mb-0.5 font-medium">SSE Endpoint (GET):</span>
-                                        <code class="block font-mono bg-base-200 p-1.5 rounded text-[11px] select-all break-all" dir="ltr">{{ url('/api/mcp/sse') }}</code>
+                                        <span class="text-base-content/70 block mb-0.5 font-medium">Streamable HTTP (POST):</span>
+                                        <code class="block font-mono bg-base-200 p-1.5 rounded text-[11px] select-all break-all" dir="ltr">{{ route('mcp.handle') }}</code>
                                     </div>
                                     <p class="text-[11px] text-base-content/60 pt-1 border-t border-base-200">
                                         {{ __('Connect AI agents (Claude Desktop, Cursor, etc.) using Bearer token authentication.') }}
@@ -83,7 +79,7 @@
                         @if (\Illuminate\Support\Facades\Route::has('mcp.handle'))
                             <div class="text-xs text-base-content/80 flex flex-wrap items-center gap-1.5 pt-1">
                                 <span>{{ __('Connect your AI agent using this token and the MCP URL:') }}</span>
-                                <code class="font-mono bg-base-100/80 px-2 py-0.5 rounded border border-warning/40 text-xs" dir="ltr">{{ url('/api/mcp') }}</code>
+                                <code class="font-mono bg-base-100/80 px-2 py-0.5 rounded border border-warning/40 text-xs" dir="ltr">{{ route('mcp.handle') }}</code>
                             </div>
                         @endif
                     </div>
