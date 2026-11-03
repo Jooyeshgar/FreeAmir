@@ -1,45 +1,19 @@
 # Extension API
 
-Issue #453 provides the shared core navigation tree and its generic extension API foundation.
+Issue #453 provides the shared core navigation tree and the host context it needs.
 Navigation registration and rendering are available independently of optional packages.
-The dependent invoice-category integration in issue #445 wires invoice slots, persistence,
-query hooks and fiscal-year events into application flows; those integrations are not part
-of this navigation branch.
+Invoice slots, invoice query/persistence hooks and fiscal-year events belong to the
+dependent invoice integration (#445) and are not part of this document.
 
-`App\Extensions\ExtensionApi::VERSION` is `1`. Packages target this host API explicitly. FreeAmir is
-an application, not a Composer library; do not invent a dependency on `amir/freeamir`. Package tests cover
-their own behavior and host integration tests verify compatibility with the actual FreeAmir checkout.
+`App\Extensions\ExtensionApi::VERSION` is `1`. FreeAmir is an application, not a Composer
+library; do not invent a dependency on `amir/freeamir`.
 
-## Registries
+The host registers `App\Extensions\NavigationRegistry` as a singleton from
+`App\Providers\ExtensionServiceProvider`. Navigation IDs are globally unique and duplicate
+registrations are configuration errors. Visibility and authorization are checked for the
+current request, never at registration.
 
-The host registers these services from `App\Providers\ExtensionServiceProvider`:
-
-- `App\Extensions\NavigationRegistry` for management and workspace menu entries.
-- `App\Extensions\ViewSlotRegistry` for package views rendered at documented page locations.
-- `App\Extensions\InvoiceExtensionRegistry` for invoice query filters and request-scoped persistence.
-
-Navigation IDs are globally unique, view item IDs are unique within a slot, and invoice extension keys
-are globally unique. Duplicate registrations are configuration errors. Multiple packages may register
-different IDs at the same location. Lower priorities run first; ties are sorted by ID/key. Navigation and
-view registrations default to priority 100. Invoice handler classes are resolved through the container per
-operation; registries do not retain handler instances or validated request payloads. Handlers must not bind
-request-specific state as singletons. View data callbacks must use the supplied context rather than capture
-a request at application boot. Visibility and authorization must be checked for the current request.
-
-An invoice package implements `App\Extensions\Contracts\InvoiceExtension` and registers a key, handler
-class, and optional priority with `InvoiceExtensionRegistry::register()`. Keys use lowercase letters,
-digits, and underscores and start with a letter. Payloads are submitted under `extensions[<key>]`.
-Missing payloads mean no change; an explicitly submitted empty array is passed to the handler so it can
-implement remove-all. Malformed payloads and unknown submitted keys are rejected with validation errors
-instead of silently becoming empty selections. Validation is completed before writes and persistence
-must be called within the same database transaction as the invoice operation. The registry coordinates
-handlers; it does not start a transaction or authorize a request itself.
-
-The `extendQuery()` handlers modify the same Eloquent builder. The dependent invoice integration
-must call them before statistics, totals and pagination are computed. Handlers should append
-constraints without discarding the host's fiscal-year or permission restrictions.
-
-## Navigation tree foundation (issue #453)
+## Navigation tree
 
 The registry also accepts an immutable `App\Extensions\MenuItem` definition:
 
@@ -108,53 +82,8 @@ selected year, then checks fiscal-year membership. `ensureFiscalYearOpen()`
 also delegates to the existing host mutation guard. Operation permissions are separate and must still be
 checked by package endpoints.
 
-## Reserved integration locations
+## Navigation integration notes
 
-The shared navigation tree retains these registered package locations:
-
-- Navigation areas: `navigation.workspace.invoices` in the Invoices menu and `navigation.management` in the Management menu. Both are rendered by the host component.
-- Planned invoice view slots: `invoice.create.fields`, `invoice.edit.fields`, `invoice.show.panels`, `invoice.index.filters`, `invoice.index.row.badges`. Wiring these slots belongs to issue #445.
-
-Navigation registered in either legacy area is adapted into its existing slot in the shared
-tree; packages may also register a typed `MenuItem` under a stable core parent. The shared
-renderer checks the current user, route existence, permission and callback context on every
-request, escapes labels and ignores missing routes. Definitions must come from trusted
-code rather than request input. The separate `<x-extension-navigation>` compatibility
-component belongs to the dependent invoice integration.
-
-Package Blade views should use the host `<x-app-layout>`, `<x-input>`, `<x-textarea>`, and
-`<x-show-message-bags>` components. Package views must be included in the host's
-Vite/Tailwind source configuration by the integrating change; this branch does not add
-package asset scanning. Avoid nested forms inside host slots. Keep interaction local to
-Alpine data attributes unless a shared host behavior is required.
-
-Views and handlers must come from trusted installed package code. Do not use request input as a class,
-view, file path, or registry definition. Fields rendered inside an existing form must not add nested forms.
-The dependent invoice integration must render the same detail slot for beginning inventory as for other invoice types.
-
-## Fiscal-year transitions
-
-The foundation includes the `App\Events\FiscalYearTransitioning` event contract without
-wiring a dispatch point. The concrete `FiscalYearCopied` and `InvoiceDerived` events and
-their transactional dispatch points belong to the dependent invoice integration in #445.
-
-The category integration must keep package-owned tables, migrations and dynamic relations
-outside core models. Category-only operations must not change accounting amounts,
-postings, statuses or payments.
-
-## Dependent invoice integration checkpoints (#445)
-
-This list describes the dependent work, not completed navigation deliverables.
-
-1. Local development environment and isolated test command.
-2. Registries, API version, host context, and event contract.
-3. Package schema, discovery, and dynamic invoice relation.
-4. Category management UI, routes, validation, and registered navigation.
-5. Invoice form slots and transactional extension persistence.
-6. Detail assignment for every invoice type/status, including paid invoices.
-7. List filters integrated before statistics and pagination.
-8. Transactional fiscal-year definition copying and derived-invoice inheritance.
-9. Package archive installation, integration verification, and delivery documentation.
-
-Each checkpoint is verified and committed separately. Installation and CI results are recorded only when
-they have actually been observed.
+Package Blade views should use the host `<x-app-layout>` components. Definitions must come
+from trusted installed package code; do not use request input as a route, class or registry
+definition.
