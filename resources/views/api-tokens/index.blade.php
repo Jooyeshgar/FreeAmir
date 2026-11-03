@@ -62,6 +62,15 @@
                 </div>
             </div>
 
+            @unless (\Illuminate\Support\Facades\Route::has('mcp.handle'))
+                <div class="alert alert-info mt-3" role="status">
+                    <div>
+                        <span class="font-semibold">{{ __('MCP connection is unavailable') }}</span>
+                        <p class="text-sm">{{ __('The MCP service is not enabled on this installation. Ask the administrator to enable it to display the connection URL.') }}</p>
+                    </div>
+                </div>
+            @endunless
+
             @if (session('plainTextToken'))
                 <div class="alert alert-warning shadow-md" x-data="{ tokenCopied: false }">
                     <div class="w-full space-y-2">
