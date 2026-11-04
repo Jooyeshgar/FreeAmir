@@ -12,7 +12,7 @@
         </div>
 
         <nav class="flex min-w-0 flex-1 items-center gap-1" aria-label="{{ __('Main navigation') }}">
-            <ul class="app-main-menu menu hidden px-1 xl:menu-horizontal xl:flex-nowrap xl:flex" data-main-menu>
+            <ul class="app-main-menu menu hidden px-1 xl:menu-horizontal xl:flex-nowrap xl:flex gap-0.5" data-main-menu>
                 <x-menu />
             </ul>
         </nav>
