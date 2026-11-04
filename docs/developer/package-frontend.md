@@ -68,17 +68,17 @@ Form Request authorization, and the host fiscal-year context. Hiding a menu does
 FreeAmir uses Tailwind v4 and daisyUI v5. `resources/css/app.css` explicitly scans `vendor/amir`, and
 the Vite configuration preserves Laravel's default refresh paths while adding package Blade views.
 Install Composer packages before building frontend assets. The same installed path is used by local
-Composer symlinks and release archives; production builds do not require a sibling Enterprise checkout.
+Composer symlinks and release archives; production builds do not require a sibling package checkout.
 
 ```bash
 ./vendor/bin/sail npm run dev
 ./vendor/bin/sail npm run build
 ```
 
-When developing a symlinked package in Sail, enable the sibling mount as described in
-[enterprise-development.md](enterprise-development.md). Rebuild after installing or removing a package
-so the output reflects the installed views. New dependencies, standalone scripts, and custom asset
-bundles need their own explicit integration contract; this checkpoint uses the existing shared bundle.
+When developing a symlinked package in Sail, use a local Compose override to mount the package checkout.
+Rebuild after installing or removing a package so the output reflects the installed views. New
+dependencies, standalone scripts, and custom asset bundles need their own explicit integration contract;
+this checkpoint uses the existing shared bundle.
 
 ## Validation and verification
 

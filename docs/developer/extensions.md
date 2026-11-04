@@ -37,6 +37,66 @@ The `extendQuery()` handlers modify the same Eloquent builder. The host calls th
 and pagination are computed. Handlers should append constraints without discarding the host's fiscal-year or
 permission restrictions.
 
+## Navigation tree foundation (issue #453)
+
+The registry also accepts an immutable `App\Extensions\MenuItem` definition:
+
+```php
+$registry->register(new \App\Extensions\MenuItem(
+    id: 'example.categories',
+    label: 'example::messages.title',
+    route: 'example.index',
+    parent: 'core.management.system',
+    priority: 150,
+    permissions: ['example.view'],
+    permissionMode: 'any',
+    visible: static fn (array $context): bool => $context['fiscal_year_id'] !== null,
+    routeParameters: ['mode' => 'categories'],
+));
+```
+
+`parent: null` declares a root. Core IDs use the stable `core.*` namespace, including
+`core.invoices`, `core.management`, and `core.management.system`. Routes remain trusted
+named routes; route existence is checked by the renderer after providers finish booting.
+`routeParameters` contains fixed, named scalar or null values. It cannot retain request or
+model objects in the singleton. Permissions are a list; `permissionMode` accepts `any` or
+`all`. These are definitions: registration and `tree()` do not evaluate authorization or
+visibility callbacks, resolve the user, or cache a filtered tree.
+
+`tree()` assembles a fresh array of `['item' => MenuItem, 'children' => [...]]` nodes.
+Children can be registered before their parents. Siblings sort by priority, then ID.
+An unknown parent, self-reference, or disconnected parent cycle raises `LogicException`
+outside production. In production, the invalid branch and its descendants are omitted;
+valid roots remain available. Definitions remain registered and can be read again after
+a missing parent is registered. Null labels are retained in the definition tree for the
+renderer to filter; they are not an instruction to display an untitled group.
+
+The version 1 `register($id, $array)` / `items($area)` API retains its array fields,
+single permission, callback, metadata, defaults and ordering. The existing Blade
+component continues to consume it. In the new tree, legacy entries use these placements:
+
+| Legacy area | Parent | Core slot priority | Intended position |
+|---|---|---:|---|
+| `navigation.workspace.invoices` | `core.invoices` | 700 | After the existing invoice items at priorities 100–600 |
+| `navigation.management` | `core.management` | 400 | After the three existing groups at 100–300 and before About at 500 |
+
+The legacy item's own priority sorts only within that area's slot. It cannot move an old
+item across core siblings, even at an extreme integer priority. A new typed sibling at the
+slot's exact priority sorts before that legacy block. A legacy area outside these two
+names maps to its area string as a parent ID, without a special slot priority; that parent
+must also be registered when reading the tree.
+
+The core provider registers the complete stable tree, and the shared Blade menu renders
+that tree recursively for both desktop and mobile consumers. Permission and visibility
+callbacks are evaluated on every request; empty groups are omitted. Legacy area
+registrations are still assembled into their original slots, so installed packages keep
+their existing API while typed package items can be placed under any core parent.
+
+The shared renderer matches the route and menu discriminator
+parameters exactly, including absence of `service_buy` for the ordinary Buy variant, while
+ignoring non-menu filters such as pagination and search. Merely matching the route name
+or a subset of the query would incorrectly activate several invoice variants at once.
+
 ## Host context
 
 Packages resolve `App\Extensions\Contracts\HostContext` for the current authenticated user and selected
@@ -48,16 +108,17 @@ checked by package endpoints.
 
 ## Reserved integration locations
 
-The host renders these registered package locations:
+The shared navigation tree retains these registered package locations:
 
 - Navigation areas: `navigation.workspace.invoices` in the Invoices menu and `navigation.management` in the Management menu. Both are rendered by the host component.
 - View slots: `invoice.create.fields`, `invoice.edit.fields`, `invoice.show.panels`, `invoice.index.filters`, `invoice.index.row.badges`.
 
-Navigation registered in either area is rendered by the host's generic
-`<x-extension-navigation>` component. A package provides a stable `id`, translated `label`, named `route`,
-optional `permission`, optional `visible` callback, and numeric `priority`. The renderer checks the current
-user, route existence, permission, and callback context on every request. It escapes labels and ignores
-missing routes. It never evaluates route names, view names, or permissions from request input.
+Navigation registered in either legacy area is adapted into its existing slot in the shared
+tree; packages may also register a typed `MenuItem` under a stable core parent. The old
+`<x-extension-navigation>` component remains available to consumers of the version 1 array
+API. Both render paths check the current user, route existence, permission, and callback
+context on every request. They escape labels and ignore missing routes. They never evaluate
+route names, view names, or permissions from request input.
 
 Package Blade views should use the host `<x-app-layout>`, `<x-input>`, `<x-textarea>`, and
 `<x-show-message-bags>` components. Package Tailwind classes are scanned from `vendor/amir`; package views
@@ -93,6 +154,5 @@ Category-only operations must not change accounting amounts, postings, statuses,
 8. Transactional fiscal-year definition copying and derived-invoice inheritance.
 9. Package archive installation, integration verification, and delivery documentation.
 
-Each checkpoint is verified and committed separately. Installation from Nexus and an exact-head CI result
-are recorded only when they have actually been observed. See [local development](enterprise-development.md)
-for the Sail mount and database isolation commands.
+Each checkpoint is verified and committed separately. Installation and CI results are recorded only when
+they have actually been observed.

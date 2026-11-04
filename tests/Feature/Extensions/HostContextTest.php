@@ -17,7 +17,7 @@ class HostContextTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_api_and_context_boot_without_an_enterprise_package(): void
+    public function test_api_and_context_boot_without_an_optional_package(): void
     {
         config(['active-fiscal-year-id' => null]);
         self::assertSame(1, ExtensionApi::VERSION);
