@@ -24,6 +24,24 @@ operation; registries do not retain handler instances or validated request paylo
 request-specific state as singletons. View data callbacks must use the supplied context rather than capture
 a request at application boot. Visibility and authorization must be checked for the current request.
 
+View slots accept arbitrary page data through `context`, for example:
+
+```blade
+<x-extension-slot slot="customer.show.panels" :context="['customer' => $customer]" />
+```
+
+The callback receives this context and returns an array of view data, or `null` to skip the item.
+The view receives the context merged with the callback's data; callback data takes precedence.
+Existing `:invoice="$invoice"` bindings remain supported and provide the `invoice` context key.
+An explicitly bound non-null invoice takes precedence over an invoice supplied in `context`.
+Each item is rendered independently. Callback errors, invalid callback return values, and Blade rendering
+errors are reported through Laravel's exception handler and the failing item is omitted. Other items
+continue rendering. Missing views and `null` results are skipped without reporting an error.
+Slot views render as self-contained fragments with isolated Blade state, including nested components.
+Pass page data explicitly through `context`; do not depend on the parent's component scope, sections, or
+stacks, or use `@push` inside a slot to add host-page assets. Use the shared frontend bundle for assets.
+Registration errors, such as duplicate item IDs, remain configuration errors and are not suppressed.
+
 An invoice package implements `App\Extensions\Contracts\InvoiceExtension` and registers a key, handler
 class, and optional priority with `InvoiceExtensionRegistry::register()`. Keys use lowercase letters,
 digits, and underscores and start with a letter. Payloads are submitted under `extensions[<key>]`.
