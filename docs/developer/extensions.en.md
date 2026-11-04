@@ -94,8 +94,8 @@ a missing parent is registered. Null labels are retained in the definition tree 
 renderer to filter; they are not an instruction to display an untitled group.
 
 The version 1 `register($id, $array)` / `items($area)` API retains its array fields,
-single permission, callback, metadata, defaults and ordering. The existing Blade
-component continues to consume it. In the new tree, legacy entries use these placements:
+single permission, callback, metadata, defaults and ordering. The `<x-extension-navigation>`
+component continues to consume it; the shared `<x-menu>` adapts these entries into its tree. In the new tree, legacy entries use these placements:
 
 | Legacy area | Parent | Core slot priority | Intended position |
 |---|---|---:|---|
@@ -108,16 +108,14 @@ slot's exact priority sorts before that legacy block. A legacy area outside thes
 names maps to its area string as a parent ID, without a special slot priority; that parent
 must also be registered when reading the tree.
 
-This checkpoint implements definitions and tree assembly. Core provider registration,
-permission filtering, recursive Blade rendering and active matching are later migration
-steps. Until that migration, typed items are available through the registry but are not
-displayed by the old area component. Reading `tree()` requires its parents to have been
-registered; the core parent definitions will be added in the provider step.
+`CoreNavigationServiceProvider` registers the core menu under stable `core.*` IDs. The `<x-menu>`
+component evaluates permissions and visibility callbacks on each request, omitting empty groups,
+null labels and missing routes. Desktop and mobile share the recursive renderer, which displays
+both typed items and legacy registrations.
 
-The agreed active rule for the later renderer is to match the route and menu discriminator
-parameters exactly, including absence of `service_buy` for the ordinary Buy variant, while
-ignoring non-menu filters such as pagination and search. Merely matching the route name
-or a subset of the query would incorrectly activate several invoice variants at once.
+Active matching checks the route and menu discriminator parameters exactly, including absence of
+`service_buy` for ordinary purchases. Non-menu filters such as pagination and search are ignored,
+and the active item's parent summaries are highlighted too.
 
 ## Host context
 
