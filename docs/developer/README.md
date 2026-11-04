@@ -23,6 +23,8 @@
 | [project-structure.md](project-structure.md) | معماری Laravel، پوشه‌ها و الگوی کلی کد |
 | [database-guide.md](database-guide.md) | ساختار جدول‌ها، روابط و نکات کار با دیتابیس |
 | [testing-guide.md](testing-guide.md) | اجرای تست‌ها و نوشتن تست‌های Feature و Unit |
+| [extensions.md](extensions.md) | قرارداد افزونه‌ها، رجیستری‌ها، اسلات‌ها و context میزبان |
+| [package-frontend.md](package-frontend.md) | اتصال صفحه‌ها، منو و فایل‌های فرانت بسته‌ها |
 | [../script/README.md](../../script/README.md) | ابزارها و اسکریپت‌های مهاجرت داده |
 
 ## مستندات دامنه حسابداری برای توسعه

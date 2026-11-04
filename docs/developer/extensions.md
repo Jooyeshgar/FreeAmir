@@ -1,63 +1,68 @@
-# Extension API
+<div dir="rtl">
 
-FreeAmir is introducing a small host API for optional Laravel packages, tracked by GitLab issue #445.
-The registry foundation, management navigation, invoice form/detail/filter slots, transactional invoice
-extension persistence, list-query extension hook, and fiscal-year transition events are available.
+# API افزونه‌ها
 
-`App\Extensions\ExtensionApi::VERSION` is `1`. Packages target this host API explicitly. FreeAmir is
-an application, not a Composer library; do not invent a dependency on `amir/freeamir`. Package tests cover
-their own behavior and host integration tests verify compatibility with the actual FreeAmir checkout.
+**[English version](extensions.en.md)**
 
-## Registries
+**[بازگشت به راهنمای برنامه‌نویس](README.md)**
 
-The host registers these services from `App\Providers\ExtensionServiceProvider`:
+امیر یک API کوچک برای اتصال بسته‌های اختیاری Laravel فراهم می‌کند که در ایشوی #445 پیگیری می‌شود.
+زیرساخت رجیستری‌ها، منوی مدیریت، اسلات‌های فرم، جزئیات و فیلتر فاکتور، ذخیرهٔ تراکنشی داده‌های افزونه،
+گسترش کوئری فهرست و رویدادهای انتقال سال مالی در دسترس‌اند.
 
-- `App\Extensions\NavigationRegistry` for management and workspace menu entries.
-- `App\Extensions\ViewSlotRegistry` for package views rendered at documented page locations.
-- `App\Extensions\InvoiceExtensionRegistry` for invoice query filters and request-scoped persistence.
+مقدار `App\Extensions\ExtensionApi::VERSION` برابر `1` است. بسته‌ها باید سازگاری خود را با این نسخه مشخص کنند.
+امیر یک برنامه است و کتابخانهٔ Composer نیست؛ وابستگی فرضی به `amir/freeamir` تعریف نکنید.
+تست‌های هر بسته رفتار خود آن را بررسی می‌کنند و تست‌های یکپارچه‌سازی میزبان، سازگاری با کد واقعی امیر را می‌سنجند.
 
-Navigation IDs are globally unique, view item IDs are unique within a slot, and invoice extension keys
-are globally unique. Duplicate registrations are configuration errors. Multiple packages may register
-different IDs at the same location. Lower priorities run first; ties are sorted by ID/key. Navigation and
-view registrations default to priority 100. Invoice handler classes are resolved through the container per
-operation; registries do not retain handler instances or validated request payloads. Handlers must not bind
-request-specific state as singletons. View data callbacks must use the supplied context rather than capture
-a request at application boot. Visibility and authorization must be checked for the current request.
+## رجیستری‌ها
 
-View slots accept arbitrary page data through `context`, for example:
+سرویس‌های زیر در `App\Providers\ExtensionServiceProvider` ثبت می‌شوند:
+
+- `App\Extensions\NavigationRegistry`: ورودی‌های منوی مدیریت و محیط کاری.
+- `App\Extensions\ViewSlotRegistry`: نمایش view بسته‌ها در جایگاه‌های مستندشدهٔ صفحات.
+- `App\Extensions\InvoiceExtensionRegistry`: فیلتر کوئری فاکتور و ذخیرهٔ داده‌های افزونه در هر درخواست.
+
+شناسهٔ آیتم‌های منو و کلید افزونه‌های فاکتور در کل رجیستری یکتا هستند؛ شناسهٔ آیتم view در همان اسلات یکتا است.
+ثبت تکراری خطای پیکربندی است. چند بسته می‌توانند با شناسه‌های متفاوت در یک جایگاه ثبت شوند.
+اولویت کوچک‌تر زودتر اجرا می‌شود و در اولویت برابر، ترتیب بر اساس شناسه یا کلید است.
+اولویت پیش‌فرض منو و view برابر `100` است. handler فاکتور در هر عملیات از container دریافت می‌شود؛ رجیستری
+نمونهٔ handler یا دادهٔ اعتبارسنجی‌شدهٔ درخواست را نگه نمی‌دارد. وضعیت وابسته به درخواست را در singleton ذخیره نکنید.
+callback دادهٔ view باید از context ورودی استفاده کند و درخواست زمان boot برنامه را نگه ندارد.
+نمایش و مجوزها باید بر اساس درخواست جاری بررسی شوند.
+
+اسلات‌ها داده‌های عمومی صفحه را از `context` دریافت می‌کنند؛ برای نمونه:
 
 ```blade
 <x-extension-slot slot="customer.show.panels" :context="['customer' => $customer]" />
 ```
 
-The callback receives this context and returns an array of view data, or `null` to skip the item.
-The view receives the context merged with the callback's data; callback data takes precedence.
-Existing `:invoice="$invoice"` bindings remain supported and provide the `invoice` context key.
-An explicitly bound non-null invoice takes precedence over an invoice supplied in `context`.
-Each item is rendered independently. Callback errors, invalid callback return values, and Blade rendering
-errors are reported through Laravel's exception handler and the failing item is omitted. Other items
-continue rendering. Missing views and `null` results are skipped without reporting an error.
-Slot views render as self-contained fragments with isolated Blade state, including nested components.
-Pass page data explicitly through `context`; do not depend on the parent's component scope, sections, or
-stacks, or use `@push` inside a slot to add host-page assets. Use the shared frontend bundle for assets.
-Registration errors, such as duplicate item IDs, remain configuration errors and are not suppressed.
+callback این context را می‌گیرد و آرایهٔ دادهٔ view یا `null` برای عدم نمایش آیتم برمی‌گرداند.
+دادهٔ view ترکیب context و خروجی callback است و خروجی callback اولویت دارد.
+اتصال فعلی `:invoice="$invoice"` همچنان پشتیبانی می‌شود و کلید `invoice` را در context قرار می‌دهد.
+فاکتور غیرتهی که صریحاً به کامپوننت متصل شده باشد، بر فاکتور موجود در `context` اولویت دارد.
+هر آیتم مستقل رندر می‌شود. خطای callback، خروجی نامعتبر آن یا خطای رندر Blade از طریق exception handler لاراول
+گزارش می‌شود و فقط آیتم خطادار حذف می‌شود؛ بقیهٔ آیتم‌ها نمایش داده می‌شوند.
+view ناموجود و خروجی `null` بدون گزارش خطا کنار گذاشته می‌شوند.
 
-An invoice package implements `App\Extensions\Contracts\InvoiceExtension` and registers a key, handler
-class, and optional priority with `InvoiceExtensionRegistry::register()`. Keys use lowercase letters,
-digits, and underscores and start with a letter. Payloads are submitted under `extensions[<key>]`.
-Missing payloads mean no change; an explicitly submitted empty array is passed to the handler so it can
-implement remove-all. Malformed payloads and unknown submitted keys are rejected with validation errors
-instead of silently becoming empty selections. Validation is completed before writes and persistence
-must be called within the same database transaction as the invoice operation. The registry coordinates
-handlers; it does not start a transaction or authorize a request itself.
+view اسلات یک قطعهٔ مستقل با وضعیت Blade جداگانه، شامل کامپوننت‌های تو‌در‌تو، است.
+دادهٔ صفحه را صریحاً با `context` بفرستید؛ به scope کامپوننت والد، section یا stack آن وابسته نباشید.
+برای افزودن فایل به صفحهٔ میزبان از `@push` داخل اسلات استفاده نکنید؛ فایل‌ها را در بستهٔ فرانت مشترک قرار دهید.
+خطاهای ثبت، از جمله شناسهٔ تکراری، همچنان خطای پیکربندی هستند و پنهان نمی‌شوند.
 
-The `extendQuery()` handlers modify the same Eloquent builder. The host calls them before statistics, totals,
-and pagination are computed. Handlers should append constraints without discarding the host's fiscal-year or
-permission restrictions.
+بستهٔ فاکتور قرارداد `App\Extensions\Contracts\InvoiceExtension` را پیاده‌سازی می‌کند و کلید، کلاس handler و
+اولویت اختیاری را با `InvoiceExtensionRegistry::register()` ثبت می‌کند.
+کلید باید با حرف کوچک انگلیسی شروع شود و فقط شامل حروف کوچک، عدد و زیرخط باشد.
+داده‌ها با ساختار `extensions[<key>]` ارسال می‌شوند. نبودن کلید یعنی عدم تغییر؛ آرایهٔ خالیِ صریح به افزونه
+داده می‌شود تا در صورت نیاز همهٔ انتخاب‌ها را حذف کند. دادهٔ نامعتبر یا کلید ناشناخته با خطای اعتبارسنجی رد می‌شود.
+اعتبارسنجی باید پیش از نوشتن کامل شود و ذخیرهٔ داده‌های افزونه داخل همان تراکنش دیتابیس عملیات فاکتور انجام شود.
+رجیستری هماهنگ‌کننده است و خودش تراکنش را شروع یا درخواست را مجاز نمی‌کند.
 
-## Navigation tree foundation (issue #453)
+handlerهای `extendQuery()` همان Eloquent builder را تغییر می‌دهند. میزبان آن‌ها را پیش از محاسبهٔ آمار، جمع‌ها
+و صفحه‌بندی فراخوانی می‌کند. شرط‌های جدید را بدون حذف محدودیت‌های سال مالی و مجوزهای میزبان اضافه کنید.
 
-The registry also accepts an immutable `App\Extensions\MenuItem` definition:
+## زیرساخت درخت منو؛ ایشوی #453
+
+رجیستری تعریف تغییرناپذیر `App\Extensions\MenuItem` را هم می‌پذیرد:
 
 ```php
 $registry->register(new \App\Extensions\MenuItem(
@@ -73,103 +78,97 @@ $registry->register(new \App\Extensions\MenuItem(
 ));
 ```
 
-`parent: null` declares a root. Core IDs use the stable `core.*` namespace, including
-`core.invoices`, `core.management`, and `core.management.system`. Routes remain trusted
-named routes; route existence is checked by the renderer after providers finish booting.
-`routeParameters` contains fixed, named scalar or null values. It cannot retain request or
-model objects in the singleton. Permissions are a list; `permissionMode` accepts `any` or
-`all`. These are definitions: registration and `tree()` do not evaluate authorization or
-visibility callbacks, resolve the user, or cache a filtered tree.
+مقدار `parent: null` یک ریشه تعریف می‌کند. شناسه‌های هسته فضای نام پایدار `core.*` دارند؛ از جمله
+`core.invoices`، `core.management` و `core.management.system`.
+مسیرها باید named route مورد اعتماد باشند. وجود مسیر پس از boot همهٔ providerها، هنگام رندر بررسی می‌شود.
+`routeParameters` شامل مقادیر ثابت و نام‌دار از نوع scalar یا null است و نباید درخواست یا مدل را در singleton نگه دارد.
+مجوزها یک فهرست‌اند و `permissionMode` مقدار `any` یا `all` می‌پذیرد.
+ثبت و فراخوانی `tree()` فقط تعریف‌ها را مدیریت می‌کنند؛ مجوز یا callback نمایش را اجرا نمی‌کنند، کاربر را
+دریافت نمی‌کنند و درخت فیلترشده را cache نمی‌کنند.
 
-`tree()` assembles a fresh array of `['item' => MenuItem, 'children' => [...]]` nodes.
-Children can be registered before their parents. Siblings sort by priority, then ID.
-An unknown parent, self-reference, or disconnected parent cycle raises `LogicException`
-outside production. In production, the invalid branch and its descendants are omitted;
-valid roots remain available. Definitions remain registered and can be read again after
-a missing parent is registered. Null labels are retained in the definition tree for the
-renderer to filter; they are not an instruction to display an untitled group.
+`tree()` هر بار آرایهٔ تازه‌ای از گره‌های `['item' => MenuItem, 'children' => [...]]` می‌سازد.
+فرزند می‌تواند پیش از والد ثبت شود. فرزندان هر والد با اولویت و سپس شناسه مرتب می‌شوند.
+والد ناشناخته، ارجاع به خود یا چرخهٔ جدا از ریشه در محیط غیرعملیاتی `LogicException` ایجاد می‌کند.
+در production شاخهٔ نامعتبر و فرزندانش حذف می‌شوند و ریشه‌های معتبر باقی می‌مانند.
+تعریف‌ها در رجیستری باقی می‌مانند؛ پس از ثبت والدِ مفقود می‌توان درخت را دوباره خواند.
+عنوان null در تعریف درخت حفظ می‌شود تا رندرکننده آن را فیلتر کند؛ این مقدار به معنای نمایش گروه بدون عنوان نیست.
 
-The version 1 `register($id, $array)` / `items($area)` API retains its array fields,
-single permission, callback, metadata, defaults and ordering. The existing Blade
-component continues to consume it. In the new tree, legacy entries use these placements:
+API نسخهٔ ۱ یعنی `register($id, $array)` و `items($area)`، فیلدهای آرایه، مجوز تکی، callback، metadata،
+مقادیر پیش‌فرض و ترتیب قبلی را حفظ می‌کند. کامپوننت Blade فعلی همچنان از همین API استفاده می‌کند.
+جایگاه ورودی‌های قدیمی در درخت جدید به این صورت است:
 
-| Legacy area | Parent | Core slot priority | Intended position |
+| ناحیهٔ قدیمی | والد | اولویت جایگاه در هسته | محل نمایش |
 |---|---|---:|---|
-| `navigation.workspace.invoices` | `core.invoices` | 700 | After the existing invoice items at priorities 100–600 |
-| `navigation.management` | `core.management` | 400 | After the three existing groups at 100–300 and before About at 500 |
+| `navigation.workspace.invoices` | `core.invoices` | 700 | پس از آیتم‌های فعلی فاکتور با اولویت ۱۰۰ تا ۶۰۰ |
+| `navigation.management` | `core.management` | 400 | پس از سه گروه فعلی با اولویت ۱۰۰ تا ۳۰۰ و پیش از درباره با اولویت ۵۰۰ |
 
-The legacy item's own priority sorts only within that area's slot. It cannot move an old
-item across core siblings, even at an extreme integer priority. A new typed sibling at the
-slot's exact priority sorts before that legacy block. A legacy area outside these two
-names maps to its area string as a parent ID, without a special slot priority; that parent
-must also be registered when reading the tree.
+اولویت خود آیتم قدیمی فقط داخل جایگاه همان ناحیه اثر دارد؛ حتی مقدار بسیار بزرگ یا کوچک، آن را از آیتم‌های
+هم‌سطح هسته عبور نمی‌دهد. آیتم typed جدید با اولویت برابر جایگاه، پیش از بلوک قدیمی قرار می‌گیرد.
+ناحیهٔ قدیمی خارج از این دو نام، همان نام ناحیه را به‌عنوان شناسهٔ والد می‌گیرد و اولویت جایگاه ویژه ندارد؛
+آن والد هم باید هنگام خواندن درخت ثبت شده باشد.
 
-This checkpoint implements definitions and tree assembly. Core provider registration,
-permission filtering, recursive Blade rendering and active matching are later migration
-steps. Until that migration, typed items are available through the registry but are not
-displayed by the old area component. Reading `tree()` requires its parents to have been
-registered; the core parent definitions will be added in the provider step.
+این مرحله تعریف‌ها و ساخت درخت را پیاده‌سازی می‌کند. ثبت منوی هسته در provider، فیلتر مجوزها، رندر بازگشتی Blade
+و تشخیص آیتم فعال در مراحل بعد منتقل می‌شوند. تا آن زمان آیتم‌های typed از رجیستری قابل دریافت‌اند، اما کامپوننت
+ناحیه‌ای قدیمی آن‌ها را نمایش نمی‌دهد. خواندن `tree()` به ثبت والدها نیاز دارد و تعریف والدهای هسته در مرحلهٔ provider اضافه می‌شود.
 
-The agreed active rule for the later renderer is to match the route and menu discriminator
-parameters exactly, including absence of `service_buy` for the ordinary Buy variant, while
-ignoring non-menu filters such as pagination and search. Merely matching the route name
-or a subset of the query would incorrectly activate several invoice variants at once.
+قاعدهٔ توافق‌شده برای رندرکنندهٔ بعدی این است که route و پارامترهای متمایزکنندهٔ منو دقیقاً تطبیق داشته باشند؛
+از جمله نبودن `service_buy` برای خرید معمولی. فیلترهای غیرمرتبط با منو، مانند جست‌وجو و صفحه‌بندی، نادیده گرفته می‌شوند.
+تطبیق صرف نام route یا بخشی از query می‌تواند چند نوع فاکتور را هم‌زمان فعال نشان دهد.
 
-## Host context
+## context میزبان
 
-Packages resolve `App\Extensions\Contracts\HostContext` for the current authenticated user and selected
-fiscal-year ID. The host implementation reads them on each call. It does not use the CLI helper's fallback
-to the first fiscal year when no year is selected. `authorizeFiscalYear()` requires authentication and the
-selected year, then checks membership or the host super-administrator permission. `ensureFiscalYearOpen()`
-also delegates to the existing host mutation guard. Operation permissions are separate and must still be
-checked by package endpoints.
+بسته‌ها برای کاربر احرازهویت‌شدهٔ جاری و شناسهٔ سال مالی انتخاب‌شده از `App\Extensions\Contracts\HostContext`
+استفاده می‌کنند. پیاده‌سازی میزبان این مقادیر را در هر فراخوانی می‌خواند و از رفتار جایگزین helper خط فرمان،
+یعنی انتخاب اولین سال مالی هنگام نبود انتخاب، استفاده نمی‌کند.
+`authorizeFiscalYear()` احراز هویت و سال انتخاب‌شده را الزامی می‌کند، سپس عضویت کاربر یا مجوز مدیر کل را بررسی می‌کند.
+`ensureFiscalYearOpen()` از محافظ فعلی تغییرات سال مالی استفاده می‌کند.
+مجوز عملیات مستقل است و endpointهای بسته باید آن را جداگانه بررسی کنند.
 
-## Reserved integration locations
+## جایگاه‌های اتصال
 
-The host renders these registered package locations:
+میزبان جایگاه‌های زیر را نمایش می‌دهد:
 
-- Navigation areas: `navigation.workspace.invoices` in the Invoices menu and `navigation.management` in the Management menu. Both are rendered by the host component.
-- View slots: `invoice.create.fields`, `invoice.edit.fields`, `invoice.show.panels`, `invoice.index.filters`, `invoice.index.row.badges`.
+- ناحیه‌های منو: `navigation.workspace.invoices` در منوی فاکتورها و `navigation.management` در منوی مدیریت.
+- اسلات‌های view: `invoice.create.fields`، `invoice.edit.fields`، `invoice.show.panels`، `invoice.index.filters` و `invoice.index.row.badges`.
 
-Navigation registered in either area is rendered by the host's generic
-`<x-extension-navigation>` component. A package provides a stable `id`, translated `label`, named `route`,
-optional `permission`, optional `visible` callback, and numeric `priority`. The renderer checks the current
-user, route existence, permission, and callback context on every request. It escapes labels and ignores
-missing routes. It never evaluates route names, view names, or permissions from request input.
+ورودی‌های منو با کامپوننت عمومی `<x-extension-navigation>` رندر می‌شوند.
+بسته یک `id` پایدار، `label` قابل ترجمه، named route در `route`، و در صورت نیاز `permission`، callback
+به نام `visible` و `priority` عددی فراهم می‌کند. رندرکننده در هر درخواست کاربر، وجود مسیر، مجوز و context callback
+را بررسی می‌کند. عنوان‌ها escape می‌شوند و مسیرهای ناموجود نادیده گرفته می‌شوند.
+نام route، view یا مجوز از ورودی درخواست دریافت و اجرا نمی‌شود.
 
-Package Blade views should use the host `<x-app-layout>`, `<x-input>`, `<x-textarea>`, and
-`<x-show-message-bags>` components. Package Tailwind classes are scanned from `vendor/amir`; package views
-must be included in the host's Vite/Tailwind source configuration. Use `@source` for installed package
-views and avoid nested forms inside host slots. Keep interaction local to Alpine data attributes unless a
-shared host behavior is required.
+viewهای Blade بسته از کامپوننت‌های میزبان مانند `<x-app-layout>`، `<x-input>`، `<x-textarea>` و
+`<x-show-message-bags>` استفاده می‌کنند. کلاس‌های Tailwind بسته از `vendor/amir` اسکن می‌شوند؛ viewهای بسته
+باید در پیکربندی منابع Vite/Tailwind میزبان باشند. برای viewهای نصب‌شده از `@source` استفاده کنید و داخل
+اسلات فرم، فرم تو‌در‌تو نسازید. تعامل را تا وقتی رفتار مشترک میزبان لازم نیست، در data attributeهای Alpine نگه دارید.
 
-Views and handlers must come from trusted installed package code. Do not use request input as a class,
-view, file path, or registry definition. Fields rendered inside an existing form must not add nested forms.
-The beginning-inventory detail page must render the same detail slot as other invoice types.
+view و handler فقط از کد مورد اعتمادِ بستهٔ نصب‌شده می‌آیند. ورودی درخواست نباید نام کلاس، view، مسیر فایل یا
+تعریف رجیستری را تعیین کند. صفحهٔ جزئیات موجودی اول دوره باید همان اسلات جزئیات سایر نوع‌های فاکتور را نمایش دهد.
 
-## Fiscal-year transitions
+## انتقال سال مالی
 
-`App\Extensions\Events\FiscalYearCopied` carries source and target fiscal-year models. The host dispatches
-it synchronously after creating the next year and inside the close/open transaction. Package listeners use
-the same connection; failures roll back the transition. Direct year creation and recalculation of an
-existing closing document do not dispatch it. `InvoiceDerived` carries the source and generated invoice
-when the host creates a derived invoice such as a void invoice.
+رویداد `App\Extensions\Events\FiscalYearCopied` مدل سال مالی مبدأ و مقصد را حمل می‌کند.
+میزبان پس از ساخت سال بعد و داخل تراکنش بستن و بازکردن سال، آن را هم‌زمان dispatch می‌کند.
+listener بسته از همان اتصال استفاده می‌کند و خطای آن باعث rollback انتقال می‌شود.
+ساخت مستقیم سال مالی یا محاسبهٔ مجدد سند اختتامیهٔ موجود، این رویداد را dispatch نمی‌کند.
+`InvoiceDerived` هنگام ساخت فاکتور مشتق‌شده، مانند فاکتور ابطال، فاکتور مبدأ و فاکتور ساخته‌شده را حمل می‌کند.
 
-The category package owns its tables and migrations. Its invoice model is configured by the host and its
-dynamic relation is registered by the package provider, without a package trait in `App\Models\Invoice`.
-Category-only operations must not change accounting amounts, postings, statuses, or payments.
+بستهٔ دسته‌بندی مالک جدول‌ها و migrationهای خودش است. مدل فاکتور آن را میزبان پیکربندی می‌کند و رابطهٔ پویا
+در provider بسته ثبت می‌شود؛ نیازی به trait بسته در `App\Models\Invoice` نیست.
+عملیات دسته‌بندی نباید مبلغ، ثبت حسابداری، وضعیت یا پرداخت فاکتور را تغییر دهد.
 
-## Implementation checkpoints
+## مراحل پیاده‌سازی
 
-1. Local development environment and isolated test command.
-2. Registries, API version, host context, and event contract.
-3. Package schema, discovery, and dynamic invoice relation.
-4. Category management UI, routes, validation, and registered navigation.
-5. Invoice form slots and transactional extension persistence.
-6. Detail assignment for every invoice type/status, including paid invoices.
-7. List filters integrated before statistics and pagination.
-8. Transactional fiscal-year definition copying and derived-invoice inheritance.
-9. Package archive installation, integration verification, and delivery documentation.
+1. محیط توسعهٔ محلی و دستور استاندارد تست با Sail.
+2. رجیستری‌ها، نسخهٔ API، context میزبان و قرارداد رویدادها.
+3. ساختار دیتابیس بسته، discovery و رابطهٔ پویای فاکتور.
+4. رابط مدیریت دسته‌بندی، مسیرها، اعتبارسنجی و ثبت منو.
+5. اسلات‌های فرم فاکتور و ذخیرهٔ تراکنشی داده‌های افزونه.
+6. تخصیص دسته در جزئیات همهٔ نوع‌ها و وضعیت‌های فاکتور، شامل فاکتور پرداخت‌شده.
+7. اعمال فیلتر فهرست پیش از آمار و صفحه‌بندی.
+8. کپی تراکنشی تعریف‌ها در انتقال سال مالی و ارث‌بری فاکتور مشتق‌شده.
+9. نصب از آرشیو بسته، بررسی یکپارچه‌سازی و مستندات تحویل.
 
-Each checkpoint is verified and committed separately. Installation and CI results are recorded only when
-they have actually been observed.
+هر مرحله جداگانه بررسی و کامیت می‌شود. نتیجهٔ نصب و CI فقط پس از مشاهدهٔ واقعی ثبت می‌شود.
+
+</div>
