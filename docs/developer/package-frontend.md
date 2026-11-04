@@ -95,7 +95,7 @@ separate actual-host tests under its repository's `integration/freeamir/`.
 Run the host's empty-package and navigation suites:
 
 ```bash
-./script/test-sail tests/Feature/Extensions
+./vendor/bin/sail artisan test tests/Feature/Extensions
 ```
 
 Also build with and without the package installed, and inspect the page in the browser for Persian RTL,
