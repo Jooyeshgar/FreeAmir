@@ -77,6 +77,46 @@ class ExtensionNavigationTest extends TestCase
         self::assertSame('', trim($this->navigation()));
     }
 
+    public function test_main_menu_renders_extensions_in_their_sections_and_respects_permissions(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        foreach (['invoices.index', 'access-super-admin-panel'] as $permission) {
+            $user->givePermissionTo(Permission::findOrCreate($permission, 'web'));
+        }
+
+        $registry = app(NavigationRegistry::class);
+        foreach ([
+            'invoice-entry' => ['navigation.workspace.invoices', 'Invoice extension', null],
+            'management-entry' => ['navigation.management', 'Management extension', 'access-super-admin-panel'],
+            'restricted-entry' => ['navigation.management', 'Restricted extension', 'users.index'],
+        ] as $id => [$area, $label, $permission]) {
+            Route::get('/'.$id, fn () => 'example')->name($id);
+            $registry->register($id, compact('area', 'label', 'permission') + ['route' => $id]);
+        }
+        Route::getRoutes()->refreshNameLookups();
+
+        $html = Blade::render('<x-menu />');
+        $document = new \DOMDocument;
+        @$document->loadHTML('<?xml encoding="UTF-8">'.$html);
+        $xpath = new \DOMXPath($document);
+        foreach ([
+            'invoice-entry' => __('Invoices'),
+            'management-entry' => __('Management'),
+        ] as $route => $section) {
+            $links = $xpath->query('//a[@href="'.route($route).'"]');
+            self::assertCount(1, $links);
+            $summary = $xpath->query('ancestor::details[1]/summary', $links->item(0));
+            self::assertCount(1, $summary);
+            self::assertSame($section, trim($summary->item(0)->textContent));
+        }
+        self::assertStringContainsString('Invoice extension', $html);
+        self::assertStringContainsString('Management extension', $html);
+        self::assertStringNotContainsString('Restricted extension', $html);
+        self::assertStringContainsString(route('invoices.index', ['invoice_type' => 'sell']), $html);
+        self::assertStringContainsString(route('about'), $html);
+    }
+
     private function navigation(): string
     {
         Route::getRoutes()->refreshNameLookups();

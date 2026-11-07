@@ -1,13 +1,19 @@
-# Package frontend integration
+<div dir="rtl">
 
-Optional packages render their own Laravel Blade pages inside FreeAmir. The host supplies the layout,
-shared components, translated navigation renderer, Tailwind/daisyUI build, and Alpine runtime.
-The first consumer is `amir/invoice-categories`.
+# اتصال فرانت بسته‌ها
 
-## Package-owned pages
+**[English version](package-frontend.en.md)**
 
-Keep package views under `resources/views/` and translations under `lang/fa/` and `lang/en/`.
-Register both from the package service provider:
+**[بازگشت به راهنمای برنامه‌نویس](README.md)**
+
+بسته‌های اختیاری، صفحه‌های Laravel Blade خود را داخل امیر نمایش می‌دهند.
+میزبان layout، کامپوننت‌های مشترک، رندر منوی ترجمه‌شده، build مربوط به Tailwind/daisyUI و محیط Alpine را فراهم می‌کند.
+اولین مصرف‌کنندهٔ این سازوکار `amir/invoice-categories` است.
+
+## صفحه‌های متعلق به بسته
+
+viewهای بسته را در `resources/views/` و ترجمه‌ها را در `lang/fa/` و `lang/en/` نگه دارید.
+آن‌ها را همراه مسیرها در service provider بسته ثبت کنید:
 
 ```php
 $this->loadViewsFrom(__DIR__.'/../resources/views', 'example');
@@ -15,7 +21,7 @@ $this->loadTranslationsFrom(__DIR__.'/../lang', 'example');
 $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
 ```
 
-Render a namespaced view such as `view('example::index', $data)`. Reuse the host components:
+view را با فضای نام، مانند `view('example::index', $data)`، رندر کنید و از کامپوننت‌های میزبان استفاده کنید:
 
 ```blade
 <x-app-layout :title="__('example::messages.title')">
@@ -29,15 +35,16 @@ Render a namespaced view such as `view('example::index', $data)`. Reuse the host
 </x-app-layout>
 ```
 
-Available host components include `x-input`, `x-textarea`, `x-button`, and `x-show-message-bags`.
-Use translated text, escaped Blade output, semantic controls, responsive grids, and theme tokens such as
-`bg-base-100` and `text-base-content`. Use complete Tailwind class strings; runtime string concatenation
-cannot be detected reliably by the build. Put dynamic color values in validated hexadecimal style values,
-never in arbitrary generated class names. Alpine is already loaded by the host; do not load it a second time.
+کامپوننت‌های میزبان شامل `x-input`، `x-textarea`، `x-button` و `x-show-message-bags` هستند.
+متن‌ها را ترجمه کنید؛ خروجی Blade را escape کنید و از کنترل‌های معنایی، چیدمان واکنش‌گرا و توکن‌های پوسته
+مانند `bg-base-100` و `text-base-content` استفاده کنید.
+نام کلاس‌های Tailwind را کامل بنویسید؛ ساختن نام کلاس با اتصال رشته‌ها در زمان اجرا، هنگام build قابل تشخیص مطمئن نیست.
+رنگ پویا را با مقدار hexadecimal اعتبارسنجی‌شده در style قرار دهید؛ نام کلاس دلخواه تولید نکنید.
+Alpine را میزبان بارگذاری می‌کند؛ آن را دوباره بارگذاری نکنید.
 
-## Management navigation
+## منوی مدیریت
 
-After its routes are registered, a package registers an item with the host:
+بسته پس از ثبت مسیرهای خود، آیتم منو را در میزبان ثبت می‌کند:
 
 ```php
 $this->app->make(\App\Extensions\NavigationRegistry::class)->register('example.categories', [
@@ -50,58 +57,60 @@ $this->app->make(\App\Extensions\NavigationRegistry::class)->register('example.c
 ]);
 ```
 
-IDs are globally unique. Lower priorities appear first; equal priorities sort by ID. The host renders
-`navigation.management` through `x-extension-navigation` in the shared desktop/mobile menu. The component
-checks authentication, named-route existence, permission, and the visibility callback on each render. It
-escapes translated labels and marks the current route with `aria-current="page"`.
+شناسه‌ها در کل رجیستری یکتا هستند. اولویت کوچک‌تر زودتر نمایش داده می‌شود و اولویت برابر با شناسه مرتب می‌شود.
+میزبان `navigation.management` را با `x-extension-navigation` در منوی مشترک دسکتاپ و موبایل نمایش می‌دهد.
+کامپوننت در هر رندر احراز هویت، وجود named route، مجوز و callback نمایش را بررسی می‌کند.
+عنوان ترجمه‌شده escape می‌شود و مسیر جاری با `aria-current="page"` مشخص می‌شود.
 
-Invoice features can register in `navigation.workspace.invoices` to appear in the Invoices menu.
-The navigation area controls placement; each item's permission and endpoint authorization still apply.
-The invoice-category package uses this area while retaining the existing management permission for its CRUD screen.
+قابلیت‌های فاکتور می‌توانند در `navigation.workspace.invoices` ثبت شوند تا در منوی فاکتورها قرار بگیرند.
+ناحیه فقط محل نمایش را تعیین می‌کند؛ مجوز آیتم و مجوز endpoint همچنان باید بررسی شوند.
+بستهٔ دسته‌بندی فاکتور از همین ناحیه استفاده می‌کند و مجوز مدیریت فعلی صفحهٔ CRUD را حفظ می‌کند.
 
-The callback receives `user` and `fiscal_year_id`. Do not capture the boot-time request or authenticated
-user. Navigation visibility is presentation only: protect every endpoint separately with middleware,
-Form Request authorization, and the host fiscal-year context. Hiding a menu does not authorize a request.
+callback مقادیر `user` و `fiscal_year_id` را دریافت می‌کند.
+درخواست یا کاربر زمان boot را نگه ندارید. نمایش منو فقط مربوط به رابط است؛ هر endpoint را جداگانه با middleware،
+مجوز Form Request و context سال مالی میزبان محافظت کنید. پنهان‌کردن منو جایگزین بررسی مجوز درخواست نیست.
 
-## Assets and local development
+## فایل‌های فرانت و توسعهٔ محلی
 
-FreeAmir uses Tailwind v4 and daisyUI v5. `resources/css/app.css` explicitly scans `vendor/amir`, and
-the Vite configuration preserves Laravel's default refresh paths while adding package Blade views.
-Install Composer packages before building frontend assets. The same installed path is used by local
-Composer symlinks and release archives; production builds do not require a sibling package checkout.
+امیر از Tailwind نسخهٔ ۴ و daisyUI نسخهٔ ۵ استفاده می‌کند.
+فایل `resources/css/app.css` مسیر `vendor/amir` را صریحاً اسکن می‌کند و پیکربندی Vite، ضمن حفظ مسیرهای
+پیش‌فرض refresh لاراول، viewهای Blade بسته را هم اضافه می‌کند.
+پیش از build فرانت، بسته‌های Composer را نصب کنید. مسیر نصب در symlink محلی Composer و آرشیو انتشار یکی است؛
+build محیط عملیاتی به checkout بسته در پوشهٔ همسایه نیاز ندارد.
 
 ```bash
 ./vendor/bin/sail npm run dev
 ./vendor/bin/sail npm run build
 ```
 
-When developing a symlinked package in Sail, use a local Compose override to mount the package checkout.
-Rebuild after installing or removing a package so the output reflects the installed views. New
-dependencies, standalone scripts, and custom asset bundles need their own explicit integration contract;
-this checkpoint uses the existing shared bundle.
+برای توسعهٔ بستهٔ symlinkشده در Sail، از Compose override محلی برای mount کردن checkout بسته استفاده کنید.
+پس از نصب یا حذف بسته دوباره build بگیرید تا خروجی با viewهای نصب‌شده هماهنگ شود.
+وابستگی جدید، اسکریپت مستقل یا bundle اختصاصی به قرارداد اتصال جداگانه نیاز دارد؛ این مرحله از bundle مشترک فعلی استفاده می‌کند.
 
-## Validation and verification
+## اعتبارسنجی و بررسی
 
-Keep controllers thin. Normalize inputs before uniqueness checks, validate with Form Requests, and scope
-reads and writes to the selected fiscal year through `HostContext`. Check record ownership before checking
-its closed-year state so requests cannot reveal information about records in another year. Call
-`ensureFiscalYearOpen()` for writes and create/edit forms. Escape old input and persisted values.
+کنترلرها را سبک نگه دارید. ورودی را پیش از بررسی یکتایی یکسان‌سازی کنید، اعتبارسنجی را با Form Request انجام دهید و
+خواندن و نوشتن را با `HostContext` به سال مالی انتخاب‌شده محدود کنید.
+ابتدا تعلق رکورد به سال مالی را بررسی کنید و سپس بسته‌بودن سال را بسنجید تا اطلاعات رکورد سال دیگر افشا نشود.
+برای نوشتن و فرم‌های ایجاد و ویرایش، `ensureFiscalYearOpen()` را فراخوانی کنید.
+ورودی قبلی فرم و مقادیر ذخیره‌شده را escape کنید.
 
-Test endpoint permissions independently of menu visibility. Cover guests, unauthorized users, missing
-year context, other-year IDs (including closed years), validation errors, and CRUD. Verify that removing
-a category only removes its assignments and preserves invoice data. The invoice-category package has
-separate actual-host tests under its repository's `integration/freeamir/`.
+مجوز endpoint را مستقل از نمایش منو تست کنید. مهمان، کاربر بدون مجوز، نبود سال مالی، شناسهٔ سال دیگر شامل سال بسته،
+خطای اعتبارسنجی و CRUD را پوشش دهید. حذف دسته‌بندی باید فقط تخصیص‌ها را حذف کند و اطلاعات فاکتور را نگه دارد.
+تست‌های اتصال بستهٔ دسته‌بندی به میزبان واقعی، در مخزن خود بسته و مسیر `integration/freeamir/` هستند.
 
-Run the host's empty-package and navigation suites:
+تست‌های میزبان برای نبود بستهٔ اختیاری و منو را اجرا کنید:
 
 ```bash
-./script/test-sail tests/Feature/Extensions
+./vendor/bin/sail artisan test tests/Feature/Extensions
 ```
 
-Also build with and without the package installed, and inspect the page in the browser for Persian RTL,
-English LTR, narrow layouts, menu visibility, form submission, and light/dark themes.
+با بسته و بدون بسته build بگیرید و صفحه را در مرورگر از نظر فارسی راست‌به‌چپ، انگلیسی چپ‌به‌راست، عرض کم،
+نمایش منو، ارسال فرم و پوستهٔ روشن و تیره بررسی کنید.
 
-## Extension locations
+## جایگاه‌های افزونه
 
-The invoice form, detail, and filter slots are rendered by the current host. Package providers must still
-register trusted views and validate all submitted payloads through `InvoiceExtensionRegistry`.
+میزبان فعلی اسلات‌های فرم، جزئیات و فیلتر فاکتور را نمایش می‌دهد.
+provider بسته باید view مورد اعتماد را ثبت کند و همهٔ داده‌های ارسالی را با `InvoiceExtensionRegistry` اعتبارسنجی کند.
+
+</div>
