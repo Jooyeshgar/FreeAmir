@@ -7,6 +7,28 @@
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
+.invoice-tooltips-ready [data-tip]::before,
+.invoice-tooltips-ready [data-tip]::after {
+    display: none;
+}
+
+.invoice-table-tooltip {
+    position: fixed;
+    z-index: 100;
+    width: max-content;
+    max-width: min(20rem, calc(100vw - 1rem));
+    padding: .25rem .5rem;
+    border-radius: var(--radius-field);
+    background: var(--color-neutral);
+    color: var(--color-neutral-content);
+    font-size: .875rem;
+    line-height: 1.25;
+    text-align: center;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+    pointer-events: none;
+}
+
 /*
   The default border color has changed to `currentcolor` in Tailwind CSS v4,
   so we've added these compatibility styles to make sure everything still

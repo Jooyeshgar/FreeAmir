@@ -1,6 +1,7 @@
 import '@majidh1/jalalidatepicker/dist/jalalidatepicker'
 
 import Alpine from 'alpinejs';
+import './invoice-tooltips';
 import { Chart, registerables } from 'chart.js';
 
 window.Alpine = Alpine;

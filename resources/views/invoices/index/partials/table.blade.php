@@ -1,4 +1,4 @@
-<div class="overflow-x-auto lg:overflow-x-hidden">
+<div class="overflow-x-auto lg:overflow-x-hidden" data-invoice-tooltips>
     <table class="table w-full">
         <thead>
             <tr>
