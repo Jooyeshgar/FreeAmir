@@ -3697,5 +3697,18 @@
     "percentage points": "percentage points",
     "Sort invoice numbers": "Sort invoice numbers",
     "Sort all invoice numbers in the active fiscal year? Existing printed invoice numbers will change.": "Sort all invoice numbers in the active fiscal year? Existing printed invoice numbers will change.",
-    "Invoice numbers sorted successfully.": "Invoice numbers sorted successfully."
+    "Invoice numbers sorted successfully.": "Invoice numbers sorted successfully.",
+    "Select valid entries from this document.": "Select valid entries from this document.",
+    "Could not copy document attachments.": "Could not copy document attachments.",
+    "Select all entries": "Select all entries",
+    "Select entry :number": "Select entry :number",
+    "Remove selected entries from source": "Remove selected entries from source",
+    "Transfer attachments": "Transfer attachments",
+    "Select the entries in the document table, then choose the transfer options.": "Select the entries in the document table, then choose the transfer options.",
+    "Transferring entries can affect financial reports. Confirm that you reviewed the selected entries before continuing.": "Transferring entries can affect financial reports. Confirm that you reviewed the selected entries before continuing.",
+    "Transferring entries can affect financial reports. Selected source entries will be deleted and approval may be revoked. Confirm to continue.": "Transferring entries can affect financial reports. Selected source entries will be deleted and approval may be revoked. Confirm to continue.",
+    "Select at least one entry to transfer.": "Select at least one entry to transfer.",
+    "This may affect financial reports. Selected source entries will be deleted and approval may be revoked. Continue?": "This may affect financial reports. Selected source entries will be deleted and approval may be revoked. Continue?",
+    "This may affect financial reports. Continue transferring the selected entries?": "This may affect financial reports. Continue transferring the selected entries?",
+    "I have reviewed the selected entries and confirm the financial impact.": "I have reviewed the selected entries and confirm the financial impact."
 }

@@ -2,6 +2,7 @@
     $sumCredit = $document->transactions->where('value', '>', 0)->sum('value');
     $sumDebit = $document->transactions->where('value', '<', 0)->reduce(fn($carry, $transaction) => $carry + abs($transaction->value), 0);
     $documentFiles = $document->documentFiles ?? collect();
+    $canTransfer = auth()->user()->can('documents.transfer') && $fiscalYears->isNotEmpty() && ! $document->documentable_type && ! $fiscalYearClosed;
 @endphp
 
 <x-app-layout :title="__('Document') . ' #' . formatDocumentNumber($document->number)">
@@ -10,6 +11,7 @@
             class="card-header bg-gradient-to-r from-blue-50 to-indigo-50 dark:text-white dark:from-gray-800 dark:to-gray-700 px-6 py-4 rounded-t-2xl border-b-2 border-primary/20">
             <div>
                 <h2 class="text-2xl font-bold text-gray-800 dark:text-white">
+                    <x-user-guide-link source="accounting/document-list/accounting-documents.md" />
                     {{ __('Document') }} #{{ formatDocumentNumber($document->number) }}
                     @if ($document->title)
                         - {{ $document->title }}
@@ -100,6 +102,9 @@
                     <table class="table w-full">
                         <thead>
                             <tr>
+                                @if ($canTransfer)
+                                    <th class="px-4 py-3"><input type="checkbox" id="select-all-transactions" class="checkbox checkbox-sm" aria-label="{{ __('Select all entries') }}"></th>
+                                @endif
                                 <th class="px-4 py-3">#</th>
                                 <th class="px-4 py-3 text-right">{{ __('Code') }}</th>
                                 <th class="px-4 py-3 text-right">{{ __('Account') }}</th>
@@ -111,6 +116,9 @@
                         <tbody>
                             @forelse ($document->transactions as $index => $transaction)
                                 <tr class="hover:bg-base-300">
+                                    @if ($canTransfer)
+                                        <td class="px-4 py-3"><input type="checkbox" name="transaction_ids[]" value="{{ $transaction->id }}" form="document-transfer-form" class="transaction-checkbox checkbox checkbox-sm" aria-label="{{ __('Select entry :number', ['number' => localizeNumber($index + 1)]) }}" @checked(in_array($transaction->id, old('transaction_ids', [])))></td>
+                                    @endif
                                     <td class="px-4 py-3">{{ localizeNumber($index + 1) }}</td>
                                     <td class="px-4 py-3">
                                         <a href="{{ route('transactions.index', ['subject_id' => $transaction->subject_id]) }}" class="link link-hover"
@@ -131,7 +139,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="px-4 py-6 text-center text-gray-500 dark:text-slate-400">
+                                    <td colspan="{{ $canTransfer ? 7 : 6 }}" class="px-4 py-6 text-center text-gray-500 dark:text-slate-400">
                                         {{ __('There are no transactions in this document yet.') }}
                                     </td>
                                 </tr>
@@ -139,7 +147,7 @@
                         </tbody>
                         <tfoot>
                             <tr>
-                                <td colspan="3" class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
+                                <td colspan="{{ $canTransfer ? 4 : 3 }}" class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
                                     {{ __('Total entries: :count', ['count' => localizeNumber($document->transactions->count())]) }}
                                 </td>
                                 <td class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
@@ -324,7 +332,7 @@
 
                 <div class="flex flex-wrap gap-2">
                     @can('documents.transfer')
-                        @if ($fiscalYears->isNotEmpty() && ! $document->documentable)
+                        @if ($fiscalYears->isNotEmpty() && ! $document->documentable_type)
                             @if ($fiscalYearClosed)
                                 <button type="button" class="btn gap-2 btn-disabled" disabled title="{{ __('This fiscal year is already closed.') }}">{{ __('Transfer to another Fiscal Year') }}</button>
                             @else
@@ -417,11 +425,12 @@
     </div>
 
     @can('documents.transfer')
-        @if ($fiscalYears->isNotEmpty() && ! $document->documentable && ! $fiscalYearClosed)
+        @if ($canTransfer)
             <dialog id="doc-transfer-modal" class="modal">
                 <div class="modal-box">
                     <h3 class="font-bold text-lg">{{ __('Transfer to another Fiscal Year') }}</h3>
-                    <form action="{{ route('documents.transfer', $document) }}" method="POST" class="mt-4">
+                    <p class="mt-2 text-sm">{{ __('Select the entries in the document table, then choose the transfer options.') }}</p>
+                    <form id="document-transfer-form" action="{{ route('documents.transfer', $document) }}" method="POST" class="mt-4" onsubmit="return confirmTransfer()">
                         @csrf
                         <div class="form-control w-full">
                             <label class="label">
@@ -434,6 +443,21 @@
                                 @endforeach
                             </select>
                         </div>
+                        <label class="label cursor-pointer justify-start gap-3 mt-3">
+                            <input type="checkbox" name="remove_from_source" value="1" class="checkbox checkbox-sm" id="remove-from-source">
+                            <span class="label-text">{{ __('Remove selected entries from source') }}</span>
+                        </label>
+                        <label class="label cursor-pointer justify-start gap-3">
+                            <input type="checkbox" name="transfer_attachments" value="1" class="checkbox checkbox-sm">
+                            <span class="label-text">{{ __('Transfer attachments') }}</span>
+                        </label>
+                        <div class="alert alert-warning mt-3 text-sm">
+                            {{ __('Transferring entries can affect financial reports. Confirm that you reviewed the selected entries before continuing.') }}
+                        </div>
+                        <label class="label cursor-pointer justify-start gap-3 mt-3">
+                            <input type="checkbox" name="confirmed" value="1" class="checkbox checkbox-sm" required>
+                            <span class="label-text">{{ __('I have reviewed the selected entries and confirm the financial impact.') }}</span>
+                        </label>
                         <div class="modal-action">
                             <button type="button" onclick="document.getElementById('doc-transfer-modal').close()" class="btn btn-sm md:btn-sm lg:btn-md">{{ __('Cancel') }}</button>
                             <button type="submit" class="btn btn-sm md:btn-sm lg:btn-md btn-primary gap-2">{{ __('Transfer') }}</button>
@@ -446,4 +470,22 @@
             </dialog>
         @endif
     @endcan
+    <script>
+        document.getElementById('select-all-transactions')?.addEventListener('change', (event) => {
+            document.querySelectorAll('.transaction-checkbox').forEach((checkbox) => checkbox.checked = event.target.checked);
+        });
+        document.getElementById('remove-from-source')?.addEventListener('change', (event) => {
+            const alert = document.querySelector('#doc-transfer-modal .alert');
+            if (alert) alert.textContent = event.target.checked
+                ? @json(__('Transferring entries can affect financial reports. Selected source entries will be deleted and approval may be revoked. Confirm to continue.'))
+                : @json(__('Transferring entries can affect financial reports. Confirm that you reviewed the selected entries before continuing.'));
+        });
+        function confirmTransfer() {
+            const selected = document.querySelectorAll('.transaction-checkbox:checked').length;
+            if (!selected) { alert(@json(__('Select at least one entry to transfer.'))); return false; }
+            return confirm(document.getElementById('remove-from-source')?.checked
+                ? @json(__('This may affect financial reports. Selected source entries will be deleted and approval may be revoked. Continue?'))
+                : @json(__('This may affect financial reports. Continue transferring the selected entries?')));
+        }
+    </script>
 </x-app-layout>
