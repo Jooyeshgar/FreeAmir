@@ -1,5 +1,7 @@
 # Permissions and role assignment
 
+[نسخه فارسی](permissions.md)
+
 A permission determines which operation a user may perform. A role is a reusable set of permissions that you assign to users. Company and fiscal-year data scope is configured separately by selecting the user's fiscal years. These settings do not create accounting documents.
 
 ## Before you start
