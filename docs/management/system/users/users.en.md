@@ -13,5 +13,4 @@ In the create and edit forms, assign access by selecting one or more fiscal year
 
 Roles determine operational permissions, while assignments in `fiscal_year_user` define the data the user can access. Access to one fiscal year does not grant access to the company's other fiscal years. User and fiscal-year assignment changes do not create accounting documents.
 
-
 For exact or wildcard permissions and role assignment, see the [permissions and role assignment guide](../permissions/permissions.en.md).
