@@ -36,7 +36,7 @@ class RolesAndPermissionsSeeder extends Seeder
         app()[PermissionRegistrar::class]->forgetCachedPermissions();
 
         foreach ($this->definePermissions() as $permission) {
-            Permission::firstOrCreate(['name' => $permission]);
+            Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']);
         }
 
         $this->seedRoles();
@@ -119,9 +119,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'invoices.payments' => ['update', 'store', 'store-cheque', 'destroy', 'create-document', 'destroy-document', 'search-subjects'],
 
             // Users / Roles / Permissions / Configs
-            'users' => [...self::CRUD, 'create-employee', 'impersonate'],
-            'permissions' => self::CRUD_NO_SHOW,
-            'roles' => self::CRUD_NO_SHOW,
+            // Keep the Accountant's limited actions explicit; full managers use users.*.
+            'users' => ['*', 'index', 'impersonate'],
+            'permissions' => ['*'],
+            'roles' => ['*'],
+            'activity-logs' => ['*'],
             'configs' => self::CRUD,
 
             // HR
@@ -192,8 +194,6 @@ class RolesAndPermissionsSeeder extends Seeder
         $extras = [
             'home',
             'access-super-admin-panel',
-            'activity-logs.index',
-            'activity-logs.details',
             'api.access',
             'change-company',
             'update-global-configs',
@@ -212,12 +212,19 @@ class RolesAndPermissionsSeeder extends Seeder
 
     private function seedRoles(): void
     {
-        $superAdmin = Role::firstOrCreate(['name' => 'Super-Admin']);
-        $superAdmin->syncPermissions(Permission::all());
+        // Seeded roles use only the declared web permissions, including on reruns
+        // where legacy action grants or unrelated wildcard records still exist.
+        $permissions = Permission::query()
+            ->where('guard_name', 'web')
+            ->whereIn('name', $this->definePermissions());
 
-        $admin = Role::firstOrCreate(['name' => __('Admin')]);
+        $superAdmin = Role::firstOrCreate(['name' => 'Super-Admin', 'guard_name' => 'web']);
+        $superAdmin->syncPermissions((clone $permissions)->whereNotIn('name', ['users.index', 'users.impersonate'])->get());
+
+        $admin = Role::firstOrCreate(['name' => __('Admin'), 'guard_name' => 'web']);
         $admin->syncPermissions(
-            Permission::query()
+            (clone $permissions)
+                ->whereNotIn('name', ['users.index', 'users.impersonate'])
                 ->where('name', 'NOT LIKE', 'roles.%')
                 ->where('name', 'NOT LIKE', 'permissions.%')
                 ->where('name', '!=', 'access-super-admin-panel')
@@ -228,9 +235,9 @@ class RolesAndPermissionsSeeder extends Seeder
 
         $superAdmin->users()->each(fn (User $user) => $user->assignRole($admin));
 
-        $accountant = Role::firstOrCreate(['name' => __('Accountant')]);
+        $accountant = Role::firstOrCreate(['name' => __('Accountant'), 'guard_name' => 'web']);
         $accountant->syncPermissions(
-            Permission::query()
+            (clone $permissions)
                 ->where(fn ($query) => $query
                     ->where('name', 'NOT LIKE', 'users.%')
                     ->orWhereIn('name', ['users.index', 'users.impersonate']))
@@ -246,9 +253,9 @@ class RolesAndPermissionsSeeder extends Seeder
                 ->toArray()
         );
 
-        $warehouse = Role::firstOrCreate(['name' => __('Warehousekeeper')]);
+        $warehouse = Role::firstOrCreate(['name' => __('Warehousekeeper'), 'guard_name' => 'web']);
         $warehouse->syncPermissions(
-            Permission::query()
+            (clone $permissions)
                 ->where(fn ($q) => $q
                     ->where('name', 'LIKE', 'products.%')
                     ->orWhere('name', 'LIKE', 'product-groups.%')
@@ -258,9 +265,9 @@ class RolesAndPermissionsSeeder extends Seeder
                 ->toArray()
         );
 
-        $seller = Role::firstOrCreate(['name' => __('Seller')]);
+        $seller = Role::firstOrCreate(['name' => __('Seller'), 'guard_name' => 'web']);
         $seller->syncPermissions(
-            Permission::query()
+            (clone $permissions)
                 ->where(fn ($q) => $q
                     ->where('name', 'LIKE', 'invoices.%')
                     ->orWhere('name', 'LIKE', 'ancillary-costs.%')
@@ -290,13 +297,14 @@ class RolesAndPermissionsSeeder extends Seeder
                 ->toArray()
         );
 
-        $employeeRole = Role::firstOrCreate(['name' => __('Employee')]);
+        $employeeRole = Role::firstOrCreate(['name' => __('Employee'), 'guard_name' => 'web']);
         $employeeRole->syncPermissions(
-            Permission::query()
-                ->where('name', 'LIKE', 'employee-portal.%')
-                ->orWhere('name', '=', 'change-company')
-                ->orWhereIn('name', ['home', 'home.summary'])
-                ->orWhere('name', '=', 'attendance.attendance-logs.show')
+            (clone $permissions)
+                ->where(fn ($query) => $query
+                    ->where('name', 'LIKE', 'employee-portal.%')
+                    ->orWhere('name', '=', 'change-company')
+                    ->orWhereIn('name', ['home', 'home.summary'])
+                    ->orWhere('name', '=', 'attendance.attendance-logs.show'))
                 ->pluck('name')
                 ->toArray()
         );
