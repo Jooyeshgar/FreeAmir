@@ -17,11 +17,11 @@
                     @endif
                     <x-user-guide-link source="accounting/document-list/accounting-documents.md" />
                 </h2>
-                <p class="mt-1 float-end">
+                <p class="mt-1 md:float-end">
                     {{ __('Issued on :date', ['date' => $document->date ? formatDate($document->date) : __('Unknown')]) }}
                 </p>
             </div>
-            <div class="flex flex-wrap gap-2 mt-2">
+            <div class="flex flex-wrap gap-2 mt-2 whitespace-nowrap">
                 <span class="badge badge-sm md:badge-md lg:badge-lg badge-primary gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
