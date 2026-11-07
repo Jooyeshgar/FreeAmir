@@ -27,6 +27,7 @@
 
 - [شرکت‌ها](system/companies/companies.md)
 - [کاربران](system/users/users.md)
+- [مجوزها و تخصیص نقش](system/permissions/permissions.md)
 - [تنظیمات](system/configs/configs.md)
 - [دریافت پشتیبان](system/backups/backups.md)
 - [بارگذاری پشتیبان](system/upload-backup/upload-backup.md)

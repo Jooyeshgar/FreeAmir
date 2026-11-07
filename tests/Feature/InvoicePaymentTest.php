@@ -980,18 +980,22 @@ class InvoicePaymentTest extends TestCase
         $this->assertTrue($invoice->fresh()->status->isPaid());
     }
 
-    public function test_payment_edit_permission_migration_preserves_access_for_existing_roles_and_users(): void
+    public function test_payment_wildcard_grants_editing_through_a_role_or_direct_assignment(): void
     {
-        $store = Permission::findOrCreate('invoices.payments.store');
-        $role = Role::create(['name' => 'Payment recorder']);
-        $role->givePermissionTo($store);
-        $this->user->givePermissionTo($store);
-        $migration = require database_path('migrations/2026_10_21_070000_add_invoice_payment_edit_permissions.php');
-        $migration->up();
-        $migration->up();
-        foreach (['invoices.payments.update', 'invoices.payments.update'] as $name) {
-            $this->assertTrue($role->fresh()->hasPermissionTo($name));
-            $this->assertTrue($this->user->fresh()->hasPermissionTo($name));
-        }
+        $wildcard = Permission::findOrCreate('invoices.payments.*', 'web');
+        $role = Role::create(['name' => 'Payment recorder', 'guard_name' => 'web']);
+        $role->givePermissionTo($wildcard);
+        $this->user->assignRole($role);
+
+        $this->assertDatabaseMissing('permissions', ['name' => 'invoices.payments.update']);
+        $this->assertTrue($this->user->fresh()->can('invoices.payments.update'));
+        $this->assertFalse($this->user->fresh()->can('roles.update'));
+
+        $unprivileged = User::factory()->create();
+        $this->assertFalse($unprivileged->can('invoices.payments.update'));
+
+        $directUser = User::factory()->create();
+        $directUser->givePermissionTo($wildcard);
+        $this->assertTrue($directUser->can('invoices.payments.update'));
     }
 }
