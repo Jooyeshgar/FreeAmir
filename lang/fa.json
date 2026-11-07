@@ -3695,7 +3695,7 @@
     "Select entry :number": "انتخاب ردیف :number",
     "Remove selected entries from source": "حذف ردیف‌های انتخاب‌شده از مبدأ",
     "Transfer attachments": "انتقال پیوست‌ها",
-    "Select the entries in the document table, then choose the transfer options.": "ردیف‌ها را در جدول سند انتخاب کنید، سپس گزینه‌های انتقال را تعیین کنید.",
+    "You can transfer selected transactions instead of the whole document.": "می‌توانید ردیف‌های انتخاب‌شده را به‌جای کل سند منتقل کنید.",
     "Transferring entries can affect financial reports. Confirm that you reviewed the selected entries before continuing.": "انتقال ردیف‌ها می‌تواند بر مانده حساب‌ها و گزارش‌های مالی اثر بگذارد. پیش از ادامه، بررسی ردیف‌های انتخاب‌شده را تأیید کنید.",
     "Transferring entries can affect financial reports. Selected source entries will be deleted and approval may be revoked. Confirm to continue.": "انتقال ردیف‌ها می‌تواند بر مانده حساب‌ها و گزارش‌های مالی اثر بگذارد. ردیف‌های انتخاب‌شده از مبدأ حذف می‌شوند و ممکن است تأیید سند مبدأ لغو شود. برای ادامه تأیید کنید.",
     "Select at least one entry to transfer.": "حداقل یک ردیف برای انتقال انتخاب کنید.",

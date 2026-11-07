@@ -429,7 +429,7 @@
             <dialog id="doc-transfer-modal" class="modal">
                 <div class="modal-box">
                     <h3 class="font-bold text-lg">{{ __('Transfer to another Fiscal Year') }}</h3>
-                    <p class="mt-2 text-sm">{{ __('Select the entries in the document table, then choose the transfer options.') }}</p>
+                    <p class="mt-2 text-sm">{{ __('You can transfer selected transactions instead of the whole document.') }}</p>
                     <form id="document-transfer-form" action="{{ route('documents.transfer', $document) }}" method="POST" class="mt-4" onsubmit="return confirmTransfer()">
                         @csrf
                         <div class="form-control w-full">

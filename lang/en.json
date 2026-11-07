@@ -3704,7 +3704,7 @@
     "Select entry :number": "Select entry :number",
     "Remove selected entries from source": "Remove selected entries from source",
     "Transfer attachments": "Transfer attachments",
-    "Select the entries in the document table, then choose the transfer options.": "Select the entries in the document table, then choose the transfer options.",
+    "You can transfer selected transactions instead of the whole document.": "You can transfer selected transactions instead of the whole document.",
     "Transferring entries can affect financial reports. Confirm that you reviewed the selected entries before continuing.": "Transferring entries can affect financial reports. Confirm that you reviewed the selected entries before continuing.",
     "Transferring entries can affect financial reports. Selected source entries will be deleted and approval may be revoked. Confirm to continue.": "Transferring entries can affect financial reports. Selected source entries will be deleted and approval may be revoked. Confirm to continue.",
     "Select at least one entry to transfer.": "Select at least one entry to transfer.",

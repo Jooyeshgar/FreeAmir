@@ -404,6 +404,7 @@ class FiscalYearTransferTest extends TestCase
             ->assertSee('name="transfer_attachments"', false)
             ->assertDontSee('select-all-transactions', false)
             ->assertDontSee('name="confirmed"', false)
+            ->assertSee(__('You can transfer selected transactions instead of the whole document.'))
             ->assertSee(__('Transferring entries can affect financial reports. Confirm that you reviewed the selected entries before continuing.'));
 
         $dom = new \DOMDocument;
