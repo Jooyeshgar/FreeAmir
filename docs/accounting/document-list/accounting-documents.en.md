@@ -207,17 +207,16 @@ Viewing, editing, and deleting files require the corresponding permissions. File
 
 On a standalone document's detail page, **Transfer to another Fiscal Year** shows user-accessible destinations that are open and differ from the active fiscal year. The source fiscal year must also be open, and the user must have document-transfer permission. Documents linked to an invoice or another operation must be transferred through that operation.
 
-1. Open the source document and select the required entries in the table. Use “Select all entries” to select the whole document. At least one entry is required.
+1. Open the source document and optionally select entries in the table. If you select none, all entries are transferred.
 2. Choose **Transfer to another Fiscal Year** and select the **Target Fiscal Year**.
 3. By default, the source document and all its entries remain unchanged. Selecting **Remove selected entries from source** deletes only those entries. If an approved document becomes unbalanced after deletion, its approval is revoked; if it remains balanced, approval is preserved. If no entries remain, the document itself and its source attachments are also deleted.
 4. **Transfer attachments** is independent of entry removal. Selecting it copies all the document's attachments to the destination as independent files and records. Without this option, no attachments are transferred. Deleting the source document does not delete the destination copies.
-5. Read the financial-impact warning, select **I have reviewed the selected entries and confirm the financial impact**, and choose **Transfer**. A final confirmation message is also displayed. When removing entries from the source, the warning mentions entry deletion and possible approval revocation.
-6. The destination document contains only the selected entries and is always unapproved; even a single entry or an unbalanced selection can be transferred. Its number is based on the latest document number in the destination. The document's date and title and the entries' descriptions and amounts are preserved. Accounts are found by code in the destination; missing accounts are created with their parent chains.
-7. Switch the active fiscal year to the destination and check the entries, accounts, date, attachments, and total debit and credit. Complete an unbalanced document before approving it. If you selected source removal, also review the source document's entries and status.
+5. The destination document contains only the selected entries and is always unapproved; even a single entry or an unbalanced selection can be transferred. Its number is based on the latest document number in the destination. The document's date and title and the entries' descriptions and amounts are preserved. Accounts are found by code in the destination; missing accounts are created with their parent chains.
+6. Switch the active fiscal year to the destination and check the entries, accounts, date, attachments, and total debit and credit. Complete an unbalanced document before approving it. If you selected source removal, also review the source document's entries and status.
 
 > **Financial impact:** Unapproved entries also appear in transaction-based reports. Transferring without source removal keeps the entries in both years; removing them from the source can also change source-year balances and reports. For example, transferring only the debit entry from a balanced document creates an unbalanced destination document; deleting that same entry from the source also revokes the source document's approval.
 
-The request is rejected if no entry is selected, an entry belongs to another document, or financial-impact confirmation is missing. An attachment-copy error also rolls back the transfer; check the source files and access to them. After resolving an error, review the entries and options again.
+The request is rejected if an entry belongs to another document. When no entries are selected, all entries are transferred. An attachment-copy error also rolls back the transfer; check the source files and access to them. After resolving an error, review the entries and options again.
 
 ## How documents affect reports
 

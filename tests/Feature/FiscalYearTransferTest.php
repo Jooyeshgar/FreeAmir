@@ -26,6 +26,7 @@ use App\Services\PaymentService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -350,16 +351,33 @@ class FiscalYearTransferTest extends TestCase
         $this->assertSame(1, $document->transactions()->count());
     }
 
-    public function test_endpoint_requires_selection_confirmation_and_entries_belonging_to_source(): void
+    public function test_endpoint_transfers_all_entries_when_selection_is_absent_or_empty(): void
     {
         $cash = $this->makeSubject($this->source, '101', 'Cash');
-        $document = $this->makeDocument($this->source, [[$cash, 100]]);
-        $otherDocument = $this->makeDocument($this->source, [[$cash, -100]]);
-        $base = ['target_fiscal_year_id' => $this->target->id, 'confirmed' => '1'];
-        $this->post(route('documents.transfer', $document), $base)->assertSessionHasErrors('transaction_ids');
-        $this->post(route('documents.transfer', $document), $base + ['transaction_ids' => $otherDocument->transactions()->pluck('id')->all()])->assertSessionHasErrors('transaction_ids.0');
-        $this->post(route('documents.transfer', $document), ['target_fiscal_year_id' => $this->target->id, 'transaction_ids' => $document->transactions()->pluck('id')->all()])->assertSessionHasErrors('confirmed');
+        foreach ([[], ['transaction_ids' => []], ['transaction_ids' => null]] as $selection) {
+            $document = $this->makeDocument($this->source, [[$cash, 100], [$cash, -100]]);
+            $this->post(route('documents.transfer', $document), ['target_fiscal_year_id' => $this->target->id] + $selection)
+                ->assertRedirect(route('documents.show', $document))->assertSessionHas('success');
+            $transferred = Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->latest('id')->firstOrFail();
+            $this->assertEqualsCanonicalizing([100, -100], $transferred->transactions()->pluck('value')->all());
+            $this->assertNull($transferred->approved_at);
+            $this->assertSame(2, $document->transactions()->count());
+        }
+    }
+
+    public function test_endpoint_transfers_only_selected_entries_and_rejects_foreign_entries(): void
+    {
+        $cash = $this->makeSubject($this->source, '101', 'Cash');
+        $document = $this->makeDocument($this->source, [[$cash, 100], [$cash, -100]]);
+        $other = $this->makeDocument($this->source, [[$cash, 50]]);
+        $base = ['target_fiscal_year_id' => $this->target->id];
+        $this->post(route('documents.transfer', $document), $base + ['transaction_ids' => $other->transactions()->pluck('id')->all()])
+            ->assertSessionHasErrors('transaction_ids.0');
         $this->assertSame(0, Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->count());
+        $this->post(route('documents.transfer', $document), $base + ['transaction_ids' => [$document->transactions()->first()->id]])
+            ->assertSessionHas('success');
+        $transferred = Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->firstOrFail();
+        $this->assertEquals([100], $transferred->transactions()->pluck('value')->all());
     }
 
     public function test_endpoint_redirects_to_list_after_removing_all_source_entries(): void
@@ -368,9 +386,7 @@ class FiscalYearTransferTest extends TestCase
         $document = $this->makeDocument($this->source, [[$cash, 100]]);
         $this->post(route('documents.transfer', $document), [
             'target_fiscal_year_id' => $this->target->id,
-            'transaction_ids' => $document->transactions()->pluck('id')->all(),
             'remove_from_source' => '1',
-            'confirmed' => '1',
         ])->assertRedirect(route('documents.index'))->assertSessionHas('success');
         $this->assertDatabaseMissing('documents', ['id' => $document->id]);
     }
@@ -380,25 +396,38 @@ class FiscalYearTransferTest extends TestCase
         $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'documents.show']));
         $cash = $this->makeSubject($this->source, '101', 'Cash');
         $document = $this->makeDocument($this->source, [[$cash, 100]]);
-        $this->get(route('documents.show', $document))->assertOk()
+        $description = str_repeat('Long entry description ', 10);
+        $document->transactions()->first()->update(['desc' => $description]);
+        $response = $this->get(route('documents.show', $document))->assertOk()
             ->assertSee('name="transaction_ids[]"', false)
             ->assertSee('name="remove_from_source"', false)
             ->assertSee('name="transfer_attachments"', false)
-            ->assertSee('name="confirmed"', false)
+            ->assertDontSee('select-all-transactions', false)
+            ->assertDontSee('name="confirmed"', false)
             ->assertSee(__('Transferring entries can affect financial reports. Confirm that you reviewed the selected entries before continuing.'));
+
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="UTF-8">'.$response->getContent());
+        $xpath = new \DOMXPath($dom);
+        $descriptionCell = $xpath->query('//td[@title]')->item(0);
+        $this->assertSame($description, $descriptionCell->getAttribute('title'));
+        $this->assertSame(Str::limit($description, 50), $descriptionCell->textContent);
+        $heading = $xpath->query('//h2[a[@data-user-guide-link]]')->item(0);
+        $this->assertStringStartsWith(__('Document').' #', trim($heading->textContent));
+        $this->assertSame('a', $heading->lastElementChild->tagName);
+        foreach ($xpath->query('//div[contains(@class, "card-header")]//span[contains(@class, "badge")]') as $badge) {
+            $this->assertStringContainsString('badge-sm md:badge-md lg:badge-lg', $badge->getAttribute('class'));
+        }
     }
 
-    public function test_endpoint_rejects_duplicate_entries_and_unconfirmed_requests_without_writing(): void
+    public function test_endpoint_rejects_duplicate_entries_without_writing(): void
     {
         $cash = $this->makeSubject($this->source, '101', 'Cash');
         $document = $this->makeDocument($this->source, [[$cash, 100]]);
         $id = $document->transactions()->first()->id;
         $this->post(route('documents.transfer', $document), [
-            'target_fiscal_year_id' => $this->target->id, 'transaction_ids' => [$id, $id], 'confirmed' => '1',
+            'target_fiscal_year_id' => $this->target->id, 'transaction_ids' => [$id, $id],
         ])->assertSessionHasErrors('transaction_ids.0');
-        $this->post(route('documents.transfer', $document), [
-            'target_fiscal_year_id' => $this->target->id, 'transaction_ids' => [$id], 'confirmed' => '0',
-        ])->assertSessionHasErrors('confirmed');
         $this->assertSame(0, Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->count());
     }
 
@@ -406,7 +435,7 @@ class FiscalYearTransferTest extends TestCase
     {
         $cash = $this->makeSubject($this->source, '101', 'Cash');
         $document = $this->makeDocument($this->source, [[$cash, 100]]);
-        $payload = ['target_fiscal_year_id' => $this->target->id, 'transaction_ids' => $document->transactions()->pluck('id')->all(), 'confirmed' => '1'];
+        $payload = ['target_fiscal_year_id' => $this->target->id, 'transaction_ids' => $document->transactions()->pluck('id')->all()];
         foreach ([$this->source, $this->target] as $year) {
             $year->update(['closed_at' => now()]);
             $this->post(route('documents.transfer', $document), $payload)->assertSessionHasErrors('fiscal_year');
@@ -824,7 +853,7 @@ class FiscalYearTransferTest extends TestCase
         $cash = $this->makeSubject($this->source, '101', 'Cash');
         $document = $this->makeDocument($this->source, [[$cash, 100]]);
 
-        $response = $this->post(route('documents.transfer', $document), ['target_fiscal_year_id' => $this->source->id, 'transaction_ids' => $document->transactions()->pluck('id')->all(), 'confirmed' => '1']);
+        $response = $this->post(route('documents.transfer', $document), ['target_fiscal_year_id' => $this->source->id, 'transaction_ids' => $document->transactions()->pluck('id')->all()]);
 
         $response->assertSessionHas('error');
         $this->assertSame(0, Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->count());
@@ -835,7 +864,7 @@ class FiscalYearTransferTest extends TestCase
         $cash = $this->makeSubject($this->source, '101', 'Cash');
         $document = $this->makeDocument($this->source, [[$cash, 100]]);
 
-        $response = $this->post(route('documents.transfer', $document), ['target_fiscal_year_id' => $this->target->id, 'transaction_ids' => $document->transactions()->pluck('id')->all(), 'confirmed' => '1']);
+        $response = $this->post(route('documents.transfer', $document), ['target_fiscal_year_id' => $this->target->id, 'transaction_ids' => $document->transactions()->pluck('id')->all()]);
 
         $response->assertSessionHas('success');
         $this->assertSame(1, Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->count());
@@ -882,7 +911,7 @@ class FiscalYearTransferTest extends TestCase
         $this->makeCustomer($this->target, 'ACME');
         $this->makeProduct($this->target, 'Widget', 'P1');
 
-        $response = $this->post(route('documents.transfer', $document), ['target_fiscal_year_id' => $this->target->id, 'transaction_ids' => $document->transactions()->pluck('id')->all(), 'confirmed' => '1']);
+        $response = $this->post(route('documents.transfer', $document), ['target_fiscal_year_id' => $this->target->id, 'transaction_ids' => $document->transactions()->pluck('id')->all()]);
 
         $response->assertSessionHasErrors();
         $this->assertSame(0, Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->count());
@@ -895,7 +924,7 @@ class FiscalYearTransferTest extends TestCase
         $cash = $this->makeSubject($this->source, '101', 'Cash');
         $document = $this->makeDocument($this->source, [[$cash, 100]]);
 
-        $response = $this->post(route('documents.transfer', $document), ['target_fiscal_year_id' => $foreign->id, 'transaction_ids' => $document->transactions()->pluck('id')->all(), 'confirmed' => '1']);
+        $response = $this->post(route('documents.transfer', $document), ['target_fiscal_year_id' => $foreign->id, 'transaction_ids' => $document->transactions()->pluck('id')->all()]);
 
         $response->assertForbidden();
         $this->assertSame(0, Document::withoutGlobalScopes()->where('fiscal_year_id', $foreign->id)->count());

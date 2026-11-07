@@ -435,11 +435,10 @@ class DocumentController extends Controller
     {
         $data = $request->validate([
             'target_fiscal_year_id' => 'required|integer|exists:fiscal_years,id',
-            'transaction_ids' => 'required|array|min:1',
+            'transaction_ids' => 'nullable|array',
             'transaction_ids.*' => ['required', 'integer', 'distinct', Rule::exists('transactions', 'id')->where('document_id', $document->id)],
             'remove_from_source' => 'sometimes|boolean',
             'transfer_attachments' => 'sometimes|boolean',
-            'confirmed' => 'required|accepted',
         ]);
 
         if (! Auth::user()->fiscalYears()->whereKey($request->integer('target_fiscal_year_id'))->exists()) {
@@ -456,7 +455,7 @@ class DocumentController extends Controller
             $document,
             $request->integer('target_fiscal_year_id'),
             $request->user(),
-            $data['transaction_ids'],
+            ($data['transaction_ids'] ?? []) ?: null,
             $request->boolean('remove_from_source'),
             $request->boolean('transfer_attachments'),
         );

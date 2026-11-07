@@ -11,18 +11,18 @@
             class="card-header bg-gradient-to-r from-blue-50 to-indigo-50 dark:text-white dark:from-gray-800 dark:to-gray-700 px-6 py-4 rounded-t-2xl border-b-2 border-primary/20">
             <div>
                 <h2 class="text-2xl font-bold text-gray-800 dark:text-white">
-                    <x-user-guide-link source="accounting/document-list/accounting-documents.md" />
                     {{ __('Document') }} #{{ formatDocumentNumber($document->number) }}
                     @if ($document->title)
                         - {{ $document->title }}
                     @endif
+                    <x-user-guide-link source="accounting/document-list/accounting-documents.md" />
                 </h2>
                 <p class="mt-1 float-end">
                     {{ __('Issued on :date', ['date' => $document->date ? formatDate($document->date) : __('Unknown')]) }}
                 </p>
             </div>
             <div class="flex flex-wrap gap-2 mt-2">
-                <span class="badge badge-lg badge-primary gap-2">
+                <span class="badge badge-sm md:badge-md lg:badge-lg badge-primary gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M7 7h.01M7 3h10a2 2 0 012 2v4a2 2 0 01-.586 1.414l-7 7a2 2 0 01-2.828 0l-4.586-4.586A2 2 0 014 12V5a2 2 0 012-2z" />
@@ -43,7 +43,7 @@
                     };
                 @endphp
                 @if ($document->documentable && $documentableRoute)
-                    <span class="badge badge-lg badge-info gap-2">
+                    <span class="badge badge-sm md:badge-md lg:badge-lg badge-info gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m2 8H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2z" />
                         </svg>
@@ -52,7 +52,7 @@
                         </a>
                     </span>
                 @endif
-                <span class="badge badge-lg {{ $document->approved_at ? 'badge-outline' : 'badge-warning' }} gap-2">
+                <span class="badge badge-sm md:badge-md lg:badge-lg {{ $document->approved_at ? 'badge-outline' : 'badge-warning' }} gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
@@ -103,7 +103,7 @@
                         <thead>
                             <tr>
                                 @if ($canTransfer)
-                                    <th class="px-4 py-3"><input type="checkbox" id="select-all-transactions" class="checkbox checkbox-sm" aria-label="{{ __('Select all entries') }}"></th>
+                                    <th class="px-4 py-3"></th>
                                 @endif
                                 <th class="px-4 py-3">#</th>
                                 <th class="px-4 py-3 text-right">{{ __('Code') }}</th>
@@ -129,7 +129,7 @@
                                     <td class="px-4 py-3">
                                         {{ $transaction->subject?->name ?? '—' }}
                                     </td>
-                                    <td class="px-4 py-3">{{ $transaction->desc ?? '—' }}</td>
+                                    <td class="px-4 py-3 max-w-xs truncate" title="{{ $transaction->desc ?? '—' }}">{{ \Illuminate\Support\Str::limit($transaction->desc ?? '—', 50) }}</td>
                                     <td class="px-4 py-3 text-right">
                                         {{ $transaction->value < 0 ? formatNumber(abs($transaction->value)) : formatNumber(0) }}
                                     </td>
@@ -434,30 +434,26 @@
                         @csrf
                         <div class="form-control w-full">
                             <label class="label">
-                                <span class="label-text font-semibold">{{ __('Target Fiscal Year') }}</span>
+                                <span class="label-text text-sm font-semibold">{{ __('Target Fiscal Year') }}</span>
                             </label>
                             <select name="target_fiscal_year_id" class="select select-bordered w-full" required>
                                 <option value="">{{ __('-- Select fiscal year --') }}</option>
                                 @foreach ($fiscalYears as $year)
-                                    <option value="{{ $year->id }}">{{ $year->name }}</option>
+                                    <option value="{{ $year->id }}">{{ $year->company->name }} - {{ $year->year }}</option>
                                 @endforeach
                             </select>
                         </div>
                         <label class="label cursor-pointer justify-start gap-3 mt-3">
                             <input type="checkbox" name="remove_from_source" value="1" class="checkbox checkbox-sm" id="remove-from-source">
-                            <span class="label-text">{{ __('Remove selected entries from source') }}</span>
+                            <span class="label-text text-sm">{{ __('Remove selected entries from source') }}</span>
                         </label>
                         <label class="label cursor-pointer justify-start gap-3">
                             <input type="checkbox" name="transfer_attachments" value="1" class="checkbox checkbox-sm">
-                            <span class="label-text">{{ __('Transfer attachments') }}</span>
+                            <span class="label-text text-sm">{{ __('Transfer attachments') }}</span>
                         </label>
                         <div class="alert alert-warning mt-3 text-sm">
                             {{ __('Transferring entries can affect financial reports. Confirm that you reviewed the selected entries before continuing.') }}
                         </div>
-                        <label class="label cursor-pointer justify-start gap-3 mt-3">
-                            <input type="checkbox" name="confirmed" value="1" class="checkbox checkbox-sm" required>
-                            <span class="label-text">{{ __('I have reviewed the selected entries and confirm the financial impact.') }}</span>
-                        </label>
                         <div class="modal-action">
                             <button type="button" onclick="document.getElementById('doc-transfer-modal').close()" class="btn btn-sm md:btn-sm lg:btn-md">{{ __('Cancel') }}</button>
                             <button type="submit" class="btn btn-sm md:btn-sm lg:btn-md btn-primary gap-2">{{ __('Transfer') }}</button>
@@ -471,9 +467,6 @@
         @endif
     @endcan
     <script>
-        document.getElementById('select-all-transactions')?.addEventListener('change', (event) => {
-            document.querySelectorAll('.transaction-checkbox').forEach((checkbox) => checkbox.checked = event.target.checked);
-        });
         document.getElementById('remove-from-source')?.addEventListener('change', (event) => {
             const alert = document.querySelector('#doc-transfer-modal .alert');
             if (alert) alert.textContent = event.target.checked
@@ -481,8 +474,6 @@
                 : @json(__('Transferring entries can affect financial reports. Confirm that you reviewed the selected entries before continuing.'));
         });
         function confirmTransfer() {
-            const selected = document.querySelectorAll('.transaction-checkbox:checked').length;
-            if (!selected) { alert(@json(__('Select at least one entry to transfer.'))); return false; }
             return confirm(document.getElementById('remove-from-source')?.checked
                 ? @json(__('This may affect financial reports. Selected source entries will be deleted and approval may be revoked. Continue?'))
                 : @json(__('This may affect financial reports. Continue transferring the selected entries?')));
