@@ -211,6 +211,19 @@ class ExtensionRegistryTest extends TestCase
         self::assertCount(2, $instances);
         self::assertNotSame($instances[0], $instances[1]);
     }
+
+    public function test_extensions_without_csv_methods_are_valid_and_add_no_columns(): void
+    {
+        $registry = new InvoiceExtensionRegistry($this->app);
+        $registry->register('reference', ReferenceExtension::class);
+        $payloads = $registry->validateRequest(Request::create('/', 'POST', [
+            'extensions' => ['reference' => ['reference' => ' example ']],
+        ]));
+
+        self::assertSame(['reference' => ['reference' => 'example']], $payloads);
+        self::assertSame([], $registry->csvHeaders());
+        self::assertSame([], $registry->csvRow(new Invoice));
+    }
 }
 
 class ExtensionTrace
@@ -269,15 +282,5 @@ class ReferenceExtension implements InvoiceExtension
         if ($request->filled('creator_id')) {
             $query->where('creator_id', (int) $request->input('creator_id'));
         }
-    }
-
-    public function csvHeaders(): array
-    {
-        return [];
-    }
-
-    public function csvRow(Model $invoice): array
-    {
-        return [];
     }
 }
