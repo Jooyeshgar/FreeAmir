@@ -1,4 +1,53 @@
-<div class="overflow-x-auto lg:overflow-x-hidden">
+<div class="overflow-x-auto lg:overflow-x-hidden"
+    x-data="{
+        tooltipText: '',
+        tooltipStyle: {},
+        tooltipDirection: 'rtl',
+        activeTrigger: null,
+        hideTooltip() {
+            this.tooltipText = '';
+            this.activeTrigger = null;
+        },
+        showTooltip(event) {
+            const trigger = event.target.closest('[data-tip]');
+            if (!trigger || !trigger.dataset.tip.trim() || trigger === this.activeTrigger) return;
+            if (!trigger.classList.contains('tooltip') &amp;&amp; !window.matchMedia('(min-width: 1024px)').matches) return;
+            this.activeTrigger = trigger;
+            this.tooltipText = trigger.dataset.tip;
+            this.tooltipDirection = getComputedStyle(trigger).direction;
+            this.$nextTick(() => {
+                if (this.activeTrigger !== trigger) return;
+                const rect = trigger.getBoundingClientRect();
+                const tooltip = this.$refs.floatingTooltip;
+                const gap = 8;
+                const left = Math.max(gap, Math.min(rect.left + (rect.width - tooltip.offsetWidth) / 2, window.innerWidth - tooltip.offsetWidth - gap));
+                const top = rect.top >= tooltip.offsetHeight + gap * 2 ? rect.top - tooltip.offsetHeight - gap : rect.bottom + gap;
+                this.tooltipStyle = {
+                    left: left + 'px',
+                    top: Math.max(gap, Math.min(top, window.innerHeight - tooltip.offsetHeight - gap)) + 'px',
+                };
+            });
+        },
+        leaveTooltip(event) {
+            if (this.activeTrigger &amp;&amp; !this.activeTrigger.contains(event.relatedTarget)) this.hideTooltip();
+        },
+    }"
+    :class="'invoice-tooltips-ready'"
+    @pointerover="showTooltip($event)" @pointerout="leaveTooltip($event)"
+    @focusin="showTooltip($event)" @focusout="leaveTooltip($event)"
+    @keydown.escape.window="hideTooltip()" @scroll.window.capture="hideTooltip()" @resize.window="hideTooltip()">
+    {{-- Teleport outside the scrolling table so tooltips cannot be clipped or add scrollbars. --}}
+    <template x-teleport="body">
+        <div x-ref="floatingTooltip" x-show="tooltipText" x-cloak role="tooltip"
+            x-text="tooltipText" :style="tooltipStyle" :dir="tooltipDirection"
+            class="fixed z-[100] w-max max-w-[min(20rem,calc(100vw-1rem))] rounded-field bg-neutral px-2 py-1 text-center text-sm leading-tight text-neutral-content whitespace-pre-line break-words pointer-events-none"></div>
+    </template>
+    <style>
+        .invoice-tooltips-ready [data-tip]::before,
+        .invoice-tooltips-ready [data-tip]::after {
+            display: none;
+        }
+    </style>
     <table class="table w-full">
         <thead>
             <tr>
