@@ -5,10 +5,7 @@
         <div>
             <p class="text-xs font-bold uppercase tracking-[0.16em] text-sky-600 dark:text-sky-400">
                 {{ __('Access control') }}</p>
-            <div class="flex items-center gap-1">
-                <h1 class="mt-1 text-2xl font-bold tracking-tight">{{ __('Roles and access policies') }}</h1>
-                <x-user-guide-link source="management/system/permissions/permissions.md" />
-            </div>
+            <h1 class="mt-1 text-2xl font-bold tracking-tight">{{ __('Roles and access policies') }}</h1>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 {{ __('Define reusable access policies and review their assignments.') }}</p>
         </div>
