@@ -32,22 +32,15 @@
             if (this.activeTrigger &amp;&amp; !this.activeTrigger.contains(event.relatedTarget)) this.hideTooltip();
         },
     }"
-    :class="'invoice-tooltips-ready'"
+    :class="'invoice-tooltips-ready [&_[data-tip]::before]:hidden [&_[data-tip]::after]:hidden'"
     @pointerover="showTooltip($event)" @pointerout="leaveTooltip($event)"
     @focusin="showTooltip($event)" @focusout="leaveTooltip($event)"
     @keydown.escape.window="hideTooltip()" @scroll.window.capture="hideTooltip()" @resize.window="hideTooltip()">
-    {{-- Teleport outside the scrolling table so tooltips cannot be clipped or add scrollbars. --}}
     <template x-teleport="body">
         <div x-ref="floatingTooltip" x-show="tooltipText" x-cloak role="tooltip"
             x-text="tooltipText" :style="tooltipStyle" :dir="tooltipDirection"
             class="fixed z-[100] w-max max-w-[min(20rem,calc(100vw-1rem))] rounded-field bg-neutral px-2 py-1 text-center text-sm leading-tight text-neutral-content whitespace-pre-line break-words pointer-events-none"></div>
     </template>
-    <style>
-        .invoice-tooltips-ready [data-tip]::before,
-        .invoice-tooltips-ready [data-tip]::after {
-            display: none;
-        }
-    </style>
     <table class="table w-full">
         <thead>
             <tr>
