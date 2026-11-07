@@ -27,6 +27,7 @@ Guides follow the application menu order. A guide's location follows its menu po
 
 - [Companies](system/companies/companies.en.md)
 - [Users](system/users/users.en.md)
+- [Permissions and role assignment](system/permissions/permissions.en.md)
 - [Configs](system/configs/configs.en.md)
 - [Backup](system/backups/backups.en.md)
 - [Upload backup](system/upload-backup/upload-backup.en.md)
