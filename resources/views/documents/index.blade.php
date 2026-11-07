@@ -163,7 +163,7 @@
                                         </svg>
                                     </a>
                                     @if ($fiscalYearClosed || $document->documentable)
-                                        <span class="lg:tooltip"
+                                        <span class="lg:tooltip lg:tooltip-right"
                                             data-tip="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Cannot edit this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
                                             <button class="btn btn-sm btn-info btn-square btn-disabled cursor-not-allowed" disabled
                                                 title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Cannot edit this document because it is linked to another record.') }}">
@@ -183,7 +183,7 @@
                                     @endif
 
                                     @if ($fiscalYearClosed || $document->documentable)
-                                        <span class="lg:tooltip" data-tip="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Cannot change status of this document because it created automatically.') }}">
+                                        <span class="lg:tooltip lg:tooltip-right" data-tip="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Cannot change status of this document because it created automatically.') }}">
                                             <button class="btn btn-sm btn-error btn-square btn-disabled cursor-not-allowed"
                                                 title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Cannot change status of this document because it created automatically.') }}">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -225,7 +225,7 @@
                                     @endif
 
                                     @if ($fiscalYearClosed || $document->documentable)
-                                        <span class="lg:tooltip"
+                                        <span class="lg:tooltip lg:tooltip-right"
                                             data-tip="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Cannot delete this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
                                             <button class="btn btn-sm btn-error btn-square btn-disabled cursor-not-allowed" disabled
                                                 title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Cannot delete this document because it is linked to another record.') }}">
@@ -247,7 +247,7 @@
                                             </button>
                                         </form>
                                     @else
-                                        <span class="lg:tooltip"
+                                        <span class="lg:tooltip lg:tooltip-right"
                                             data-tip="{{ __('Cannot delete this document because it is approved') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
                                             <button class="btn btn-sm btn-error btn-square btn-disabled cursor-not-allowed" disabled
                                                 title="{{ __('Cannot delete this document because it is approved.') }}">
