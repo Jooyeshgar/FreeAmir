@@ -55,6 +55,7 @@ class InvoicePaymentTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $this->paymentService = app(PaymentService::class);
 
@@ -912,10 +913,7 @@ class InvoicePaymentTest extends TestCase
             ->assertDontSee('data-payment-id="'.$payment->id.'"', false);
         $data = ['amount' => 60, 'subject_id' => $this->cashSubjectId()];
         $this->put(route('invoices.payments.update', [$invoice, $payment]), $data)->assertForbidden();
-        $this->user->givePermissionTo([
-            Permission::findOrCreate('invoices.payments.update'),
-            Permission::findOrCreate('invoices.payments.update'),
-        ]);
+        $this->user->givePermissionTo(Permission::findOrCreate('invoices.payments.update'));
         $this->get(route('invoices.show', $invoice))->assertOk()
             ->assertSee('data-payment-id="'.$payment->id.'"', false);
         $this->put(route('invoices.payments.update', [$invoice, $payment]), $data)
