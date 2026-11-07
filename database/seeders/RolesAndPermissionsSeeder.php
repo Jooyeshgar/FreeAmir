@@ -15,16 +15,6 @@ use Spatie\Permission\PermissionRegistrar;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
-    /**
-     * Standard RESTful resource actions.
-     */
-    private const CRUD = ['index', 'create', 'store', 'show', 'edit', 'update', 'destroy'];
-
-    /**
-     * RESTful resource actions without `show`.
-     */
-    private const CRUD_NO_SHOW = ['index', 'create', 'store', 'edit', 'update', 'destroy'];
-
     public function run(): void
     {
         $this->seedPermissionsAndRoles();
@@ -43,171 +33,77 @@ class RolesAndPermissionsSeeder extends Seeder
     }
 
     /**
-     * Build the full flat list of permissions from the grouped definition.
-     *
-     * Each entry of `$groups` is `prefix => actions[]`. The resulting permission
-     * name is `"{$prefix}.{$action}"`. Free-standing permissions (not tied to a
-     * RESTful resource) are listed under `extras`.
+     * Grant all actions for each route resource. Standalone capabilities keep
+     * their existing names because they do not represent resource actions.
      *
      * @return array<int, string>
      */
     private function definePermissions(): array
     {
-        $groups = [
-            // Subjects / accounting subjects
-            'subjects' => [...self::CRUD, 'search', 'search-code', 'transfer'],
-
-            // Documents (accounting documents) and their files
-            'documents' => [
-                ...self::CRUD,
-                'print', 'duplicate', 'change-status', 'approve-all',
-                'search-account-balance', 'export', 'export.download', 'import', 'import.store',
-                'sort-numbers', 'sort-numbers.start', 'sort-numbers.process', 'transfer',
-            ],
-            'documents.files' => ['create', 'store', 'edit', 'update', 'destroy', 'view', 'download'],
-
-            'transactions' => ['index', 'show'],
-
-            // Products / services and their groups
-            'products' => [...self::CRUD, 'search-product-group', 'report', 'export', 'recalculate-quantity'],
-            'product-groups' => self::CRUD,
-            'services' => [...self::CRUD, 'search-service-group'],
-            'service-groups' => self::CRUD,
-
-            // Customers
-            'customers' => [...self::CRUD, 'export', 'import', 'import.store'],
-            'customer-groups' => self::CRUD,
-
-            // CRM
-            'crm' => ['dashboard'],
-
-            // Companies + fiscal-year wizard
-            'companies' => [
-                ...self::CRUD,
-                'close-fiscal-year',
-                'test-moadian-connection',
-                'closing-wizard', 'closing-wizard.step1', 'closing-wizard.step3', 'closing-wizard.recalculate', 'closing-wizard.recreate-opening',
-            ],
-            'fiscal-years' => self::CRUD,
-
-            // Backups
-            'backups' => ['create', 'export', 'import', 'upload', 'document-files-size'],
-
-            // Banks / bank accounts
-            'bank-accounts' => [...self::CRUD, 'search-bank'],
-            'banks' => self::CRUD,
-            'cheques' => [...self::CRUD, 'report', 'transition'],
-            'chequebooks' => self::CRUD,
-
-            // Invoices and their statuses
-            'invoices' => [
-                ...self::CRUD,
-                'bookmark',
-                'dashboard', 'print', 'export', 'change-status', 'search', 'approve', 'get-items',
-                'moadian-form', 'moadian-histories.index', 'moadian-histories.show', 'send-moadian', 'moadian-check-status',
-                'search-customer', 'search-product-service',
-                'inactive', 'inactive.approve', 'sort-numbers',
-                'conflicts', 'conflicts.more',
-                'group-action', 'void-form', 'void', 'transfer',
-            ],
-
-            // Ancillary costs
-            'ancillary-costs' => ['index', 'search-customer', 'search-invoice', 'get-products', 'approve', 'change-status'],
-            'invoices.ancillary-costs' => ['create', 'store', 'show', 'edit', 'update', 'destroy'],
-
-            // Invoice payments
-            'invoices.payments' => ['update', 'store', 'store-cheque', 'destroy', 'create-document', 'destroy-document', 'search-subjects'],
-
-            // Users / Roles / Permissions / Configs
-            // Keep the Accountant's limited actions explicit; full managers use users.*.
-            'users' => ['*', 'index', 'impersonate'],
-            'permissions' => ['*'],
-            'roles' => ['*'],
-            'activity-logs' => ['*'],
-            'configs' => self::CRUD,
-
-            // HR
-            'hr.employees' => [...self::CRUD, 'export'],
-            'hr.org-charts' => self::CRUD,
-            'hr.organization-units' => self::CRUD,
-            'hr.personnel-requests' => [...self::CRUD, 'approve', 'reject'],
-
-            // Attendance
-            'attendance.attendance-logs' => [
-                ...self::CRUD,
-                'recalculate', 'recalculate-all',
-                'import', 'import.preview', 'import.store',
-                'bulk-create', 'bulk-store', 'search-employee',
-            ],
-            'attendance.monthly-attendances' => [...self::CRUD, 'recalculate', 'payroll.store', 'bulk-create', 'bulk-store'],
-            'attendance.work-shifts' => self::CRUD_NO_SHOW,
-
-            // Salary / Payroll
-            'salary.tax-slabs' => self::CRUD,
-            'salary.work-sites' => self::CRUD_NO_SHOW,
-            'salary.work-site-contracts' => self::CRUD_NO_SHOW,
-            'salary.public-holidays' => self::CRUD_NO_SHOW,
-            'salary.payroll-elements' => self::CRUD_NO_SHOW,
-            'salary.salary-decrees' => self::CRUD_NO_SHOW,
-            'salary.payrolls' => [
-                'index', 'show', 'destroy', 'dashboard',
-                'transition.draft-to-pending-manager-approval',
-                'transition.pending-manager-approval-to-approved',
-                'transition.approved-to-paid',
-            ],
-            'salary.payroll-items' => ['edit', 'update'],
-
-            // Warehouse
-            'warehouse' => ['dashboard'],
-            'warehouses' => [...self::CRUD_NO_SHOW, 'transfer', 'transfer.store', 'transfer-history'],
-
-            // Budgeting
-            'budgets' => ['index', 'store', 'rollover', 'calculate-expenses', 'destroy', 'search-subjects'],
-
-            // Comments
-            'comments' => self::CRUD_NO_SHOW,
-
-            // Reports
-            'reports' => ['ledger', 'journal', 'sub-ledger', 'trial-balance', 'trial-balance.print', 'trial-balance.export-csv', 'inventory-turnover', 'inventory-turnover.pdf', 'documents', 'result', 'cost-income', 'company-overview', 'company-overview.cash-banks', 'company-overview.bank-account', 'company-overview.seed-demo-data', 'company-overview.refresh-database'],
-
-            // Commercial ledgers
-            'commercial-ledgers' => ['index', 'store', 'show', 'download', 'destroy'],
-
-            // API
-            'api-tokens' => ['index', 'create', 'store', 'destroy'],
-
-            // Home
-            'home' => ['summary'],
-
-            // Employee portal
-            'employee-portal' => [
-                'employee.show',
-                'change-employee-information', 'update-employee-information',
-                'dashboard',
-                'attendance-logs',
-                'monthly-attendances', 'monthly-attendances.show',
-                'payrolls', 'payrolls.show',
-            ],
-            'employee-portal.personnel-requests' => self::CRUD_NO_SHOW,
+        $resources = [
+            'subjects',
+            'documents',
+            'documents.files',
+            'transactions',
+            'products',
+            'product-groups',
+            'services',
+            'service-groups',
+            'customers',
+            'customer-groups',
+            'crm',
+            'companies',
+            'fiscal-years',
+            'backups',
+            'bank-accounts',
+            'banks',
+            'cheques',
+            'chequebooks',
+            'invoices',
+            'ancillary-costs',
+            'invoices.ancillary-costs',
+            'invoices.payments',
+            'users',
+            'permissions',
+            'roles',
+            'activity-logs',
+            'configs',
+            'hr.employees',
+            'hr.org-charts',
+            'hr.organization-units',
+            'hr.personnel-requests',
+            'attendance.attendance-logs',
+            'attendance.monthly-attendances',
+            'attendance.work-shifts',
+            'salary.tax-slabs',
+            'salary.work-sites',
+            'salary.work-site-contracts',
+            'salary.public-holidays',
+            'salary.payroll-elements',
+            'salary.salary-decrees',
+            'salary.payrolls',
+            'salary.payroll-items',
+            'warehouse',
+            'warehouses',
+            'budgets',
+            'comments',
+            'reports',
+            'commercial-ledgers',
+            'api-tokens',
+            'home',
+            'employee-portal',
+            'employee-portal.personnel-requests',
         ];
 
-        $extras = [
+        return [
+            ...array_map(fn (string $resource) => $resource.'.*', $resources),
             'home',
             'access-super-admin-panel',
-            'api.access',
+            'api.*',
             'change-company',
             'update-global-configs',
             'report',
         ];
-
-        $permissions = $extras;
-        foreach ($groups as $prefix => $actions) {
-            foreach ($actions as $action) {
-                $permissions[] = $prefix.'.'.$action;
-            }
-        }
-
-        return array_values(array_unique($permissions));
     }
 
     private function seedRoles(): void
@@ -219,12 +115,11 @@ class RolesAndPermissionsSeeder extends Seeder
             ->whereIn('name', $this->definePermissions());
 
         $superAdmin = Role::firstOrCreate(['name' => 'Super-Admin', 'guard_name' => 'web']);
-        $superAdmin->syncPermissions((clone $permissions)->whereNotIn('name', ['users.index', 'users.impersonate'])->get());
+        $superAdmin->syncPermissions((clone $permissions)->get());
 
         $admin = Role::firstOrCreate(['name' => __('Admin'), 'guard_name' => 'web']);
         $admin->syncPermissions(
             (clone $permissions)
-                ->whereNotIn('name', ['users.index', 'users.impersonate'])
                 ->where('name', 'NOT LIKE', 'roles.%')
                 ->where('name', 'NOT LIKE', 'permissions.%')
                 ->where('name', '!=', 'access-super-admin-panel')
@@ -238,9 +133,6 @@ class RolesAndPermissionsSeeder extends Seeder
         $accountant = Role::firstOrCreate(['name' => __('Accountant'), 'guard_name' => 'web']);
         $accountant->syncPermissions(
             (clone $permissions)
-                ->where(fn ($query) => $query
-                    ->where('name', 'NOT LIKE', 'users.%')
-                    ->orWhereIn('name', ['users.index', 'users.impersonate']))
                 ->where('name', 'NOT LIKE', 'roles.%')
                 ->where('name', 'NOT LIKE', 'permissions.%')
                 ->where('name', 'NOT LIKE', 'configs.%')
@@ -248,7 +140,6 @@ class RolesAndPermissionsSeeder extends Seeder
                 ->where('name', '!=', 'update-global-configs')
                 ->where('name', 'NOT LIKE', 'api.%')
                 ->where('name', 'NOT LIKE', 'api-tokens.%')
-                ->where('name', '!=', 'salary.payrolls.transition.pending-manager-approval-to-approved')
                 ->pluck('name')
                 ->toArray()
         );
@@ -274,25 +165,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     ->orWhere('name', 'LIKE', 'customers.%')
                     ->orWhere('name', 'LIKE', 'customer-groups.%')
                     ->orWhere('name', 'LIKE', 'crm.%')
-                    ->orWhereIn('name', ['home', 'home.summary']))
-                ->whereNotIn('name', [
-                    'invoices.approve',
-                    'invoices.change-status',
-                    'invoices.conflicts',
-                    'invoices.conflicts.more',
-                    'invoices.group-action',
-                    'invoices.inactive',
-                    'invoices.inactive.approve',
-                    'invoices.transfer',
-                    'ancillary-costs.approve',
-                    'ancillary-costs.change-status',
-                    'invoices.payments.store',
-                    'invoices.payments.update',
-                    'invoices.payments.store-cheque',
-                    'invoices.payments.destroy',
-                    'invoices.payments.create-document',
-                    'invoices.payments.destroy-document',
-                ])
+                    ->orWhereIn('name', ['home', 'home.*']))
                 ->pluck('name')
                 ->toArray()
         );
@@ -303,8 +176,8 @@ class RolesAndPermissionsSeeder extends Seeder
                 ->where(fn ($query) => $query
                     ->where('name', 'LIKE', 'employee-portal.%')
                     ->orWhere('name', '=', 'change-company')
-                    ->orWhereIn('name', ['home', 'home.summary'])
-                    ->orWhere('name', '=', 'attendance.attendance-logs.show'))
+                    ->orWhereIn('name', ['home', 'home.*'])
+                    ->orWhere('name', '=', 'attendance.attendance-logs.*'))
                 ->pluck('name')
                 ->toArray()
         );

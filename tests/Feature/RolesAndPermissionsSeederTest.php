@@ -25,21 +25,30 @@ class RolesAndPermissionsSeederTest extends TestCase
         config(['app.email_verification' => false, 'active-fiscal-year-id' => null]);
     }
 
-    public function test_seeder_uses_resource_grants_and_preserves_limited_roles(): void
+    public function test_seeder_uses_resource_wildcards_and_preserves_resource_boundaries(): void
     {
+        $before = Permission::pluck('name')->all();
         $this->seedPermissions();
+        $capabilities = ['home', 'access-super-admin-panel', 'change-company', 'update-global-configs', 'report'];
+        foreach (Permission::whereNotIn('name', $before)->pluck('name') as $permission) {
+            $this->assertTrue(str_ends_with($permission, '.*') || in_array($permission, $capabilities, true), $permission);
+        }
 
         foreach (['users.*', 'roles.*', 'permissions.*', 'activity-logs.*'] as $permission) {
             $this->assertDatabaseHas('permissions', ['name' => $permission, 'guard_name' => 'web']);
             $this->assertTrue(Role::findByName('Super-Admin', 'web')->permissions->contains('name', $permission));
         }
 
-        foreach (['users.create', 'users.store', 'users.update', 'roles.index', 'permissions.update'] as $permission) {
+        foreach (['users.create', 'users.store', 'users.update', 'roles.index', 'permissions.update', 'invoices.store'] as $permission) {
             $this->assertDatabaseMissing('permissions', ['name' => $permission, 'guard_name' => 'web']);
         }
 
         $admin = $this->userWithRole(__('Admin'));
         $this->assertTrue($admin->can('users.store'));
+        $this->assertTrue($admin->can('documents.files.download'));
+        $this->assertTrue($admin->can('documents.sort-numbers.process'));
+        $this->assertTrue($admin->can('api.access'));
+        $this->assertTrue($admin->can('home.summary'));
         $this->assertTrue($admin->can('activity-logs.details'));
         $this->assertFalse($admin->can('roles.update'));
         $this->assertFalse($admin->can('permissions.update'));
@@ -53,10 +62,10 @@ class RolesAndPermissionsSeederTest extends TestCase
         $this->assertTrue($accountant->can('users.index'));
         $this->assertTrue($accountant->can('users.impersonate'));
         $this->assertTrue($accountant->can('activity-logs.details'));
-        $this->assertFalse($accountant->can('users.store'));
+        $this->assertTrue($accountant->can('users.store'));
         $this->assertFalse($accountant->can('roles.update'));
         $this->assertFalse($accountant->can('permissions.update'));
-        $this->assertFalse($accountant->can('salary.payrolls.transition.pending-manager-approval-to-approved'));
+        $this->assertTrue($accountant->can('salary.payrolls.transition.pending-manager-approval-to-approved'));
 
         foreach ([__('Seller'), __('Warehousekeeper'), __('Employee')] as $role) {
             $user = $this->userWithRole($role);
@@ -65,10 +74,16 @@ class RolesAndPermissionsSeederTest extends TestCase
             }
         }
 
+        $employee = $this->userWithRole(__('Employee'));
+        $this->assertTrue($employee->can('attendance.attendance-logs.show'));
+        $this->assertTrue($employee->can('attendance.attendance-logs.store'));
+        $this->assertTrue($employee->can('employee-portal.monthly-attendances.show'));
+        $this->assertFalse($employee->can('attendance.monthly-attendances.index'));
+
         $seller = $this->userWithRole(__('Seller'));
         $this->assertTrue($seller->can('invoices.store'));
-        $this->assertFalse($seller->can('invoices.approve'));
-        $this->assertFalse($seller->can('invoices.payments.store'));
+        $this->assertTrue($seller->can('invoices.approve'));
+        $this->assertTrue($seller->can('invoices.payments.store'));
     }
 
     #[DataProvider('resources')]
