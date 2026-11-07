@@ -17,6 +17,7 @@ use App\Services\InvoiceService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class InvoiceDashboardTest extends TestCase
@@ -130,6 +131,16 @@ class InvoiceDashboardTest extends TestCase
                 'end_date' => '1405/02/01',
             ]))
             ->assertSessionHasErrors('end_date');
+    }
+
+    public function test_resource_wildcard_allows_dashboard_without_an_action_permission_record(): void
+    {
+        $role = Role::create(['name' => 'Invoice Analyst', 'guard_name' => 'web']);
+        $role->givePermissionTo(Permission::findOrCreate('invoices.*', 'web'));
+        $this->user->assignRole($role);
+
+        $this->assertDatabaseMissing('permissions', ['name' => 'invoices.dashboard']);
+        $this->actingAs($this->user)->get(route('invoices.dashboard'))->assertOk();
     }
 
     public function test_dashboard_requires_its_permission(): void

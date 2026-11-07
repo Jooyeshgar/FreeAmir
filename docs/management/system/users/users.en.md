@@ -12,3 +12,5 @@ In the create and edit forms, assign access by selecting one or more fiscal year
 4. Open **Edit** to change the user's details, roles, or fiscal years. A password is optional when editing; if provided, it must be at least eight characters and confirmed. You can link an employee only if that employee is not already linked to another user.
 
 Roles determine operational permissions, while assignments in `fiscal_year_user` define the data the user can access. Access to one fiscal year does not grant access to the company's other fiscal years. User and fiscal-year assignment changes do not create accounting documents.
+
+For exact or wildcard permissions and role assignment, see the [permissions and role assignment guide](../permissions/permissions.en.md).
