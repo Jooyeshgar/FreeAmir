@@ -239,6 +239,7 @@ class RemainingFiscalYearMutationTest extends TestCase
             if (in_array($name, [
                 'api-tokens.create', 'backups.create', 'companies.create', 'companies.edit',
                 'configs.create', 'fiscal-years.create', 'users.create', 'users.edit',
+                'permissions.create', 'permissions.edit', 'roles.create', 'roles.edit',
             ], true)) {
                 return false;
             }
@@ -254,6 +255,7 @@ class RemainingFiscalYearMutationTest extends TestCase
             'fiscal-years.store', 'companies.store', 'companies.update', 'companies.test-moadian-connection',
             'api-tokens.store', 'api-tokens.destroy', 'users.store',
             'users.update', 'users.destroy', 'report',
+            'permissions.*', 'roles.*',
             'backups.export', 'backups.import', 'documents.export.download',
             'reports.documents.export', 'attendance.attendance-logs.import.preview', 'commercial-ledgers.store',
             'commercial-ledgers.destroy', 'companies.close-fiscal-year',
