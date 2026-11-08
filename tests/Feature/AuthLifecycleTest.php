@@ -110,7 +110,7 @@ class AuthLifecycleTest extends TestCase
         $this->assertDatabaseMissing('users', ['email' => 'escalated@example.com']);
     }
 
-    public function test_role_and_permission_pages_are_not_available_in_the_workspace(): void
+    public function test_role_and_permission_pages_are_available_to_authorized_workspace_users(): void
     {
         $roleIndex = Permission::firstOrCreate(['name' => 'roles.index']);
         $permissionIndex = Permission::firstOrCreate(['name' => 'permissions.index']);
@@ -125,8 +125,10 @@ class AuthLifecycleTest extends TestCase
 
         $workspace = $this->actingAs($viewer)->get(route('about'));
         $workspace->assertOk();
-        $workspace->assertDontSee(url('/management/roles'), false);
-        $workspace->assertDontSee(url('/management/permissions'), false);
+        $workspace->assertSee(route('roles.index'), false);
+        $workspace->assertSee(route('permissions.index'), false);
+        $this->get(route('roles.index'))->assertOk();
+        $this->get(route('permissions.index'))->assertOk();
 
         $this->get(url('/management/roles'))->assertNotFound();
         $this->get(url('/management/permissions'))->assertNotFound();

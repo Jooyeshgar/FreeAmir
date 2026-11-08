@@ -24,8 +24,8 @@ class CoreNavigationTest extends TestCase
         $nodes = $this->flatten($tree);
         $coreNodes = array_values(array_filter($nodes, static fn (MenuItem $item): bool => str_starts_with($item->id, 'core.')));
 
-        self::assertCount(85, $coreNodes);
-        self::assertCount(71, array_filter($coreNodes, static fn (MenuItem $item): bool => $item->route !== null));
+        self::assertCount(87, $coreNodes);
+        self::assertCount(73, array_filter($coreNodes, static fn (MenuItem $item): bool => $item->route !== null));
         self::assertCount(14, array_filter($coreNodes, static fn (MenuItem $item): bool => $item->route === null));
         foreach ($coreNodes as $item) {
             if ($item->route !== null) {
@@ -60,6 +60,12 @@ class CoreNavigationTest extends TestCase
         $nodes = $this->flatten(app(NavigationRegistry::class)->tree());
 
         foreach ([
+            'core.management.system' => [
+                'core.management.system.companies', 'core.management.system.fiscal-years',
+                'core.management.system.permissions', 'core.management.system.roles', 'core.management.system.users',
+                'core.management.system.activity-logs', 'core.management.system.configs',
+                'core.management.system.backup', 'core.management.system.upload-backup',
+            ],
             'core.portal' => [
                 'core.portal.dashboard', 'core.portal.attendance', 'core.portal.monthly-attendance',
                 'core.portal.payrolls', 'core.portal.requests', 'core.portal.information',
