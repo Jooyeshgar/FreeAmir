@@ -60,7 +60,6 @@ class ActivityLogController extends Controller
     public function details(Activity $activity): JsonResponse
     {
         abort_unless(in_array($activity->source, ['request', 'model'], true), 404);
-        $activity = $this->activityLogService->findVisible($activity->id);
 
         $modelType = request()->query('model_type');
         $modelId = request()->query('model_id');
@@ -71,7 +70,7 @@ class ActivityLogController extends Controller
             $activity->setAttribute('details', $details->put('models', $models->all()));
         }
 
-        $row = $this->activityRow($activity->load('user:id,name,email'), request()->user()->fiscalYears()->with('company:id,name')->get()->keyBy('id'), collect());
+        $row = $this->activityRow($activity->load('user:id,name,email'), FiscalYear::query()->with('company:id,name')->get()->keyBy('id'), collect());
 
         return response()->json([
             'html' => view('activity-logs._details', ['activity' => $row])->render(),
