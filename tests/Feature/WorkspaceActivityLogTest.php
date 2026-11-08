@@ -11,6 +11,7 @@ use App\Services\ActivityLogService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -37,8 +38,13 @@ class WorkspaceActivityLogTest extends TestCase
             ]);
         }
 
+        $retrieved = 0;
+        Event::listen('eloquent.retrieved: '.Activity::class, function () use (&$retrieved): void {
+            $retrieved++;
+        });
         $this->actingAs($viewer);
         foreach ([[], ['fiscal_year_id' => $year->id]] as $filters) {
+            $retrieved = 0;
             DB::enableQueryLog();
             DB::flushQueryLog();
             try {
@@ -50,8 +56,46 @@ class WorkspaceActivityLogTest extends TestCase
 
             $this->assertSame(520, $data['activities']->total());
             $this->assertCount(25, $data['activities']);
+            $this->assertSame(25, $retrieved, 'Only the displayed page should instantiate Activity models.');
             $ownershipQueries = $queries->filter(fn (array $query): bool => preg_match('/from ["`]documents["`]/i', $query['query']) === 1);
             $this->assertCount(2, $ownershipQueries, 'Current model ownership should be loaded once per chunk, not once per document or again for a selected fiscal year.');
+        }
+    }
+
+    public function test_legacy_groups_keep_page_boundaries_without_hydrating_the_entire_history(): void
+    {
+        $viewer = $this->viewer();
+        $year = FiscalYear::factory()->create();
+        $viewer->fiscalYears()->sync([$year->id]);
+        $groups = collect();
+        foreach (range(1, 30) as $minute) {
+            $date = now()->startOfDay()->addMinutes($minute);
+            $models = collect(range(1, 2))->map(function () use ($viewer, $year, $date): Activity {
+                $activity = $this->activity($viewer, ['fiscal_year_id' => $year->id, 'route' => 'fiscal-years.update']);
+                $activity->forceFill(['created_at' => $date])->save();
+
+                return $activity;
+            });
+            $request = $this->activity($viewer, ['fiscal_year_id' => $year->id, 'route' => 'fiscal-years.update'], source: 'request');
+            $request->forceFill(['created_at' => $date])->save();
+            $groups->prepend(collect([$request->id])->concat($models->pluck('id')));
+        }
+
+        $retrieved = 0;
+        Event::listen('eloquent.retrieved: '.Activity::class, function () use (&$retrieved): void {
+            $retrieved++;
+        });
+        $this->actingAs($viewer);
+        foreach ([1 => 25, 2 => 5, 3 => 0] as $page => $count) {
+            $retrieved = 0;
+            $this->get(route('activity-logs.index', ['page' => $page]))->assertOk()
+                ->assertViewHas('activities', function ($activities) use ($groups, $page, $count): bool {
+                    $expected = $groups->slice(($page - 1) * 25, 25)->map(fn ($group) => $group->first())->values()->all();
+
+                    return $activities->total() === 30 && $activities->count() === $count
+                        && $activities->pluck('detailsActivityId')->all() === $expected;
+                });
+            $this->assertSame($count * 3, $retrieved);
         }
     }
 
@@ -164,7 +208,8 @@ class WorkspaceActivityLogTest extends TestCase
         $deletedYear = $this->activity($viewer, ['fiscal_year_ids' => [$allowed->id, 999999]], source: 'request');
 
         $this->actingAs($viewer)->get(route('activity-logs.index'))
-            ->assertOk()->assertViewHas('activities', fn ($activities) => $activities->total() === 1);
+            ->assertOk()->assertViewHas('activities', fn ($activities) => $activities->total() === 1)
+            ->assertViewHas('modelTypes', fn ($types) => $types->all() === [FiscalYear::class]);
         $this->getJson(route('activity-logs.details', $visible))->assertOk();
         foreach ([$mixed, $foreignModel, $deletedYear] as $activity) {
             $this->getJson(route('activity-logs.details', $activity, false).'?model_type='.urlencode(FiscalYear::class).'&model_id='.$allowed->id)

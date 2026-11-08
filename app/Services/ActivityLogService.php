@@ -279,10 +279,11 @@ class ActivityLogService
         $ids = [];
         $filteredIds = [];
 
-        Activity::query()->when($activityId !== null, fn (Builder $query) => $query->whereKey($activityId))
-            ->chunkById(500, function (EloquentCollection $activities) use ($allowed, $companyYears, $filterFiscalYearId, &$ids, &$filteredIds): void {
-                $modelsByActivity = $activities->mapWithKeys(function (Activity $activity): array {
-                    $details = $activity->details ?? collect();
+        Activity::query()->select(['id', 'source', 'model_type', 'model_id', 'details'])
+            ->when($activityId !== null, fn (Builder $query) => $query->whereKey($activityId))->toBase()
+            ->chunkById(500, function (Collection $activities) use ($allowed, $companyYears, $filterFiscalYearId, &$ids, &$filteredIds): void {
+                $modelsByActivity = $activities->mapWithKeys(function (object $activity): array {
+                    $details = $this->detailsCollection($activity->details ?? null);
                     $models = $activity->source === 'model' ? [[
                         'model_type' => $activity->model_type,
                         'model_id' => $activity->model_id,
@@ -317,6 +318,19 @@ class ActivityLogService
             });
 
         return ['all' => $ids, 'filtered' => $filteredIds];
+    }
+
+    private function detailsCollection(mixed $details): Collection
+    {
+        if ($details instanceof Collection) {
+            return $details;
+        }
+
+        if (is_string($details)) {
+            $details = json_decode($details, true);
+        }
+
+        return collect(is_array($details) ? $details : []);
     }
 
     /**
@@ -431,14 +445,16 @@ class ActivityLogService
         $page = Paginator::resolveCurrentPage();
         $firstItem = ($page - 1) * $perPage;
         $lastItem = $firstItem + $perPage;
-        $selectedActivities = new EloquentCollection;
+        $selectedIds = [];
         $groupCount = 0;
         $pendingRequest = null;
         $pendingModels = collect();
 
-        $addGroup = function (Collection $group) use (&$groupCount, $firstItem, $lastItem, $selectedActivities): void {
+        $addGroup = function (Collection $group) use (&$groupCount, $firstItem, $lastItem, &$selectedIds): void {
             if ($groupCount >= $firstItem && $groupCount < $lastItem) {
-                $group->each(fn (Activity $activity) => $selectedActivities->push($activity));
+                $group->each(function (object $activity) use (&$selectedIds): void {
+                    $selectedIds[] = $activity->id;
+                });
             }
 
             $groupCount++;
@@ -449,20 +465,20 @@ class ActivityLogService
                 return;
             }
 
-            $pendingModels = $pendingModels->sortByDesc(fn (Activity $activity): int => $activity->created_at?->getTimestamp() ?? 0)->values();
+            $pendingModels = $pendingModels->sortByDesc(fn (object $activity): int => $activity->created_at?->getTimestamp() ?? 0)->values();
 
             $relatedIndexes = $pendingModels->keys()
                 ->filter(fn (int $index): bool => $this->belongsToRequest($pendingRequest, $pendingModels[$index]));
 
             if ($relatedIndexes->isEmpty()) {
                 $addGroup(collect([$pendingRequest]));
-                $pendingModels->each(fn (Activity $activity) => $addGroup(collect([$activity])));
+                $pendingModels->each(fn (object $activity) => $addGroup(collect([$activity])));
             } else {
                 $firstRelatedIndex = $relatedIndexes->first();
-                $relatedActivities = $relatedIndexes->map(fn (int $index): Activity => $pendingModels[$index]);
+                $relatedActivities = $relatedIndexes->map(fn (int $index): object => $pendingModels[$index]);
                 $requestActivity = $pendingRequest;
 
-                $pendingModels->each(function (Activity $activity, int $index) use ($addGroup, $firstRelatedIndex, $relatedIndexes, $relatedActivities, $requestActivity): void {
+                $pendingModels->each(function (object $activity, int $index) use ($addGroup, $firstRelatedIndex, $relatedIndexes, $relatedActivities, $requestActivity): void {
                     if ($index === $firstRelatedIndex) {
                         $addGroup(collect([$requestActivity])->concat($relatedActivities));
                     }
@@ -477,9 +493,13 @@ class ActivityLogService
             $pendingModels = collect();
         };
 
-        $listingQuery = (clone $query)->selectRaw("activity_log.*, CASE WHEN source = 'request' THEN JSON_REMOVE(details, '$.models') ELSE details END AS details");
+        // Group legacy request/model pairs using only their matching metadata.
+        $listingQuery = (clone $query)->select(['id', 'source', 'user_id', 'created_at'])
+            ->selectRaw("JSON_OBJECT('route', JSON_EXTRACT(details, '$.route')) AS details")->toBase();
 
         foreach ($listingQuery->lazyByIdDesc(500) as $activity) {
+            $activity->details = $this->detailsCollection($activity->details);
+            $activity->created_at = $activity->created_at ? Carbon::parse($activity->created_at) : null;
             if ($activity->source === 'request') {
                 $flushRequest();
                 $pendingRequest = $activity;
@@ -495,7 +515,10 @@ class ActivityLogService
         }
 
         $flushRequest();
-        $selectedActivities->load('user:id,name,email');
+        $selectedById = (clone $query)->whereIn('id', $selectedIds)
+            ->selectRaw("activity_log.*, CASE WHEN source = 'request' THEN JSON_REMOVE(details, '$.models') ELSE details END AS details")
+            ->with('user:id,name,email')->get()->keyBy('id');
+        $selectedActivities = new EloquentCollection(collect($selectedIds)->map(fn ($id) => $selectedById->get($id))->filter()->all());
 
         return (new LengthAwarePaginator(
             $selectedActivities,
@@ -506,7 +529,7 @@ class ActivityLogService
         ))->withQueryString();
     }
 
-    private function belongsToRequest(Activity $requestActivity, Activity $modelActivity): bool
+    private function belongsToRequest(object $requestActivity, object $modelActivity): bool
     {
         $requestRoute = $requestActivity->details?->get('route');
 
@@ -533,13 +556,9 @@ class ActivityLogService
     private function availableModelTypes(Builder $visible): Collection
     {
         $directTypes = (clone $visible)->whereNotNull('model_type')->distinct()->pluck('model_type');
-        $aggregatedTypes = (clone $visible)->where('source', 'request')->whereNotNull('details')
-            ->pluck('details')
-            ->flatMap(fn (mixed $details): array => (array) data_get(
-                is_string($details) ? json_decode($details, true) : $details,
-                'model_types',
-                [],
-            ));
+        $aggregatedTypes = (clone $visible)->where('source', 'request')->whereNotNull('details')->toBase()
+            ->selectRaw("JSON_EXTRACT(details, '$.model_types') AS model_types")->pluck('model_types')
+            ->flatMap(fn (mixed $types): array => (array) (is_string($types) ? json_decode($types, true) : $types));
 
         return $directTypes->merge($aggregatedTypes)->filter()->unique()->sort()->values();
     }
