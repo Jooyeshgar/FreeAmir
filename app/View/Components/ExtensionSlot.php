@@ -4,7 +4,6 @@ namespace App\View\Components;
 
 use App\Extensions\ViewSlotRegistry;
 use Illuminate\Contracts\View\View;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\View as ViewFactory;
 use Illuminate\View\Component;
 use Throwable;
@@ -15,7 +14,6 @@ class ExtensionSlot extends Component
     public function __construct(
         private readonly ViewSlotRegistry $registry,
         public readonly string $slot = '',
-        public readonly ?Model $invoice = null,
         /** @var array<string, mixed> */
         public readonly array $context = [],
     ) {}
@@ -23,10 +21,7 @@ class ExtensionSlot extends Component
     public function render(): View
     {
         $items = [];
-        $context = array_merge(['invoice' => $this->invoice], $this->context);
-        if ($this->invoice !== null) {
-            $context['invoice'] = $this->invoice;
-        }
+        $context = $this->context;
 
         foreach ($this->registry->items($this->slot) as $item) {
             try {

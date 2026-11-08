@@ -148,6 +148,6 @@ class InvoiceExtensionSlotTest extends TestCase
 
     private function renderSlot(string $slot, ?Invoice $invoice = null): string
     {
-        return (new ExtensionSlot(app(ViewSlotRegistry::class), $slot, $invoice))->render()->render();
+        return (new ExtensionSlot(app(ViewSlotRegistry::class), $slot, context: ['invoice' => $invoice]))->render()->render();
     }
 }

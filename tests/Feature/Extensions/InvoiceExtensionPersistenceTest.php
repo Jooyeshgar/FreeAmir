@@ -4,7 +4,7 @@ namespace Tests\Feature\Extensions;
 
 use App\Enums\InvoiceType;
 use App\Extensions\Contracts\InvoiceExtension;
-use App\Extensions\Events\InvoiceDerived;
+use App\Extensions\Events\VoidInvoiceCreated;
 use App\Extensions\InvoiceExtensionRegistry;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
@@ -132,12 +132,12 @@ class InvoiceExtensionPersistenceTest extends TestCase
         self::assertSame(['original', 'updated'], $this->extension->persisted[$invoice->id]);
     }
 
-    public function test_void_event_persists_extension_and_listener_failure_rolls_back_the_derived_invoice(): void
+    public function test_void_event_persists_extension_and_listener_failure_rolls_back_the_void_invoice(): void
     {
         $invoice = InvoiceService::createInvoice($this->user, $this->data(InvoiceType::SELL), $this->items(InvoiceType::SELL))['invoice'];
         app(InvoiceService::class)->changeInvoiceStatus($invoice, 'approved');
         self::assertTrue($invoice->fresh()->status->isApproved());
-        Event::listen(InvoiceDerived::class, function (InvoiceDerived $event) use ($invoice): void {
+        Event::listen(VoidInvoiceCreated::class, function (VoidInvoiceCreated $event) use ($invoice): void {
             self::assertSame($invoice->id, $event->source->id);
             ($this->persister('derived'))($event->target);
         });

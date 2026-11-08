@@ -5,7 +5,7 @@ namespace App\Services;
 use App\DTO\InvoiceStatusDecision;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Extensions\Events\InvoiceDerived;
+use App\Extensions\Events\VoidInvoiceCreated;
 use App\Models\AncillaryCost;
 use App\Models\Cheque;
 use App\Models\FiscalYear;
@@ -1530,7 +1530,7 @@ class InvoiceService
             $voidInvoice->returned_invoice_id = $invoice->id; // Like a return sell invoice
             $voidInvoice->save();
 
-            event(new InvoiceDerived($invoice, $voidInvoice));
+            event(new VoidInvoiceCreated($invoice, $voidInvoice));
 
             $voidInvoice->items()->createMany(
                 $invoice->items->map(fn ($item) => [

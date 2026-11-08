@@ -27,7 +27,7 @@
         </div>
     </div>
 
-    <x-extension-slot :slot="$extensionSlot ?? 'invoice.create.fields'" :invoice="$invoice" />
+    <x-extension-slot :slot="$extensionSlot ?? 'invoice.create.fields'" :context="['invoice' => $invoice]" />
 </x-card>
 <x-card class="mt-4 rounded-2xl w-full" class_body="p-0 pt-0 mt-4" x-data="transactionForm">
     <div class="max-w-full overflow-visible">

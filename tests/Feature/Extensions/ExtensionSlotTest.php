@@ -46,7 +46,7 @@ class ExtensionSlotTest extends TestCase
         app(ViewSlotRegistry::class)->register('invoice.edit.fields.test', 'invoice', 'extension-tests::extension-stub',
             fn (array $context): array => ['label' => 'invoice-'.$context['invoice']->getKey()]);
 
-        $html = Blade::render('<x-extension-slot slot="invoice.edit.fields.test" :invoice="$invoice" :context="$context" />', [
+        $html = Blade::render('<x-extension-slot slot="invoice.edit.fields.test" :context="array_merge($context, [\'invoice\' => $invoice])" />', [
             'invoice' => (new Invoice)->forceFill(['id' => 11]),
             'context' => ['invoice' => (new Invoice)->forceFill(['id' => 22])],
         ]);
@@ -69,10 +69,10 @@ class ExtensionSlotTest extends TestCase
         Exceptions::assertNothingReported();
     }
 
-    public function test_legacy_callback_still_receives_a_null_invoice_without_a_binding(): void
+    public function test_callback_handles_null_invoice_in_context(): void
     {
         app(ViewSlotRegistry::class)->register('invoice.create.fields.test', 'invoice', 'extension-tests::extension-stub',
-            fn (array $context): array => ['label' => $context['invoice'] === null ? 'new-invoice' : 'existing-invoice']);
+            fn (array $context): array => ['label' => ($context['invoice'] ?? null) === null ? 'new-invoice' : 'existing-invoice']);
 
         $html = Blade::render('<x-extension-slot slot="invoice.create.fields.test" />');
 

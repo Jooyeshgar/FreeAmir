@@ -82,7 +82,7 @@
                     <td class="px-4 py-2">
                         <div class="inline-flex items-center gap-1.5">
                             <a href="{{ route('invoices.show', $invoice) }}" class="link link-hover">{{ formatDocumentNumber($invoice->number) }}</a>
-                            <x-extension-slot slot="invoice.index.row.badges" :invoice="$invoice" />
+                            <x-extension-slot slot="invoice.index.row.badges" :context="['invoice' => $invoice]" />
                         </div>
                     </td>
                     <td class="px-4 py-2">

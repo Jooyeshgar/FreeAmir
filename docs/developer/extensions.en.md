@@ -18,12 +18,12 @@ The host registers these services from `App\Providers\ExtensionServiceProvider`:
 
 - `App\Extensions\NavigationRegistry` for management and workspace menu entries.
 - `App\Extensions\ViewSlotRegistry` for package views rendered at documented page locations.
-- `App\Extensions\InvoiceExtensionRegistry` for invoice query filters and request-scoped persistence.
+- `App\Extensions\InvoiceExtensionRegistry` for the current invoice-model extension lifecycle.
 
 Navigation IDs are globally unique, view item IDs are unique within a slot, and invoice extension keys
 are globally unique. Duplicate registrations are configuration errors. Multiple packages may register
 different IDs at the same location. Lower priorities run first; ties are sorted by ID/key. Navigation and
-view registrations default to priority 100. Invoice handler classes are resolved through the container per
+view registrations default to priority 100. Model handler classes are resolved through the container per
 operation; registries do not retain handler instances or validated request payloads. Handlers must not bind
 request-specific state as singletons. View data callbacks must use the supplied context rather than capture
 a request at application boot. Visibility and authorization must be checked for the current request.
@@ -36,8 +36,7 @@ View slots accept arbitrary page data through `context`, for example:
 
 The callback receives this context and returns an array of view data, or `null` to skip the item.
 The view receives the context merged with the callback's data; callback data takes precedence.
-Existing `:invoice="$invoice"` bindings remain supported and provide the `invoice` context key.
-An explicitly bound non-null invoice takes precedence over an invoice supplied in `context`.
+All page data is passed through `context`; invoice pages use `:context="['invoice' => $invoice]"`.
 Each item is rendered independently. Callback errors, invalid callback return values, and Blade rendering
 errors are reported through Laravel's exception handler and the failing item is omitted. Other items
 continue rendering. Missing views and `null` results are skipped without reporting an error.
@@ -46,7 +45,7 @@ Pass page data explicitly through `context`; do not depend on the parent's compo
 stacks, or use `@push` inside a slot to add host-page assets. Use the shared frontend bundle for assets.
 Registration errors, such as duplicate item IDs, remain configuration errors and are not suppressed.
 
-An invoice package implements `App\Extensions\Contracts\InvoiceExtension` and registers a key, handler
+An extension implements `App\Extensions\Contracts\ModelExtension` and registers a key, handler
 class, and optional priority with `InvoiceExtensionRegistry::register()`. Keys use lowercase letters,
 digits, and underscores and start with a letter. Payloads are submitted under `extensions[<key>]`.
 Missing payloads mean no change; an explicitly submitted empty array is passed to the handler so it can
@@ -154,8 +153,9 @@ The beginning-inventory detail page must render the same detail slot as other in
 `App\Extensions\Events\FiscalYearCopied` carries source and target fiscal-year models. The host dispatches
 it synchronously after creating the next year and inside the close/open transaction. Package listeners use
 the same connection; failures roll back the transition. Direct year creation and recalculation of an
-existing closing document do not dispatch it. `InvoiceDerived` carries the source and generated invoice
-when the host creates a derived invoice such as a void invoice.
+existing closing document do not dispatch it. `VoidInvoiceCreated` carries the original invoice and the
+new void invoice. It is dispatched inside the void transaction after saving the void invoice and before
+copying its items and approving it; it does not signal completion or commit of the operation.
 
 The category package owns its tables and migrations. Its invoice model is configured by the host and its
 dynamic relation is registered by the package provider, without a package trait in `App\Models\Invoice`.

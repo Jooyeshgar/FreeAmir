@@ -2,7 +2,7 @@
 
 namespace App\Extensions;
 
-use App\Extensions\Contracts\InvoiceExtension;
+use App\Extensions\Contracts\ModelExtension;
 use Illuminate\Contracts\Container\Container;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -14,21 +14,21 @@ use LogicException;
 final class InvoiceExtensionRegistry
 {
     /**
-     * @var array<string, array{handler: class-string<InvoiceExtension>, priority: int}>
+     * @var array<string, array{handler: class-string<ModelExtension>, priority: int}>
      */
     private array $extensions = [];
 
     public function __construct(private readonly Container $container) {}
 
-    /** @param class-string<InvoiceExtension> $handler */
+    /** @param class-string<ModelExtension> $handler */
     public function register(string $key, string $handler, int $priority = 100): void
     {
         if (! preg_match('/^[a-z][a-z0-9_]*$/D', $key)) {
             throw new InvalidArgumentException('Invoice extension keys must use lowercase letters, digits, and underscores.');
         }
 
-        if (! is_subclass_of($handler, InvoiceExtension::class)) {
-            throw new InvalidArgumentException("Invoice extension [{$key}] must implement the InvoiceExtension contract.");
+        if (! is_subclass_of($handler, ModelExtension::class)) {
+            throw new InvalidArgumentException("Extension [{$key}] must implement the ModelExtension contract.");
         }
 
         if (isset($this->extensions[$key])) {
@@ -39,7 +39,7 @@ final class InvoiceExtensionRegistry
     }
 
     /**
-     * @return array<string, array{handler: class-string<InvoiceExtension>, priority: int}>
+     * @return array<string, array{handler: class-string<ModelExtension>, priority: int}>
      */
     public function extensions(): array
     {

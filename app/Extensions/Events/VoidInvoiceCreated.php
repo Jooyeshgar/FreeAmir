@@ -4,7 +4,7 @@ namespace App\Extensions\Events;
 
 use App\Models\Invoice;
 
-final class InvoiceDerived
+final class VoidInvoiceCreated
 {
     public function __construct(
         public readonly Invoice $source,
