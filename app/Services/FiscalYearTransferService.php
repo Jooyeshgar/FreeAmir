@@ -22,10 +22,12 @@ use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class FiscalYearTransferService
 {
-    public static function transferDocument(Document $document, int $targetFiscalYearId, User $user): array
+    public static function transferDocument(Document $document, int $targetFiscalYearId, User $user, ?array $transactionIds = null, bool $removeFromSource = false, bool $transferAttachments = false): array
     {
         $document->load(['documentable', 'transactions.subject']);
 
@@ -34,7 +36,7 @@ class FiscalYearTransferService
             return ['success' => false, 'errors' => $fiscalYearErrors];
         }
 
-        if ($document->documentable) {
+        if ($document->documentable_type || $document->documentable_id) {
             return [
                 'success' => false,
                 'errors' => [__('This document is linked to :type and cannot be transferred on its own. Transfer the :type instead.', [
@@ -43,11 +45,43 @@ class FiscalYearTransferService
             ];
         }
 
-        return DB::transaction(function () use ($document, $targetFiscalYearId, $user) {
-            $newDoc = self::_transferDocumentOnly($document, $targetFiscalYearId, $user);
+        $copiedPaths = [];
+        try {
+            return DB::transaction(function () use ($document, $targetFiscalYearId, $user, $transactionIds, $removeFromSource, $transferAttachments, &$copiedPaths) {
+                $document = Document::whereKey($document->id)->lockForUpdate()->firstOrFail();
+                $transactions = $document->transactions()->with('subject')->lockForUpdate()->get();
+                $selected = $transactionIds === null ? $transactions : $transactions->whereIn('id', $transactionIds);
+                if ($selected->isEmpty() || ($transactionIds !== null && $selected->count() !== count(array_unique($transactionIds))) || $selected->contains(fn ($transaction) => ! $transaction->subject)) {
+                    throw ValidationException::withMessages(['transaction_ids' => __('Select valid entries from this document.')]);
+                }
 
-            return ['success' => true, 'document' => $newDoc];
-        });
+                $document->setRelation('transactions', $selected);
+                $newDoc = self::_transferDocumentOnly($document, $targetFiscalYearId, $user, unapproved: true);
+
+                if ($transferAttachments) {
+                    foreach ($document->documentFiles as $file) {
+                        $copy = app(DocumentFileService::class)->copyToDocument($file, $newDoc, $user);
+                        $copiedPaths[] = $copy->path;
+                    }
+                }
+
+                $sourceDeleted = false;
+                if ($removeFromSource) {
+                    app(ActivityLogService::class)->deleteModels($document->transactions()->whereIn('id', $selected->modelKeys())->getQuery());
+                    if (! $document->transactions()->exists()) {
+                        DocumentService::deleteDocument($document->id);
+                        $sourceDeleted = true;
+                    } elseif ($document->approved_at && $document->transactions()->sum('value') != 0) {
+                        DocumentService::changeDocumentStatus($document, $user, 'unapproved');
+                    }
+                }
+
+                return ['success' => true, 'document' => $newDoc, 'source_deleted' => $sourceDeleted];
+            });
+        } catch (\Throwable $exception) {
+            Storage::disk('public')->delete($copiedPaths);
+            throw $exception;
+        }
     }
 
     public static function transferInvoice(Invoice $invoice, int $targetFiscalYearId, User $user, bool $transferDependencies = false): array
@@ -308,7 +342,7 @@ class FiscalYearTransferService
         return $newAc;
     }
 
-    private static function _transferDocumentOnly(Document $document, int $targetFiscalYearId, User $user, ?int $documentableId = null, ?string $documentableType = null): Document
+    private static function _transferDocumentOnly(Document $document, int $targetFiscalYearId, User $user, ?int $documentableId = null, ?string $documentableType = null, bool $unapproved = false): Document
     {
         $subjectMapping = [];
         foreach ($document->transactions as $transaction) {
@@ -326,8 +360,8 @@ class FiscalYearTransferService
         $newDoc->number = self::_nextDocumentNumber($targetFiscalYearId);
         $newDoc->date = $document->date;
         $newDoc->creator_id = $user->id;
-        $newDoc->approver_id = $document->approver_id;
-        $newDoc->approved_at = $document->approved_at;
+        $newDoc->approver_id = $unapproved ? null : $document->approver_id;
+        $newDoc->approved_at = $unapproved ? null : $document->approved_at;
         $newDoc->fiscal_year_id = $targetFiscalYearId;
         $newDoc->documentable_id = $documentableId;
         $newDoc->documentable_type = $documentableType;

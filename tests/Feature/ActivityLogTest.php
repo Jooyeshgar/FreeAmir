@@ -181,6 +181,122 @@ class ActivityLogTest extends TestCase
         $this->assertArrayNotHasKey('name', $models->first()['old']);
     }
 
+    public function test_document_duplication_stores_and_displays_one_activity_with_all_created_models(): void
+    {
+        $actor = User::factory()->create();
+        $actor->givePermissionTo(Permission::firstOrCreate(['name' => 'documents.duplicate']));
+        $actor->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+        $fiscalYear = FiscalYear::factory()->create(['year' => 1405]);
+        config(['active-fiscal-year-id' => $fiscalYear->id]);
+        $subject = Subject::create([
+            'parent_id' => null,
+            'name' => 'Cash',
+            'code' => '001',
+            'type' => 3,
+        ]);
+        $document = Document::create([
+            'fiscal_year_id' => $fiscalYear->id,
+            'number' => 101,
+            'date' => '2026-03-21',
+            'creator_id' => $actor->id,
+            'title' => 'Duplication audit',
+        ]);
+        foreach ([100, 200, -300] as $value) {
+            Transaction::create([
+                'subject_id' => $subject->id,
+                'document_id' => $document->id,
+                'user_id' => $actor->id,
+                'value' => $value,
+                'desc' => 'Duplicated transaction '.$value,
+            ]);
+        }
+
+        Activity::query()->delete();
+        $this->actingAs($actor)->get(route('documents.duplicate', $document))->assertStatus(405);
+        $this->assertSame(1, Document::query()->count());
+        $this->assertDatabaseCount('activity_log', 0);
+
+        $response = $this->post(route('documents.duplicate', $document));
+        $duplicate = Document::query()->where('id', '!=', $document->id)->sole();
+        $response->assertRedirect(route('documents.edit', $duplicate));
+
+        $activity = Activity::query()->sole();
+        $models = collect($activity->details->get('models'));
+        $this->assertSame('request', $activity->source);
+        $this->assertSame($actor->id, $activity->user_id);
+        $this->assertSame('documents.duplicate', $activity->details->get('route'));
+        $this->assertSame('POST', $activity->details->get('method'));
+        $this->assertSame($fiscalYear->id, $activity->details->get('fiscal_year_id'));
+        $this->assertCount(4, $models);
+        $this->assertTrue($models->every(fn (array $model): bool => $model['event'] === 'created'));
+        $this->assertSame([$duplicate->id], $models->where('model_type', Document::class)->pluck('model_id')->all());
+        $this->assertEqualsCanonicalizing(
+            $duplicate->transactions->pluck('id')->all(),
+            $models->where('model_type', Transaction::class)->pluck('model_id')->all()
+        );
+        $this->assertCount(3, $duplicate->transactions);
+
+        $this->get(route('management.activity-logs.index'))
+            ->assertOk()
+            ->assertViewHas('activities', fn ($activities): bool => $activities->total() === 1
+                && $activities->count() === 1
+                && $activities->first()['id'] === $activity->id);
+        $this->getJson(route('management.activity-logs.details', $activity))
+            ->assertOk()
+            ->assertJsonPath('html', function (string $html) use ($duplicate): bool {
+                return str_contains($html, $duplicate->title)
+                    && $duplicate->transactions->every(fn (Transaction $transaction): bool => str_contains($html, $transaction->desc));
+            });
+        $this->assertDatabaseCount('activity_log', 1);
+    }
+
+    public function test_ordinary_get_requests_do_not_record_request_activities(): void
+    {
+        $actor = User::factory()->create();
+        Route::get('/test/activity-log/read-only', fn () => response()->noContent())->middleware('web');
+
+        Activity::query()->delete();
+        $this->actingAs($actor)->get('/test/activity-log/read-only')->assertNoContent();
+
+        $this->assertDatabaseCount('activity_log', 0);
+    }
+
+    public function test_missing_document_duplication_does_not_record_a_successful_activity(): void
+    {
+        $actor = User::factory()->create();
+        $actor->givePermissionTo(Permission::firstOrCreate(['name' => 'documents.duplicate']));
+        $fiscalYear = FiscalYear::factory()->create(['year' => 1405]);
+        config(['active-fiscal-year-id' => $fiscalYear->id]);
+
+        Activity::query()->delete();
+        $this->actingAs($actor)->post(route('documents.duplicate', 999999))->assertNotFound();
+
+        $this->assertDatabaseCount('activity_log', 0);
+    }
+
+    public function test_closed_year_document_duplication_does_not_create_models_or_activity(): void
+    {
+        $actor = User::factory()->create();
+        $actor->givePermissionTo(Permission::firstOrCreate(['name' => 'documents.duplicate']));
+        $fiscalYear = FiscalYear::factory()->create(['year' => 1405]);
+        config(['active-fiscal-year-id' => $fiscalYear->id]);
+        $document = Document::create([
+            'fiscal_year_id' => $fiscalYear->id,
+            'number' => 101,
+            'date' => '2026-03-21',
+            'creator_id' => $actor->id,
+        ]);
+        $fiscalYear->update(['closed_at' => now()]);
+
+        Activity::query()->delete();
+        $this->actingAs($actor)->postJson(route('documents.duplicate', $document))
+            ->assertUnprocessable()->assertJsonValidationErrors('fiscal_year');
+
+        $this->assertSame(1, Document::query()->count());
+        $this->assertDatabaseCount('transactions', 0);
+        $this->assertDatabaseCount('activity_log', 0);
+    }
+
     public function test_activity_log_listing_does_not_load_request_model_snapshots(): void
     {
         $actor = User::factory()->create();

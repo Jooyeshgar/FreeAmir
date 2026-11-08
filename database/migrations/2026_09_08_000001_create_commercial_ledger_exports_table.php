@@ -22,31 +22,10 @@ return new class extends Migration
             $table->unsignedInteger('row_count')->default(0);
             $table->timestamps();
         });
-
-        foreach ([
-            'commercial-ledgers.index',
-            'commercial-ledgers.store',
-            'commercial-ledgers.show',
-            'commercial-ledgers.download',
-            'commercial-ledgers.destroy',
-        ] as $permission) {
-            DB::table(config('permission.table_names.permissions'))->updateOrInsert(
-                ['name' => $permission, 'guard_name' => 'web'],
-                ['updated_at' => now(), 'created_at' => now()]
-            );
-        }
     }
 
     public function down(): void
     {
-        DB::table(config('permission.table_names.permissions'))->whereIn('name', [
-            'commercial-ledgers.index',
-            'commercial-ledgers.store',
-            'commercial-ledgers.show',
-            'commercial-ledgers.download',
-            'commercial-ledgers.destroy',
-        ])->delete();
-
         Schema::dropIfExists('commercial_ledger_exports');
     }
 };

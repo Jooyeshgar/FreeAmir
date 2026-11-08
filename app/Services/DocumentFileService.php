@@ -4,10 +4,12 @@ namespace App\Services;
 
 use App\Models\Document;
 use App\Models\DocumentFile;
+use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class DocumentFileService
 {
@@ -60,6 +62,34 @@ class DocumentFileService
 
             $documentFile->delete();
         });
+    }
+
+    public function copyToDocument(DocumentFile $file, Document $destination, User $user): DocumentFile
+    {
+        $this->fiscalYearMutationGuard->ensureOpen($destination);
+        $disk = Storage::disk($this->disk);
+        $path = $this->basePath.'/'.$destination->id.'/'.Str::uuid();
+        $extension = pathinfo($file->name, PATHINFO_EXTENSION);
+        if ($extension !== '') {
+            $path .= '.'.$extension;
+        }
+
+        if (! $disk->copy($this->resolvePath($file), $path)) {
+            throw ValidationException::withMessages(['transfer_attachments' => __('Could not copy document attachments.')]);
+        }
+
+        try {
+            return DocumentFile::create([
+                'document_id' => $destination->id,
+                'user_id' => $user->id,
+                'title' => $file->title,
+                'name' => $file->name,
+                'path' => $path,
+            ]);
+        } catch (\Throwable $exception) {
+            $disk->delete($path);
+            throw $exception;
+        }
     }
 
     public function resolvePath(DocumentFile $documentFile): string

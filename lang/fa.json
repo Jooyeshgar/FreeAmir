@@ -3688,5 +3688,17 @@
     "percentage points": "واحد درصد",
     "Sort invoice numbers": "مرتب‌سازی شماره فاکتورها",
     "Sort all invoice numbers in the active fiscal year? Existing printed invoice numbers will change.": "شماره همه فاکتورهای سال مالی فعال مرتب شود؟ شماره فاکتورهای چاپ‌شده تغییر خواهد کرد.",
-    "Invoice numbers sorted successfully.": "شماره فاکتورها با موفقیت مرتب شد."
+    "Invoice numbers sorted successfully.": "شماره فاکتورها با موفقیت مرتب شد.",
+    "Select valid entries from this document.": "ردیف‌های معتبر همین سند را انتخاب کنید.",
+    "Could not copy document attachments.": "کپی پیوست‌های سند انجام نشد.",
+    "Select all entries": "انتخاب همه ردیف‌ها",
+    "Select entry :number": "انتخاب ردیف :number",
+    "Remove selected entries from source": "حذف ردیف‌های انتخاب‌شده از مبدأ",
+    "Transfer attachments": "انتقال پیوست‌ها",
+    "You can transfer selected transactions instead of the whole document.": "می‌توانید ردیف‌های انتخاب‌شده را به‌جای کل سند منتقل کنید.",
+    "Transferring entries can affect financial reports. Confirm that you reviewed the selected entries before continuing.": "انتقال ردیف‌ها می‌تواند بر مانده حساب‌ها و گزارش‌های مالی اثر بگذارد. پیش از ادامه، بررسی ردیف‌های انتخاب‌شده را تأیید کنید.",
+    "Transferring entries can affect financial reports. Selected source entries will be deleted and approval may be revoked. Confirm to continue.": "انتقال ردیف‌ها می‌تواند بر مانده حساب‌ها و گزارش‌های مالی اثر بگذارد. ردیف‌های انتخاب‌شده از مبدأ حذف می‌شوند و ممکن است تأیید سند مبدأ لغو شود. برای ادامه تأیید کنید.",
+    "Select at least one entry to transfer.": "حداقل یک ردیف برای انتقال انتخاب کنید.",
+    "This may affect financial reports. Selected source entries will be deleted and approval may be revoked. Continue?": "این عملیات می‌تواند بر گزارش‌های مالی اثر بگذارد. ردیف‌های انتخاب‌شده از مبدأ حذف می‌شوند و ممکن است تأیید سند مبدأ لغو شود. ادامه می‌دهید؟",
+    "This may affect financial reports. Continue transferring the selected entries?": "این عملیات می‌تواند بر گزارش‌های مالی اثر بگذارد. انتقال ردیف‌های انتخاب‌شده را ادامه می‌دهید؟"
 }

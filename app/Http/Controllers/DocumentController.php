@@ -20,6 +20,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -432,7 +433,13 @@ class DocumentController extends Controller
 
     public function transfer(Request $request, Document $document): RedirectResponse
     {
-        $request->validate(['target_fiscal_year_id' => 'required|integer|exists:fiscal_years,id']);
+        $data = $request->validate([
+            'target_fiscal_year_id' => 'required|integer|exists:fiscal_years,id',
+            'transaction_ids' => 'nullable|array',
+            'transaction_ids.*' => ['required', 'integer', 'distinct', Rule::exists('transactions', 'id')->where('document_id', $document->id)],
+            'remove_from_source' => 'sometimes|boolean',
+            'transfer_attachments' => 'sometimes|boolean',
+        ]);
 
         if (! Auth::user()->fiscalYears()->whereKey($request->integer('target_fiscal_year_id'))->exists()) {
             abort(403);
@@ -444,13 +451,20 @@ class DocumentController extends Controller
 
         $this->fiscalYearMutationGuard->ensureOpen($document, $request->integer('target_fiscal_year_id'));
 
-        $result = FiscalYearTransferService::transferDocument($document, $request->target_fiscal_year_id, $request->user());
+        $result = FiscalYearTransferService::transferDocument(
+            $document,
+            $request->integer('target_fiscal_year_id'),
+            $request->user(),
+            ($data['transaction_ids'] ?? []) ?: null,
+            $request->boolean('remove_from_source'),
+            $request->boolean('transfer_attachments'),
+        );
 
         if (! $result['success']) {
             return redirect()->route('documents.show', $document)->withErrors($result['errors']);
         }
 
-        $redirect = redirect()->route('documents.show', $document)
+        $redirect = ($result['source_deleted'] ? redirect()->route('documents.index') : redirect()->route('documents.show', $document))
             ->with('success', __('Document transferred successfully to the target fiscal year.'));
 
         if (! empty($result['warnings'])) {
