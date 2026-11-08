@@ -3702,7 +3702,5 @@
     "Transferring entries can affect financial reports. Selected source entries will be deleted and approval may be revoked. Confirm to continue.": "Transferring entries can affect financial reports. Selected source entries will be deleted and approval may be revoked. Confirm to continue.",
     "Select at least one entry to transfer.": "Select at least one entry to transfer.",
     "This may affect financial reports. Selected source entries will be deleted and approval may be revoked. Continue?": "This may affect financial reports. Selected source entries will be deleted and approval may be revoked. Continue?",
-    "This may affect financial reports. Continue transferring the selected entries?": "This may affect financial reports. Continue transferring the selected entries?",
-    "Do you want to refresh data for the active fiscal year?": "Do you want to refresh data for the active fiscal year?",
-    "This will delete data in the active fiscal year and rebuild it with demo data. Continue?": "This will delete data in the active fiscal year and rebuild it with demo data. Continue?"
+    "This may affect financial reports. Continue transferring the selected entries?": "This may affect financial reports. Continue transferring the selected entries?"
 }

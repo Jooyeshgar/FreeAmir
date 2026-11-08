@@ -19,7 +19,9 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Services\HomeService;
 use App\Services\SubjectService;
+use Database\Seeders\DemoSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Spatie\Permission\Models\Permission;
 use Tests\Helpers\SeederHelper;
 use Tests\TestCase;
@@ -299,7 +301,57 @@ class HomeServiceChartTest extends TestCase
         config(['app.debug' => true, 'app.env' => 'testing']);
         $this->signInWith(['reports.company-overview', 'reports.company-overview.seed-demo-data', 'reports.company-overview.refresh-database', 'products.index']);
 
-        $this->get(route('reports.company-overview'))->assertOk()->assertSee(route('reports.company-overview.seed-demo-data'), false);
+        $this->get(route('reports.company-overview'))->assertOk()
+            ->assertSee(route('reports.company-overview.seed-demo-data'), false)
+            ->assertSee(route('reports.company-overview.refresh-database'), false)
+            ->assertSee(__('Do you want to refresh your database?'))
+            ->assertSee(__('Are you sure you want to refresh the database? This will delete all current tables and data and rebuild the database with demo data.'));
+    }
+
+    public function test_database_refresh_uses_the_original_migration_and_seed_command(): void
+    {
+        config(['app.debug' => true, 'app.env' => 'testing']);
+        $this->signInWith(['reports.company-overview.refresh-database']);
+        Artisan::shouldReceive('call')->once()->with('migrate:fresh', ['--seed' => true])->andReturn(0);
+
+        $this->post(route('reports.company-overview.refresh-database'))
+            ->assertRedirect(route('home'))
+            ->assertSessionHas('success', __('Refresh database completed successfully.'));
+    }
+
+    public function test_database_refresh_reports_command_failure(): void
+    {
+        config(['app.debug' => true, 'app.env' => 'testing']);
+        $this->signInWith(['reports.company-overview.refresh-database']);
+        Artisan::shouldReceive('call')->once()->with('migrate:fresh', ['--seed' => true])
+            ->andThrow(new \RuntimeException('Refresh failed'));
+
+        $this->post(route('reports.company-overview.refresh-database'))
+            ->assertRedirect(route('home'))
+            ->assertSessionHas('error', __('An error occurred while refreshing the database.'));
+    }
+
+    public function test_database_refresh_is_unavailable_outside_debug_or_in_production(): void
+    {
+        $this->signInWith(['reports.company-overview.refresh-database']);
+        Artisan::shouldReceive('call')->never();
+
+        foreach ([[false, 'testing'], [true, 'production']] as [$debug, $environment]) {
+            config(['app.debug' => $debug, 'app.env' => $environment]);
+
+            $this->post(route('reports.company-overview.refresh-database'))->assertNotFound();
+        }
+    }
+
+    public function test_demo_seeding_uses_the_existing_seeder_for_the_active_fiscal_year(): void
+    {
+        config(['app.debug' => true, 'app.env' => 'testing']);
+        $this->signInWith(['reports.company-overview.seed-demo-data']);
+        $this->mock(DemoSeeder::class)->shouldReceive('run')->once()->with($this->fiscalYearId);
+
+        $this->post(route('reports.company-overview.seed-demo-data'))
+            ->assertRedirect(route('home'))
+            ->assertSessionHas('success', __('Demo data has been added to the database.'));
     }
 
     public function test_company_overview_applies_profit_and_loss_date_filters(): void

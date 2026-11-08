@@ -14,9 +14,9 @@
     @if ($isDebugMode)
         <div role="alert" class="alert alert-warning flex flex-col mt-4 mb-4">
             <div class="w-full flex items-center gap-2">
-                <p>{{ __('Do you want to refresh data for the active fiscal year?') }}</p>
+                <p>{{ __('Do you want to refresh your database?') }}</p>
                 <form method="POST" action="{{ route('reports.company-overview.refresh-database') }}"
-                    onsubmit="return confirm('{{ __('This will delete data in the active fiscal year and rebuild it with demo data. Continue?') }}')">
+                    onsubmit="return confirm('{{ __('Are you sure you want to refresh the database? This will delete all current tables and data and rebuild the database with demo data.') }}')">
                     @csrf
                     <button type="submit" class="btn btn-error btn-sm text-xs">{{ __('Refresh Database') }}</button>
                 </form>
