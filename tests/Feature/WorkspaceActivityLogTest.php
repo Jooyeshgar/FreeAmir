@@ -19,7 +19,61 @@ class WorkspaceActivityLogTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_ownership_queries_are_batched_as_activity_history_grows(): void
+    public function test_history_scans_do_not_transfer_large_saved_attributes_or_request_input(): void
+    {
+        $viewer = $this->viewer();
+        $year = FiscalYear::factory()->create();
+        $viewer->fiscalYears()->sync([$year->id]);
+        $largeValue = str_repeat('Large audit snapshot ', 5000);
+        foreach (range(1, 30) as $number) {
+            $this->activity($viewer, [
+                'fiscal_year_id' => $year->id,
+                'request_input' => ['payload' => $largeValue],
+                'model_types' => [FiscalYear::class],
+                'models' => [[
+                    'model_type' => FiscalYear::class, 'model_id' => $year->id,
+                    'fiscal_year_id' => $year->id,
+                    'attributes' => ['year' => 1405, 'payload' => $largeValue],
+                    'old' => ['year' => 1404, 'payload' => $largeValue],
+                ]],
+            ], source: 'request');
+        }
+        $this->activity($viewer, [
+            'fiscal_year_id' => $year->id,
+            'attributes' => ['payload' => $largeValue],
+            'old' => ['payload' => $largeValue],
+        ]);
+
+        $this->actingAs($viewer);
+        DB::enableQueryLog();
+        DB::flushQueryLog();
+        try {
+            $data = app(ActivityLogService::class)->index([]);
+            $queries = collect(DB::getQueryLog());
+        } finally {
+            DB::disableQueryLog();
+        }
+
+        $this->assertSame(31, $data['activities']->total());
+        $this->assertCount(25, $data['activities']);
+        $this->assertSame(31, $data['metrics']['total']);
+        $scans = $queries->filter(fn (array $query): bool => str_contains($query['query'], 'activity_log')
+            && str_starts_with(strtolower($query['query']), 'select')
+            && ! str_contains($query['query'], 'activity_log.*'));
+        $this->assertNotEmpty($scans);
+        foreach ($scans as $query) {
+            $rows = DB::select($query['query'], $query['bindings']);
+            $this->assertLessThan(30_000, strlen(json_encode($rows)), 'History scans must return compact metadata regardless of snapshot size.');
+            $this->assertStringNotContainsString('Large audit snapshot', json_encode($rows));
+        }
+
+        $activity = Activity::query()->where('source', 'request')->latest('id')->first();
+        $this->getJson(route('activity-logs.details', $activity))->assertOk()
+            ->assertJsonPath('html', fn (string $html): bool => str_contains($html, 'Large audit snapshot'));
+        $this->assertSame($largeValue, $activity->details['models'][0]['attributes']['payload']);
+    }
+
+    public function test_history_loading_does_not_query_model_ownership_or_hydrate_other_pages(): void
     {
         $viewer = $this->viewer();
         $year = FiscalYear::factory()->create();
@@ -58,7 +112,7 @@ class WorkspaceActivityLogTest extends TestCase
             $this->assertCount(25, $data['activities']);
             $this->assertSame(25, $retrieved, 'Only the displayed page should instantiate Activity models.');
             $ownershipQueries = $queries->filter(fn (array $query): bool => preg_match('/from ["`]documents["`]/i', $query['query']) === 1);
-            $this->assertCount(2, $ownershipQueries, 'Current model ownership should be loaded once per chunk, not once per document or again for a selected fiscal year.');
+            $this->assertCount(0, $ownershipQueries, 'Activity permissions grant access to the full history without checking each affected model.');
         }
     }
 
@@ -117,122 +171,126 @@ class WorkspaceActivityLogTest extends TestCase
         $this->assertEqualsCanonicalizing($activities->slice(1, 2)->pluck('id')->all(), $data['activities']->pluck('id')->all());
     }
 
-    public function test_listing_metrics_and_filter_options_only_include_accessible_fiscal_years(): void
+    public function test_activity_permissions_expose_all_history_metrics_and_filter_options_without_fiscal_year_assignments(): void
     {
         $viewer = $this->viewer();
-        $first = FiscalYear::factory()->create(['year' => 1405]);
-        $second = FiscalYear::factory()->create(['year' => 1404]);
-        $sameCompanyHidden = FiscalYear::factory()->create(['company_id' => $first->company_id, 'year' => 1404]);
-        $otherCompanyHidden = FiscalYear::factory()->create();
         $viewer->fiscalYears()->detach();
-        $viewer->fiscalYears()->attach([$first->id, $second->id]);
-        $visibleActor = User::factory()->create();
-        $hiddenActor = User::factory()->create();
-        $visibleActor->fiscalYears()->attach([$first->id, $second->id]);
-        $visible = collect([$first, $second])->map(fn ($year) => $this->activity($visibleActor, ['fiscal_year_id' => $year->id]));
-        $hidden = collect([$sameCompanyHidden, $otherCompanyHidden])->map(fn ($year) => $this->activity($hiddenActor, ['fiscal_year_id' => $year->id]));
-        $global = $this->activity($hiddenActor, [], User::class);
+        $years = collect([FiscalYear::factory()->create(), FiscalYear::factory()->create()]);
+        $actor = User::factory()->create();
+        $actor->fiscalYears()->sync([$years->last()->id]);
+        $records = $years->map(fn ($year) => $this->activity($actor, ['fiscal_year_id' => $year->id]));
+        $records->push($this->activity($actor, [], User::class));
 
-        $this->actingAs($viewer);
-        config(['active-fiscal-year-id' => $first->id]);
-        $data = app(ActivityLogService::class)->index([]);
-        $this->assertEqualsCanonicalizing($visible->pluck('id')->all(), $data['activities']->pluck('id')->all());
-        $this->assertSame(['total' => 2, 'today' => 2, 'model' => 2, 'request' => 0], $data['metrics']);
-        $this->assertEqualsCanonicalizing([$viewer->id, $visibleActor->id], $data['users']->pluck('id')->all());
-        $this->assertEqualsCanonicalizing([$first->id, $second->id], $data['fiscalYears']->pluck('id')->all());
-        $this->assertSame([FiscalYear::class], $data['modelTypes']->all());
-
-        foreach ($hidden->push($global) as $activity) {
-            $this->getJson(route('activity-logs.details', $activity))->assertNotFound();
+        $this->actingAs($viewer)->get(route('activity-logs.index'))->assertOk()
+            ->assertViewHas('activities', fn ($activities) => $activities->total() === 3)
+            ->assertViewHas('metrics', fn ($metrics) => $metrics === ['total' => 3, 'today' => 3, 'model' => 3, 'request' => 0])
+            ->assertViewHas('users', fn ($users) => $users->pluck('id')->all() === [$actor->id])
+            ->assertViewHas('fiscalYears', fn ($options) => $options->pluck('id')->sort()->values()->all() === $years->pluck('id')->sort()->values()->all())
+            ->assertViewHas('modelTypes', fn ($types) => $types->all() === [FiscalYear::class, User::class]);
+        foreach ($records as $record) {
+            $this->getJson(route('activity-logs.details', $record))->assertOk();
         }
-        foreach ($visible as $activity) {
-            $this->getJson(route('activity-logs.details', $activity))->assertOk();
-        }
-        $this->get(route('activity-logs.index', ['fiscal_year_id' => $sameCompanyHidden->id]))
-            ->assertOk()->assertViewHas('activities', fn ($activities) => $activities->isEmpty());
-        $this->assertSame(5, Activity::query()->count());
+        $this->assertDatabaseCount('activity_log', 3);
     }
 
-    public function test_performed_by_options_follow_selected_fiscal_year_access_even_without_activity(): void
+    public function test_filters_use_recorded_context_without_checking_current_model_access(): void
+    {
+        $viewer = $this->viewer();
+        $viewer->fiscalYears()->detach();
+        $first = FiscalYear::factory()->create();
+        $second = FiscalYear::factory()->create();
+        $actor = User::factory()->create(['name' => 'History actor']);
+        $other = User::factory()->create();
+        config(['active-fiscal-year-id' => $second->id]);
+        $document = Document::factory()->create(['fiscal_year_id' => $second->id]);
+        $matching = Activity::create([
+            'source' => 'model', 'user_id' => $actor->id, 'action' => 'updated',
+            'description' => 'Legacy context match', 'model_type' => Document::class,
+            'model_id' => $document->id,
+            'details' => ['fiscal_year_id' => $first->id, 'model_label' => 'Legacy context reference'],
+        ]);
+        $this->activity($other, ['fiscal_year_id' => $second->id]);
+        $this->actingAs($viewer);
+        foreach ([
+            ['search' => 'Legacy context'], ['search' => 'History actor'], ['user_id' => $actor->id],
+            ['model_type' => Document::class], ['model_reference' => 'Legacy context reference'],
+            ['fiscal_year_id' => $first->id], ['action' => 'updated', 'user_id' => $actor->id],
+        ] as $filters) {
+            $data = app(ActivityLogService::class)->index($filters);
+            $this->assertSame([$matching->id], $data['activities']->pluck('id')->all());
+            $this->assertSame(2, $data['metrics']['total']);
+        }
+        $this->getJson(route('activity-logs.details', $matching))->assertOk();
+        $this->assertSame(2, Activity::query()->count());
+    }
+
+    public function test_mixed_company_aggregate_details_and_model_types_are_visible(): void
     {
         $viewer = $this->viewer();
         $first = FiscalYear::factory()->create();
         $second = FiscalYear::factory()->create();
-        $hidden = FiscalYear::factory()->create();
-        $viewer->fiscalYears()->sync([$first->id, $second->id]);
-        $firstUser = User::factory()->create();
-        $firstUser->fiscalYears()->sync([$first->id]);
-        $secondUser = User::factory()->create();
-        $secondUser->fiscalYears()->sync([$second->id]);
-        $hiddenUser = User::factory()->create();
-        $hiddenUser->fiscalYears()->sync([$hidden->id]);
-        $formerUser = User::factory()->create();
-        $formerUser->fiscalYears()->detach();
-        $this->activity($formerUser, ['fiscal_year_id' => $first->id]);
-
+        $viewer->fiscalYears()->sync([$first->id]);
+        $models = collect([$first, $second])->map(fn ($year) => [
+            'model_type' => FiscalYear::class, 'model_id' => $year->id,
+            'fiscal_year_id' => $year->id, 'event' => 'created',
+            'attributes' => ['year' => $year->year], 'old' => [],
+        ])->all();
+        $record = $this->activity($viewer, [
+            'fiscal_year_ids' => [$first->id, $second->id],
+            'models' => $models, 'model_types' => [FiscalYear::class],
+            'request_input' => ['name' => 'Complete aggregate history'],
+        ], source: 'request');
         $this->actingAs($viewer);
-        $this->get(route('activity-logs.index'))->assertOk()
-            ->assertViewHas('users', fn ($users) => $users->pluck('id')->sort()->values()->all() === collect([$viewer->id, $firstUser->id, $secondUser->id])->sort()->values()->all());
-        foreach ([$first->id => $firstUser, $second->id => $secondUser] as $yearId => $user) {
-            $this->get(route('activity-logs.index', ['fiscal_year_id' => $yearId]))->assertOk()
-                ->assertViewHas('users', fn ($users) => $users->pluck('id')->sort()->values()->all() === collect([$viewer->id, $user->id])->sort()->values()->all());
+        foreach ([[], ['model_type' => FiscalYear::class], ['action' => 'created'], ['fiscal_year_id' => $second->id]] as $filters) {
+            $data = app(ActivityLogService::class)->index($filters);
+            $this->assertSame([$record->id], $data['activities']->pluck('id')->all());
+            $this->assertSame([FiscalYear::class], $data['modelTypes']->all());
+            $this->assertSame(['total' => 1, 'today' => 1, 'model' => 1, 'request' => 1], $data['metrics']);
         }
-        $this->get(route('activity-logs.index', ['fiscal_year_id' => $hidden->id]))->assertOk()
-            ->assertViewHas('users', fn ($users) => $users->isEmpty());
+        $this->getJson(route('activity-logs.details', $record))->assertOk()
+            ->assertJsonPath('html', fn (string $html): bool => str_contains($html, 'Complete aggregate history'));
+        $this->getJson(route('activity-logs.details', $record).'?model_type='.urlencode(FiscalYear::class).'&model_id='.$second->id)
+            ->assertOk();
+        $this->assertSame($models, $record->fresh()->details['models']);
     }
 
-    public function test_aggregated_requests_require_access_to_every_affected_fiscal_year(): void
+    public function test_company_and_deleted_model_history_remains_visible_without_access_to_the_affected_company(): void
     {
         $viewer = $this->viewer();
-        $allowed = FiscalYear::factory()->create();
-        $denied = FiscalYear::factory()->create();
         $viewer->fiscalYears()->detach();
-        $viewer->fiscalYears()->attach($allowed);
-        $model = ['model_type' => FiscalYear::class, 'model_id' => $allowed->id, 'event' => 'created', 'attributes' => ['year' => 1405], 'old' => [], 'fiscal_year_id' => $allowed->id];
-        $visible = $this->activity($viewer, [
-            'fiscal_year_ids' => [$allowed->id],
-            'models' => [$model],
-            'model_types' => [FiscalYear::class],
-        ], source: 'request');
-        $mixed = $this->activity($viewer, [
-            'fiscal_year_id' => $allowed->id,
-            'fiscal_year_ids' => [$allowed->id, $denied->id],
-            'models' => [$model, [...$model, 'model_id' => $denied->id, 'fiscal_year_id' => $denied->id]],
-            'request_input' => ['name' => 'Private company data'],
-        ], source: 'request');
-        $foreignModel = $this->activity($viewer, [
-            'fiscal_year_id' => $denied->id,
-            'fiscal_year_ids' => [$allowed->id],
-            'models' => [[...$model, 'model_id' => $denied->id]],
-        ], source: 'request');
-        $deletedYear = $this->activity($viewer, ['fiscal_year_ids' => [$allowed->id, 999999]], source: 'request');
-
-        $this->actingAs($viewer)->get(route('activity-logs.index'))
-            ->assertOk()->assertViewHas('activities', fn ($activities) => $activities->total() === 1)
-            ->assertViewHas('modelTypes', fn ($types) => $types->all() === [FiscalYear::class]);
-        $this->getJson(route('activity-logs.details', $visible))->assertOk();
-        foreach ([$mixed, $foreignModel, $deletedYear] as $activity) {
-            $this->getJson(route('activity-logs.details', $activity, false).'?model_type='.urlencode(FiscalYear::class).'&model_id='.$allowed->id)
-                ->assertNotFound();
-        }
-        $viewer->fiscalYears()->attach($denied);
-        $this->getJson(route('activity-logs.details', $mixed))->assertOk();
-    }
-
-    public function test_no_fiscal_year_access_fails_closed_even_for_a_platform_administrator(): void
-    {
-        $viewer = $this->viewer();
-        $viewer->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
         $year = FiscalYear::factory()->create();
-        $viewer->fiscalYears()->detach();
-        $activity = $this->activity($viewer, ['fiscal_year_id' => $year->id]);
-
+        $records = collect([
+            Activity::create([
+                'source' => 'model', 'user_id' => $viewer->id, 'action' => 'updated',
+                'description' => 'Company history', 'model_type' => Company::class,
+                'model_id' => $year->company_id, 'details' => ['attributes' => ['name' => 'Company history']],
+            ]),
+            Activity::create([
+                'source' => 'model', 'user_id' => $viewer->id, 'action' => 'deleted',
+                'description' => 'Deleted document', 'model_type' => Document::class, 'model_id' => 999999,
+                'details' => ['old' => ['fiscal_year_id' => $year->id, 'title' => 'Deleted document']],
+            ]),
+        ]);
         $this->actingAs($viewer)->get(route('activity-logs.index'))->assertOk()
-            ->assertViewHas('activities', fn ($activities) => $activities->isEmpty())
-            ->assertViewHas('metrics', fn ($metrics) => array_sum($metrics) === 0)
-            ->assertViewHas('users', fn ($users) => $users->isEmpty())
-            ->assertViewHas('fiscalYears', fn ($years) => $years->isEmpty());
-        $this->getJson(route('activity-logs.details', $activity))->assertNotFound();
+            ->assertViewHas('activities', fn ($activities) => $activities->total() === 2);
+        foreach ($records as $record) {
+            $this->getJson(route('activity-logs.details', $record))->assertOk();
+        }
+        $this->assertSame(2, Activity::query()->count());
+    }
+
+    public function test_context_only_requests_filter_by_either_year_after_access_is_removed(): void
+    {
+        $viewer = $this->viewer();
+        $years = collect([FiscalYear::factory()->create(), FiscalYear::factory()->create()]);
+        $viewer->fiscalYears()->detach();
+        $record = $this->activity($viewer, ['fiscal_year_ids' => $years->pluck('id')->all()], source: 'request');
+        $this->actingAs($viewer);
+        foreach ($years as $year) {
+            $this->get(route('activity-logs.index', ['fiscal_year_id' => $year->id]))->assertOk()
+                ->assertViewHas('activities', fn ($activities) => $activities->total() === 1);
+        }
+        $this->getJson(route('activity-logs.details', $record))->assertOk();
     }
 
     public function test_page_and_details_require_their_respective_permissions(): void
@@ -269,146 +327,6 @@ class WorkspaceActivityLogTest extends TestCase
             ->assertSessionHas('interface_mode', 'workspace');
         $this->get('/management/activity-logs')->assertNotFound();
         $this->get('/management/activity-logs/1/details')->assertNotFound();
-    }
-
-    public function test_real_company_write_and_historical_misattribution_follow_the_affected_company(): void
-    {
-        $a = FiscalYear::factory()->create();
-        $b = FiscalYear::factory()->create();
-        $editor = $this->viewer(['companies.update']);
-        $editor->fiscalYears()->sync([$a->id, $b->id]);
-        $viewerA = $this->viewer();
-        $viewerA->fiscalYears()->sync([$a->id]);
-        $viewerB = $this->viewer();
-        $viewerB->fiscalYears()->sync([$b->id]);
-
-        config(['active-fiscal-year-id' => $a->id]);
-        $this->actingAs($editor)->withSession(['interface_mode' => 'workspace'])
-            ->put(route('companies.update', $b->company_id), ['name' => 'Private Company B Changed'])
-            ->assertRedirect()->assertSessionHasNoErrors();
-        $record = Activity::query()->where('source', 'request')->where('details->route', 'companies.update')->sole();
-        $this->assertSame($b->company_id, $record->details->get('models')[0]['model_id']);
-        $this->assertSame($b->company_id, $record->details->get('models')[0]['company_id']);
-        $this->assertNull($record->details->get('models')[0]['fiscal_year_id']);
-        $this->assertDatabaseHas('companies', ['id' => $b->company_id, 'name' => 'Private Company B Changed']);
-
-        // Reproduce stored records produced by the old writer, without rewriting them.
-        $details = $record->details->all();
-        $details['fiscal_year_id'] = $a->id;
-        $details['fiscal_year_ids'] = [$a->id];
-        $details['models'][0]['fiscal_year_id'] = $a->id;
-        unset($details['models'][0]['company_id']);
-        $historical = $record->replicate();
-        $historical->details = $details;
-        $historical->save();
-        $legacyModel = Activity::create([
-            'source' => 'model', 'user_id' => $editor->id, 'action' => 'updated',
-            'description' => 'Historical company update', 'model_type' => Company::class,
-            'model_id' => $b->company_id,
-            'details' => ['fiscal_year_id' => $a->id, 'attributes' => ['name' => 'Private Company B Changed']],
-        ]);
-
-        foreach ([$record, $historical, $legacyModel] as $activity) {
-            $this->actingAs($viewerA)->getJson(route('activity-logs.details', $activity))->assertNotFound();
-            $this->getJson(route('activity-logs.details', $activity).'?model_type='.urlencode(Company::class).'&model_id='.$b->company_id)
-                ->assertNotFound();
-            $this->actingAs($viewerB)->getJson(route('activity-logs.details', $activity))->assertOk()
-                ->assertJsonPath('html', fn (string $html): bool => str_contains($html, 'Private Company B Changed'));
-        }
-        $this->actingAs($viewerA)->get(route('activity-logs.index'))->assertOk()
-            ->assertViewHas('activities', fn ($activities) => $activities->isEmpty())
-            ->assertViewHas('metrics', fn ($metrics) => array_sum($metrics) === 0);
-        $this->actingAs($viewerB)->get(route('activity-logs.index', ['fiscal_year_id' => $b->id]))->assertOk()
-            ->assertViewHas('activities', fn ($activities) => $activities->total() === 3);
-        $this->assertSame($details, $historical->fresh()->details->all());
-        $this->assertSame(3, Activity::query()->count());
-    }
-
-    public function test_scoped_global_model_events_and_context_only_requests_remain_available(): void
-    {
-        $viewer = $this->viewer();
-        $year = FiscalYear::factory()->create();
-        $viewer->fiscalYears()->sync([$year->id]);
-        $records = collect([
-            $this->activity($viewer, ['fiscal_year_id' => $year->id], User::class),
-            $this->activity($viewer, ['fiscal_year_id' => $year->id], source: 'request'),
-        ]);
-        $this->actingAs($viewer)->get(route('activity-logs.index'))->assertOk()
-            ->assertViewHas('activities', fn ($activities) => $activities->total() === 2);
-        foreach ($records as $record) {
-            $this->getJson(route('activity-logs.details', $record))->assertOk();
-        }
-        $this->assertSame(2, Activity::query()->count());
-    }
-
-    public function test_deleted_fiscal_scoped_models_remain_visible_from_their_own_snapshots(): void
-    {
-        $viewer = $this->viewer();
-        $allowed = FiscalYear::factory()->create();
-        $denied = FiscalYear::factory()->create();
-        $viewer->fiscalYears()->sync([$allowed->id]);
-        $records = collect([$allowed, $denied])->map(fn ($year) => Activity::create([
-            'source' => 'model', 'user_id' => $viewer->id, 'action' => 'deleted',
-            'description' => 'Deleted document', 'model_type' => Document::class, 'model_id' => 999999,
-            'details' => ['fiscal_year_id' => $allowed->id, 'old' => ['fiscal_year_id' => $year->id]],
-        ]));
-        $this->actingAs($viewer)->getJson(route('activity-logs.details', $records[0]))->assertOk();
-        $this->getJson(route('activity-logs.details', $records[1]))->assertNotFound();
-    }
-
-    public function test_existing_fiscal_scoped_models_use_their_current_year_over_legacy_context(): void
-    {
-        $allowed = FiscalYear::factory()->create();
-        $legacyContext = FiscalYear::factory()->create();
-        $viewer = $this->viewer();
-        $viewer->fiscalYears()->sync([$allowed->id]);
-        config(['active-fiscal-year-id' => $allowed->id]);
-        $document = Document::factory()->create(['fiscal_year_id' => $allowed->id]);
-        $activity = Activity::create([
-            'source' => 'model', 'user_id' => $viewer->id, 'action' => 'updated',
-            'description' => 'Legacy document update', 'model_type' => Document::class,
-            'model_id' => $document->id,
-            'details' => ['fiscal_year_id' => $legacyContext->id, 'attributes' => ['title' => 'Updated']],
-        ]);
-
-        $this->actingAs($viewer)->getJson(route('activity-logs.details', $activity))->assertOk();
-    }
-
-    public function test_fiscal_scope_changes_require_access_to_both_old_and_new_ownership(): void
-    {
-        $viewer = $this->viewer();
-        $allowed = FiscalYear::factory()->create();
-        $denied = FiscalYear::factory()->create();
-        $viewer->fiscalYears()->sync([$allowed->id]);
-        $activity = Activity::create([
-            'source' => 'model', 'user_id' => $viewer->id, 'action' => 'updated',
-            'description' => 'Moved document', 'model_type' => Document::class, 'model_id' => 999999,
-            'details' => ['fiscal_year_id' => $allowed->id,
-                'attributes' => ['fiscal_year_id' => $allowed->id],
-                'old' => ['fiscal_year_id' => $denied->id],
-            ],
-        ]);
-        $this->actingAs($viewer)->getJson(route('activity-logs.details', $activity))->assertNotFound();
-        $viewer->fiscalYears()->attach($denied);
-        $this->getJson(route('activity-logs.details', $activity))->assertOk();
-    }
-
-    public function test_context_only_requests_span_accessible_years_and_filter_by_either_year(): void
-    {
-        $viewer = $this->viewer();
-        $years = collect([FiscalYear::factory()->create(), FiscalYear::factory()->create()]);
-        $viewer->fiscalYears()->sync($years->pluck('id')->all());
-        $record = $this->activity($viewer, ['fiscal_year_ids' => $years->pluck('id')->all()], source: 'request');
-        $this->actingAs($viewer);
-        foreach ($years as $year) {
-            $this->get(route('activity-logs.index', ['fiscal_year_id' => $year->id]))->assertOk()
-                ->assertViewHas('activities', fn ($activities) => $activities->total() === 1);
-        }
-        $this->getJson(route('activity-logs.details', $record))->assertOk();
-        $viewer->fiscalYears()->detach($years->last());
-        $this->get(route('activity-logs.index'))->assertOk()
-            ->assertViewHas('activities', fn ($activities) => $activities->isEmpty());
-        $this->getJson(route('activity-logs.details', $record))->assertNotFound();
     }
 
     private function viewer(array $permissions = ['activity-logs.index', 'activity-logs.details']): User
