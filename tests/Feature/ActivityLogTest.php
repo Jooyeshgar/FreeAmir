@@ -20,6 +20,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class ActivityLogTest extends TestCase
@@ -162,8 +163,12 @@ class ActivityLogTest extends TestCase
     {
         $actor = User::factory()->create();
         $actor->givePermissionTo(Permission::firstOrCreate(['name' => 'documents.duplicate']));
-        $actor->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+        $actor->givePermissionTo([
+            Permission::firstOrCreate(['name' => 'activity-logs.index']),
+            Permission::firstOrCreate(['name' => 'activity-logs.details']),
+        ]);
         $fiscalYear = FiscalYear::factory()->create(['year' => 1405]);
+        $actor->fiscalYears()->attach($fiscalYear);
         config(['active-fiscal-year-id' => $fiscalYear->id]);
         $subject = Subject::create([
             'parent_id' => null,
@@ -213,12 +218,12 @@ class ActivityLogTest extends TestCase
         );
         $this->assertCount(3, $duplicate->transactions);
 
-        $this->get(route('management.activity-logs.index'))
+        $this->get(route('activity-logs.index'))
             ->assertOk()
             ->assertViewHas('activities', fn ($activities): bool => $activities->total() === 1
                 && $activities->count() === 1
                 && $activities->first()['id'] === $activity->id);
-        $this->getJson(route('management.activity-logs.details', $activity))
+        $this->getJson(route('activity-logs.details', $activity))
             ->assertOk()
             ->assertJsonPath('html', function (string $html) use ($duplicate): bool {
                 return str_contains($html, $duplicate->title)
@@ -243,6 +248,7 @@ class ActivityLogTest extends TestCase
         $actor = User::factory()->create();
         $actor->givePermissionTo(Permission::firstOrCreate(['name' => 'documents.duplicate']));
         $fiscalYear = FiscalYear::factory()->create(['year' => 1405]);
+        $actor->fiscalYears()->attach($fiscalYear);
         config(['active-fiscal-year-id' => $fiscalYear->id]);
 
         Activity::query()->delete();
@@ -256,6 +262,7 @@ class ActivityLogTest extends TestCase
         $actor = User::factory()->create();
         $actor->givePermissionTo(Permission::firstOrCreate(['name' => 'documents.duplicate']));
         $fiscalYear = FiscalYear::factory()->create(['year' => 1405]);
+        $actor->fiscalYears()->attach($fiscalYear);
         config(['active-fiscal-year-id' => $fiscalYear->id]);
         $document = Document::create([
             'fiscal_year_id' => $fiscalYear->id,
@@ -274,19 +281,21 @@ class ActivityLogTest extends TestCase
         $this->assertDatabaseCount('activity_log', 0);
     }
 
-    public function test_document_duplication_stores_and_displays_one_activity_with_all_created_models(): void
+    public function test_activity_index_does_not_eagerly_load_request_models(): void
     {
-        $actor = User::factory()->create();
+        $actor = $this->workspaceUser();
+        $yearId = config('active-fiscal-year-id');
+        $this->actingAs($actor);
+        Activity::query()->delete();
         Activity::create([
-            'log_name' => 'request',
+            'source' => 'request',
             'description' => 'POST test',
-            'event' => 'post',
+            'action' => 'post',
             'user_id' => $actor->id,
-            'properties' => ['fiscal_year_id' => config('active-fiscal-year-id'), 'route' => 'test', 'models' => [['model_type' => FiscalYear::class, 'model_id' => config('active-fiscal-year-id')]]],
+            'details' => ['fiscal_year_id' => $yearId, 'route' => 'test', 'models' => [['model_type' => FiscalYear::class, 'model_id' => $yearId]]],
         ]);
 
-        $service = app(ActivityLogService::class);
-        $result = $service->index([]);
+        $result = app(ActivityLogService::class)->index([]);
         $listed = $result['activities']->getCollection()->first();
 
         $this->assertNotNull($listed);
