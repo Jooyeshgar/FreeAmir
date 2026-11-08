@@ -134,9 +134,10 @@ class CoreNavigationServiceProvider extends ServiceProvider
         ] as $index => [$id, $label, $route]) {
             $link("core.management.finance.$id", $label, $route, 'core.management.finance', ($index + 1) * 100, [$route]);
         }
-        $group('core.management.system', 'System', 'core.management', 300, ['companies.index', 'fiscal-years.index', 'users.index', 'activity-logs.index', 'configs.index', 'backups.create']);
+        $group('core.management.system', 'System', 'core.management', 300, ['companies.index', 'fiscal-years.index', 'roles.index', 'permissions.index', 'users.index', 'activity-logs.index', 'configs.index', 'backups.create']);
         foreach ([
             ['companies', 'Companies', 'companies.index', ['companies.index']], ['fiscal-years', 'Fiscal years', 'fiscal-years.index', ['fiscal-years.index']],
+            ['permissions', 'Permissions', 'permissions.index', ['permissions.index']], ['roles', 'Roles', 'roles.index', ['roles.index']],
             ['users', 'Users', 'users.index', ['users.index']], ['activity-logs', 'Activity log', 'activity-logs.index', ['activity-logs.index']], ['configs', 'Configs', 'configs.index', ['configs.index']],
             ['backup', 'Backup', 'backups.create', ['backups.create']], ['upload-backup', 'Upload Backup', 'backups.upload', ['backups.create']],
         ] as $index => [$id, $label, $route, $permissions]) {

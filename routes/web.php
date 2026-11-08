@@ -167,6 +167,10 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::delete('invoices/{invoice}/payments/{payment}/document', [Controllers\PaymentController::class, 'destroyDocument'])->name('invoices.payments.destroy-document');
     Route::post('invoices/{invoice}/transfer', [Controllers\InvoiceController::class, 'transfer'])->name('invoices.transfer');
     Route::group(['prefix' => 'management'], function () {
+        Route::prefix('system')->group(function () {
+            Route::resource('permissions', Controllers\Management\PermissionController::class)->except(['show']);
+            Route::resource('roles', Controllers\Management\RoleController::class)->except(['show']);
+        });
         Route::post('companies/{fiscalYear}/test-moadian-connection', [Controllers\CompanyController::class, 'testMoadianConnection'])->name('companies.test-moadian-connection');
         Route::resource('fiscal-years', Controllers\FiscalYearController::class);
         Route::resource('companies', Controllers\CompanyController::class)->except(['show']);
