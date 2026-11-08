@@ -556,10 +556,6 @@ class ActivityLogService
 
     private function requestFiscalYearId(Request $request): ?int
     {
-        if ($request->hasSession() && $request->session()->get('interface_mode') === 'management') {
-            return null;
-        }
-
         $fiscalYearId = config('active-fiscal-year-id') ?? $request->cookie('active-fiscal-year-id');
 
         return $fiscalYearId ? (int) $fiscalYearId : null;

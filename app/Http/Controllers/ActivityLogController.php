@@ -26,8 +26,6 @@ class ActivityLogController extends Controller
 
     public function index(Request $request): View
     {
-        $request->session()->put('interface_mode', 'workspace');
-
         $filters = $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
             'action' => ['nullable', Rule::in(['created', 'updated', 'deleted'])],

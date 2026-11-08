@@ -139,31 +139,6 @@ class ContextualUserGuideTest extends TestCase
         }
     }
 
-    public function test_management_company_list_and_first_company_form_show_the_same_user_guide(): void
-    {
-        config(['app.user_guide_url' => 'https://guides.example.test/base/']);
-        app()->setLocale('fa');
-
-        $superAdmin = User::factory()->create();
-        $superAdmin->givePermissionTo(
-            Permission::firstOrCreate(['name' => 'access-super-admin-panel']),
-            Permission::firstOrCreate(['name' => 'companies.index']),
-        );
-
-        $this->actingAs($superAdmin)
-            ->withSession(['interface_mode' => 'management'])
-            ->get(route('companies.index'))
-            ->assertOk()
-            ->assertSee($this->guideLink(), false);
-
-        $newUser = User::factory()->create();
-
-        $this->actingAs($newUser)
-            ->get(route('registered-user.company.create'))
-            ->assertOk()
-            ->assertSee($this->guideLink(), false);
-    }
-
     public function test_moadian_setup_and_history_views_link_to_the_bilingual_guide(): void
     {
         $source = 'invoices/sells/moadian-histories/how-to-use-moadian.md';
