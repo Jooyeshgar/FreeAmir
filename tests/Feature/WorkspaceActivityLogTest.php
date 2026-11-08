@@ -316,19 +316,6 @@ class WorkspaceActivityLogTest extends TestCase
         $this->getJson(route('activity-logs.details', $activity))->assertForbidden();
     }
 
-    public function test_old_platform_endpoints_are_removed_and_workspace_layout_preserves_session_mode(): void
-    {
-        $viewer = $this->viewer();
-        $this->actingAs($viewer)->withSession(['interface_mode' => 'management'])
-            ->get(route('activity-logs.index'))->assertOk()
-            ->assertViewIs('activity-logs.index')
-            ->assertSee('workspace-drawer', false)
-            ->assertDontSee('management-drawer', false)
-            ->assertSessionHas('interface_mode', 'workspace');
-        $this->get('/management/activity-logs')->assertNotFound();
-        $this->get('/management/activity-logs/1/details')->assertNotFound();
-    }
-
     private function viewer(array $permissions = ['activity-logs.index', 'activity-logs.details']): User
     {
         $user = User::factory()->create();

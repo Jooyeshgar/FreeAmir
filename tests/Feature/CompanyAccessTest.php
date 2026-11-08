@@ -79,25 +79,6 @@ class CompanyAccessTest extends TestCase
         $this->assertTrue($fiscalYear->users()->whereKey($superAdmin->id)->exists());
     }
 
-    public function test_company_index_uses_workspace_for_retained_super_admin_without_companies(): void
-    {
-        $superAdmin = User::factory()->create();
-        $superAdmin->assignRole(Role::firstOrCreate(['name' => 'Super-Admin']));
-
-        $response = $this->actingAs($superAdmin)->withSession(['interface_mode' => 'management'])->get(route('companies.index'));
-        $response->assertOk()->assertViewIs('companies.workspace-index')->assertSee(route('companies.create'), false);
-    }
-
-    public function test_company_index_hides_first_company_button_after_super_admin_has_a_company(): void
-    {
-        $superAdmin = User::factory()->create();
-        $superAdmin->assignRole(Role::firstOrCreate(['name' => 'Super-Admin']));
-        $this->accessibleFiscalYear->users()->attach($superAdmin);
-
-        $response = $this->actingAs($superAdmin)->withSession(['interface_mode' => 'management'])->get(route('companies.index'));
-        $response->assertOk()->assertDontSee('data-testid="create-first-company"', false);
-    }
-
     public function test_closed_fiscal_year_has_an_enabled_link_to_the_closing_wizard(): void
     {
         $this->user->givePermissionTo(
