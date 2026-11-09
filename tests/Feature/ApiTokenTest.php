@@ -29,7 +29,7 @@ class ApiTokenTest extends TestCase
     public function test_user_can_create_token_only_from_own_permissions(): void
     {
         $user = User::factory()->create();
-        foreach (['api-tokens.*', 'api.access', 'documents.show', 'configs.index'] as $permission) {
+        foreach (['api-tokens.*', 'api.access', 'documents.show', 'users.index'] as $permission) {
             $user->givePermissionTo(Permission::firstOrCreate(['name' => $permission]));
         }
 
@@ -37,7 +37,7 @@ class ApiTokenTest extends TestCase
             ->get(route('api-tokens.create'))
             ->assertOk()
             ->assertSee('documents.show')
-            ->assertDontSee('configs.index');
+            ->assertDontSee('users.index');
 
         $this->actingAs($user)
             ->post(route('api-tokens.store'), [
@@ -55,7 +55,7 @@ class ApiTokenTest extends TestCase
         $this->actingAs($user)
             ->post(route('api-tokens.store'), [
                 'name' => 'web-only',
-                'permissions' => ['configs.index'],
+                'permissions' => ['users.index'],
             ])
             ->assertSessionHasErrors('permissions.0');
 
