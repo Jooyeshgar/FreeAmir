@@ -97,3 +97,14 @@ body {
 .total-label {
     text-align: right;
 }
+
+.printable main {
+    background-color: white;
+    width: auto;
+    max-width: 200mm;
+}
+
+.printable td {
+    white-space: normal;
+    overflow: visible;
+}

@@ -156,3 +156,15 @@
 * {
     font-family: "Sahel";
 }
+
+.printable main {
+    background-color: white;
+    width: auto;
+    max-width: 287mm;
+    direction: ltr;
+}
+
+.printable td {
+    white-space: normal;
+    overflow: visible;
+}

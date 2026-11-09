@@ -9,22 +9,7 @@
     };
 @endphp
 <x-report-layout :title="$invoiceTitle">
-    @push('styles')
-        @vite('resources/css/invoice.css')
-        <style>
-            .printable main {
-                background-color: white;
-                width: auto;
-                max-width: 287mm;
-                direction: ltr;
-            }
-
-            .printable td {
-                white-space: normal;
-                overflow: visible;
-            }
-        </style>
-    @endpush
+    @vite('resources/css/invoice.css')
 
     @php
         $company = $invoice->fiscalYear?->company;

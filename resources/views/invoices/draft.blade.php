@@ -1,19 +1,5 @@
 <x-report-layout :title="$invoice->invoice_type->isBeginningInventory() ? __('Beginning Inventory') : __('Pre Invoice')">
-    @push('styles')
-        @vite('resources/css/invoice-draft.css')
-        <style>
-            .printable main {
-                background-color: white;
-                width: auto;
-                max-width: 200mm;
-            }
-
-            .printable td {
-                white-space: normal;
-                overflow: visible;
-            }
-        </style>
-    @endpush
+    @vite('resources/css/invoice-draft.css')
 
     <div class="draft-invoice">
         <div class="invoice-meta">
