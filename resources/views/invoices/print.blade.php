@@ -47,7 +47,12 @@
     <table class="invoiceInfoTable">
         <tbody>
             <tr>
-                <td class="invoiceInfo">{{ $invoice->taxID }}</td>
+                <td class="invoiceInfo">
+                    @if (\App\Enums\MoadianStatus::fromData($invoice->latestMoadianHistory?->data['status'] ?? null) !== null &&
+                        \App\Enums\MoadianStatus::fromData($invoice->latestMoadianHistory?->data['status'] ?? null)?->label() !== __('SUCCESS'))
+                        {{ $invoice->taxID }}
+                    @endif 
+                </td>
                 <td class="invoiceType" rowspan="2">
                     {{ $invoiceTitle }}
                 </td>

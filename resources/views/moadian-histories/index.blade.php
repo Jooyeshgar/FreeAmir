@@ -49,6 +49,7 @@
                             <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('Status') }}</th>
                             <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('Reference Number') }}</th>
                             <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('UID') }}</th>
+                            <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('Tax ID') }}</th>
                             <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('Date') }}</th>
                             <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('Details') }}</th>
                             <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('Action') }}</th>
@@ -75,6 +76,7 @@
                                 </td>
                                 <td class="text-gray-500">{{ $history->data['referenceNumber'] ?? '-' }}</td>
                                 <td class="text-gray-500">{{ $history->data['uid'] ?? '-' }}</td>
+                                <td class="text-gray-500">{{ $status === 'SUCCESS' ? $history->invoice?->taxID : '-' }}</td>
                                 <td class="text-gray-500">{{ localizeNumber($history->created_at->format('Y/m/d H:i')) }}</td>
                                 <td>@include('moadian-histories._details', ['history' => $history])</td>
                                 <td>
@@ -104,7 +106,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="{{ isset($invoice) ? 6 : 7 }}" class="text-center text-gray-500 p-3">{{ __('No moadian histories found.') }}</td>
+                                <td colspan="{{ isset($invoice) ? 7 : 8 }}" class="text-center text-gray-500 p-3">{{ __('No moadian histories found.') }}</td>
                             </tr>
                         @endforelse
                     </tbody>

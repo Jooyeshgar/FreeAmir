@@ -1,11 +1,18 @@
 <x-app-layout :title="__('Moadian Histories') . ' ' . __('Invoice #') . formatDocumentNumber($invoice->number ?? $invoice->id)">
     <div class="card bg-base-100">
         <div class="card-body">
-            <h2 class="card-title">
-                <a href="{{ route('invoices.show', $invoice) }}" class="link-hover">
-                    {{ __('Invoice') . ' ' . $invoice->invoice_type->label() . ' #' . formatDocumentNumber($invoice->number ?? $invoice->id) }}
-                </a>
-                <x-user-guide-link source="invoices/sells/moadian-histories/how-to-use-moadian.md" />
+            <h2 class="card-title flex items-center w-full">
+                <div class="flex items-center gap-2">
+                    <a href="{{ route('invoices.show', $invoice) }}" class="link-hover">
+                        {{ __('Invoice') . ' ' . $invoice->invoice_type->label() . ' #' . formatDocumentNumber($invoice->number ?? $invoice->id) }}
+                    </a>
+                    <x-user-guide-link source="invoices/sells/moadian-histories/how-to-use-moadian.md" />
+                </div>
+
+                @if (\App\Enums\MoadianStatus::fromData($invoice->latestMoadianHistory?->data['status'] ?? null) !== null &&
+                    \App\Enums\MoadianStatus::fromData($invoice->latestMoadianHistory?->data['status'] ?? null)?->label() !== __('SUCCESS'))
+                    <span class="badge badge-sm md:badge-md lg:badge-lg badge-ghost font-normal ms-auto">{{ $invoice->taxID }}</span>
+                @endif
             </h2>
 
             <x-show-message-bags />

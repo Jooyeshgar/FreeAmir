@@ -53,6 +53,10 @@
                 @if ($isMoadianSendable && $invoice->status->isApprovedOrSettled())
                     <a class="badge badge-sm md:badge-md lg:badge-lg h-auto max-w-full whitespace-normal break-words py-1 link"
                         href="{{ route('invoices.moadian-histories.show', $invoice) }}">{{ __('Moadian Histories') }}</a>
+                        @if (\App\Enums\MoadianStatus::fromData($invoice->latestMoadianHistory?->data['status'] ?? null) !== null &&
+                            \App\Enums\MoadianStatus::fromData($invoice->latestMoadianHistory?->data['status'] ?? null)?->label() !== __('SUCCESS'))
+                            <span class="badge badge-sm md:badge-md lg:badge-lg h-auto max-w-full py-1 badge-ghost">{{ $invoice->taxID }}</span>
+                        @endif
                 @endif
 
                 @php
