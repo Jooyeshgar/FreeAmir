@@ -21,3 +21,10 @@ yarn-error.log
 script/*.sql*
 script/*/*.sql*
 storage/*.sqlite*
+
+# Local Postman exports (root-only; docs/postman/ is committed)
+/collections/
+# Postman environment files may contain tokens; only sample files are tracked
+*.postman_environment.json
+!*.postman_environment.example.json
+!*.postman_environment.sample.json

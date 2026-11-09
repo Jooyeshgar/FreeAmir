@@ -1,0 +1,14 @@
+$kind: http-request
+name: "{{base_url}}/api/companies/1/invoices"
+description: ""
+url: "{{base_url}}/api/companies/1/invoices?page=16"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  page: "16"
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 12000

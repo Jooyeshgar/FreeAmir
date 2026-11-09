@@ -1,0 +1,12 @@
+$kind: http-request
+name: "{{base_url}}/api/companies/1/invoices/228"
+description: ""
+url: "{{base_url}}/api/companies/1/invoices/228"
+method: GET
+headers:
+  Accept: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 11000
