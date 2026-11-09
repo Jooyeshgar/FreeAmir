@@ -485,15 +485,6 @@ class InvoiceService
             $itemableType = $type === 'product' ? Product::class : Service::class;
             $itemableId = $item['itemable_id'];
 
-            // $quantityAt = 0;
-            // if ($product) {
-            //     $invoiceType = $invoice->invoice_type;
-            //     if (in_array($invoiceType, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID, InvoiceType::BEGINNING_INVENTORY], true)) {
-            //         $quantityAt = max(0, $product->quantity - $quantity);
-            //     } elseif (in_array($invoiceType, [InvoiceType::SELL, InvoiceType::RETURN_BUY], true)) {
-            //         $quantityAt = $product->quantity + $quantity;
-            //     }
-            // }
             $quantityAt = 0.0;
 
             if ($product) {
