@@ -1,0 +1,16 @@
+$kind: http-request
+name: "{{base_url}}/api/companies/1/fiscal-years"
+description: ""
+url: "{{base_url}}/api/companies/1/fiscal-years?only_accessible=1&page=1&per_page=20"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  only_accessible: "1"
+  page: "1"
+  per_page: "20"
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 3000

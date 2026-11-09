@@ -1,0 +1,11 @@
+$kind: http-request
+name: ""
+url: http://127.0.0.1:8000/api/companies/1/invoices/221
+method: GET
+headers:
+  Accept: application/json
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 1000

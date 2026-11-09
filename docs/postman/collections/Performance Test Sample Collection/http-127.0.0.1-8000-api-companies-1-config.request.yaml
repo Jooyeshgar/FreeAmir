@@ -1,0 +1,16 @@
+$kind: http-request
+name: "{{base_url}}/api/companies/1/config"
+description: ""
+url: "{{base_url}}/api/companies/1/config?only_mapped=1&include_global=1&as_map=1"
+method: GET
+headers:
+  Accept: application/json
+queryParams:
+  only_mapped: "1"
+  include_global: "1"
+  as_map: "1"
+auth:
+  type: bearer
+  credentials:
+    token: "{{token}}"
+order: 2000
