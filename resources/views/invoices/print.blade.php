@@ -9,7 +9,11 @@
     };
 @endphp
 <x-report-layout :title="$invoiceTitle">
-    @vite('resources/css/invoice.css')
+    @push('styles')
+        <style>
+            {!! Illuminate\Support\Facades\File::get(resource_path('css/invoice.css')) !!}
+        </style>
+    @endpush
 
     @php
         $company = $invoice->fiscalYear?->company;

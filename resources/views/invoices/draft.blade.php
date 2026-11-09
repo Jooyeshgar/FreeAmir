@@ -1,5 +1,9 @@
 <x-report-layout :title="$invoice->invoice_type->isBeginningInventory() ? __('Beginning Inventory') : __('Pre Invoice')">
-    @vite('resources/css/invoice-draft.css')
+    @push('styles')
+        <style>
+            {!! Illuminate\Support\Facades\File::get(resource_path('css/invoice-draft.css')) !!}
+        </style>
+    @endpush
 
     <div class="draft-invoice">
         <div class="invoice-meta">
