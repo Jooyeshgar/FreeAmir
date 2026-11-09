@@ -2,6 +2,8 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Config;
+use App\Models\Scopes\FiscalYearScope;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -33,6 +35,13 @@ class SetApiCompany
         }
 
         DefaultCompany::activate($year);
+
+        $globals = Config::withoutGlobalScope(FiscalYearScope::class)->whereNull('company_id')->get();
+        foreach ($globals->merge(Config::all()) as $config) {
+            if ($config->value !== null) {
+                config(['amir.'.$config->key => $config->value]);
+            }
+        }
 
         return $next($request);
     }

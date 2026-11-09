@@ -15,6 +15,7 @@ class Customer extends Model
     use HasFiscalYear;
 
     protected $fillable = [
+        'code',
         'name',
         'subject_id',
         'phone',

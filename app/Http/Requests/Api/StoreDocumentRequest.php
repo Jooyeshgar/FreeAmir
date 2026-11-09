@@ -29,7 +29,27 @@ class StoreDocumentRequest extends FormRequest
                 Rule::exists('subjects', 'id')->where('fiscal_year_id', getScopedFiscalYear()),
             ],
             'transactions.*.value' => ['required', 'decimal:0,2'],
-            'transactions.*.desc' => ['nullable', 'string'],
+            'transactions.*.desc' => ['required', 'string'],
+            'ledger_confirmation' => ['nullable', 'boolean'],
         ];
+    }
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $transactions = $this->input('transactions');
+
+            if (! is_array($transactions)) {
+                return;
+            }
+
+            $sum = collect($transactions)->sum(fn ($t) => (float) ($t['value'] ?? 0));
+
+            if (round($sum, 2) != 0) {
+                $validator->errors()->add(
+                    'transactions',
+                    'مجموع مبالغ باید صفر باشد (بدهکار منفی، بستانکار مثبت).'
+                );
+            }
+        });
     }
 }

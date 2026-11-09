@@ -485,13 +485,39 @@ class InvoiceService
             $itemableType = $type === 'product' ? Product::class : Service::class;
             $itemableId = $item['itemable_id'];
 
-            $quantityAt = 0;
+            // $quantityAt = 0;
+            // if ($product) {
+            //     $invoiceType = $invoice->invoice_type;
+            //     if (in_array($invoiceType, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID, InvoiceType::BEGINNING_INVENTORY], true)) {
+            //         $quantityAt = max(0, $product->quantity - $quantity);
+            //     } elseif (in_array($invoiceType, [InvoiceType::SELL, InvoiceType::RETURN_BUY], true)) {
+            //         $quantityAt = $product->quantity + $quantity;
+            //     }
+            // }
+            $quantityAt = 0.0;
+
             if ($product) {
                 $invoiceType = $invoice->invoice_type;
-                if (in_array($invoiceType, [InvoiceType::BUY, InvoiceType::RETURN_SELL, InvoiceType::VOID, InvoiceType::BEGINNING_INVENTORY], true)) {
-                    $quantityAt = max(0, $product->quantity - $quantity);
-                } elseif (in_array($invoiceType, [InvoiceType::SELL, InvoiceType::RETURN_BUY], true)) {
-                    $quantityAt = $product->quantity + $quantity;
+                $productQuantity = (float) $product->quantity;
+                $itemQuantity = (float) $quantity;
+
+                if (! $invoice->status->isApprovedOrSettled()) {
+                    // Unapproved invoice: stock has not been changed by this invoice.
+                    $quantityAt = max(0.0, $productQuantity);
+                } elseif (in_array($invoiceType, [
+                    InvoiceType::BUY,
+                    InvoiceType::RETURN_SELL,
+                    InvoiceType::VOID,
+                    InvoiceType::BEGINNING_INVENTORY,
+                ], true)) {
+                    // Stock increased: reverse the invoice quantity.
+                    $quantityAt = max(0.0, $productQuantity - $itemQuantity);
+                } elseif (in_array($invoiceType, [
+                    InvoiceType::SELL,
+                    InvoiceType::RETURN_BUY,
+                ], true)) {
+                    // Stock decreased: restore the pre-invoice quantity.
+                    $quantityAt = max(0.0, $productQuantity + $itemQuantity);
                 }
             }
 

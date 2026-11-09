@@ -31,7 +31,24 @@ class ApiTokenAbilityService
     public function userAbilities($user): Collection
     {
         return $this->abilities()
-            ->filter(fn (string $ability) => $user->can($ability))
+            ->filter(fn (string $ability) => $user->can($ability) || $this->userHasWildcardFor($user, $ability))
             ->values();
+    }
+
+    /**
+     * Check whether the user holds a wildcard permission that covers the given specific ability.
+     * e.g. a user with 'customers.*' should be treated as having 'customers.store'.
+     */
+    private function userHasWildcardFor($user, string $ability): bool
+    {
+        $parts = explode('.', $ability);
+        for ($i = count($parts) - 1; $i > 0; $i--) {
+            $wildcard = implode('.', array_slice($parts, 0, $i)).'.*';
+            if ($user->can($wildcard)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

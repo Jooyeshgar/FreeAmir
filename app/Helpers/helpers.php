@@ -311,14 +311,21 @@ function convertToInt($number)
  */
 function convertToGregorian($date)
 {
+    if (empty($date)) {
+        return $date;
+    }
+
     $locale = App::getLocale();
 
     if ($locale === 'fa' || $locale === 'fa_IR') {
+        $date = str_replace('-', '/', trim($date));
+
         return jalali_to_gregorian_date($date);
     }
 
     return $date;
 }
+
 
 /**
  * Parse a Jalali (or Gregorian) date input from a form field and return a 'Y-m-d' Gregorian string.
