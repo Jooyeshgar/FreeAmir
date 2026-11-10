@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Casts\EmployeeEnum;
 use App\Enums\EmployeeDutyStatus;
 use App\Enums\EmployeeEducationLevel;
 use App\Enums\EmployeeEmploymentType;
@@ -66,13 +65,13 @@ class Employee extends Model
         'is_active' => 'boolean',
         'children_count' => 'integer',
         'leave_remain' => 'integer',
-        'nationality' => EmployeeEnum::class.':'.EmployeeNationality::class,
-        'gender' => EmployeeEnum::class.':'.EmployeeGender::class,
-        'marital_status' => EmployeeEnum::class.':'.EmployeeMaritalStatus::class,
-        'duty_status' => EmployeeEnum::class.':'.EmployeeDutyStatus::class,
-        'insurance_type' => EmployeeEnum::class.':'.EmployeeInsuranceType::class,
-        'education_level' => EmployeeEnum::class.':'.EmployeeEducationLevel::class,
-        'employment_type' => EmployeeEnum::class.':'.EmployeeEmploymentType::class,
+        'nationality' => EmployeeNationality::class,
+        'gender' => EmployeeGender::class,
+        'marital_status' => EmployeeMaritalStatus::class,
+        'duty_status' => EmployeeDutyStatus::class,
+        'insurance_type' => EmployeeInsuranceType::class,
+        'education_level' => EmployeeEducationLevel::class,
+        'employment_type' => EmployeeEmploymentType::class,
     ];
 
     public static function booted(): void
