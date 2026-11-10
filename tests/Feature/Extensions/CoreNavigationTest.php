@@ -24,7 +24,7 @@ class CoreNavigationTest extends TestCase
         $nodes = $this->flatten($tree);
         $coreNodes = array_values(array_filter($nodes, static fn (MenuItem $item): bool => str_starts_with($item->id, 'core.')));
 
-        self::assertCount(84, $coreNodes);
+        self::assertCount(87, $coreNodes);
         self::assertCount(70, array_filter($coreNodes, static fn (MenuItem $item): bool => $item->route !== null));
         self::assertCount(14, array_filter($coreNodes, static fn (MenuItem $item): bool => $item->route === null));
         foreach ($coreNodes as $item) {
