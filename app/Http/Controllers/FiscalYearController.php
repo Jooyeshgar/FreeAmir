@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\FiscalYearSection;
+use App\Extensions\AdministrationContext;
 use App\Models\Company;
 use App\Models\Document;
 use App\Models\DocumentFile;
@@ -161,16 +162,20 @@ class FiscalYearController extends Controller
 
     private function accessibleYears(Request $request)
     {
-        return $request->user()->fiscalYears();
+        return app(AdministrationContext::class)->isGlobal() ? FiscalYear::query() : $request->user()->fiscalYears();
     }
 
     private function accessibleCompanies(Request $request)
     {
+        if (app(AdministrationContext::class)->isGlobal()) {
+            return Company::query();
+        }
+
         return Company::whereHas('fiscalYears.users', fn ($query) => $query->whereKey($request->user()->id));
     }
 
     private function authorizeYear(Request $request, FiscalYear $fiscalYear): void
     {
-        abort_unless($request->user()->fiscalYears()->whereKey($fiscalYear->id)->exists(), 403);
+        abort_unless(app(AdministrationContext::class)->isGlobal() || $request->user()->fiscalYears()->whereKey($fiscalYear->id)->exists(), 403);
     }
 }
