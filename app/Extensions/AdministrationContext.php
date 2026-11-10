@@ -17,7 +17,6 @@ class AdministrationContext
         return $panel->enabledFor(auth()->user()) ? $panel : null;
     }
 
-    /** Global access is confined to authenticated extension routes. */
     public function isGlobal(): bool
     {
         return $this->panel() !== null && request()->routeIs('management.*');
