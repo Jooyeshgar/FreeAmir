@@ -45,6 +45,7 @@
                         <span aria-hidden="true" class="text-lg">&times;</span>
                     </label>
                 </div>
+                <x-admin-panel-link class="my-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-base-200" />
                 <ul class="app-mobile-menu menu mt-2 w-full gap-1 border-t border-base-content/10 text-sm" data-main-menu>
                     <x-menu />
                 </ul>
