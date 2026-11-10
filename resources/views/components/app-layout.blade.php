@@ -1,6 +1,5 @@
 @props([
     'title' => config('app.name'),
-    'adminPanel' => app(\App\Extensions\AdministrationContext::class)->panel(),
 ])
 
 <!DOCTYPE html>
@@ -46,8 +45,8 @@
                         <span aria-hidden="true" class="text-lg">&times;</span>
                     </label>
                 </div>
-                @if ($adminPanel && \Illuminate\Support\Facades\Route::has($adminPanel->dashboardRoute()))
-                    <a href="{{ route($adminPanel->dashboardRoute()) }}" class="my-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-base-200 whitespace-nowrap">
+                @if (app(\App\Extensions\AdministrationContext::class)->panel() && \Illuminate\Support\Facades\Route::has(app(\App\Extensions\AdministrationContext::class)->panel()->dashboardRoute()))
+                    <a href="{{ route(app(\App\Extensions\AdministrationContext::class)->panel()->dashboardRoute()) }}" class="my-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-base-200 whitespace-nowrap">
                         {{ __('Admin Panel') }}
                     </a>
                 @endif
