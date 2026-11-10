@@ -1,7 +1,7 @@
-.invoiceInfoTable {
-    width: 100%;
-    margin-top: 2px;
-    margin-left: 2px;
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .invoiceType {
@@ -167,4 +167,21 @@
 .printable td {
     white-space: normal;
     overflow: visible;
+}
+
+td {
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.printable {
+    background-color: lightgray;
+    background-image: none;
+    padding-top: 10px;
+    font-size: small;
+    color: black;
+
+    @media print {
+        background-color: white;
+    }
 }

@@ -8,6 +8,8 @@ export default defineConfig({
         laravel({
             input: [
                 'resources/css/app.css',
+                'resources/css/invoice.css',
+                'resources/css/invoice-draft.css',
                 'resources/js/app.js',
             ],
             refresh: true,
