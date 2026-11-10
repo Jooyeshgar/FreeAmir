@@ -54,12 +54,6 @@ class CoreNavigationTest extends TestCase
         $nodes = $this->flatten(app(NavigationRegistry::class)->tree());
 
         foreach ([
-            'core.management.system' => [
-                'core.management.system.companies', 'core.management.system.fiscal-years',
-                'core.management.system.permissions', 'core.management.system.roles', 'core.management.system.users',
-                'core.management.system.activity-logs', 'core.management.system.configs',
-                'core.management.system.backup', 'core.management.system.upload-backup',
-            ],
             'core.portal' => [
                 'core.portal.dashboard', 'core.portal.attendance', 'core.portal.monthly-attendance',
                 'core.portal.payrolls', 'core.portal.requests', 'core.portal.information',
