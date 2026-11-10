@@ -1,3 +1,9 @@
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
 @page {
     margin: 5mm;
     size: A4 portrait;
@@ -107,4 +113,21 @@ body {
 .printable td {
     white-space: normal;
     overflow: visible;
+}
+
+td {
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.printable {
+    background-color: lightgray;
+    background-image: none;
+    padding-top: 10px;
+    font-size: small;
+    color: black;
+
+    @media print {
+        background-color: white;
+    }
 }
