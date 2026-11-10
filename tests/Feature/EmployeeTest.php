@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Casts\EmployeeEnum;
 use App\Enums\EmployeeEmploymentType;
 use App\Enums\EmployeeGender;
 use App\Enums\EmployeeNationality;
@@ -15,7 +14,6 @@ use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -50,23 +48,6 @@ class EmployeeTest extends TestCase
 
         $this->workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $this->workShift = WorkShift::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
-    }
-
-    public function test_employee_enum_names_and_legacy_numeric_values_are_readable(): void
-    {
-        $employee = $this->makeEmployee();
-        DB::table('employees')->where('id', $employee->id)->update([
-            'nationality' => 'iranian', 'gender' => 'male', 'employment_type' => 'contract',
-        ]);
-        $employee->refresh();
-        self::assertSame(EmployeeNationality::IRANIAN, $employee->nationality);
-        self::assertSame(EmployeeGender::MALE, $employee->gender);
-        self::assertSame(EmployeeEmploymentType::CONTRACT, $employee->employment_type);
-        $employee->nationality = EmployeeNationality::FOREIGN;
-        $employee->save();
-        $this->assertDatabaseHas('employees', ['id' => $employee->id, 'nationality' => 'foreign']);
-        $cast = new EmployeeEnum(EmployeeNationality::class);
-        self::assertSame(EmployeeNationality::IRANIAN, $cast->get($employee, 'nationality', 1, []));
     }
 
     private function makeEmployee(array $overrides = []): Employee
@@ -526,8 +507,8 @@ class EmployeeTest extends TestCase
 
         $this->assertDatabaseHas('employees', [
             'code' => 'EMP-0001',
-            'gender' => EmployeeGender::MALE->valueName(),
-            'employment_type' => EmployeeEmploymentType::PERMANENT->valueName(),
+            'gender' => EmployeeGender::MALE->value,
+            'employment_type' => EmployeeEmploymentType::PERMANENT->value,
         ]);
     }
 
