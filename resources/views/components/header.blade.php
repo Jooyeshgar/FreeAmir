@@ -20,8 +20,8 @@
         <nav aria-label="{{ __('User menu') }}">
             <ul class="app-main-menu flex shrink-0 flex-nowrap items-center menu menu-horizontal gap-0.5 px-1" data-main-menu>
                 <li class="hidden xl:block">
-                    @if ($adminPanel && \Illuminate\Support\Facades\Route::has($adminPanel->dashboardRoute()))
-                        <a href="{{ route($adminPanel->dashboardRoute()) }}" class="whitespace-nowrap font-medium">
+                    @if (app(\App\Extensions\AdministrationContext::class)->panel() && \Illuminate\Support\Facades\Route::has(app(\App\Extensions\AdministrationContext::class)->panel()->dashboardRoute()))
+                        <a href="{{ route(app(\App\Extensions\AdministrationContext::class)->panel()->dashboardRoute()) }}" class="whitespace-nowrap font-medium">
                             {{ __('Admin Panel') }}
                         </a>
                     @endif
