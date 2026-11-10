@@ -119,7 +119,7 @@ class InvoiceExtensionSlotTest extends TestCase
             'fiscal_year_id' => $year->id,
         ]);
 
-        $extension = new class implements \App\Extensions\Contracts\InvoiceExtension {
+        $extension = new class implements \App\Extensions\Contracts\ModelExtension {
             public function validate(array $input, ?\Illuminate\Database\Eloquent\Model $invoice = null): array { return []; }
             public function persist(\Illuminate\Database\Eloquent\Model $invoice, array $data): void {}
             public function extendQuery(\Illuminate\Database\Eloquent\Builder $query, \Illuminate\Http\Request $request): void {

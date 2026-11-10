@@ -3,7 +3,7 @@
 namespace Tests\Feature\Extensions;
 
 use App\Enums\InvoiceType;
-use App\Extensions\Contracts\InvoiceExtension;
+use App\Extensions\Contracts\ModelExtension;
 use App\Extensions\Events\VoidInvoiceCreated;
 use App\Extensions\InvoiceExtensionRegistry;
 use App\Models\Customer;
@@ -200,7 +200,7 @@ class InvoiceExtensionPersistenceTest extends TestCase
     }
 }
 
-class PersistenceTestExtension implements InvoiceExtension
+class PersistenceTestExtension implements ModelExtension
 {
     public bool $fail = false;
 

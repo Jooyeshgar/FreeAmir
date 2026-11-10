@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Extensions;
 
-use App\Extensions\Contracts\InvoiceExtension;
+use App\Extensions\Contracts\ModelExtension;
 use App\Extensions\InvoiceExtensionRegistry;
 use App\Extensions\NavigationRegistry;
 use App\Extensions\ViewSlotRegistry;
@@ -231,7 +231,7 @@ class ExtensionTrace
     public array $persisted = [];
 }
 
-class LabelsExtension implements InvoiceExtension
+class LabelsExtension implements ModelExtension
 {
     public function __construct(private readonly ExtensionTrace $trace) {}
 
@@ -263,7 +263,7 @@ class LabelsExtension implements InvoiceExtension
     }
 }
 
-class ReferenceExtension implements InvoiceExtension
+class ReferenceExtension implements ModelExtension
 {
     public function __construct(private readonly ExtensionTrace $trace) {}
 
