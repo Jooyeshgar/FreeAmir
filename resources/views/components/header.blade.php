@@ -19,6 +19,9 @@
 
         <nav aria-label="{{ __('User menu') }}">
             <ul class="app-main-menu flex shrink-0 flex-nowrap items-center menu menu-horizontal gap-0.5 px-1" data-main-menu>
+                <li class="hidden xl:block">
+                    <x-admin-panel-link class="font-medium" />
+                </li>
                 <li>
                     <label class="swap swap-rotate btn btn-ghost btn-square btn-sm" aria-label="{{ __('Dark mode') }}">
                         <input type="checkbox" value="dark" class="theme-controller" />

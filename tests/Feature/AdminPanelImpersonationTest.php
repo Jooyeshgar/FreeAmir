@@ -4,17 +4,52 @@ namespace Tests\Feature;
 
 use Amir\UserManagement\Services\AdminDashboardMetrics;
 use Amir\UserManagement\Services\Impersonation;
+use App\Extensions\Contracts\AdminPanel;
 use App\Models\Company;
 use App\Models\FiscalYear;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class AdminPanelImpersonationTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+    }
+
+    public function test_workspace_admin_link_is_available_on_desktop_and_mobile_only_when_authorized(): void
+    {
+        if (! class_exists(Impersonation::class)) {
+            $this->markTestSkipped('Install amir/user-management to test the extension contract.');
+        }
+        $user = User::factory()->create();
+        foreach (['home', 'products.index', 'access-super-admin-panel'] as $name) {
+            $user->givePermissionTo(Permission::findOrCreate($name, 'web'));
+        }
+        $year = FiscalYear::factory()->create();
+        $user->fiscalYears()->sync([$year->id]);
+        $this->actingAs($user)->withCookies(['active-fiscal-year-id' => $year->id]);
+        app()->setLocale('fa');
+        $response = $this->get('/')->assertOk()->assertSee('پنل مدیریت');
+        self::assertSame(2, substr_count($response->getContent(), 'data-testid="admin-panel-link"'));
+        $response->assertSee('href="'.route('management.dashboard').'"', false);
+
+        $user->revokePermissionTo('access-super-admin-panel');
+        $this->get('/')->assertOk()->assertDontSee('data-testid="admin-panel-link"', false);
+        $user->givePermissionTo('access-super-admin-panel');
+        config(['user-management.admin.enabled' => false]);
+        $this->get('/')->assertOk()->assertDontSee('data-testid="admin-panel-link"', false);
+        config(['user-management.admin.enabled' => true]);
+        $this->app->offsetUnset(AdminPanel::class);
+        $this->get('/')->assertOk()->assertDontSee('data-testid="admin-panel-link"', false);
+    }
 
     public function test_dashboard_chart_dates_follow_the_host_locale(): void
     {

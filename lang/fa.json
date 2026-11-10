@@ -3693,5 +3693,6 @@
     "Transferring entries can affect financial reports. Selected source entries will be deleted and approval may be revoked. Confirm to continue.": "انتقال ردیف‌ها می‌تواند بر مانده حساب‌ها و گزارش‌های مالی اثر بگذارد. ردیف‌های انتخاب‌شده از مبدأ حذف می‌شوند و ممکن است تأیید سند مبدأ لغو شود. برای ادامه تأیید کنید.",
     "Select at least one entry to transfer.": "حداقل یک ردیف برای انتقال انتخاب کنید.",
     "This may affect financial reports. Selected source entries will be deleted and approval may be revoked. Continue?": "این عملیات می‌تواند بر گزارش‌های مالی اثر بگذارد. ردیف‌های انتخاب‌شده از مبدأ حذف می‌شوند و ممکن است تأیید سند مبدأ لغو شود. ادامه می‌دهید؟",
-    "This may affect financial reports. Continue transferring the selected entries?": "این عملیات می‌تواند بر گزارش‌های مالی اثر بگذارد. انتقال ردیف‌های انتخاب‌شده را ادامه می‌دهید؟"
+    "This may affect financial reports. Continue transferring the selected entries?": "این عملیات می‌تواند بر گزارش‌های مالی اثر بگذارد. انتقال ردیف‌های انتخاب‌شده را ادامه می‌دهید؟",
+    "Admin Panel": "پنل مدیریت"
 }
