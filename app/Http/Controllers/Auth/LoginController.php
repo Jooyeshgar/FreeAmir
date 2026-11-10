@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Extensions\AdministrationContext;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,6 +40,10 @@ class LoginController extends Controller
 
         if (config('app.email_verification') && ! $user->hasVerifiedEmail()) {
             return redirect()->route('verification.notice')->with('error', __('Please verify your account before continuing.'));
+        }
+
+        if ($panel = app(AdministrationContext::class)->panel()) {
+            return redirect()->route($panel->dashboardRoute());
         }
 
         if (! $user->fiscalYears()->exists()) {

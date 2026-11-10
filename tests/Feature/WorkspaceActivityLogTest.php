@@ -312,8 +312,13 @@ class WorkspaceActivityLogTest extends TestCase
         $this->get(route('activity-logs.index'))->assertForbidden();
         $this->getJson(route('activity-logs.details', $activity))->assertOk();
         $viewer->syncPermissions([Permission::firstOrCreate(['name' => 'access-super-admin-panel'])]);
-        $this->get(route('activity-logs.index'))->assertForbidden();
-        $this->getJson(route('activity-logs.details', $activity))->assertForbidden();
+        if (app(\App\Extensions\AdministrationContext::class)->panel() !== null) {
+            $this->get(route('activity-logs.index'))->assertRedirect(route('management.dashboard'));
+            $this->getJson(route('activity-logs.details', $activity))->assertRedirect(route('management.dashboard'));
+        } else {
+            $this->get(route('activity-logs.index'))->assertForbidden();
+            $this->getJson(route('activity-logs.details', $activity))->assertForbidden();
+        }
     }
 
     private function viewer(array $permissions = ['activity-logs.index', 'activity-logs.details']): User

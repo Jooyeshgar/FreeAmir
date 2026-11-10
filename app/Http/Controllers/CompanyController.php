@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\FiscalYearSection;
+use App\Extensions\AdministrationContext;
 use App\Models\Company;
 use App\Models\Document;
 use App\Models\DocumentFile;
@@ -59,7 +60,7 @@ class CompanyController extends Controller
     public function index(Request $request): View
     {
         $user = auth()->user();
-        $fiscalYears = $user->fiscalYears()
+        $fiscalYears = (app(AdministrationContext::class)->isGlobal() ? FiscalYear::query() : $user->fiscalYears())
             ->join('companies', 'companies.id', '=', 'fiscal_years.company_id')
             ->select('fiscal_years.*', 'companies.name', 'companies.address', 'companies.economical_code', 'companies.national_code', 'companies.currency', 'fiscal_years.year as fiscal_year')
             ->with('closedBy:id,name')->withCount('users')->when($request->filled('search'), function ($query) use ($request) {
@@ -78,7 +79,10 @@ class CompanyController extends Controller
             ->paginate(12)
             ->withQueryString();
 
-        return view('companies.workspace-index', ['fiscalYears' => $fiscalYears]);
+        return view('companies.workspace-index', [
+            'fiscalYears' => $fiscalYears,
+            'canCreateFirstCompany' => app(AdministrationContext::class)->isGlobal() && $user->fiscalYears()->doesntExist(),
+        ]);
     }
 
     /**
@@ -87,7 +91,7 @@ class CompanyController extends Controller
     public function create(Request $request): View
     {
         // Get previous fiscal years for the current company
-        $previousYears = $request->user()->fiscalYears()
+        $previousYears = (app(AdministrationContext::class)->isGlobal() ? FiscalYear::query() : $request->user()->fiscalYears())
             ->join('companies', 'companies.id', '=', 'fiscal_years.company_id')
             ->select('fiscal_years.*', 'companies.name', 'fiscal_years.year as fiscal_year')
             ->orderByDesc('fiscal_years.year')->get();
@@ -214,7 +218,9 @@ class CompanyController extends Controller
     {
         $this->ensureCompanyAccess($company);
         $user = auth()->user();
-        $testFiscalYear = $user->fiscalYears()->where('company_id', $company->id)->first();
+        $testFiscalYear = app(AdministrationContext::class)->isGlobal()
+            ? $company->fiscalYears()->first()
+            : $user->fiscalYears()->where('company_id', $company->id)->first();
 
         return view('companies.edit', [
             'company' => $company,
@@ -411,14 +417,14 @@ class CompanyController extends Controller
     {
         $user = auth()->user();
 
-        abort_unless($user->fiscalYears()->whereKey($fiscalYear->id)->exists(), 403);
+        abort_unless(app(AdministrationContext::class)->isGlobal() || $user->fiscalYears()->whereKey($fiscalYear->id)->exists(), 403);
     }
 
     private function ensureCompanyAccess(Company $company): void
     {
         $user = auth()->user();
 
-        abort_unless($user->fiscalYears()->where('company_id', $company->id)->exists(), 403);
+        abort_unless(app(AdministrationContext::class)->isGlobal() || $user->fiscalYears()->where('company_id', $company->id)->exists(), 403);
     }
 
     private function privateKeyRules(): array

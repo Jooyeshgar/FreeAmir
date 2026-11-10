@@ -2,6 +2,7 @@
 
 namespace App\View\Components;
 
+use App\Extensions\AdministrationContext;
 use App\Extensions\Contracts\HostContext;
 use App\Extensions\MenuItem;
 use App\Extensions\NavigationRegistry;
@@ -9,6 +10,7 @@ use Closure;
 use Illuminate\Contracts\Routing\UrlRoutable;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 use Illuminate\View\Component;
 
 class Menu extends Component
@@ -39,6 +41,10 @@ class Menu extends Component
 
         foreach ($tree as $node) {
             $item = $node['item'];
+            if ($item->route !== null && Str::is(['roles.*', 'permissions.*', 'users.*', 'companies.*', 'fiscal-years.*', 'activity-logs.*'], $item->route)
+                && app(AdministrationContext::class)->panel() !== null) {
+                continue;
+            }
             if (! $this->passesGuards($item, $user, $context)) {
                 continue;
             }

@@ -9,6 +9,7 @@ use App\Http\Middleware\EnsureFeatureEnabled;
 use App\Http\Middleware\EnsureFiscalYearOpen;
 use App\Http\Middleware\LogUserActivity;
 use App\Http\Middleware\PreventRequestsDuringMaintenance;
+use App\Http\Middleware\RedirectPlatformAdministration;
 use App\Http\Middleware\SetApiFiscalYear;
 use App\Http\Middleware\TrimStrings;
 use App\Http\Middleware\TrustProxies;
@@ -51,6 +52,7 @@ return Application::configure(basePath: dirname(__DIR__))
             ShareErrorsFromSession::class,
             VerifyCsrfToken::class,
             SubstituteBindings::class,
+            RedirectPlatformAdministration::class,
             DefaultFiscalYear::class,
             LogUserActivity::class,
         ]);
