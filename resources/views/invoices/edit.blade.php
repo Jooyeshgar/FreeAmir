@@ -15,6 +15,7 @@
                 </h2>
                 <x-show-message-bags />
 
+                @php($extensionSlot = 'invoice.edit.fields')
                 @switch($invoice_type->valueName())
                     @case('sell')
                         @include('invoices.forms.sell')

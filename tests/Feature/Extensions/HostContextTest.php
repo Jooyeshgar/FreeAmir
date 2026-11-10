@@ -4,6 +4,7 @@ namespace Tests\Feature\Extensions;
 
 use App\Extensions\Contracts\HostContext;
 use App\Extensions\ExtensionApi;
+use App\Extensions\InvoiceExtensionRegistry;
 use App\Models\FiscalYear;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -16,12 +17,13 @@ class HostContextTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_api_and_context_boot_without_an_enterprise_package(): void
+    public function test_api_and_context_boot_without_an_optional_package(): void
     {
         config(['active-fiscal-year-id' => null]);
         self::assertSame(1, ExtensionApi::VERSION);
         self::assertNull(app(HostContext::class)->user());
         self::assertNull(app(HostContext::class)->activeFiscalYearId());
+        self::assertNotContains('host-test', array_keys(app(InvoiceExtensionRegistry::class)->extensions()));
     }
 
     public function test_context_follows_current_user_and_year_without_caching_them(): void

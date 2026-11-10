@@ -1665,4 +1665,5 @@
         });
     </script>
 
+    <x-extension-slot slot="invoice.show.panels" :context="['invoice' => $invoice]" />
 </x-app-layout>
