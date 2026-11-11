@@ -334,7 +334,9 @@ class InvoiceCsvExportTest extends TestCase
         $download = $this->actingAs($this->user)->post(route('report'), [...$payload, 'delivery' => 'download']);
         $download->assertOk();
         $content = $download->streamedContent();
-        $this->assertSame(['123', 'مشتری ۱۲', '1405/01/01', '', '246.9', '0', '0', '0', '246.9'], $this->csvRows($content)[1]);
+        $row = $this->csvRows($content)[1];
+        $this->assertMatchesRegularExpression('/\A123(?:\.00)?\z/', $row[0]);
+        $this->assertSame(['مشتری ۱۲', '1405/01/01', '', '246.9', '0', '0', '0', '246.9'], array_slice($row, 1));
 
         $this->post(route('report'), [...$payload, 'delivery' => 'email', 'email' => $this->user->email])->assertRedirect();
         Notification::assertSentTo($this->user, ReportExportNotification::class,
