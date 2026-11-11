@@ -91,7 +91,7 @@ class TrialBalanceService
                 $net = $debitSum + $creditSum;
 
                 fputcsv($handle, [
-                    $subject->code,
+                    csvNumber($subject->code),
                     $subject->name,
                     csvNumber($sumBed),
                     csvNumber($sumBes),

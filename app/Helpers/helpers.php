@@ -200,16 +200,11 @@ function formatMinutesAsTime($minutes): string
 }
 
 /**
- * Format a number for CSV export: returns Farsi digits when locale is fa/fa_IR, otherwise the value as-is.
+ * Normalize structured CSV values without changing separators or leading zeros.
  */
-function csvNumber(int|float|string $value): string
+function csvNumber(int|float|string|null $value): string
 {
-    $locale = App::getLocale();
-    if ($locale === 'fa' || $locale === 'fa_IR') {
-        return convertToFarsi((string) $value);
-    }
-
-    return (string) $value;
+    return toEnglish((string) $value);
 }
 
 /**

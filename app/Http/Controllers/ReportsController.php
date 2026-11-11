@@ -520,13 +520,13 @@ class ReportsController extends Controller
 
             foreach ($transactions as $transaction) {
                 fputcsv($file, [
-                    formatDate($transaction->document->date),
-                    formatDocumentNumber($transaction->document->number),
-                    formatCode($transaction->subject->code),
+                    gregorian_to_jalali_date($transaction->document->date),
+                    csvNumber(formatDocumentNumber($transaction->document->number)),
+                    csvNumber(formatCode($transaction->subject->code)),
                     $transaction->subject->name,
                     $transaction->desc ?? '',
-                    $transaction->debit ?? 0,
-                    $transaction->credit ?? 0,
+                    csvNumber($transaction->debit ?? 0),
+                    csvNumber($transaction->credit ?? 0),
                 ]);
             }
 

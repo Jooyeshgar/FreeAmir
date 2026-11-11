@@ -112,7 +112,7 @@ class DocumentImportExportService
     public function export(array $filters): StreamedResponse
     {
         $query = self::buildQuery($filters);
-        $filename = __('Documents report').'-'.formatDate(Carbon::now(), 'Y-m-d').'.csv';
+        $filename = __('Documents report').'-'.gregorian_to_jalali_date(Carbon::now(), '-').'.csv';
         $columns = $this->resolveExportColumns($filters);
 
         return self::exportCsv($query, $filename, $columns);
@@ -158,16 +158,16 @@ class DocumentImportExportService
                     foreach ($documents as $document) {
                         foreach ($document->transactions as $transaction) {
                             $subject = $transaction->subject;
-                            [$root, $moein, $tafsili] = FreeAmirImportFormat::parseSubjectCodes($subject->code ?? '');
+                            [$root, $moein, $tafsili] = FreeAmirImportFormat::parseSubjectCodes(csvNumber($subject->code));
                             $row = [
                                 'doc_number' => csvNumber(floor($document->number)),
-                                'doc_date' => formatDate($document->date),
+                                'doc_date' => gregorian_to_jalali_date($document->date),
                                 'doc_title' => $document->title ?? '',
                                 'doc_type' => $document->documentable ? __('automatic') : __('manual'),
                                 'doc_status' => __($document->approved_at ? 'approved' : 'unapproved'),
-                                'subject_root_code' => $root,
-                                'subject_moein_code' => $moein,
-                                'subject_tafsili_code' => $tafsili,
+                                'subject_root_code' => csvNumber($root),
+                                'subject_moein_code' => csvNumber($moein),
+                                'subject_tafsili_code' => csvNumber($tafsili),
                                 'subject_name' => $subject->name ?? '',
                                 'subject_type' => $subject->type?->label() ?? '',
                                 'subject_is_permanent' => __($subject->is_permanent ? 'Permanent' : 'Temporary'),
