@@ -267,6 +267,9 @@ class CommercialLedgerService
         fputcsv($handle, array_map('__', self::HEADERS));
 
         foreach ($rows as $row) {
+            foreach (['row_number', 'date', 'general_code', 'subsidiary_code', 'debit', 'credit'] as $column) {
+                $row[$column] = csvNumber($row[$column]);
+            }
             fputcsv($handle, array_values($row));
         }
 

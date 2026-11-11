@@ -122,7 +122,8 @@ class ReportExportService
                             'oversell' => $product->oversell, 'discount_formula' => $product->discount_formula,
                             'description' => $product->description, 'vat' => $product->vat,
                         ]);
-                        fputcsv($file, array_map(fn (string $column) => $row[$column] ?? null, array_keys($columns)));
+                        fputcsv($file, array_map(fn (string $column) => in_array($column, ['name', 'category', 'location', 'description'], true)
+                            ? ($row[$column] ?? null) : csvNumber($row[$column] ?? null), array_keys($columns)));
                     }
                 });
         });
@@ -183,7 +184,8 @@ class ReportExportService
                             'sales_return_account' => abs($totals[$service->sales_returns_subject_id] ?? 0), 'income_subject_code' => $service->subject?->code,
                             'cogs_subject_code' => $service->cogsSubject?->code, 'sales_returns_subject_code' => $service->salesReturnsSubject?->code,
                             'sstid' => $service->sstid, 'description' => $service->description];
-                        fputcsv($file, array_map(fn (string $column) => $row[$column] ?? null, array_keys($columns)));
+                        fputcsv($file, array_map(fn (string $column) => in_array($column, ['name', 'group_name', 'description'], true)
+                            ? ($row[$column] ?? null) : csvNumber($row[$column] ?? null), array_keys($columns)));
                     }
                 });
         });
@@ -194,11 +196,11 @@ class ReportExportService
         return $this->csv('customers_'.now()->format('YmdHis').'.csv', CustomerImportService::COLUMNS, function ($file): void {
             Customer::with('group', 'subject')->orderBy('id')->chunk(200, function ($customers) use ($file): void {
                 foreach ($customers as $customer) {
-                    fputcsv($file, [$customer->name, $customer->group?->name, $customer->subject?->code, $customer->type?->valueName(),
-                        $customer->phone, $customer->mobile, $customer->fax, $customer->address, $customer->postal_code, $customer->email,
-                        $customer->ecnmcs_code, $customer->personal_code, $customer->web_page, $customer->responsible, $customer->connector,
-                        $customer->desc, $customer->credit, $customer->disc_rate, $customer->acc_name_1, $customer->acc_no_1,
-                        $customer->acc_bank_1, $customer->acc_name_2, $customer->acc_no_2, $customer->acc_bank_2]);
+                    fputcsv($file, [$customer->name, $customer->group?->name, csvNumber($customer->subject?->code), $customer->type?->valueName(),
+                        csvNumber($customer->phone), csvNumber($customer->mobile), csvNumber($customer->fax), $customer->address, csvNumber($customer->postal_code), $customer->email,
+                        csvNumber($customer->ecnmcs_code), csvNumber($customer->personal_code), $customer->web_page, $customer->responsible, $customer->connector,
+                        $customer->desc, csvNumber($customer->credit), csvNumber($customer->disc_rate), $customer->acc_name_1, csvNumber($customer->acc_no_1),
+                        $customer->acc_bank_1, $customer->acc_name_2, csvNumber($customer->acc_no_2), $customer->acc_bank_2]);
                 }
             });
         });
@@ -224,7 +226,7 @@ class ReportExportService
                     $subtotal = $invoice->items->sum(fn ($item) => (float) $item->quantity * (float) $item->unit_price);
                     $discounts = (float) $invoice->items->sum('discount');
                     $extensionValues = $extensionRegistry->csvRow($invoice);
-                    fputcsv($file, [$invoice->number, $invoice->customer?->name, formatDate($invoice->date), $invoice->document?->number,
+                    fputcsv($file, [csvNumber($invoice->number), $invoice->customer?->name, gregorian_to_jalali_date($invoice->date), csvNumber($invoice->document?->number),
                         $subtotal, $discounts, (float) $invoice->items->sum('vat'), (float) $invoice->amount - (float) $invoice->subtraction, $subtotal - $discounts, ...$extensionValues]);
                 }
             });
@@ -238,10 +240,10 @@ class ReportExportService
             __('Contract End Date'), __('Salary Decree Count')], function ($file) use ($filters): void {
                 $this->employeeQuery($this->filterRequest($filters))->chunk(200, function ($employees) use ($file): void {
                     foreach ($employees as $employee) {
-                        fputcsv($file, [$employee->code, $employee->first_name, $employee->last_name, $employee->national_code, $employee->phone,
+                        fputcsv($file, [csvNumber($employee->code), $employee->first_name, $employee->last_name, csvNumber($employee->national_code), csvNumber($employee->phone),
                             $employee->workSite?->name, $employee->orgChart?->title, $employee->workSiteContract?->name,
                             $employee->employment_type?->label(), $employee->is_active ? __('Active') : __('Inactive'),
-                            $employee->contract_start_date?->toDateString(), $employee->contract_end_date?->toDateString(), $employee->salary_decrees_count]);
+                            $employee->contract_start_date ? gregorian_to_jalali_date($employee->contract_start_date, '-') : '', $employee->contract_end_date ? gregorian_to_jalali_date($employee->contract_end_date, '-') : '', csvNumber($employee->salary_decrees_count)]);
                     }
                 });
             });
@@ -330,13 +332,13 @@ class ReportExportService
             $query->chunk(200, function ($transactions) use ($file): void {
                 foreach ($transactions as $transaction) {
                     fputcsv($file, [
-                        formatDate($transaction->document->date),
-                        formatDocumentNumber($transaction->document->number),
-                        formatCode($transaction->subject->code),
+                        gregorian_to_jalali_date($transaction->document->date),
+                        csvNumber(formatDocumentNumber($transaction->document->number)),
+                        csvNumber(formatCode($transaction->subject->code)),
                         $transaction->subject->name,
                         $transaction->desc ?? '',
-                        $transaction->debit ?? 0,
-                        $transaction->credit ?? 0,
+                        csvNumber($transaction->debit ?? 0),
+                        csvNumber($transaction->credit ?? 0),
                     ]);
                 }
             });
