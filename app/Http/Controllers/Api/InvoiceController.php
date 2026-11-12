@@ -427,7 +427,7 @@ class InvoiceController extends Controller
 
         if (! in_array($status, $allowed, true)) {
             throw ValidationException::withMessages([
-                'status' => ['وضعیت نامعتبر است. وضعیت‌های مجاز: '.implode(', ', $allowed)],
+                'status' => __('Invalid status. Allowed values: :statuses', ['statuses' => implode(', ', $allowed)]),
             ]);
         }
 
@@ -452,7 +452,7 @@ class InvoiceController extends Controller
             $error = $decision->messages->first(fn ($m) => $m->type === 'error');
 
             throw ValidationException::withMessages([
-                'status' => [$error?->text ?? 'تغییر وضعیت ممکن نیست.'],
+                'status' => $error?->text ?? __('The status change is not possible.'),
             ]);
         }
 

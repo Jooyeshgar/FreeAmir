@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 
 class ServiceController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, int $fiscalYear): JsonResponse
     {
         $validated = $request->validate([
             'q' => ['nullable', 'string', 'max:100'],
@@ -43,7 +43,7 @@ class ServiceController extends Controller
         ]);
     }
 
-    public function store(Request $request, ServiceService $serviceService): JsonResponse
+    public function store(Request $request, ServiceService $serviceService, int $fiscalYear): JsonResponse
     {
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
