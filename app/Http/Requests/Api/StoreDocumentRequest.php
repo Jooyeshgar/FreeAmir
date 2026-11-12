@@ -29,7 +29,27 @@ class StoreDocumentRequest extends FormRequest
                 Rule::exists('subjects', 'id')->where('fiscal_year_id', getActiveFiscalYear()),
             ],
             'transactions.*.value' => ['required', 'decimal:0,2'],
-            'transactions.*.desc' => ['nullable', 'string'],
+            'transactions.*.desc' => ['required', 'string'],
         ];
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $transactions = $this->input('transactions');
+
+            if (! is_array($transactions)) {
+                return;
+            }
+
+            $sum = collect($transactions)->sum(fn ($transaction) => (float) ($transaction['value'] ?? 0));
+
+            if (round($sum, 2) != 0) {
+                $validator->errors()->add(
+                    'transactions',
+                    __('The transaction values must sum to zero (debits are negative and credits are positive).')
+                );
+            }
+        });
     }
 }

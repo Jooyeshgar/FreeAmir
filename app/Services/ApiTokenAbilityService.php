@@ -7,9 +7,6 @@ use Illuminate\Support\Facades\Route;
 
 class ApiTokenAbilityService
 {
-    /**
-     * Permissions attached to API routes are the abilities users may grant to tokens.
-     */
     public function abilities(): Collection
     {
         return collect(Route::getRoutes())
@@ -31,7 +28,21 @@ class ApiTokenAbilityService
     public function userAbilities($user): Collection
     {
         return $this->abilities()
-            ->filter(fn (string $ability) => $user->can($ability))
+            ->filter(fn (string $ability) => $user->can($ability) || $this->userHasWildcardFor($user, $ability))
             ->values();
+    }
+
+    private function userHasWildcardFor($user, string $ability): bool
+    {
+        $parts = explode('.', $ability);
+
+        for ($i = count($parts) - 1; $i > 0; $i--) {
+            $wildcard = implode('.', array_slice($parts, 0, $i)).'.*';
+            if ($user->can($wildcard)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
