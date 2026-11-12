@@ -5,8 +5,8 @@ namespace Tests\Feature;
 use App\Enums\EmployeeEmploymentType;
 use App\Enums\EmployeeGender;
 use App\Enums\EmployeeNationality;
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\MonthlyAttendance;
 use App\Models\Payroll;
 use App\Models\SalaryDecree;
@@ -23,7 +23,7 @@ class EmployeeTest extends TestCase
 
     protected User $user;
 
-    protected int $companyId;
+    protected int $fiscalYearId;
 
     protected WorkSite $workSite;
 
@@ -33,27 +33,27 @@ class EmployeeTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create();
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'hr.employees.*'])
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
 
-        $this->workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
-        $this->workShift = WorkShift::factory()->create(['company_id' => $this->companyId]);
+        $this->workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $this->workShift = WorkShift::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
     }
 
     private function makeEmployee(array $overrides = []): Employee
     {
         return Employee::factory()->create(array_merge([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'work_site_id' => $this->workSite->id,
         ], $overrides));
     }
@@ -96,10 +96,10 @@ class EmployeeTest extends TestCase
 
     public function test_index_does_not_show_employees_from_other_companies(): void
     {
-        $otherCompany = Company::factory()->create();
-        $otherSite = WorkSite::factory()->create(['company_id' => $otherCompany->id]);
+        $otherFiscalYear = FiscalYear::factory()->create();
+        $otherSite = WorkSite::factory()->create(['fiscal_year_id' => $otherFiscalYear->id]);
         Employee::factory()->create([
-            'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherFiscalYear->id,
             'work_site_id' => $otherSite->id,
             'first_name' => 'Foreign',
             'last_name' => 'Employee',
@@ -176,7 +176,7 @@ class EmployeeTest extends TestCase
             'code' => 'EMP-002',
         ]);
         SalaryDecree::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $matching->id,
         ]);
 
@@ -208,7 +208,7 @@ class EmployeeTest extends TestCase
         $employee = $this->makeEmployee(['code' => 'EMP-DC1', 'first_name' => 'Decree', 'last_name' => 'Owner']);
 
         SalaryDecree::factory()->count(3)->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $employee->id,
         ]);
 
@@ -224,7 +224,7 @@ class EmployeeTest extends TestCase
 
     public function test_export_filters_by_work_site(): void
     {
-        $otherSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $otherSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
 
         $this->makeEmployee(['code' => 'EMP-S1', 'work_site_id' => $this->workSite->id]);
         $this->makeEmployee(['code' => 'EMP-S2', 'work_site_id' => $otherSite->id]);
@@ -250,10 +250,10 @@ class EmployeeTest extends TestCase
     {
         $this->makeEmployee(['code' => 'EMP-MINE']);
 
-        $otherCompany = Company::factory()->create();
-        $otherSite = WorkSite::factory()->create(['company_id' => $otherCompany->id]);
+        $otherFiscalYear = FiscalYear::factory()->create();
+        $otherSite = WorkSite::factory()->create(['fiscal_year_id' => $otherFiscalYear->id]);
         Employee::factory()->create([
-            'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherFiscalYear->id,
             'work_site_id' => $otherSite->id,
             'code' => 'EMP-OTHER',
         ]);
@@ -293,7 +293,7 @@ class EmployeeTest extends TestCase
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('employees', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'code' => 'EMP-0001',
             'first_name' => 'Ali',
             'last_name' => 'Hosseini',
@@ -371,20 +371,20 @@ class EmployeeTest extends TestCase
 
         $employee = $this->makeEmployee();
         $decree = SalaryDecree::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $employee->id,
             'name' => 'Active Decree 1405',
             'daily_wage' => 2500000,
             'is_active' => true,
         ]);
         $attendance = MonthlyAttendance::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $employee->id,
             'year' => 1405,
             'month' => 4,
         ]);
         $payroll = Payroll::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $employee->id,
             'decree_id' => $decree->id,
             'monthly_attendance_id' => $attendance->id,

@@ -25,7 +25,7 @@ class StoreServiceRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'code' => ['nullable', Rule::unique('services', 'code')->where('fiscal_year_id', getScopedFiscalYear())],
+            'code' => ['nullable', Rule::unique('services', 'code')->where('fiscal_year_id', getActiveFiscalYear())],
             'name' => 'required|max:20|string|regex:/^[\w\d\s\-\:\.]*$/u',
             'group' => 'required|exists:service_groups,id|integer',
             'selling_price' => [
@@ -47,7 +47,7 @@ class StoreServiceRequest extends FormRequest
         $validatedData = $this->validated();
 
         if (empty($validatedData['code'])) {
-            $maxCode = Service::where('fiscal_year_id', getScopedFiscalYear())->whereRaw('code REGEXP "^[0-9]+$"')
+            $maxCode = Service::where('fiscal_year_id', getActiveFiscalYear())->whereRaw('code REGEXP "^[0-9]+$"')
                 ->selectRaw('MAX(CAST(code AS UNSIGNED)) AS max_code')->value('max_code');
 
             $validatedData['code'] = ($maxCode ?: 0) + 1;

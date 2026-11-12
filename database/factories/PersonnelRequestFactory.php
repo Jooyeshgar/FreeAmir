@@ -4,8 +4,8 @@ namespace Database\Factories;
 
 use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\PersonnelRequest;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -19,7 +19,7 @@ class PersonnelRequestFactory extends Factory
         $endDate = $this->faker->dateTimeBetween($startDate, '+7 days');
 
         return [
-            'company_id' => Company::factory(),
+            'fiscal_year_id' => FiscalYear::factory(),
             'employee_id' => Employee::factory(),
             'request_type' => $this->faker->randomElement(PersonnelRequestType::cases()),
             'start_date' => $startDate,

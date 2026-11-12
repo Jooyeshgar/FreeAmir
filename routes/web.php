@@ -48,7 +48,7 @@ Route::middleware(['auth', 'permission:access-super-admin-panel', 'ensure-featur
     });
 });
 
-Route::group(['middleware' => ['auth', 'ensure-employee', 'ensure-feature-enabled:email_verification'], 'prefix' => 'employee-portal', 'as' => 'employee-portal.'], function () {
+Route::group(['middleware' => ['auth', 'ensure-employee', 'ensure-feature-enabled:email_verification', 'fiscal-year-open'], 'prefix' => 'employee-portal', 'as' => 'employee-portal.'], function () {
     Route::get('/employee', [Controllers\EmployeePortalController::class, 'employeeShow'])->name('employee.show');
     Route::get('/change-employee-information', [Controllers\EmployeePortalController::class, 'changeEmployeeInformation'])->name('change-employee-information');
     Route::put('/change-employee-information', [Controllers\EmployeePortalController::class, 'updateEmployeeInformation'])->name('update-employee-information');
@@ -66,7 +66,7 @@ Route::group(['middleware' => ['auth', 'ensure-employee', 'ensure-feature-enable
     Route::delete('/personnel-requests/{personnel_request}', [Controllers\EmployeePortalController::class, 'destroyPersonnelRequest'])->name('personnel-requests.destroy');
 });
 
-Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabled:email_verification']], function () {
+Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabled:email_verification', 'fiscal-year-open']], function () {
     Route::get('api-tokens', [Controllers\ApiTokenController::class, 'index'])->name('api-tokens.index');
     Route::get('api-tokens/create', [Controllers\ApiTokenController::class, 'create'])->name('api-tokens.create');
     Route::post('api-tokens', [Controllers\ApiTokenController::class, 'store'])->name('api-tokens.store');
@@ -100,7 +100,7 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::post('documents/import', [Controllers\DocumentController::class, 'import'])->name('documents.import.store');
     Route::resource('documents', Controllers\DocumentController::class);
     Route::get('documents/{document}/print', [Controllers\DocumentController::class, 'print'])->name('documents.print');
-    Route::get('documents/{document}/duplicate', [Controllers\DocumentController::class, 'duplicate'])->name('documents.duplicate');
+    Route::post('documents/{document}/duplicate', [Controllers\DocumentController::class, 'duplicate'])->name('documents.duplicate');
     Route::post('documents/{document}/transfer', [Controllers\DocumentController::class, 'transfer'])->name('documents.transfer');
 
     Route::resource('transactions', Controllers\TransactionController::class)->only(['index', 'show']);
@@ -147,6 +147,7 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::get('invoices/inactive', [Controllers\InvoiceController::class, 'inactiveInvoices'])->name('invoices.inactive');
     Route::post('invoices/inactive/approve', [Controllers\InvoiceController::class, 'approveInactiveInvoices'])->name('invoices.inactive.approve');
     Route::get('invoices/export', [Controllers\InvoiceController::class, 'export'])->name('invoices.export');
+    Route::post('invoices/sort-numbers', [Controllers\InvoiceController::class, 'sortNumbers'])->name('invoices.sort-numbers');
     Route::prefix('invoices')->group(function () {
         Route::get('ancillary-costs/search-customer', [Controllers\AncillaryCostController::class, 'searchCustomer'])->name('ancillary-costs.search-customer');
         Route::get('ancillary-costs/search-invoice', [Controllers\AncillaryCostController::class, 'searchInvoice'])->name('ancillary-costs.search-invoice');
@@ -162,6 +163,7 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     });
     Route::get('invoices/moadian-histories', [Controllers\MoadianHistoryController::class, 'index'])->name('invoices.moadian-histories.index');
     Route::resource('invoices', Controllers\InvoiceController::class);
+    Route::patch('invoices/{invoice}/bookmark', [Controllers\InvoiceController::class, 'updateBookmark'])->name('invoices.bookmark');
     Route::get('invoices/{invoice}/moadian-histories', [Controllers\MoadianHistoryController::class, 'show'])->name('invoices.moadian-histories.show');
     Route::post('invoices/{invoice}/send-moadian', [Controllers\InvoiceController::class, 'sendMoadian'])->name('invoices.send-moadian');
     Route::post('invoices/{invoice}/moadian-check-status', [Controllers\MoadianHistoryController::class, 'checkStatus'])->name('invoices.moadian-check-status');
@@ -171,20 +173,26 @@ Route::group(['middleware' => ['auth', 'check-permission', 'ensure-feature-enabl
     Route::get('invoices/{invoice}/print', [Controllers\InvoiceController::class, 'print'])->name('invoices.print');
     Route::get('invoices/{invoice}/void', [Controllers\InvoiceController::class, 'showVoidForm'])->name('invoices.void-form');
     Route::post('invoices/{invoice}/void', [Controllers\InvoiceController::class, 'voidInvoice'])->name('invoices.void');
+    Route::post('invoices/{invoice}/approve-inactive', [Controllers\InvoiceController::class, 'approveInactive'])->name('invoices.approve');
     Route::post('invoices/{invoice}/change-status/{status}', [Controllers\InvoiceController::class, 'changeStatus'])->name('invoices.change-status');
     Route::post('invoices/{invoice}/payments', [Controllers\PaymentController::class, 'store'])->name('invoices.payments.store');
+    Route::get('invoices/{invoice}/payments/subjects', [Controllers\PaymentController::class, 'searchSubjects'])->name('invoices.payments.search-subjects');
     Route::post('invoices/{invoice}/payments/cheque', [Controllers\PaymentController::class, 'storeCheque'])->name('invoices.payments.store-cheque');
+    Route::put('invoices/{invoice}/payments/{payment}', [Controllers\PaymentController::class, 'update'])->name('invoices.payments.update');
     Route::delete('invoices/{invoice}/payments/{payment}', [Controllers\PaymentController::class, 'destroy'])->name('invoices.payments.destroy');
     Route::post('invoices/{invoice}/payments/{payment}/document', [Controllers\PaymentController::class, 'createDocument'])->name('invoices.payments.create-document');
     Route::delete('invoices/{invoice}/payments/{payment}/document', [Controllers\PaymentController::class, 'destroyDocument'])->name('invoices.payments.destroy-document');
     Route::post('invoices/{invoice}/transfer', [Controllers\InvoiceController::class, 'transfer'])->name('invoices.transfer');
     Route::group(['prefix' => 'management'], function () {
+        Route::post('companies/{fiscalYear}/test-moadian-connection', [Controllers\CompanyController::class, 'testMoadianConnection'])->name('companies.test-moadian-connection');
+        Route::resource('fiscal-years', Controllers\FiscalYearController::class);
         Route::resource('companies', Controllers\CompanyController::class);
-        Route::post('companies/close-fiscal-year/{company}', [Controllers\CompanyController::class, 'closeFiscalYear'])->name('companies.close-fiscal-year');
-        Route::get('companies/{company}/closing-wizard', [Controllers\CompanyController::class, 'closingWizard'])->name('companies.closing-wizard');
-        Route::post('companies/{company}/closing-wizard/step1', [Controllers\CompanyController::class, 'closingWizardStep1'])->name('companies.closing-wizard.step1');
-        Route::post('companies/{company}/closing-wizard/step3', [Controllers\CompanyController::class, 'closingWizardStep3'])->name('companies.closing-wizard.step3');
-        Route::post('companies/{company}/closing-wizard/recalculate', [Controllers\CompanyController::class, 'recalculateClosingDocument'])->name('companies.closing-wizard.recalculate');
+        Route::post('companies/close-fiscal-year/{fiscalYear}', [Controllers\CompanyController::class, 'closeFiscalYear'])->name('companies.close-fiscal-year');
+        Route::get('companies/{fiscalYear}/closing-wizard', [Controllers\CompanyController::class, 'closingWizard'])->name('companies.closing-wizard');
+        Route::post('companies/{fiscalYear}/closing-wizard/step1', [Controllers\CompanyController::class, 'closingWizardStep1'])->name('companies.closing-wizard.step1');
+        Route::post('companies/{fiscalYear}/closing-wizard/step3', [Controllers\CompanyController::class, 'closingWizardStep3'])->name('companies.closing-wizard.step3');
+        Route::post('companies/{fiscalYear}/closing-wizard/recalculate', [Controllers\CompanyController::class, 'recalculateClosingDocument'])->name('companies.closing-wizard.recalculate');
+        Route::post('companies/{fiscalYear}/closing-wizard/recreate-opening', [Controllers\CompanyController::class, 'recreateOpeningDocument'])->name('companies.closing-wizard.recreate-opening');
         Route::post('users/{user}/create-employee', [Controllers\Management\UserController::class, 'createEmployee'])
             ->name('users.create-employee');
         Route::post('users/{user}/impersonate', [Controllers\Management\UserController::class, 'impersonate'])

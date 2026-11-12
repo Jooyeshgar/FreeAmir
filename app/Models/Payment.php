@@ -8,6 +8,7 @@ class Payment extends Model
 {
     protected $fillable = [
         'amount',
+        'bank_service_fee',
         'date',
         'reference_number',
         'description',
@@ -21,6 +22,7 @@ class Payment extends Model
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'bank_service_fee' => 'decimal:2',
         'date' => 'date',
     ];
 

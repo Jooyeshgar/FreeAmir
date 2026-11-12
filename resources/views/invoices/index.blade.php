@@ -37,10 +37,15 @@
             document.querySelectorAll('.change-status-form').forEach(form => {
                 form.addEventListener('submit', function(e) {
                     e.preventDefault();
-                    if (confirm(
-                            '{{ __('This invoice has warnings for change its status, are you sure to change status?') }}'
-                        )) {
+                    if (confirm(this.dataset.confirmMessage)) {
                         this.submit();
+                    }
+                });
+            });
+            document.querySelectorAll('.delete-settled-form').forEach(form => {
+                form.addEventListener('submit', function(e) {
+                    if (!confirm('{{ __('Deleting this paid or partially paid invoice will remove its payments and accounting documents. Are you sure?') }}')) {
+                        e.preventDefault();
                     }
                 });
             });

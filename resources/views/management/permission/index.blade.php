@@ -5,7 +5,10 @@
         <div>
             <p class="text-xs font-bold uppercase tracking-[0.16em] text-amber-600 dark:text-amber-400">
                 {{ __('Access control') }}</p>
-            <h1 class="mt-1 text-2xl font-bold tracking-tight">{{ __('Permission catalog') }}</h1>
+            <div class="flex items-center gap-1">
+                <h1 class="mt-1 text-2xl font-bold tracking-tight">{{ __('Permission catalog') }}</h1>
+                <x-user-guide-link source="management/system/permissions/permissions.md" />
+            </div>
             <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
                 {{ __('Review individual capabilities and the roles that receive them.') }}</p>
         </div>

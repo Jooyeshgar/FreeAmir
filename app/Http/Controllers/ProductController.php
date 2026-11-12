@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\ProductGroup;
@@ -72,7 +73,7 @@ class ProductController extends Controller
             'products' => $products,
             'csvColumns' => $this->exportColumnMapping(),
             'reportColumns' => $this->reportColumnMapping(),
-        ]);
+        ])->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function create()
@@ -129,7 +130,7 @@ class ProductController extends Controller
             })
             ->paginate(20);
 
-        return view('products.show', compact('product', 'historyItems'));
+        return view('products.show', compact('product', 'historyItems'))->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function recalculateQuantity(Product $product): RedirectResponse
@@ -164,7 +165,7 @@ class ProductController extends Controller
             'file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
         ]);
 
-        $result = $importService->import($request->file('file'), getActiveLegacyCompany());
+        $result = $importService->import($request->file('file'), getActiveFiscalYear());
 
         return redirect()->route('products.index')->with('success', __('Import complete: :imported products imported, :updated updated, :groups groups created.', [
             'imported' => $result['imported'],

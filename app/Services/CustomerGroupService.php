@@ -74,7 +74,9 @@ class CustomerGroupService
 
     public function create(array $data): CustomerGroup
     {
-        $data['company_id'] ??= getActiveLegacyCompany();
+        app(FiscalYearMutationGuard::class)->ensureOpen($data['fiscal_year_id'] ?? getActiveFiscalYear());
+
+        $data['fiscal_year_id'] ??= getActiveFiscalYear();
 
         $customerGroup = CustomerGroup::create($data);
 
@@ -85,6 +87,8 @@ class CustomerGroupService
 
     public function update(CustomerGroup $customerGroup, array $data): CustomerGroup
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($customerGroup, $data['fiscal_year_id'] ?? null);
+
         $customerGroup->fill($data);
         $customerGroup->save();
 
@@ -95,6 +99,8 @@ class CustomerGroupService
 
     public function delete(CustomerGroup $customerGroup): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($customerGroup);
+
         DB::transaction(function () use ($customerGroup) {
             foreach ($customerGroup->customers as $customer) {
                 app(ActivityLogService::class)->deleteModels($customer->comments()->getQuery());
@@ -108,7 +114,7 @@ class CustomerGroupService
 
     protected function syncSubject(CustomerGroup $customerGroup): void
     {
-        $companyId = $customerGroup->company_id ?? getActiveLegacyCompany();
+        $fiscalYearId = $customerGroup->fiscal_year_id ?? getActiveFiscalYear();
 
         $relation = 'subject';
         $parentId = config('amir.cust_subject');
@@ -118,7 +124,7 @@ class CustomerGroupService
             $subject = $this->subjectService->createSubject([
                 'name' => $customerGroup->name,
                 'parent_id' => $parentId,
-                'company_id' => $companyId,
+                'fiscal_year_id' => $fiscalYearId,
             ]);
         }
 

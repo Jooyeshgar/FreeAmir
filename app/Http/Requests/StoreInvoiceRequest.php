@@ -73,7 +73,7 @@ class StoreInvoiceRequest extends FormRequest
                         'vat' => isset($t['vat']) ? convertToFloat($t['vat']) : null,
                         'desc' => $t['desc'] ?? null,
                         'quantity' => isset($t['quantity']) ? convertToFloat($t['quantity']) : 1,
-                        'unit_discount' => isset($t['off']) ? convertToFloat($t['off']) : 0,
+                        'discount' => convertToFloat($t['discount'] ?? $t['off'] ?? 0),
                         'unit' => isset($t['unit']) ? convertToFloat($t['unit']) : null,
                         'total' => isset($t['total']) ? convertToFloat($t['total']) : null,
                     ];
@@ -103,7 +103,7 @@ class StoreInvoiceRequest extends FormRequest
             foreach ($transactions as $index => $transaction) {
                 $quantity = (float) ($transaction['quantity'] ?? 0);
                 $unitPrice = (float) ($transaction['unit'] ?? 0);
-                $unitDiscount = (float) ($transaction['unit_discount'] ?? 0);
+                $itemDiscount = (float) ($transaction['discount'] ?? 0);
                 $lineAmount = $quantity * $unitPrice;
 
                 if ($lineAmount > (float) self::DECIMAL_18_2_MAX) {
@@ -113,10 +113,10 @@ class StoreInvoiceRequest extends FormRequest
                     );
                 }
 
-                if ($unitDiscount > $lineAmount) {
+                if ($itemDiscount > $lineAmount) {
                     $validator->errors()->add(
-                        "transactions.{$index}.unit_discount",
-                        __('The unit discount may not be greater than the calculated line amount.')
+                        "transactions.{$index}.discount",
+                        __('The discount may not be greater than the calculated line amount.')
                     );
                 }
             }
@@ -336,7 +336,7 @@ class StoreInvoiceRequest extends FormRequest
                 'decimal:0,2',
                 Rule::unique('documents', 'number')
                     ->where(function ($query) {
-                        return $query->where('fiscal_year_id', getScopedFiscalYear());
+                        return $query->where('fiscal_year_id', getActiveFiscalYear());
                     })
                     ->ignore($isEditing ? $invoice->document_id : null),
             ],
@@ -345,7 +345,7 @@ class StoreInvoiceRequest extends FormRequest
                 'integer',
                 Rule::unique('invoices', 'number')
                     ->where(function ($query) {
-                        return $query->where('fiscal_year_id', getScopedFiscalYear())
+                        return $query->where('fiscal_year_id', getActiveFiscalYear())
                             ->where('invoice_type', InvoiceType::fromName($this->effectiveInvoiceType()));
                     })
                     ->ignore($isEditing ? $invoice->id : null),
@@ -356,7 +356,7 @@ class StoreInvoiceRequest extends FormRequest
             'warehouse_id' => [
                 'required',
                 'integer',
-                Rule::exists('warehouses', 'id')->where('fiscal_year_id', getScopedFiscalYear()),
+                Rule::exists('warehouses', 'id')->where('fiscal_year_id', getActiveFiscalYear()),
             ],
 
             'transactions' => 'required|array|min:1',
@@ -385,7 +385,7 @@ class StoreInvoiceRequest extends FormRequest
                 : 'required|numeric|min:0|max:100'),
             'transactions.*.desc' => 'nullable|string|max:500',
             'transactions.*.quantity' => ($isReturnInvoice ? 'required|numeric|min:0|max:' : 'required|numeric|min:1|max:').self::DECIMAL_18_2_MAX,
-            'transactions.*.unit_discount' => $isBeginningInventory ? 'nullable|numeric|in:0' : 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX,
+            'transactions.*.discount' => $isBeginningInventory ? 'nullable|numeric|in:0' : 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX,
             'transactions.*.unit' => 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX,
             'transactions.*.total' => 'required|numeric|min:0|max:'.self::DECIMAL_18_2_MAX,
         ];

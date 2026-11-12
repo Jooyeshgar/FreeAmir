@@ -59,7 +59,12 @@
                 <h2 class="font-bold text-slate-900 dark:text-white">{{ __('Fiscal-year breakdown') }}</h2>
                 <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">{{ __('Usage and access for each company record.') }}</p>
             </div>
-            <span class="text-xs font-medium text-slate-500">{{ trans_choice(':count record|:count records', $fiscalYears->count(), ['count' => localizeNumber(number_format($fiscalYears->count()))]) }}</span>
+            <div class="flex items-center gap-3">
+                <span class="text-xs font-medium text-slate-500">{{ trans_choice(':count record|:count records', $fiscalYears->count(), ['count' => localizeNumber(number_format($fiscalYears->count()))]) }}</span>
+                @can('fiscal-years.create')
+                    <a href="{{ route('fiscal-years.create', ['company_id' => $business->id]) }}" class="btn btn-primary btn-sm">+ {{ __('Create Fiscal Year') }}</a>
+                @endcan
+            </div>
         </header>
 
         <div class="overflow-x-auto">
@@ -77,7 +82,13 @@
                 <tbody>
                     @foreach ($fiscalYears as $fiscalYear)
                         <tr class="border-slate-100 transition hover:bg-slate-50/70 dark:border-slate-800 dark:hover:bg-slate-800/30">
-                            <td><span class="rounded-lg bg-slate-100 px-2.5 py-1 font-mono font-bold dark:bg-slate-800">{{ localizeNumber($fiscalYear->fiscal_year) }}</span></td>
+                            <td>
+                                @can('fiscal-years.show')
+                                    <a href="{{ route('fiscal-years.show', $fiscalYear) }}" class="rounded-lg bg-slate-100 px-2.5 py-1 font-mono font-bold hover:underline dark:bg-slate-800">{{ localizeNumber($fiscalYear->fiscal_year) }}</a>
+                                @else
+                                    {{ localizeNumber($fiscalYear->fiscal_year) }}
+                                @endcan
+                            </td>
                             <td>{{ localizeNumber(number_format($fiscalYear->users_count)) }}</td>
                             <td>{{ localizeNumber(number_format($fiscalYear->documents_count)) }}</td>
                             <td>{{ localizeNumber(number_format($fiscalYear->invoices_count)) }}</td>
@@ -88,8 +99,8 @@
                                 </span>
                             </td>
                             <td class="text-end">
-                                @can('companies.edit')
-                                    <a href="{{ route('companies.edit', $fiscalYear) }}" class="btn btn-ghost btn-xs rounded-lg">{{ __('Edit') }}</a>
+                                @can('fiscal-years.edit')
+                                    <a href="{{ route('fiscal-years.edit', $fiscalYear) }}" class="btn btn-ghost btn-xs rounded-lg">{{ __('Edit') }}</a>
                                 @endcan
                             </td>
                         </tr>

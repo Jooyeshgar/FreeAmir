@@ -4,9 +4,11 @@ namespace App\Services;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Extensions\InvoiceExtensionRegistry;
 use App\Models\Customer;
 use App\Models\Document;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\Service;
@@ -46,6 +48,7 @@ class ReportExportService
         private readonly DocumentImportExportService $documentExportService,
         private readonly TrialBalanceService $trialBalanceService,
         private readonly InventoryTurnoverService $inventoryTurnoverService,
+        private readonly ?InvoiceExtensionRegistry $invoiceExtensionRegistry = null,
     ) {}
 
     public function generate(string $export, array $filters): array
@@ -119,7 +122,8 @@ class ReportExportService
                             'oversell' => $product->oversell, 'discount_formula' => $product->discount_formula,
                             'description' => $product->description, 'vat' => $product->vat,
                         ]);
-                        fputcsv($file, array_map(fn (string $column) => $row[$column] ?? null, array_keys($columns)));
+                        fputcsv($file, array_map(fn (string $column) => in_array($column, ['name', 'category', 'location', 'description'], true)
+                            ? ($row[$column] ?? null) : csvNumber($row[$column] ?? null), array_keys($columns)));
                     }
                 });
         });
@@ -180,7 +184,8 @@ class ReportExportService
                             'sales_return_account' => abs($totals[$service->sales_returns_subject_id] ?? 0), 'income_subject_code' => $service->subject?->code,
                             'cogs_subject_code' => $service->cogsSubject?->code, 'sales_returns_subject_code' => $service->salesReturnsSubject?->code,
                             'sstid' => $service->sstid, 'description' => $service->description];
-                        fputcsv($file, array_map(fn (string $column) => $row[$column] ?? null, array_keys($columns)));
+                        fputcsv($file, array_map(fn (string $column) => in_array($column, ['name', 'group_name', 'description'], true)
+                            ? ($row[$column] ?? null) : csvNumber($row[$column] ?? null), array_keys($columns)));
                     }
                 });
         });
@@ -191,11 +196,11 @@ class ReportExportService
         return $this->csv('customers_'.now()->format('YmdHis').'.csv', CustomerImportService::COLUMNS, function ($file): void {
             Customer::with('group', 'subject')->orderBy('id')->chunk(200, function ($customers) use ($file): void {
                 foreach ($customers as $customer) {
-                    fputcsv($file, [$customer->name, $customer->group?->name, $customer->subject?->code, $customer->type?->valueName(),
-                        $customer->phone, $customer->mobile, $customer->fax, $customer->address, $customer->postal_code, $customer->email,
-                        $customer->ecnmcs_code, $customer->personal_code, $customer->web_page, $customer->responsible, $customer->connector,
-                        $customer->desc, $customer->credit, $customer->disc_rate, $customer->acc_name_1, $customer->acc_no_1,
-                        $customer->acc_bank_1, $customer->acc_name_2, $customer->acc_no_2, $customer->acc_bank_2]);
+                    fputcsv($file, [$customer->name, $customer->group?->name, csvNumber($customer->subject?->code), $customer->type?->valueName(),
+                        csvNumber($customer->phone), csvNumber($customer->mobile), csvNumber($customer->fax), $customer->address, csvNumber($customer->postal_code), $customer->email,
+                        csvNumber($customer->ecnmcs_code), csvNumber($customer->personal_code), $customer->web_page, $customer->responsible, $customer->connector,
+                        $customer->desc, csvNumber($customer->credit), csvNumber($customer->disc_rate), $customer->acc_name_1, csvNumber($customer->acc_no_1),
+                        $customer->acc_bank_1, $customer->acc_name_2, csvNumber($customer->acc_no_2), $customer->acc_bank_2]);
                 }
             });
         });
@@ -207,18 +212,22 @@ class ReportExportService
         $type = InvoiceType::tryFromName($request->invoice_type);
         $status = InvoiceStatus::tryFromName($request->status);
         $query = Invoice::with(['customer', 'document', 'items'])->orderByDesc('date')->orderByDesc('number');
+        $extensionRegistry = $this->invoiceExtensionRegistry ?? app(InvoiceExtensionRegistry::class);
+        $extensionRegistry->extendQuery($query, $request);
         $this->applyInvoiceFilters($query, $request, $type);
         $query->when($status !== null, fn ($invoice) => $invoice->where('status', $status));
+        $extensionHeaders = $extensionRegistry->csvHeaders();
         $headers = [__('Invoice Number'), __('Customer Name'), __('Date'), __('Document Number'), __('Before discounts and tax'),
-            __('Discounts'), __('Tax'), __('Amount'), __('Amount - Discounts')];
+            __('Discounts'), __('Tax'), __('Amount'), __('Amount - Discounts'), ...$extensionHeaders];
 
-        return $this->csv('invoices_'.now()->format('YmdHis').'.csv', $headers, function ($file) use ($query): void {
-            $query->chunk(200, function ($invoices) use ($file): void {
+        return $this->csv('invoices_'.now()->format('YmdHis').'.csv', $headers, function ($file) use ($query, $extensionRegistry): void {
+            $query->chunk(200, function ($invoices) use ($file, $extensionRegistry): void {
                 foreach ($invoices as $invoice) {
                     $subtotal = $invoice->items->sum(fn ($item) => (float) $item->quantity * (float) $item->unit_price);
-                    $discounts = (float) $invoice->items->sum('unit_discount');
-                    fputcsv($file, [$invoice->number, $invoice->customer?->name, formatDate($invoice->date), $invoice->document?->number,
-                        $subtotal, $discounts, (float) $invoice->items->sum('vat'), (float) $invoice->amount - (float) $invoice->subtraction, $subtotal - $discounts]);
+                    $discounts = (float) $invoice->items->sum('discount');
+                    $extensionValues = $extensionRegistry->csvRow($invoice);
+                    fputcsv($file, [csvNumber($invoice->number), $invoice->customer?->name, gregorian_to_jalali_date($invoice->date), csvNumber($invoice->document?->number),
+                        $subtotal, $discounts, (float) $invoice->items->sum('vat'), (float) $invoice->amount - (float) $invoice->subtraction, $subtotal - $discounts, ...$extensionValues]);
                 }
             });
         });
@@ -231,10 +240,10 @@ class ReportExportService
             __('Contract End Date'), __('Salary Decree Count')], function ($file) use ($filters): void {
                 $this->employeeQuery($this->filterRequest($filters))->chunk(200, function ($employees) use ($file): void {
                     foreach ($employees as $employee) {
-                        fputcsv($file, [$employee->code, $employee->first_name, $employee->last_name, $employee->national_code, $employee->phone,
+                        fputcsv($file, [csvNumber($employee->code), $employee->first_name, $employee->last_name, csvNumber($employee->national_code), csvNumber($employee->phone),
                             $employee->workSite?->name, $employee->orgChart?->title, $employee->workSiteContract?->name,
                             $employee->employment_type?->label(), $employee->is_active ? __('Active') : __('Inactive'),
-                            $employee->contract_start_date?->toDateString(), $employee->contract_end_date?->toDateString(), $employee->salary_decrees_count]);
+                            $employee->contract_start_date ? gregorian_to_jalali_date($employee->contract_start_date, '-') : '', $employee->contract_end_date ? gregorian_to_jalali_date($employee->contract_end_date, '-') : '', csvNumber($employee->salary_decrees_count)]);
                     }
                 });
             });
@@ -264,8 +273,19 @@ class ReportExportService
             }
         })->validate();
 
-        $startDate = $this->reportDate($validated['start_date'] ?? null, 'start_date');
-        $endDate = $this->reportDate($validated['end_date'] ?? null, 'end_date');
+        $fiscalYear = FiscalYear::findOrFail(getActiveFiscalYear());
+        [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
+        $startDate = $this->reportDate($validated['start_date'] ?? null, 'start_date') ?? $fiscalStart->toDateString();
+        $endDate = $this->reportDate($validated['end_date'] ?? null, 'end_date') ?? $fiscalEnd->toDateString();
+
+        if ($startDate && ($startDate < $fiscalStart->toDateString() || $startDate > $fiscalEnd->toDateString())) {
+            throw ValidationException::withMessages(['start_date' => __('The start date must be within the active fiscal year.')]);
+        }
+
+        if ($endDate && ($endDate < $fiscalStart->toDateString() || $endDate > $fiscalEnd->toDateString())) {
+            throw ValidationException::withMessages(['end_date' => __('The end date must be within the active fiscal year.')]);
+        }
+
         if ($startDate && $endDate && Carbon::parse($startDate)->isAfter(Carbon::parse($endDate))) {
             throw ValidationException::withMessages(['start_date' => __('Start date cannot be greater than end date.')]);
         }
@@ -274,8 +294,8 @@ class ReportExportService
             $documentFilters = [
                 'start_document_number' => $validated['start_document_number'] ?? null,
                 'end_document_number' => $validated['end_document_number'] ?? null,
-                'start_date' => $validated['start_date'] ?? null,
-                'end_date' => $validated['end_date'] ?? null,
+                'start_date' => $validated['start_date'] ?? convertToJalali($startDate, true),
+                'end_date' => $validated['end_date'] ?? convertToJalali($endDate, true),
                 'text' => $validated['search'] ?? null,
                 'columns_selected' => $validated['columns_selected'] ?? null,
                 'columns' => $validated['columns'] ?? [],
@@ -312,13 +332,13 @@ class ReportExportService
             $query->chunk(200, function ($transactions) use ($file): void {
                 foreach ($transactions as $transaction) {
                     fputcsv($file, [
-                        formatDate($transaction->document->date),
-                        formatDocumentNumber($transaction->document->number),
-                        formatCode($transaction->subject->code),
+                        gregorian_to_jalali_date($transaction->document->date),
+                        csvNumber(formatDocumentNumber($transaction->document->number)),
+                        csvNumber(formatCode($transaction->subject->code)),
                         $transaction->subject->name,
                         $transaction->desc ?? '',
-                        $transaction->debit ?? 0,
-                        $transaction->credit ?? 0,
+                        csvNumber($transaction->debit ?? 0),
+                        csvNumber($transaction->credit ?? 0),
                     ]);
                 }
             });
@@ -336,12 +356,11 @@ class ReportExportService
 
     private function invoicePdf(array $filters): array
     {
-        $invoice = Invoice::with('company', 'customer', 'items')->findOrFail($filters['invoice_id'] ?? null);
-        if (! $invoice->status->isApprovedOrSettled()) {
-            throw ValidationException::withMessages(['invoice_id' => __('Only approved and paid invoices can be emailed as PDF.')]);
-        }
+        $invoice = Invoice::with('fiscalYear.company', 'customer', 'items.itemable')->findOrFail($filters['invoice_id'] ?? null);
+        $draft = $invoice->invoice_type->isBeginningInventory() || ! $invoice->status->isApprovedOrSettled();
+        $view = $draft ? 'invoices.pdf-draft' : 'invoices.pdf-print';
 
-        return ['content' => PDF::loadView('invoices.print', compact('invoice'))->output(),
+        return ['content' => PDF::loadView($view, compact('invoice'), [], ['format' => 'A4', 'orientation' => $draft ? 'P' : 'L'])->output(),
             'filename' => 'invoice-'.formatDocumentNumber($invoice->number ?? $invoice->id).'.pdf', 'mime' => 'application/pdf'];
     }
 
@@ -444,10 +463,11 @@ class ReportExportService
 
     private function applyInvoiceFilters(Builder $query, Request $request, ?InvoiceType $type): void
     {
+        $query->when($request->boolean('bookmarked'), fn ($q) => $q->where('is_bookmarked', true));
         $serviceBuy = in_array($type, [InvoiceType::BUY, InvoiceType::RETURN_BUY], true) && $request->boolean('service_buy');
         $query->when($type, fn ($q) => $q->where('invoice_type', $type))->when($request->filled('number'), fn ($q) => $q->where('number', $request->number));
-        $query->when($request->filled('start_date'), fn ($q) => $q->whereDate('date', '>=', jalaliInputToGregorian($request->start_date, 'start_date')));
-        $query->when($request->filled('end_date'), fn ($q) => $q->whereDate('date', '<=', jalaliInputToGregorian($request->end_date, 'end_date')));
+        $query->when($request->filled('start_date'), fn ($q) => $q->where('date', '>=', convertToGregorian($request->start_date)));
+        $query->when($request->filled('end_date'), fn ($q) => $q->where('date', '<=', convertToGregorian($request->end_date)));
         $query->when($request->filled('text'), fn ($q) => $q->where(fn ($invoice) => $invoice
             ->whereHas('items', fn ($items) => $items->where('description', 'like', "%{$request->text}%"))
             ->orWhereHas('customer', fn ($customer) => $customer->where('name', 'like', "%{$request->text}%"))));

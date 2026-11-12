@@ -8,19 +8,26 @@ use App\Enums\InvoiceType;
 use App\Enums\SubjectType;
 use App\Models\AncillaryCost;
 use App\Models\AncillaryCostItem;
-use App\Models\Company;
+use App\Models\Config;
 use App\Models\Customer;
 use App\Models\Document;
+use App\Models\DocumentFile;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
+use App\Models\Payment;
 use App\Models\Product;
 use App\Models\Service;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\FiscalYearTransferService;
+use App\Services\PaymentService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -30,9 +37,9 @@ class FiscalYearTransferTest extends TestCase
 
     private User $user;
 
-    private Company $source;
+    private FiscalYear $source;
 
-    private Company $target;
+    private FiscalYear $target;
 
     private int $sequence = 1000;
 
@@ -46,14 +53,13 @@ class FiscalYearTransferTest extends TestCase
         parent::setUp();
 
         $this->user = User::factory()->create();
-        $this->source = Company::factory()->create(['fiscal_year' => 1402]);
-        $this->target = Company::factory()->create(['fiscal_year' => 1403]);
-        $this->source->users()->attach($this->user);
-        $this->target->users()->attach($this->user);
+        $this->source = FiscalYear::factory()->create(['year' => 1402]);
+        $this->target = FiscalYear::factory()->create(['year' => 1403]);
+        $this->source->users()->syncWithoutDetaching($this->user);
+        $this->target->users()->syncWithoutDetaching($this->user);
 
         $this->actingAs($this->user);
         $this->activate($this->source);
-        $this->withCookies(['active-fiscal-year-id' => (string) $this->source->fiscalYear->id]);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'documents.transfer']),
@@ -61,32 +67,28 @@ class FiscalYearTransferTest extends TestCase
         );
     }
 
-    private function activate(Company $company): void
+    private function activate(FiscalYear $fiscalYear): void
     {
-        config([
-            'active-company-id' => $company->fiscalYear->company_identity_id,
-            'active-legacy-company-id' => $company->id,
-            'active-fiscal-year-id' => $company->fiscalYear->id,
-        ]);
+        config(['active-fiscal-year-id' => $fiscalYear->id]);
     }
 
-    private function makeSubject(Company $company, string $code, string $name, ?Subject $parent = null): Subject
+    private function makeSubject(FiscalYear $fiscalYear, string $code, string $name, ?Subject $parent = null): Subject
     {
         return Subject::create([
             'code' => $code,
             'name' => $name,
             'type' => SubjectType::BOTH,
-            'company_id' => $company->id,
+            'fiscal_year_id' => $fiscalYear->id,
             'parent_id' => $parent?->id,
         ]);
     }
 
-    private function makeCustomer(Company $company, string $name): Customer
+    private function makeCustomer(FiscalYear $fiscalYear, string $name): Customer
     {
-        return Customer::create(['name' => $name, 'company_id' => $company->id]);
+        return Customer::create(['name' => $name, 'fiscal_year_id' => $fiscalYear->id]);
     }
 
-    private function makeProduct(Company $company, string $name, string $code): Product
+    private function makeProduct(FiscalYear $fiscalYear, string $name, string $code): Product
     {
         return Product::create([
             'code' => $code,
@@ -95,22 +97,22 @@ class FiscalYearTransferTest extends TestCase
             'selling_price' => 0,
             'vat' => 0,
             'average_cost' => 0,
-            'company_id' => $company->id,
+            'fiscal_year_id' => $fiscalYear->id,
         ]);
     }
 
-    private function makeService(Company $company, string $name, string $code): Service
+    private function makeService(FiscalYear $fiscalYear, string $name, string $code): Service
     {
         return Service::create([
             'code' => $code,
             'name' => $name,
             'selling_price' => 0,
             'vat' => 0,
-            'company_id' => $company->id,
+            'fiscal_year_id' => $fiscalYear->id,
         ]);
     }
 
-    private function makeInvoice(Company $company, array $attributes = []): Invoice
+    private function makeInvoice(FiscalYear $fiscalYear, array $attributes = []): Invoice
     {
         $invoice = new Invoice;
         $invoice->forceFill(array_merge([
@@ -123,15 +125,15 @@ class FiscalYearTransferTest extends TestCase
             'status' => InvoiceStatus::APPROVED,
             'title' => 'Invoice',
             'creator_id' => $this->user->id,
-            'company_id' => $company->id,
+            'fiscal_year_id' => $fiscalYear->id,
         ], $attributes));
 
-        $previous = config('active-legacy-company-id');
-        config(['active-legacy-company-id' => $company->id]);
+        $previous = config('active-fiscal-year-id');
+        config(['active-fiscal-year-id' => $fiscalYear->id]);
         try {
             $invoice->save();
         } finally {
-            config(['active-legacy-company-id' => $previous]);
+            config(['active-fiscal-year-id' => $previous]);
         }
 
         return $invoice;
@@ -145,7 +147,7 @@ class FiscalYearTransferTest extends TestCase
             'itemable_id' => $product->id,
             'quantity' => $qty,
             'unit_price' => $unit,
-            'unit_discount' => 0,
+            'discount' => 0,
             'vat' => 0,
             'amount' => $qty * $unit,
         ]);
@@ -159,20 +161,20 @@ class FiscalYearTransferTest extends TestCase
             'itemable_id' => $service->id,
             'quantity' => 1,
             'unit_price' => $unit,
-            'unit_discount' => 0,
+            'discount' => 0,
             'vat' => 0,
             'amount' => $unit,
         ]);
     }
 
-    private function makeDocument(Company $company, array $lines, ?int $number = null, $documentable = null): Document
+    private function makeDocument(FiscalYear $fiscalYear, array $lines, ?int $number = null, $documentable = null): Document
     {
         $document = Document::create([
             'number' => $number ?? (Document::withoutGlobalScopes()->max('number') ?? 0) + 1,
             'date' => '2023-06-01',
             'title' => 'Document',
             'creator_id' => $this->user->id,
-            'company_id' => $company->id,
+            'fiscal_year_id' => $fiscalYear->id,
             'documentable_id' => $documentable?->id,
             'documentable_type' => $documentable ? $documentable::class : null,
         ]);
@@ -190,7 +192,7 @@ class FiscalYearTransferTest extends TestCase
         return $document;
     }
 
-    private function makeAncillaryCost(Company $company, Invoice $invoice, Product $product, array $attributes = []): AncillaryCost
+    private function makeAncillaryCost(FiscalYear $fiscalYear, Invoice $invoice, Product $product, array $attributes = []): AncillaryCost
     {
         $ac = AncillaryCost::create(array_merge([
             'number' => $this->nextNumber(),
@@ -201,7 +203,7 @@ class FiscalYearTransferTest extends TestCase
             'invoice_id' => $invoice->id,
             'customer_id' => $invoice->customer_id,
             'status' => InvoiceStatus::APPROVED,
-            'company_id' => $company->id,
+            'fiscal_year_id' => $fiscalYear->id,
         ], $attributes));
 
         AncillaryCostItem::create([
@@ -216,12 +218,12 @@ class FiscalYearTransferTest extends TestCase
 
     private function targetInvoices(): Collection
     {
-        return Invoice::withoutGlobalScopes()->where('company_id', $this->target->id)->get();
+        return Invoice::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->get();
     }
 
     private function targetAncillaryCosts(): Collection
     {
-        return AncillaryCost::withoutGlobalScopes()->where('company_id', $this->target->id)->get();
+        return AncillaryCost::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->get();
     }
 
     public function test_transfers_a_plain_document_with_its_transactions_and_creates_subjects_in_target(): void
@@ -235,7 +237,7 @@ class FiscalYearTransferTest extends TestCase
 
         $this->assertTrue($result['success']);
 
-        $newDoc = Document::withoutGlobalScopes()->where('company_id', $this->target->id)->where('number', 25)->first();
+        $newDoc = Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->where('number', 25)->first();
 
         $this->assertNotNull($newDoc);
         $this->assertNotEquals($document->number, $newDoc->number);
@@ -248,10 +250,219 @@ class FiscalYearTransferTest extends TestCase
         $this->assertEqualsCanonicalizing([1000.0, -1000.0], $transactions->pluck('value')->map(fn ($v) => (float) $v)->all());
 
         foreach (['101', '102'] as $code) {
-            $this->assertDatabaseHas('subjects', ['company_id' => $this->target->id, 'code' => $code]);
+            $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->target->id, 'code' => $code]);
         }
 
-        $this->assertDatabaseHas('documents', ['id' => $document->id, 'company_id' => $this->source->id]);
+        $this->assertDatabaseHas('documents', ['id' => $document->id, 'fiscal_year_id' => $this->source->id]);
+    }
+
+    public function test_selected_unbalanced_entries_are_copied_unapproved_without_changing_source(): void
+    {
+        $cash = $this->makeSubject($this->source, '101', 'Cash');
+        $bank = $this->makeSubject($this->source, '102', 'Bank');
+        $document = $this->makeDocument($this->source, [[$cash, 100], [$bank, -100]]);
+        $document->update(['approved_at' => now(), 'approver_id' => $this->user->id]);
+        $original = $document->fresh()->getAttributes();
+        $selected = $document->transactions()->first();
+
+        $result = FiscalYearTransferService::transferDocument($document, $this->target->id, $this->user, [$selected->id]);
+
+        $this->assertTrue($result['success']);
+        $this->assertNull($result['document']->approved_at);
+        $this->assertNull($result['document']->approver_id);
+        $this->assertSame([100.0], $result['document']->transactions()->pluck('value')->map(fn ($value) => (float) $value)->all());
+        $this->assertSame($original, $document->fresh()->getAttributes());
+        $this->assertSame(2, $document->transactions()->count());
+        $this->assertDatabaseMissing('subjects', ['fiscal_year_id' => $this->target->id, 'code' => '102']);
+    }
+
+    public function test_removing_selected_entries_revokes_approval_only_when_remaining_entries_are_unbalanced(): void
+    {
+        $cash = $this->makeSubject($this->source, '101', 'Cash');
+        foreach ([false, true] as $balancedRemainder) {
+            $document = $this->makeDocument($this->source, [[$cash, 100], [$cash, -100], [$cash, 50], [$cash, -50]]);
+            $document->update(['approved_at' => now(), 'approver_id' => $this->user->id]);
+            $ids = $document->transactions()->orderBy('id')->pluck('id');
+            $selected = $ids->take($balancedRemainder ? 2 : 1)->all();
+
+            $result = FiscalYearTransferService::transferDocument($document, $this->target->id, $this->user, $selected, true);
+
+            $this->assertTrue($result['success']);
+            $this->assertFalse($result['source_deleted']);
+            $this->assertSame($ids->diff($selected)->values()->all(), $document->transactions()->orderBy('id')->pluck('id')->all());
+            $this->assertSame($balancedRemainder, $document->fresh()->approved_at !== null);
+            $this->assertNull($result['document']->approved_at);
+        }
+    }
+
+    public function test_attachments_are_optional_independent_copies_and_all_entry_removal_deletes_source(): void
+    {
+        Storage::fake('public');
+        $cash = $this->makeSubject($this->source, '101', 'Cash');
+        foreach ([false, true] as $copyAttachments) {
+            $document = $this->makeDocument($this->source, [[$cash, 100], [$cash, -100]]);
+            $path = 'documents/'.$document->id.'/receipt.pdf';
+            Storage::disk('public')->put($path, 'receipt contents');
+            $file = DocumentFile::create(['document_id' => $document->id, 'user_id' => $this->user->id, 'title' => 'Receipt', 'name' => 'receipt.pdf', 'path' => 'storage/'.$path]);
+
+            $result = FiscalYearTransferService::transferDocument($document, $this->target->id, $this->user, $document->transactions()->pluck('id')->all(), true, $copyAttachments);
+
+            $this->assertTrue($result['source_deleted']);
+            $this->assertDatabaseMissing('documents', ['id' => $document->id]);
+            $this->assertDatabaseMissing('transactions', ['document_id' => $document->id]);
+            $this->assertDatabaseMissing('document_files', ['id' => $file->id]);
+            Storage::disk('public')->assertMissing($path);
+            $copies = $result['document']->documentFiles;
+            $this->assertCount($copyAttachments ? 1 : 0, $copies);
+            if ($copyAttachments) {
+                $this->assertNotSame($path, $copies->first()->path);
+                $this->assertSame('Receipt', $copies->first()->title);
+                $this->assertSame('receipt.pdf', $copies->first()->name);
+                $this->assertSame('receipt contents', Storage::disk('public')->get($copies->first()->path));
+            }
+        }
+    }
+
+    public function test_attachment_copy_keeps_source_files_and_rolls_back_on_copy_failure(): void
+    {
+        Storage::fake('public');
+        $cash = $this->makeSubject($this->source, '101', 'Cash');
+        $document = $this->makeDocument($this->source, [[$cash, 100]]);
+        $path = 'documents/'.$document->id.'/receipt.pdf';
+        Storage::disk('public')->put($path, 'receipt contents');
+        DocumentFile::create(['document_id' => $document->id, 'title' => 'Receipt', 'name' => 'receipt.pdf', 'path' => $path]);
+        $ids = $document->transactions()->pluck('id')->all();
+        $result = FiscalYearTransferService::transferDocument($document, $this->target->id, $this->user, $ids, transferAttachments: true);
+        Storage::disk('public')->assertExists($path);
+        $this->assertSame(1, $document->documentFiles()->count());
+        $this->assertSame(1, $result['document']->documentFiles()->count());
+
+        DocumentFile::create(['document_id' => $document->id, 'title' => 'Missing', 'name' => 'missing.pdf', 'path' => 'missing.pdf']);
+        $filesBefore = Storage::disk('public')->allFiles();
+        try {
+            FiscalYearTransferService::transferDocument($document, $this->target->id, $this->user, $ids, true, true);
+            $this->fail('Missing attachments must fail the transfer.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('transfer_attachments', $exception->errors());
+        }
+        $this->assertEqualsCanonicalizing($filesBefore, Storage::disk('public')->allFiles());
+        $this->assertSame(1, Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->count());
+        $this->assertDatabaseHas('documents', ['id' => $document->id]);
+        $this->assertSame(1, $document->transactions()->count());
+    }
+
+    public function test_endpoint_transfers_all_entries_when_selection_is_absent_or_empty(): void
+    {
+        $cash = $this->makeSubject($this->source, '101', 'Cash');
+        foreach ([[], ['transaction_ids' => []], ['transaction_ids' => null]] as $selection) {
+            $document = $this->makeDocument($this->source, [[$cash, 100], [$cash, -100]]);
+            $this->post(route('documents.transfer', $document), ['target_fiscal_year_id' => $this->target->id] + $selection)
+                ->assertRedirect(route('documents.show', $document))->assertSessionHas('success');
+            $transferred = Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->latest('id')->firstOrFail();
+            $this->assertEqualsCanonicalizing([100, -100], $transferred->transactions()->pluck('value')->all());
+            $this->assertNull($transferred->approved_at);
+            $this->assertSame(2, $document->transactions()->count());
+        }
+    }
+
+    public function test_endpoint_transfers_only_selected_entries_and_rejects_foreign_entries(): void
+    {
+        $cash = $this->makeSubject($this->source, '101', 'Cash');
+        $document = $this->makeDocument($this->source, [[$cash, 100], [$cash, -100]]);
+        $other = $this->makeDocument($this->source, [[$cash, 50]]);
+        $base = ['target_fiscal_year_id' => $this->target->id];
+        $this->post(route('documents.transfer', $document), $base + ['transaction_ids' => $other->transactions()->pluck('id')->all()])
+            ->assertSessionHasErrors('transaction_ids.0');
+        $this->assertSame(0, Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->count());
+        $this->post(route('documents.transfer', $document), $base + ['transaction_ids' => [$document->transactions()->first()->id]])
+            ->assertSessionHas('success');
+        $transferred = Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->firstOrFail();
+        $this->assertEquals([100], $transferred->transactions()->pluck('value')->all());
+    }
+
+    public function test_endpoint_redirects_to_list_after_removing_all_source_entries(): void
+    {
+        $cash = $this->makeSubject($this->source, '101', 'Cash');
+        $document = $this->makeDocument($this->source, [[$cash, 100]]);
+        $this->post(route('documents.transfer', $document), [
+            'target_fiscal_year_id' => $this->target->id,
+            'remove_from_source' => '1',
+        ])->assertRedirect(route('documents.index'))->assertSessionHas('success');
+        $this->assertDatabaseMissing('documents', ['id' => $document->id]);
+    }
+
+    public function test_document_page_shows_row_selection_options_and_financial_warning(): void
+    {
+        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'documents.show']));
+        $cash = $this->makeSubject($this->source, '101', 'Cash');
+        $document = $this->makeDocument($this->source, [[$cash, 100]]);
+        $description = str_repeat('Long entry description ', 10);
+        $document->transactions()->first()->update(['desc' => $description]);
+        $response = $this->get(route('documents.show', $document))->assertOk()
+            ->assertSee('name="transaction_ids[]"', false)
+            ->assertSee('name="remove_from_source"', false)
+            ->assertSee('name="transfer_attachments"', false)
+            ->assertDontSee('select-all-transactions', false)
+            ->assertDontSee('name="confirmed"', false)
+            ->assertSee(__('You can transfer selected transactions instead of the whole document.'))
+            ->assertSee(__('Transferring entries can affect financial reports. Confirm that you reviewed the selected entries before continuing.'));
+
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="UTF-8">'.$response->getContent());
+        $xpath = new \DOMXPath($dom);
+        $descriptionCell = $xpath->query('//td[@title]')->item(0);
+        $this->assertSame($description, $descriptionCell->getAttribute('title'));
+        $this->assertSame(Str::limit($description, 50), $descriptionCell->textContent);
+        $heading = $xpath->query('//h2[a[@data-user-guide-link]]')->item(0);
+        $this->assertStringStartsWith(__('Document').' #', trim($heading->textContent));
+        $this->assertSame('a', $heading->lastElementChild->tagName);
+        foreach ($xpath->query('//div[contains(@class, "card-header")]//span[contains(@class, "badge")]') as $badge) {
+            $this->assertStringContainsString('badge-sm md:badge-md lg:badge-lg', $badge->getAttribute('class'));
+        }
+    }
+
+    public function test_endpoint_rejects_duplicate_entries_without_writing(): void
+    {
+        $cash = $this->makeSubject($this->source, '101', 'Cash');
+        $document = $this->makeDocument($this->source, [[$cash, 100]]);
+        $id = $document->transactions()->first()->id;
+        $this->post(route('documents.transfer', $document), [
+            'target_fiscal_year_id' => $this->target->id, 'transaction_ids' => [$id, $id],
+        ])->assertSessionHasErrors('transaction_ids.0');
+        $this->assertSame(0, Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->count());
+    }
+
+    public function test_endpoint_keeps_open_year_and_permission_requirements_for_selected_entry_transfer(): void
+    {
+        $cash = $this->makeSubject($this->source, '101', 'Cash');
+        $document = $this->makeDocument($this->source, [[$cash, 100]]);
+        $payload = ['target_fiscal_year_id' => $this->target->id, 'transaction_ids' => $document->transactions()->pluck('id')->all()];
+        foreach ([$this->source, $this->target] as $year) {
+            $year->update(['closed_at' => now()]);
+            $this->post(route('documents.transfer', $document), $payload)->assertSessionHasErrors('fiscal_year');
+            $year->update(['closed_at' => null]);
+        }
+        $this->user->revokePermissionTo('documents.transfer');
+        $this->post(route('documents.transfer', $document), $payload)->assertForbidden();
+        $this->assertSame(0, Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->count());
+        $this->assertSame(1, $document->transactions()->count());
+    }
+
+    public function test_service_rejects_empty_or_foreign_entry_selections(): void
+    {
+        $cash = $this->makeSubject($this->source, '101', 'Cash');
+        $document = $this->makeDocument($this->source, [[$cash, 100]]);
+        $other = $this->makeDocument($this->source, [[$cash, -100]]);
+        foreach ([[], $other->transactions()->pluck('id')->all()] as $selection) {
+            try {
+                FiscalYearTransferService::transferDocument($document, $this->target->id, $this->user, $selection, true);
+                $this->fail('Invalid selection must be rejected.');
+            } catch (ValidationException $exception) {
+                $this->assertArrayHasKey('transaction_ids', $exception->errors());
+            }
+        }
+        $this->assertSame(0, Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->count());
+        $this->assertSame(1, $document->transactions()->count());
     }
 
     public function test_document_transfer_recreates_the_full_subject_ancestor_chain(): void
@@ -264,9 +475,9 @@ class FiscalYearTransferTest extends TestCase
         $result = FiscalYearTransferService::transferDocument($document, $this->target->id, $this->user);
         $this->assertTrue($result['success']);
 
-        $targetRoot = Subject::withoutGlobalScopes()->where('company_id', $this->target->id)->where('code', '1')->first();
-        $targetMid = Subject::withoutGlobalScopes()->where('company_id', $this->target->id)->where('code', '101')->first();
-        $targetLeaf = Subject::withoutGlobalScopes()->where('company_id', $this->target->id)->where('code', '101001')->first();
+        $targetRoot = Subject::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->where('code', '1')->first();
+        $targetMid = Subject::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->where('code', '101')->first();
+        $targetLeaf = Subject::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->where('code', '101001')->first();
 
         $this->assertNotNull($targetRoot);
         $this->assertNotNull($targetMid);
@@ -286,10 +497,10 @@ class FiscalYearTransferTest extends TestCase
         $result = FiscalYearTransferService::transferDocument($document, $this->target->id, $this->user);
         $this->assertTrue($result['success']);
 
-        $matches = Subject::withoutGlobalScopes()->where('company_id', $this->target->id)->where('code', '101')->get();
+        $matches = Subject::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->where('code', '101')->get();
         $this->assertCount(1, $matches, 'existing target subject should be reused, not duplicated');
 
-        $newDoc = Document::withoutGlobalScopes()->where('company_id', $this->target->id)->first();
+        $newDoc = Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->first();
         $this->assertSame($existing->id, Transaction::where('document_id', $newDoc->id)->first()->subject_id);
     }
 
@@ -316,7 +527,7 @@ class FiscalYearTransferTest extends TestCase
         $this->assertCount(1, $targetInvoices);
 
         $newInvoice = $targetInvoices->first();
-        $this->assertSame($this->target->id, (int) $newInvoice->company_id);
+        $this->assertSame($this->target->id, (int) $newInvoice->fiscal_year_id);
         $this->assertSame(1, (int) $newInvoice->number);
         $this->assertNotEquals($invoice->number, $newInvoice->number);
         $this->assertSame(InvoiceType::BUY, $newInvoice->invoice_type);
@@ -328,11 +539,11 @@ class FiscalYearTransferTest extends TestCase
 
         $newDoc = Document::withoutGlobalScopes()->find($newInvoice->document_id);
         $this->assertNotNull($newDoc);
-        $this->assertSame($this->target->id, (int) $newDoc->company_id);
+        $this->assertSame($this->target->id, (int) $newDoc->fiscal_year_id);
         $this->assertSame(Invoice::class, $newDoc->documentable_type);
         $this->assertSame($newInvoice->id, $newDoc->documentable_id);
 
-        $this->assertSame($this->source->id, (int) $invoice->fresh()->company_id);
+        $this->assertSame($this->source->id, (int) $invoice->fresh()->fiscal_year_id);
     }
 
     public function test_invoice_transfer_uses_the_next_target_number_for_the_same_invoice_type(): void
@@ -351,7 +562,7 @@ class FiscalYearTransferTest extends TestCase
 
         $this->assertTrue($result['success'], json_encode($result));
 
-        $newInvoice = Invoice::withoutGlobalScopes()->where('company_id', $this->target->id)->where('invoice_type', InvoiceType::BUY)->where('number', 38)->first();
+        $newInvoice = Invoice::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->where('invoice_type', InvoiceType::BUY)->where('number', 38)->first();
 
         $this->assertNotNull($newInvoice);
         $this->assertNotEquals($invoice->number, $newInvoice->number);
@@ -374,6 +585,92 @@ class FiscalYearTransferTest extends TestCase
         $newItem = InvoiceItem::where('invoice_id', $newInvoice->id)->first();
         $this->assertSame(Service::class, $newItem->itemable_type);
         $this->assertSame($targetService->id, $newItem->itemable_id);
+    }
+
+    public function test_invoice_transfer_carries_recorded_payments_and_bank_fee_subject_config(): void
+    {
+        $root = $this->makeSubject($this->source, '700', 'Receivables');
+        $customerSubject = $this->makeSubject($this->source, '700001', 'ACME', $root);
+        $customer = $this->makeCustomer($this->source, 'ACME');
+        $customer->subject_id = $customerSubject->id;
+        $customer->saveQuietly();
+        $customerSubject->subjectable()->associate($customer);
+        $customerSubject->save();
+        $cashRoot = $this->makeSubject($this->source, '100', 'Cash');
+        $cash = $this->makeSubject($this->source, '100001', 'Cash account', $cashRoot);
+        $feeRoot = $this->makeSubject($this->source, '600', 'Expenses');
+        $fee = $this->makeSubject($this->source, '600001', 'Bank fees', $feeRoot);
+        Config::create(['key' => 'bank_service_fee', 'value' => (string) $fee->id, 'fiscal_year_id' => $this->source->id, 'type' => 3, 'category' => 1]);
+
+        $invoice = $this->makeInvoice($this->source, ['customer_id' => $customer->id, 'invoice_type' => InvoiceType::SELL, 'amount' => 100]);
+        $this->activate($this->source);
+        app(PaymentService::class)->createPayment($this->user, $invoice, [
+            'amount' => 60, 'subject_id' => $cash->id, 'bank_service_fee' => 2,
+        ]);
+
+        $this->makeCustomer($this->target, 'ACME');
+        $result = FiscalYearTransferService::transferInvoice($invoice->fresh(), $this->target->id, $this->user);
+
+        $this->assertTrue($result['success'], json_encode($result));
+        $targetInvoice = $this->targetInvoices()->first();
+        $targetPayment = Payment::withoutGlobalScopes()->where('invoice_id', $targetInvoice->id)->first();
+        $this->assertNotNull($targetPayment);
+        $this->assertEqualsWithDelta(60, (float) $targetPayment->amount, 0.01);
+        $this->assertEqualsWithDelta(2, (float) $targetPayment->bank_service_fee, 0.01);
+        $this->assertNotNull($targetPayment->document_id);
+        $targetConfig = Config::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->where('key', 'bank_service_fee')->first();
+        $this->assertNotNull($targetConfig);
+        $this->assertDatabaseHas('subjects', ['id' => $targetConfig->value, 'fiscal_year_id' => $this->target->id, 'name' => 'Bank fees']);
+        $this->assertDatabaseHas('subjects', ['id' => $targetPayment->settlement_subject_id, 'fiscal_year_id' => $this->target->id, 'name' => 'Cash account']);
+    }
+
+    public function test_invoice_transfer_can_create_missing_dependencies_and_recreate_their_subject_trees(): void
+    {
+        $root = $this->makeSubject($this->source, '700', 'Source root');
+        $customerSubject = $this->makeSubject($this->source, '700001', 'ACME', $root);
+        $customer = $this->makeCustomer($this->source, 'ACME');
+        $customer->subject_id = $customerSubject->id;
+        $customer->saveQuietly();
+        $customerSubject->subjectable()->associate($customer);
+        $customerSubject->save();
+
+        $product = $this->makeProduct($this->source, 'Widget', 'P1');
+        $productSubject = $this->makeSubject($this->source, '800001', 'Widget');
+        $product->inventory_subject_id = $productSubject->id;
+        $product->save();
+        $productSubject->subjectable()->associate($product);
+        $productSubject->save();
+
+        $service = $this->makeService($this->source, 'Consulting', 'S1');
+        $serviceSubject = $this->makeSubject($this->source, '900001', 'Consulting');
+        $service->subject_id = $serviceSubject->id;
+        $service->save();
+        $serviceSubject->subjectable()->associate($service);
+        $serviceSubject->save();
+
+        $invoice = $this->makeInvoice($this->source, ['customer_id' => $customer->id, 'amount' => 100]);
+        $this->addProductItem($invoice, $product);
+        $this->addServiceItem($invoice, $service);
+
+        $result = FiscalYearTransferService::transferInvoice($invoice, $this->target->id, $this->user, true);
+
+        $this->assertTrue($result['success'], json_encode($result));
+        $targetCustomer = Customer::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->where('name', 'ACME')->first();
+        $targetProduct = Product::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->where('name', 'Widget')->first();
+        $targetService = Service::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->where('name', 'Consulting')->first();
+        $this->assertNotNull($targetCustomer);
+        $this->assertNotNull($targetProduct);
+        $this->assertNotNull($targetService);
+        $this->assertNotNull($targetCustomer->subject_id);
+        $this->assertNotNull($targetProduct->inventory_subject_id);
+        $this->assertNotNull($targetService->subject_id);
+
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->target->id, 'code' => '700', 'name' => 'Source root']);
+        $targetCustomerSubject = Subject::withoutGlobalScopes()->find($targetCustomer->subject_id);
+        $this->assertSame('700001', $targetCustomerSubject->code);
+        $this->assertSame($targetCustomer->id, (int) $targetCustomerSubject->subjectable_id);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->target->id, 'code' => '800001', 'name' => 'Widget']);
+        $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->target->id, 'code' => '900001', 'name' => 'Consulting']);
     }
 
     public function test_invoice_transfer_fails_when_customer_missing_in_target_and_rolls_back(): void
@@ -433,7 +730,7 @@ class FiscalYearTransferTest extends TestCase
         $this->assertCount(1, $targetAcs);
 
         $newAc = $targetAcs->first();
-        $this->assertSame($this->target->id, (int) $newAc->company_id);
+        $this->assertSame($this->target->id, (int) $newAc->fiscal_year_id);
         $this->assertEquals($ac->number, $newAc->number);
         $this->assertSame($this->targetInvoices()->first()->id, $newAc->invoice_id);
 
@@ -441,7 +738,7 @@ class FiscalYearTransferTest extends TestCase
         $this->assertSame($targetProduct->id, $newAcItem->product_id);
         $newAcDoc = Document::withoutGlobalScopes()->find($newAc->document_id);
         $this->assertNotNull($newAcDoc);
-        $this->assertSame($this->target->id, (int) $newAcDoc->company_id);
+        $this->assertSame($this->target->id, (int) $newAcDoc->fiscal_year_id);
         $this->assertSame(AncillaryCost::class, $newAcDoc->documentable_type);
         $this->assertSame($newAc->id, $newAcDoc->documentable_id);
     }
@@ -490,7 +787,7 @@ class FiscalYearTransferTest extends TestCase
         $this->makeProduct($this->target, 'Widget', 'P1');
 
         $existingOriginal = $this->makeInvoice($this->target, [
-            'customer_id' => Customer::withoutGlobalScopes()->where('company_id', $this->target->id)->first()->id,
+            'customer_id' => Customer::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->first()->id,
             'invoice_type' => InvoiceType::SELL,
             'number' => 7000,
             'amount' => 100,
@@ -499,10 +796,10 @@ class FiscalYearTransferTest extends TestCase
         $result = FiscalYearTransferService::transferInvoice($returnInvoice, $this->target->id, $this->user);
         $this->assertTrue($result['success'], json_encode($result));
 
-        $sellInvoices = Invoice::withoutGlobalScopes()->where('company_id', $this->target->id)->where('invoice_type', InvoiceType::SELL)->get();
+        $sellInvoices = Invoice::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->where('invoice_type', InvoiceType::SELL)->get();
         $this->assertCount(1, $sellInvoices, 'existing original must be reused, not duplicated');
 
-        $newReturn = Invoice::withoutGlobalScopes()->where('company_id', $this->target->id)->where('invoice_type', InvoiceType::RETURN_SELL)->first();
+        $newReturn = Invoice::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->where('invoice_type', InvoiceType::RETURN_SELL)->first();
         $this->assertSame($existingOriginal->id, $newReturn->returned_invoice_id);
         $this->assertEmpty($result['warnings'] ?? []);
     }
@@ -527,7 +824,7 @@ class FiscalYearTransferTest extends TestCase
         $this->assertFalse($result['success']);
         $this->assertNotEmpty($result['errors']);
         $this->assertCount(0, $this->targetInvoices());
-        $this->assertSame(0, Document::withoutGlobalScopes()->where('company_id', $this->target->id)->count());
+        $this->assertSame(0, Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->count());
     }
 
     public function test_transfer_document_rejects_a_document_linked_to_an_ancillary_cost(): void
@@ -549,7 +846,7 @@ class FiscalYearTransferTest extends TestCase
         $this->assertFalse($result['success']);
         $this->assertNotEmpty($result['errors']);
         $this->assertCount(0, $this->targetAncillaryCosts());
-        $this->assertSame(0, Document::withoutGlobalScopes()->where('company_id', $this->target->id)->count());
+        $this->assertSame(0, Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->count());
     }
 
     public function test_document_transfer_endpoint_rejects_same_fiscal_year(): void
@@ -557,10 +854,10 @@ class FiscalYearTransferTest extends TestCase
         $cash = $this->makeSubject($this->source, '101', 'Cash');
         $document = $this->makeDocument($this->source, [[$cash, 100]]);
 
-        $response = $this->post(route('documents.transfer', $document), ['target_company_id' => $this->source->id]);
+        $response = $this->post(route('documents.transfer', $document), ['target_fiscal_year_id' => $this->source->id, 'transaction_ids' => $document->transactions()->pluck('id')->all()]);
 
         $response->assertSessionHas('error');
-        $this->assertSame(0, Document::withoutGlobalScopes()->where('company_id', $this->target->id)->count());
+        $this->assertSame(0, Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->count());
     }
 
     public function test_document_transfer_endpoint_succeeds_and_flashes_success(): void
@@ -568,10 +865,10 @@ class FiscalYearTransferTest extends TestCase
         $cash = $this->makeSubject($this->source, '101', 'Cash');
         $document = $this->makeDocument($this->source, [[$cash, 100]]);
 
-        $response = $this->post(route('documents.transfer', $document), ['target_company_id' => $this->target->id]);
+        $response = $this->post(route('documents.transfer', $document), ['target_fiscal_year_id' => $this->target->id, 'transaction_ids' => $document->transactions()->pluck('id')->all()]);
 
         $response->assertSessionHas('success');
-        $this->assertSame(1, Document::withoutGlobalScopes()->where('company_id', $this->target->id)->count());
+        $this->assertSame(1, Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->count());
     }
 
     public function test_invoice_transfer_endpoint_flashes_errors_on_missing_dependency(): void
@@ -581,7 +878,7 @@ class FiscalYearTransferTest extends TestCase
         $invoice = $this->makeInvoice($this->source, ['customer_id' => $customer->id, 'amount' => 100]);
         $this->addProductItem($invoice, $product);
 
-        $response = $this->post(route('invoices.transfer', $invoice), ['target_company_id' => $this->target->id]);
+        $response = $this->post(route('invoices.transfer', $invoice), ['target_fiscal_year_id' => $this->target->id]);
 
         $response->assertSessionHasErrors();
         $this->assertCount(0, $this->targetInvoices());
@@ -597,7 +894,7 @@ class FiscalYearTransferTest extends TestCase
         $this->makeCustomer($this->target, 'ACME');
         $this->makeProduct($this->target, 'Widget', 'P1');
 
-        $response = $this->post(route('invoices.transfer', $invoice), ['target_company_id' => $this->target->id]);
+        $response = $this->post(route('invoices.transfer', $invoice), ['target_fiscal_year_id' => $this->target->id]);
 
         $response->assertSessionHas('success');
         $this->assertCount(1, $this->targetInvoices());
@@ -615,37 +912,58 @@ class FiscalYearTransferTest extends TestCase
         $this->makeCustomer($this->target, 'ACME');
         $this->makeProduct($this->target, 'Widget', 'P1');
 
-        $response = $this->post(route('documents.transfer', $document), ['target_company_id' => $this->target->id]);
+        $response = $this->post(route('documents.transfer', $document), ['target_fiscal_year_id' => $this->target->id, 'transaction_ids' => $document->transactions()->pluck('id')->all()]);
 
         $response->assertSessionHasErrors();
-        $this->assertSame(0, Document::withoutGlobalScopes()->where('company_id', $this->target->id)->count());
+        $this->assertSame(0, Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->count());
     }
 
-    public function test_document_transfer_endpoint_forbids_a_target_company_the_user_cannot_access(): void
+    public function test_document_transfer_endpoint_forbids_a_target_fiscal_year_the_user_cannot_access(): void
     {
-        $foreign = Company::factory()->create(['fiscal_year' => 1404]);
+        $foreign = FiscalYear::factory()->create(['year' => 1404]);
         $foreign->users()->detach($this->user);
         $cash = $this->makeSubject($this->source, '101', 'Cash');
         $document = $this->makeDocument($this->source, [[$cash, 100]]);
 
-        $response = $this->post(route('documents.transfer', $document), ['target_company_id' => $foreign->id]);
+        $response = $this->post(route('documents.transfer', $document), ['target_fiscal_year_id' => $foreign->id, 'transaction_ids' => $document->transactions()->pluck('id')->all()]);
 
         $response->assertForbidden();
-        $this->assertSame(0, Document::withoutGlobalScopes()->where('company_id', $foreign->id)->count());
+        $this->assertSame(0, Document::withoutGlobalScopes()->where('fiscal_year_id', $foreign->id)->count());
     }
 
-    public function test_invoice_transfer_endpoint_forbids_a_target_company_the_user_cannot_access(): void
+    public function test_invoice_transfer_endpoint_forbids_a_target_fiscal_year_the_user_cannot_access(): void
     {
-        $foreign = Company::factory()->create(['fiscal_year' => 1404]);
+        $foreign = FiscalYear::factory()->create(['year' => 1404]);
         $foreign->users()->detach($this->user);
         $customer = $this->makeCustomer($this->source, 'ACME');
         $product = $this->makeProduct($this->source, 'Widget', 'P1');
         $invoice = $this->makeInvoice($this->source, ['customer_id' => $customer->id, 'amount' => 100]);
         $this->addProductItem($invoice, $product);
 
-        $response = $this->post(route('invoices.transfer', $invoice), ['target_company_id' => $foreign->id]);
+        $response = $this->post(route('invoices.transfer', $invoice), ['target_fiscal_year_id' => $foreign->id]);
 
         $response->assertForbidden();
-        $this->assertCount(0, Invoice::withoutGlobalScopes()->where('company_id', $foreign->id)->get());
+        $this->assertCount(0, Invoice::withoutGlobalScopes()->where('fiscal_year_id', $foreign->id)->get());
+    }
+
+    public function test_transfer_rejects_a_closed_source_or_target_year_without_writing(): void
+    {
+        $cash = $this->makeSubject($this->source, '101', 'Cash');
+        $document = $this->makeDocument($this->source, [[$cash, 100]]);
+
+        $this->source->update(['closed_at' => now()]);
+        $result = FiscalYearTransferService::transferDocument($document, $this->target->id, $this->user);
+
+        $this->assertFalse($result['success']);
+        $this->assertContains(__('This fiscal year is already closed.'), $result['errors']);
+        $this->assertSame(0, Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->count());
+
+        $this->source->update(['closed_at' => null]);
+        $this->target->update(['closed_at' => now()]);
+        $result = FiscalYearTransferService::transferDocument($document, $this->target->id, $this->user);
+
+        $this->assertFalse($result['success']);
+        $this->assertContains(__('This fiscal year is already closed.'), $result['errors']);
+        $this->assertSame(0, Document::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->count());
     }
 }

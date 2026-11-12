@@ -20,10 +20,12 @@ class ProductService
 
     public function create(array $data): Product
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($data['fiscal_year_id'] ?? getActiveFiscalYear());
+
         $websites = $data['websites'] ?? [];
         unset($data['websites']);
 
-        $data['company_id'] ??= getActiveLegacyCompany();
+        $data['fiscal_year_id'] ??= getActiveFiscalYear();
 
         $product = Product::create($data);
 
@@ -35,6 +37,8 @@ class ProductService
 
     public function update(Product $product, array $data): Product
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($product, $data['fiscal_year_id'] ?? null);
+
         $websites = $data['websites'] ?? null;
         unset($data['websites']);
 
@@ -52,6 +56,8 @@ class ProductService
 
     public function delete(Product $product): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($product);
+
         $product->productWebsites()->delete();
         $product->delete();
         $this->deleteSubjects($product);
@@ -133,7 +139,7 @@ class ProductService
             throw ValidationException::withMessages(['warehouse_id' => __('The selected warehouse is invalid.')]);
         }
 
-        if ((int) $warehouse->company_id !== (int) $product->company_id) {
+        if ((int) $warehouse->fiscal_year_id !== (int) $product->fiscal_year_id) {
             throw ValidationException::withMessages([
                 'warehouse_id' => __('The selected warehouse is invalid.'),
             ]);
@@ -158,7 +164,10 @@ class ProductService
 
         if (! $product->oversell && (float) $stock->quantity + $delta < 0) {
             throw ValidationException::withMessages([
-                'quantity' => __('The selected warehouse does not have enough stock.'),
+                'quantity' => __('The selected warehouse does not have enough stock for product :name (code: :code).', [
+                    'name' => $product->name,
+                    'code' => $product->code,
+                ]),
             ]);
         }
 
@@ -174,7 +183,7 @@ class ProductService
 
         $invoiceWarehouseId = isset($invoiceItem['invoice_id']) ? Invoice::query()->whereKey($invoiceItem['invoice_id'])->value('warehouse_id') : null;
 
-        return $invoiceWarehouseId ?? Warehouse::query()->where('company_id', $product->company_id)->orderBy('id')->value('id');
+        return $invoiceWarehouseId ?? Warehouse::query()->where('fiscal_year_id', $product->fiscal_year_id)->orderBy('id')->value('id');
     }
 
     public static function adjustWarehouseAverageCostForAncillaryCost(AncillaryCost $ancillaryCost, bool $reverse = false): void
@@ -286,6 +295,8 @@ class ProductService
 
     public static function recalculateQuantity(Product $product): float
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($product);
+
         return DB::transaction(function () use ($product): float {
             $stocks = WarehouseProductStock::query()
                 ->where('product_id', $product->id)
@@ -309,7 +320,6 @@ class ProductService
                     $query->where('itemable_type', Product::class)->where('itemable_id', $product->id);
                 }])
                 ->orderBy('date')
-                ->orderBy('number')
                 ->orderBy('id')
                 ->lockForUpdate()
                 ->get();
@@ -361,10 +371,10 @@ class ProductService
         $product->loadMissing('productGroup', 'incomeSubject', 'salesReturnsSubject', 'cogsSubject', 'inventorySubject');
 
         $group = $product->productGroup;
-        $companyId = $product->company_id ?? $group?->company_id ?? getActiveLegacyCompany();
+        $fiscalYearId = $product->fiscal_year_id ?? $group?->fiscal_year_id ?? getActiveFiscalYear();
 
-        if (! $companyId) {
-            throw new \RuntimeException('Unable to determine company for product subject synchronization.');
+        if (! $fiscalYearId) {
+            throw new \RuntimeException('Unable to determine fiscal year for product subject synchronization.');
         }
 
         $subjectConfigs = [
@@ -398,7 +408,7 @@ class ProductService
                 $subject = $this->subjectService->createSubject([
                     'name' => $targetName,
                     'parent_id' => $parentId,
-                    'company_id' => $companyId,
+                    'fiscal_year_id' => $fiscalYearId,
                 ]);
             }
 

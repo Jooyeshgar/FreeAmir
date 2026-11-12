@@ -11,9 +11,9 @@
             <p class="mt-0.5 text-sm text-base-content/50">{{ __('Manage chequebooks for payable cheques') }}</p>
         </div>
 
-        <a href="{{ route('chequebooks.create') }}" class="btn btn-primary btn-sm">
+        <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('chequebooks.create') }}" class="btn btn-primary btn-sm">
             {{ __('Create chequebook') }}
-        </a>
+        </x-closed-year-action-link>
     </div>
 
     {{-- Chequebook List --}}
@@ -119,7 +119,7 @@
                                     <div class="card-actions items-center justify-between border-t border-base-200 pt-3">
                                         @can('cheques.create')
                                             @if ($remainingLeaves > 0)
-                                                <a href="{{ route('cheques.create', [
+                                                <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('cheques.create', [
                                                     'direction' => \App\Enums\ChequeType::PAYABLE->value,
                                                     'bank_account_id' => $chequebook->bank_account_id,
                                                     'chequebook_id' => $chequebook->id,
@@ -128,7 +128,7 @@
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6" />
                                                     </svg>
                                                     {{ __('Register cheque') }}
-                                                </a>
+                                                </x-closed-year-action-link>
                                             @else
                                                 <span class="tooltip" data-tip="{{ __('The selected chequebook has no unused leaves.') }}">
                                                     <button type="button" class="btn btn-primary btn-xs gap-1" disabled>
@@ -153,13 +153,13 @@
                                                 </a>
                                             @endcan
                                             @can('chequebooks.edit')
-                                                <a href="{{ route('chequebooks.edit', $chequebook) }}" class="btn btn-xs btn-ghost gap-1">
+                                                <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('chequebooks.edit', $chequebook) }}" class="btn btn-xs btn-ghost gap-1">
                                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                             d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L8.582 18.07a4.5 4.5 0 0 1-1.897 1.13L3 20.25l1.05-3.685a4.5 4.5 0 0 1 1.13-1.897l11.682-11.681Z" />
                                                     </svg>
                                                     {{ __('Edit') }}
-                                                </a>
+                                                </x-closed-year-action-link>
                                             @endcan
                                         </div>
                                     </div>

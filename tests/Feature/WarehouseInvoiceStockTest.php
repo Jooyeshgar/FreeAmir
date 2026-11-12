@@ -6,10 +6,10 @@ use App\Enums\FiscalYearSection;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Http\Requests\StoreInvoiceRequest;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -34,7 +34,9 @@ class WarehouseInvoiceStockTest extends TestCase
 {
     use RefreshDatabase, SeederHelper;
 
-    private Company $company;
+    private FiscalYear $fiscalYear;
+
+    private int $fiscalYearId;
 
     private User $user;
 
@@ -52,24 +54,25 @@ class WarehouseInvoiceStockTest extends TestCase
     {
         parent::setUp();
 
-        $this->company = Company::factory()->create();
-        config(['active-company-id' => $this->company->id]);
+        $this->fiscalYear = FiscalYear::factory()->create();
+        $this->fiscalYearId = $this->fiscalYear->id;
+        config(['active-fiscal-year-id' => $this->fiscalYearId]);
 
         $this->user = User::factory()->create();
-        $this->company->users()->attach($this->user);
+        $this->fiscalYear->users()->attach($this->user);
         $this->actingAs($this->user);
 
-        $this->importSubjects($this->company->id);
-        $this->importConfigs($this->company->id);
+        $this->importSubjects($this->fiscalYearId);
+        $this->importConfigs($this->fiscalYearId);
 
-        $group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->company->id]);
-        $customerGroup = CustomerGroup::factory()->withSubject()->create(['company_id' => $this->company->id]);
-        $this->customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create(['company_id' => $this->company->id]);
+        $group = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $customerGroup = CustomerGroup::factory()->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $this->customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
 
         $this->mainWarehouse = $this->warehouse('Main');
         $this->emptyWarehouse = $this->warehouse('Empty');
         $this->product = Product::factory()->withGroup($group)->withSubjects()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYearId,
             'quantity' => 0,
             'average_cost' => 100,
         ]);
@@ -147,18 +150,17 @@ class WarehouseInvoiceStockTest extends TestCase
 
     public function test_recalculate_quantity_uses_approved_beginning_inventory_instead_of_previous_fiscal_year_stock(): void
     {
-        $previousCompany = Company::factory()->create([
-            'name' => $this->company->name,
-            'fiscal_year' => (int) $this->company->fiscal_year - 1,
+        $previousFiscalYear = FiscalYear::factory()->create([
+            'year' => (int) $this->fiscalYear->year - 1,
         ]);
-        $previousGroup = ProductGroup::factory()->create(['company_id' => $previousCompany->id]);
+        $previousGroup = ProductGroup::factory()->create(['fiscal_year_id' => $previousFiscalYear->id]);
         $previousProduct = Product::factory()->withGroup($previousGroup)->create([
-            'company_id' => $previousCompany->id,
+            'fiscal_year_id' => $previousFiscalYear->id,
             'code' => $this->product->code,
             'quantity' => 12,
         ]);
         $previousMainWarehouse = Warehouse::create([
-            'company_id' => $previousCompany->id,
+            'fiscal_year_id' => $previousFiscalYear->id,
             'name' => $this->mainWarehouse->name,
             'code' => $this->mainWarehouse->code,
         ]);
@@ -169,10 +171,10 @@ class WarehouseInvoiceStockTest extends TestCase
             'average_cost' => 100,
         ]);
 
+        $beginningInventory = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900, '2026-01-01');
         $buy = $this->createInvoice(InvoiceType::BUY, 4, $this->mainWarehouse, true, null, 100, '2026-01-02');
         $sell = $this->createInvoice(InvoiceType::SELL, 2, $this->mainWarehouse, false, null, 100, '2026-01-03');
         $this->approve($sell);
-        $beginningInventory = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 900, '2026-01-01');
 
         $this->assertSame(InvoiceStatus::APPROVED, $beginningInventory->status);
         $this->assertEqualsWithDelta(7, (float) $this->product->fresh()->quantity, 0.001);
@@ -191,7 +193,7 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->assertEqualsWithDelta(9, (float) $sell->items()->firstOrFail()->quantity_at, 0.001);
     }
 
-    public function test_approved_beginning_inventory_adds_stock_updates_cost_and_creates_accounting(): void
+    public function test_approved_beginning_inventory_replaces_unsupported_stock_updates_cost_and_creates_accounting(): void
     {
         $this->setStock($this->mainWarehouse, 2, 175);
         $this->product->update(['quantity' => 2, 'average_cost' => 125]);
@@ -211,18 +213,23 @@ class WarehouseInvoiceStockTest extends TestCase
             'subject_id' => (int) config('amir.beginning_inventory'),
             'value' => 4500,
         ]);
-        $this->assertEqualsWithDelta(7, (float) $this->product->fresh()->quantity, 0.001);
-        $this->assertStock($this->mainWarehouse, 7);
-        $this->assertEqualsWithDelta(678.571, (float) $this->product->fresh()->average_cost, 0.001);
-        $this->assertEqualsWithDelta(692.86, $this->stockAverageCost($this->mainWarehouse, $this->product), 0.001);
+        $this->assertEqualsWithDelta(5, (float) $this->product->fresh()->quantity, 0.001);
+        $this->assertStock($this->mainWarehouse, 5);
+        $this->assertEqualsWithDelta(0, (float) $invoice->items->first()->quantity_at, 0.001);
+        $this->assertEqualsWithDelta(900, (float) $this->product->fresh()->average_cost, 0.001);
+        $this->assertEqualsWithDelta(900, $this->stockAverageCost($this->mainWarehouse, $this->product), 0.001);
+        $this->assertEqualsWithDelta(0, (float) $invoice->document->transactions()->sum('value'), 0.001);
+        $this->assertEqualsWithDelta(5, ProductService::recalculateQuantity($this->product->fresh()), 0.001);
+        $this->assertStock($this->mainWarehouse, 5);
+        $this->assertEqualsWithDelta(0, (float) $invoice->items()->firstOrFail()->quantity_at, 0.001);
         $this->assertEqualsWithDelta(900, (float) $invoice->items->first()->unit_price, 0.001);
     }
 
     public function test_editing_beginning_inventory_reverses_old_product_and_warehouse_before_applying_replacement(): void
     {
-        $secondGroup = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->company->id]);
+        $secondGroup = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $secondProduct = Product::factory()->withGroup($secondGroup)->withSubjects()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYearId,
             'quantity' => 0,
             'average_cost' => 240,
         ]);
@@ -237,7 +244,7 @@ class WarehouseInvoiceStockTest extends TestCase
                 'itemable_id' => $secondProduct->id,
                 'quantity' => 3,
                 'unit' => 800,
-                'unit_discount' => 0,
+                'discount' => 0,
                 'vat' => 0,
             ]],
             true
@@ -274,10 +281,10 @@ class WarehouseInvoiceStockTest extends TestCase
 
     public function test_fiscal_year_import_remaps_invoice_warehouse(): void
     {
-        $serviceGroup = ServiceGroup::factory()->withSubject()->create(['company_id' => $this->company->id]);
-        $service = Service::factory()->withGroup($serviceGroup)->withSubject()->create(['company_id' => $this->company->id]);
+        $serviceGroup = ServiceGroup::factory()->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $service = Service::factory()->withGroup($serviceGroup)->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $invoice = Invoice::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYearId,
             'number' => ++$this->nextInvoiceNumber,
             'date' => now()->toDateString(),
             'invoice_type' => InvoiceType::SELL,
@@ -296,7 +303,7 @@ class WarehouseInvoiceStockTest extends TestCase
             'itemable_type' => Product::class,
             'quantity' => 1,
             'unit_price' => 100,
-            'unit_discount' => 0,
+            'discount' => 0,
             'vat' => 0,
             'amount' => 100,
         ]);
@@ -306,12 +313,12 @@ class WarehouseInvoiceStockTest extends TestCase
             'itemable_type' => Service::class,
             'quantity' => 1,
             'unit_price' => 100,
-            'unit_discount' => 0,
+            'discount' => 0,
             'vat' => 0,
             'amount' => 100,
         ]);
 
-        $exportData = FiscalYearService::exportData($this->company->fiscalYear->id, [
+        $exportData = FiscalYearService::exportData($this->fiscalYearId, [
             FiscalYearSection::SUBJECTS->value,
             FiscalYearSection::CUSTOMERS->value,
             FiscalYearSection::PRODUCTS->value,
@@ -324,18 +331,18 @@ class WarehouseInvoiceStockTest extends TestCase
         ]);
 
         $targetWarehouse = Warehouse::withoutGlobalScopes()
-            ->where('company_id', $target->id)
+            ->where('fiscal_year_id', $target->id)
             ->where('code', $this->mainWarehouse->code)
             ->firstOrFail();
         $targetInvoice = Invoice::withoutGlobalScopes()
-            ->where('company_id', $target->id)
+            ->where('fiscal_year_id', $target->id)
             ->where('number', $invoice->number)
             ->firstOrFail();
         $this->assertNotSame($this->mainWarehouse->id, $targetWarehouse->id);
         $this->assertSame($targetWarehouse->id, $targetInvoice->warehouse_id);
         $this->assertSame(
             $target->id,
-            Warehouse::withoutGlobalScopes()->findOrFail($targetInvoice->warehouse_id)->company_id
+            Warehouse::withoutGlobalScopes()->findOrFail($targetInvoice->warehouse_id)->fiscal_year_id
         );
     }
 
@@ -384,9 +391,9 @@ class WarehouseInvoiceStockTest extends TestCase
 
     public function test_invoice_form_rejects_missing_and_cross_company_warehouse(): void
     {
-        $foreignCompany = Company::factory()->create();
+        $foreignFiscalYear = FiscalYear::factory()->create();
         $foreignWarehouse = Warehouse::withoutGlobalScopes()->create([
-            'company_id' => $foreignCompany->id,
+            'fiscal_year_id' => $foreignFiscalYear->id,
             'name' => 'Foreign',
             'code' => 'FOREIGN',
         ]);
@@ -428,13 +435,33 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->assertSame($this->emptyWarehouse->id, $buy->fresh()->warehouse_id);
     }
 
-    public function test_stock_mutation_rejects_an_outgoing_invoice_that_would_make_warehouse_negative(): void
+    public function test_stock_mutation_rejects_an_outgoing_invoice_that_would_make_warehouse_negative_in_persian(): void
     {
+        $this->stockMutationRejectsAnOutgoingInvoiceThatWouldMakeWarehouseNegative('fa', 'موجودی انبار انتخاب‌شده برای کالای کالای آزمایشی (کد: 00123) کافی نیست.');
+    }
+
+    public function test_stock_mutation_rejects_an_outgoing_invoice_that_would_make_warehouse_negative_in_english(): void
+    {
+        $this->stockMutationRejectsAnOutgoingInvoiceThatWouldMakeWarehouseNegative('en', 'The selected warehouse does not have enough stock for product کالای آزمایشی (code: 00123).');
+    }
+
+    private function stockMutationRejectsAnOutgoingInvoiceThatWouldMakeWarehouseNegative(string $locale, string $expectedMessage): void
+    {
+        app()->setLocale($locale);
+        $this->product->update(['name' => 'کالای آزمایشی', 'code' => '00123', 'oversell' => false]);
         $sell = $this->createInvoice(InvoiceType::SELL, 1, $this->emptyWarehouse, false);
+        $sell->update(['status' => InvoiceStatus::READY_TO_APPROVE]);
 
-        $this->expectException(ValidationException::class);
+        try {
+            (new InvoiceService)->changeInvoiceStatus($sell, 'approved');
+            $this->fail('Approval should reject insufficient warehouse stock.');
+        } catch (ValidationException $exception) {
+            $this->assertSame(['quantity' => [$expectedMessage]], $exception->errors());
+        }
 
-        (new InvoiceService)->changeInvoiceStatus($sell, 'approved');
+        $this->assertStock($this->emptyWarehouse, 0);
+        $this->assertSame(InvoiceStatus::READY_TO_APPROVE, $sell->fresh()->status);
+        $this->assertEqualsWithDelta(0, (float) $this->product->fresh()->quantity, 0.001);
     }
 
     public function test_void_restores_and_unapproval_removes_stock_from_original_sell_warehouse(): void
@@ -454,8 +481,8 @@ class WarehouseInvoiceStockTest extends TestCase
 
     public function test_return_service_buy_request_validates_the_service_model(): void
     {
-        $serviceGroup = ServiceGroup::factory()->withSubject()->create(['company_id' => $this->company->id]);
-        $service = Service::factory()->withGroup($serviceGroup)->withSubject()->create(['company_id' => $this->company->id]);
+        $serviceGroup = ServiceGroup::factory()->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $service = Service::factory()->withGroup($serviceGroup)->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $buy = InvoiceService::createInvoice(
             $this->user,
             $this->invoiceData(InvoiceType::BUY, $this->mainWarehouse),
@@ -464,7 +491,7 @@ class WarehouseInvoiceStockTest extends TestCase
                 'itemable_id' => $service->id,
                 'quantity' => 2,
                 'unit' => 100,
-                'unit_discount' => 0,
+                'discount' => 0,
                 'vat' => 0,
             ]]
         )['invoice'];
@@ -622,7 +649,7 @@ class WarehouseInvoiceStockTest extends TestCase
                 'itemable_id' => $product->id,
                 'quantity' => $quantity,
                 'unit' => $unit,
-                'unit_discount' => 0,
+                'discount' => 0,
                 'vat' => 0,
             ]],
             true
@@ -672,7 +699,7 @@ class WarehouseInvoiceStockTest extends TestCase
             'itemable_id' => $this->product->id,
             'quantity' => $quantity,
             'unit' => $unit,
-            'unit_discount' => 0,
+            'discount' => 0,
             'vat' => 0,
         ];
     }
@@ -748,7 +775,7 @@ class WarehouseInvoiceStockTest extends TestCase
     private function warehouse(string $name): Warehouse
     {
         return Warehouse::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => $name,
             'code' => strtoupper($name),
         ]);
@@ -769,7 +796,7 @@ class WarehouseInvoiceStockTest extends TestCase
         return AncillaryCostService::createAncillaryCost($this->user, [
             'invoice_id' => $invoice->id,
             'customer_id' => $this->customer->id,
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYearId,
             'date' => now()->toDateString(),
             'type' => 'Shipping',
             'amount' => 100,

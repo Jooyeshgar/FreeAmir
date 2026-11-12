@@ -10,7 +10,9 @@ class ServiceService
 
     public function create(array $data): Service
     {
-        $data['company_id'] ??= getActiveLegacyCompany();
+        app(FiscalYearMutationGuard::class)->ensureOpen($data['fiscal_year_id'] ?? getActiveFiscalYear());
+
+        $data['fiscal_year_id'] ??= getActiveFiscalYear();
 
         $service = Service::create($data);
 
@@ -21,6 +23,8 @@ class ServiceService
 
     public function update(Service $service, array $data): Service
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($service, $data['fiscal_year_id'] ?? null);
+
         $service->fill($data);
         $service->save();
 
@@ -31,6 +35,8 @@ class ServiceService
 
     public function delete(Service $service): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($service);
+
         $service->delete();
         $this->deleteSubjects($service);
     }
@@ -47,10 +53,10 @@ class ServiceService
         $service->loadMissing('subject', 'cogsSubject', 'salesReturnsSubject');
 
         $group = $service->serviceGroup;
-        $companyId = $service->company_id ?? $group?->company_id ?? getActiveLegacyCompany();
+        $fiscalYearId = $service->fiscal_year_id ?? $group?->fiscal_year_id ?? getActiveFiscalYear();
 
-        if (! $companyId) {
-            throw new \RuntimeException('Unable to determine company for service subject synchronization.');
+        if (! $fiscalYearId) {
+            throw new \RuntimeException('Unable to determine fiscal year for service subject synchronization.');
         }
 
         $subjectConfigs = [
@@ -80,7 +86,7 @@ class ServiceService
                 $subject = $this->subjectService->createSubject([
                     'name' => $targetName,
                     'parent_id' => $parentId,
-                    'company_id' => $companyId,
+                    'fiscal_year_id' => $fiscalYearId,
                 ]);
             }
 

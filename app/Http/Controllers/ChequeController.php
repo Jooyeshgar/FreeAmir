@@ -7,7 +7,10 @@ use App\Models\BankAccount;
 use App\Models\Cheque;
 use App\Models\Chequebook;
 use App\Models\Customer;
+use App\Models\FiscalYear;
+use App\Models\Subject;
 use App\Services\ChequeService;
+use App\Services\SubjectService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -20,10 +23,19 @@ class ChequeController extends Controller
     public function index(Request $request)
     {
         $cheques = $this->filteredQuery($request)->with(['customer', 'endorsedTo', 'bankAccount.bank', 'chequebook'])
-            ->withExists(['histories as has_lifecycle_actions' => fn (Builder $query) => $query->whereNotNull('from_status')])
             ->latest('due_date')
             ->paginate(20)
             ->withQueryString();
+
+        $filterKeys = ['q', 'direction', 'purpose', 'status', 'amount_min', 'amount_max', 'due_from', 'due_to', 'customer_id'];
+        $activeFilters = array_filter(request()->only($filterKeys), static fn ($value) => filled($value));
+        $overdueByChequeId = $cheques->getCollection()->mapWithKeys(fn (Cheque $cheque) => [
+            $cheque->id => $cheque->due_date->isPast() && ! in_array($cheque->status, [
+                ChequeType::CLEARED,
+                ChequeType::CANCELLED,
+                ChequeType::RETURNED,
+            ], true),
+        ]);
 
         return view('cheques.index', [
             'cheques' => $cheques,
@@ -31,15 +43,15 @@ class ChequeController extends Controller
             'directions' => ChequeType::directions(),
             'purposes' => ChequeType::purposes(),
             'accountSides' => Customer::with('group')->get(['id', 'name', 'group_id']),
-        ]);
+            'filterKeys' => $filterKeys,
+            'activeFilters' => $activeFilters,
+            'overdueByChequeId' => $overdueByChequeId,
+        ])->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function create(Request $request)
     {
-        return view('cheques.create', [
-            ...$this->formData($request->input('direction')),
-            'cheque' => null,
-        ]);
+        return view('cheques.create', $this->formData($request->input('direction')));
     }
 
     public function store(Request $request)
@@ -51,23 +63,39 @@ class ChequeController extends Controller
 
     public function show(Cheque $cheque)
     {
-        $cheque->load(['customer', 'endorsedTo', 'bankAccount.bank', 'chequebook', 'histories.user', 'histories.document', 'histories.payment']);
+        $cheque->load(['customer', 'endorsedTo', 'bankAccount.bank', 'chequebook', 'histories.user', 'histories.document', 'histories.payment.settlementSubjectRelation']);
+        $actionLabels = [
+            'deposit' => __('Deposit to bank'),
+            'clear' => __('Clear / cash'),
+            'endorse' => __('Endorse / transfer'),
+            'bounce' => __('Mark dishonoured'),
+            'return' => __('Return to customer'),
+            'cancel' => __('Cancel / take back'),
+            'execute' => __('Execute guarantee'),
+            'fee' => __('Record bank service fee'),
+        ];
 
         return view('cheques.show', [
             'cheque' => $cheque,
             'bankAccounts' => BankAccount::with('bank')->get(),
-            'accountSides' => Customer::with('group')->get(['id', 'name', 'group_id']),
-        ]);
+            'subjects' => app(SubjectService::class)->buildSubjectTreeFromCollection(
+                Subject::orderBy('code')->get(['id', 'name', 'code', 'parent_id']),
+            ),
+            'actionLabels' => $actionLabels,
+            'selectedSubject' => Subject::find(old('subject_id')),
+            'endorsedSubject' => $cheque->histories->firstWhere('to_status', ChequeType::ENDORSED)?->payment?->settlementSubjectRelation,
+        ])->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function edit(Cheque $cheque)
     {
-        abort_if($cheque->histories()->whereNotNull('from_status')->exists(), 409, __('A cheque cannot be edited after a lifecycle action. Register a replacement cheque to preserve its audit history.'));
+        $registrationDetails = $this->chequeService->registrationDetails($cheque);
 
-        return view('cheques.create', [
-            ...$this->formData((string) $cheque->direction->value),
-            'cheque' => $cheque,
-        ]);
+        return view('cheques.create', $this->formData(
+            (string) $registrationDetails['direction']->value,
+            $cheque,
+            $registrationDetails['purpose'],
+        ));
     }
 
     public function update(Request $request, Cheque $cheque)
@@ -139,10 +167,25 @@ class ChequeController extends Controller
         return $query;
     }
 
-    private function formData(?string $direction = null): array
+    private function formData(?string $direction = null, ?Cheque $cheque = null, ?ChequeType $purpose = null): array
     {
+        $selectedDirection = ChequeType::tryFrom((int) $direction) ?? ChequeType::RECEIVABLE;
+        $selectedDirectionValue = (string) old('direction', $cheque?->direction->value ?? $selectedDirection->value);
+        $payableDirectionValue = (string) ChequeType::PAYABLE->value;
+        $directionTitle = $selectedDirectionValue === $payableDirectionValue ? __('Issue cheque') : __('Receive cheque');
+        $initialAccountSideId = old('customer_id', $cheque?->customer_id);
+
         return [
-            'selectedDirection' => ChequeType::tryFrom((int) $direction) ?? ChequeType::RECEIVABLE,
+            'cheque' => $cheque,
+            'selectedDirectionValue' => $selectedDirectionValue,
+            'payableDirectionValue' => $payableDirectionValue,
+            'directionTitle' => $directionTitle,
+            'formTitle' => $cheque ? __('Edit cheque') : $directionTitle,
+            'selectedPurpose' => $purpose ?? $cheque?->purpose ?? ChequeType::SETTLEMENT,
+            'selectedBankAccountId' => old('bank_account_id', $cheque?->bank_account_id ?? request('bank_account_id')),
+            'selectedChequebookId' => old('chequebook_id', $cheque?->chequebook_id ?? request('chequebook_id')),
+            'initialAccountSideId' => $initialAccountSideId,
+            'initialAccountSideValue' => $initialAccountSideId ? "customer-{$initialAccountSideId}" : '',
             'bankAccounts' => BankAccount::with('bank')->get(),
             'chequebooks' => Chequebook::with('bankAccount.bank')->orderBy('serial_prefix')->get(),
             'accountSides' => Customer::with('group')->get(['id', 'name', 'group_id']),
@@ -151,6 +194,10 @@ class ChequeController extends Controller
 
     private function validateCheque(Request $request, ?Cheque $cheque = null): array
     {
+        if ($request->has('bank_service_fee')) {
+            $request->merge(['bank_service_fee' => $this->chequeService->validateBankServiceFee($request->all())]);
+        }
+
         $normalized = [
             'title' => trim($request->input('title')),
             'amount' => convertToFloat($request->input('amount', 0)),
@@ -179,21 +226,22 @@ class ChequeController extends Controller
                     'required',
                     'regex:/^\d{16}$/',
                     Rule::unique('cheques', 'sayad_number')
-                        ->where('fiscal_year_id', getScopedFiscalYear())
+                        ->where('fiscal_year_id', getActiveFiscalYear())
                         ->ignore($cheque?->id),
                 ],
                 'cheque_number' => ['nullable', 'string', 'max:50'],
-                'customer_id' => ['required', Rule::exists('customers', 'id')->where('fiscal_year_id', getScopedFiscalYear())],
+                'customer_id' => ['required', Rule::exists('customers', 'id')->where('fiscal_year_id', getActiveFiscalYear())],
                 'bank_account_id' => [
                     Rule::requiredIf($direction === ChequeType::PAYABLE->value),
                     'nullable',
-                    Rule::exists('bank_accounts', 'id')->where('fiscal_year_id', getScopedFiscalYear()),
+                    Rule::exists('bank_accounts', 'id')->where('fiscal_year_id', getActiveFiscalYear()),
                 ],
                 'chequebook_id' => [
                     'nullable',
                     'exclude_unless:direction,'.ChequeType::PAYABLE->value,
-                    Rule::exists('chequebooks', 'id')->where('fiscal_year_id', getScopedFiscalYear()),
+                    Rule::exists('chequebooks', 'id')->where('fiscal_year_id', getActiveFiscalYear()),
                 ],
+                'bank_service_fee' => ['sometimes'],
                 'description' => ['nullable', 'string', 'max:1000'],
             ],
         );
@@ -216,6 +264,10 @@ class ChequeController extends Controller
 
     private function validateTransition(Request $request): array
     {
+        if ($request->has('bank_service_fee')) {
+            $request->merge(['bank_service_fee' => $this->chequeService->validateBankServiceFee($request->all())]);
+        }
+
         if ($request->filled('date')) {
             $request->merge(['date' => jalaliInputToGregorian($request->input('date'), 'date')]);
         }
@@ -223,8 +275,10 @@ class ChequeController extends Controller
         return $request->validate(
             [
                 'date' => ['nullable', 'date'],
-                'bank_account_id' => ['nullable', Rule::exists('bank_accounts', 'id')->where('fiscal_year_id', getScopedFiscalYear())],
-                'customer_id' => ['nullable', Rule::exists('customers', 'id')->where('fiscal_year_id', getScopedFiscalYear())],
+                'bank_account_id' => ['nullable', Rule::exists('bank_accounts', 'id')->where('fiscal_year_id', getActiveFiscalYear())],
+                'subject_id' => ['nullable', 'integer', Rule::exists('subjects', 'id')->where('fiscal_year_id', getActiveFiscalYear())],
+                'customer_id' => ['nullable', Rule::exists('customers', 'id')->where('fiscal_year_id', getActiveFiscalYear())],
+                'bank_service_fee' => ['sometimes'],
                 'description' => ['nullable', 'string', 'max:1000'],
             ],
         );

@@ -7,9 +7,6 @@ use Illuminate\Support\Facades\Route;
 
 class ApiTokenAbilityService
 {
-    /**
-     * Permissions attached to API routes are the abilities users may grant to tokens.
-     */
     public function abilities(): Collection
     {
         return collect(Route::getRoutes())
@@ -35,13 +32,10 @@ class ApiTokenAbilityService
             ->values();
     }
 
-    /**
-     * Check whether the user holds a wildcard permission that covers the given specific ability.
-     * e.g. a user with 'customers.*' should be treated as having 'customers.store'.
-     */
     private function userHasWildcardFor($user, string $ability): bool
     {
         $parts = explode('.', $ability);
+
         for ($i = count($parts) - 1; $i > 0; $i--) {
             $wildcard = implode('.', array_slice($parts, 0, $i)).'.*';
             if ($user->can($wildcard)) {

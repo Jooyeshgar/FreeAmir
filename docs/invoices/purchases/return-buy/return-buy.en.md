@@ -4,7 +4,7 @@ Menu path: **Invoices → Purchases → Return Buy List**. A purchase return ret
 
 ## Before you start and record the return
 
-Select the correct company and fiscal year. The source must be a purchase in the same company, and the return's counterparty must match it. Identify the warehouse for returned goods and check the quantity and amount still returnable after earlier returns.
+Select the correct fiscal year. The source must be a purchase in that fiscal year, and the return's counterparty must match it. Identify the warehouse for returned goods and check the quantity and amount still returnable after earlier returns.
 
 1. From Return Buy List, select the source purchase; its counterparty and lines are transferred to the form.
 2. Remove unrelated lines and adjust the return quantity.
@@ -36,7 +36,7 @@ Editing, deleting, or revoking approval may be blocked by an approved return, a 
 - [ ] Weighted average and supplier balance were corrected.
 - [ ] Payments on the original invoice were reviewed separately.
 
-For an invalid source, check its type, company, and year. For an excessive amount, inspect earlier returns. For a blocked status change, inspect later documents, payments, and ancillary costs.
+For an invalid source, check its type and fiscal year. For an excessive amount, inspect earlier returns. For a blocked status change, inspect later documents, payments, and ancillary costs.
 
 ## Accounting example
 

@@ -7,6 +7,7 @@
     'title' => null,
     'desc' => null,
     'class' => 'btn btn-sm btn-outline',
+    'printUrl' => null,
 ])
 
 <button type="button" {{ $attributes->merge(['class' => $class]) }} onclick="document.getElementById('{{ $id }}').showModal()">{{ $label ?? __('Receive Report') }}</button>
@@ -44,6 +45,9 @@
             @endunless
             <div class="modal-action">
                 <button type="button" class="btn btn-sm md:btn-sm lg:btn-md btn-ghost" onclick="document.getElementById('{{ $id }}').close()">{{ __('Cancel') }}</button>
+                @if ($printUrl)
+                    <button type="button" class="btn btn-sm md:btn-sm lg:btn-md btn-accent" onclick="window.open(@js($printUrl), '_blank', 'noopener')">{{ __('Print') }}</button>
+                @endif
                 <button type="submit"
                     @if ($form)
                         form="{{ $form }}" name="_token" value="{{ csrf_token() }}"

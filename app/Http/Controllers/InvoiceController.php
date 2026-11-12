@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\ChequeType;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Extensions\InvoiceExtensionRegistry;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Models\Bank;
 use App\Models\BankAccount;
@@ -17,16 +18,20 @@ use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Service;
 use App\Models\ServiceGroup;
+use App\Models\Subject;
 use App\Models\Warehouse;
 use App\Services\AncillaryCostService;
 use App\Services\ChequeService;
+use App\Services\FiscalYearMutationGuard;
 use App\Services\FiscalYearTransferService;
 use App\Services\GroupActionService;
+use App\Services\InvoiceNumberService;
 use App\Services\InvoiceService;
 use App\Services\MoadianService;
 use App\Services\PaymentService;
 use App\Services\ReportExportService;
 use DB;
+use Closure;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -53,7 +58,7 @@ class InvoiceController extends Controller
         $invoiceType = InvoiceType::tryFromName($request->invoice_type);
         $status = InvoiceStatus::tryFromName($request->status);
 
-        $builder = Invoice::with(['customer', 'document', 'voidInvoice', 'payments'])
+        $builder = Invoice::with(['customer', 'document', 'voidInvoice', 'payments', 'fiscalYear'])
             ->orderByDesc('date')
             ->orderByDesc('number');
 
@@ -64,6 +69,8 @@ class InvoiceController extends Controller
         $builder->when(in_array($invoiceType, [InvoiceType::SELL, InvoiceType::VOID], true),
             fn ($q) => $q->with('latestMoadianHistory')
         );
+
+        app(InvoiceExtensionRegistry::class)->extendQuery($builder, $request);
 
         $isServiceBuy = $this->isServiceBuyFilterActive($request, $invoiceType);
         $this->applyInvoiceFilters($builder, $request, $invoiceType, $isServiceBuy);
@@ -91,7 +98,10 @@ class InvoiceController extends Controller
         $invoices->totalProductsQuantity = $itemTotals[Product::class] ?? 0;
         $invoices->totalServicesQuantity = $itemTotals[Service::class] ?? 0;
 
-        return view('invoices.index', ['invoices' => $invoices, 'statusCounts' => $statusCounts, 'service_buy' => $isServiceBuy]);
+        $canCreateBeginningInventory = $invoiceType === InvoiceType::BEGINNING_INVENTORY
+            && Warehouse::whereNotIn('id', Invoice::where('invoice_type', InvoiceType::BEGINNING_INVENTORY)->whereNotNull('warehouse_id')->select('warehouse_id'))->exists();
+
+        return view('invoices.index', ['invoices' => $invoices, 'statusCounts' => $statusCounts, 'service_buy' => $isServiceBuy, 'canCreateBeginningInventory' => $canCreateBeginningInventory]);
     }
 
     public function export(Request $request, ReportExportService $reportExportService): StreamedResponse
@@ -106,6 +116,8 @@ class InvoiceController extends Controller
 
     private function applyInvoiceFilters(Builder $builder, Request $request, ?InvoiceType $invoiceType, bool $isServiceBuy): void
     {
+        $builder->when($request->boolean('bookmarked'), fn ($q) => $q->where('is_bookmarked', true));
+
         if ($invoiceType !== null) {
             $builder->where('invoice_type', $invoiceType);
         }
@@ -274,6 +286,7 @@ class InvoiceController extends Controller
     public function store(StoreInvoiceRequest $request)
     {
         $validated = $request->validated();
+        $extensionPayloads = $this->validatedExtensionPayloads($request);
         $invoiceData = InvoiceService::extractInvoiceData($validated);
         $items = InvoiceService::mapTransactionsToItems($validated['transactions']);
 
@@ -283,7 +296,7 @@ class InvoiceController extends Controller
             auth()->user()->can('invoices.approve');
         }
 
-        $result = $this->invoiceService->createInvoice(auth()->user(), $invoiceData, $items, $approved);
+        $result = $this->invoiceService->createInvoice(auth()->user(), $invoiceData, $items, $approved, $this->extensionPersister($extensionPayloads));
 
         [$msgType, $msg] = $this->invoiceMessage($result, 'created', $approved);
 
@@ -317,6 +330,7 @@ class InvoiceController extends Controller
             'document',
             'document.transactions',
             'items',
+            'fiscalYear',
             'voidInvoice',
             'voidedInvoice.moadianHistories',
             'ancillaryCosts',
@@ -328,38 +342,83 @@ class InvoiceController extends Controller
             'payments.payer.subject',
             'payments.creator',
             'payments.cheque',
+            'payments.cheque.histories',
         ]);
 
         $paymentDecision = $paymentService->validateInvoicePayment($invoice);
         $settlementSubjects = $paymentService->settlementSubjects();
+        $paymentModalSubject = old('subject_id') ? Subject::find(old('subject_id')) : null;
         $paidAmount = $paymentService->paidAmount($invoice);
         $remainingAmount = $paymentService->remainingAmount($invoice);
         $chequeDirection = $chequeService->directionForInvoice($invoice);
         $chequeBanks = $chequeDirection && $chequeDirection !== ChequeType::PAYABLE ? Bank::orderBy('name')->get() : collect();
-        $chequeBankAccounts = $chequeDirection === ChequeType::PAYABLE ? BankAccount::with('bank')->orderBy('name')->get() : collect();
+        $chequeBankAccounts = $chequeDirection ? BankAccount::with('bank')->orderBy('name')->get() : collect();
         $chequebooks = $chequeDirection === ChequeType::PAYABLE ? Chequebook::with('bankAccount.bank')->orderBy('serial_prefix')->get() : collect();
+
+        $restoreChequeModal = in_array(old('cheque_payment_mode'), ['create', 'edit'], true);
+        $editingChequePayment = old('cheque_payment_mode') === 'edit' ? $invoice->payments->firstWhere('id', old('cheque_payment_id')) : null;
+        $editingCheque = $editingChequePayment?->cheque;
+        $initialChequeHistory = $editingCheque?->histories->firstWhere('from_status', null);
+        $chequeInput = fn (string $key, mixed $default = '') => $restoreChequeModal ? old($key, $default) : $default;
+        $chequePaymentModalState = [
+            'editing' => $editingCheque !== null,
+            'paymentId' => $editingChequePayment?->id ?? '',
+            'title' => $chequeInput('title', $editingCheque?->title ?? ''),
+            'amount' => $chequeInput('amount', (string) ($editingCheque?->amount ?? $remainingAmount)),
+            'availableAmount' => (string) ($remainingAmount + (float) ($editingChequePayment?->amount ?? 0)),
+            'bankServiceFee' => $chequeInput('bank_service_fee', (string) ((float) $initialChequeHistory?->bank_service_fee ?: (float) ($editingChequePayment?->bank_service_fee ?? 0))),
+            'issueDate' => $chequeInput('issue_date', convertToJalali($editingCheque?->write_date ?? now(), true)),
+            'dueDate' => $chequeInput('due_date', $editingCheque?->due_date ? convertToJalali($editingCheque->due_date, true) : ''),
+            'sayadNumber' => $chequeInput('sayad_number', $editingCheque?->sayad_number ?? ''),
+            'chequeNumber' => $chequeInput('cheque_number', $editingCheque?->cheque_number ?? ''),
+            'serial' => $chequeInput('serial', $editingCheque?->serial ?? ''),
+            'bankId' => $chequeInput('bank_id'),
+            'bankAccountId' => $chequeInput('bank_account_id', (string) ($editingCheque?->bank_account_id ?? '')),
+            'chequebookId' => $chequeInput('chequebook_id', (string) ($editingCheque?->chequebook_id ?? '')),
+            'description' => $chequeInput('description', $editingCheque?->desc ?? ''),
+            'restore' => $restoreChequeModal,
+            'closed' => $invoice->fiscalYear?->isClosed() ?? false,
+            'canCreate' => auth()->user()->can('invoices.payments.store') && auth()->user()->can('invoices.payments.store-cheque'),
+            'canEdit' => auth()->user()->can('invoices.payments.update'),
+        ];
 
         $ancillaryCostProductIds = $invoice->items->where('itemable_type', Product::class)->pluck('itemable_id')->unique()->values()->all();
         $canCreateAncillaryCost = $invoice->invoice_type === InvoiceType::BUY && ! $isServiceBuy && empty(InvoiceService::notAllowedInvoiceForAncillaryCosts($invoice, $ancillaryCostProductIds));
 
-        $fiscalYears = auth()->user()->accessibleCompanies()->where('id', '!=', getActiveLegacyCompany())->get();
+        $fiscalYears = auth()->user()->fiscalYears()->with('company')->where('fiscal_years.id', '!=', getActiveFiscalYear())->orderByDesc('year')->get();
 
-        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects', 'paidAmount', 'remainingAmount', 'chequeDirection', 'chequeBanks', 'chequeBankAccounts', 'chequebooks', 'fiscalYears', 'canCreateAncillaryCost'));
+        return view('invoices.show', compact('invoice', 'changeStatusValidation', 'isServiceBuy', 'isReturnServiceBuy', 'isMoadianSendable', 'paymentDecision', 'settlementSubjects', 'paymentModalSubject', 'paidAmount', 'remainingAmount', 'chequeDirection', 'chequeBanks', 'chequeBankAccounts', 'chequebooks', 'chequePaymentModalState', 'fiscalYears', 'canCreateAncillaryCost'));
     }
 
-    public function print(Invoice $invoice, ReportExportService $reportExportService)
+    public function updateBookmark(Request $request, Invoice $invoice): RedirectResponse
     {
-        if ($invoice->invoice_type->isBeginningInventory()) {
-            return redirect()->route('invoices.edit', $invoice);
+        abort_unless(
+            $request->user()->can('invoices.bookmark')
+                && (int) $invoice->fiscal_year_id === getActiveFiscalYear()
+                && $request->user()->fiscalYears()->whereKey($invoice->fiscal_year_id)->exists(),
+            403
+        );
+
+        $validated = $request->validate([
+            'is_bookmarked' => ['required', 'boolean'],
+        ]);
+
+        $invoice->is_bookmarked = $validated['is_bookmarked'];
+        $invoice->save();
+
+        return back();
+    }
+
+    public function print(Request $request, Invoice $invoice): View
+    {
+        $invoice->load('fiscalYear.company', 'customer', 'items.itemable');
+        $autoPrint = $request->boolean('autoprint');
+
+        if ($invoice->invoice_type->isBeginningInventory() || ! $invoice->status->isApprovedOrSettled()) {
+            return view('invoices.draft', compact('invoice', 'autoPrint'));
         }
 
-        $invoice->load('customer', 'items');
-
-        if (! $invoice->status->isApprovedOrSettled()) {
-            return view('invoices.draft', compact('invoice'));
-        }
-
-        return $reportExportService->inlineResponse('invoice_pdf', ['invoice_id' => $invoice->id]);
+        return view('invoices.print', compact('invoice', 'autoPrint'));
     }
 
     /**
@@ -452,6 +511,7 @@ class InvoiceController extends Controller
         }
 
         $validated = $request->validated();
+        $extensionPayloads = $this->validatedExtensionPayloads($request, $invoice);
         $invoiceData = InvoiceService::extractInvoiceData($validated);
         $items = InvoiceService::mapTransactionsToItems($validated['transactions'], true);
 
@@ -465,7 +525,7 @@ class InvoiceController extends Controller
             auth()->user()->can('invoices.approve');
         }
 
-        $result = $this->invoiceService->updateInvoice($invoice->id, $invoiceData, $items, $approved);
+        $result = $this->invoiceService->updateInvoice($invoice->id, $invoiceData, $items, $approved, $this->extensionPersister($extensionPayloads));
 
         [$msgType, $msg] = $this->invoiceMessage($result, 'updated', $approved);
 
@@ -478,13 +538,50 @@ class InvoiceController extends Controller
         return $redirect->with($msgType, $msg);
     }
 
-    public function destroy(Invoice $invoice)
+    /**
+     * Validate submitted extension payloads before any invoice write so a
+     * validation failure leaves the database untouched.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    private function validatedExtensionPayloads(Request $request, ?Invoice $invoice = null): array
+    {
+        if (! $request->has('extensions')) {
+            return [];
+        }
+
+        return app(InvoiceExtensionRegistry::class)->validateRequest($request, $invoice);
+    }
+
+    /**
+     * Build the callback handed to the invoice service; it runs inside the
+     * invoice's own database transaction.
+     *
+     * @param  array<string, array<string, mixed>>  $payloads
+     * @return Closure(Invoice): void|null
+     */
+    private function extensionPersister(array $payloads): ?Closure
+    {
+        if ($payloads === []) {
+            return null;
+        }
+
+        return static function (Invoice $invoice) use ($payloads): void {
+            app(InvoiceExtensionRegistry::class)->persist($invoice, $payloads);
+        };
+    }
+
+    public function destroy(Request $request, Invoice $invoice)
     {
         $isBeginningInventory = $invoice->invoice_type->isBeginningInventory();
         $indexType = $invoice->invoice_type->valueName();
 
-        if ($invoice->status->isApprovedOrSettled()) {
+        if ($isBeginningInventory && $invoice->status->isApprovedOrSettled()) {
             return redirect()->route('invoices.index', ['invoice_type' => $indexType])->with('error', __('Only unapproved and unpaided invoices can be deleted.'));
+        }
+
+        if ($invoice->status->isApprovedOrSettled() && ! $request->boolean('confirm')) {
+            return redirect()->back()->with('warning', __('Deleting this paid or partially paid invoice will remove its payments and accounting documents. Please confirm this action.'));
         }
 
         if (! $isBeginningInventory && $invoice->ancillaryCosts()->exists() && $invoice->ancillaryCosts->every(fn ($ac) => $ac->status->isApproved())) {
@@ -584,7 +681,7 @@ class InvoiceController extends Controller
                 'vat' => $item->vat,
                 'quantity' => $item->quantity,
                 'unit' => $item->unit_price,
-                'off' => $item->unit_discount,
+                'off' => $item->discount,
                 'total' => $item->amount,
                 'desc' => $item->description,
                 'warehouse_id' => $item->invoice->warehouse_id,
@@ -709,8 +806,14 @@ class InvoiceController extends Controller
                 ->with('error', __('Invalid status action.'));
         }
 
-        if ($invoice->status->isPartiallyPaid() || $invoice->status->isPaid()) {
-            return redirect()->back()->with('error', __('Remove the recorded payments before changing the invoice status.'));
+        return $this->applyInvoiceStatusChange($invoice, $status);
+    }
+
+    private function applyInvoiceStatusChange(Invoice $invoice, string $status): RedirectResponse
+    {
+        $settled = $invoice->status->isPartiallyPaid() || $invoice->status->isPaid();
+        if ($settled && ! request()->boolean('confirm')) {
+            return redirect()->back()->with('warning', __('Deactivating this paid or partially paid invoice will remove its payment accounting documents while keeping the payment records. Please confirm this action.'));
         }
 
         $decision = $this->invoiceService->getChangeStatusDecision($invoice, $status);
@@ -726,11 +829,26 @@ class InvoiceController extends Controller
             return redirect()->back()->with('warning', $warning?->text ?? __('Please confirm your action.'))->with('confirm_invoice_status_change', true)->with('conflicting_invoices', $decision->conflicts->map(fn ($i) => ['id' => $i->id, 'number' => $i->number, 'type' => $i->invoice_type?->valueName()])->values()->all());
         }
 
+        $reactivating = $status === 'approved' && $invoice->status->isApprovedInactive();
         $this->invoiceService->changeInvoiceStatus($invoice, $status);
 
-        $message = $status === 'approved' ? __('Invoice approved successfully.') : __('Invoice unapproved successfully.');
+        $message = match (true) {
+            $reactivating => __('Invoice activated successfully.'),
+            $status === 'approved' => __('Invoice approved successfully.'),
+            $status === 'approved_inactive' => __('Invoice deactivated successfully.'),
+            default => __('Invoice unapproved successfully.'),
+        };
 
-        return redirect()->back()->with('success', __($message));
+        return redirect()->back()->with('success', $message);
+    }
+
+    public function approveInactive(Invoice $invoice): RedirectResponse
+    {
+        if (! $invoice->status->isApproved()) {
+            return redirect()->back()->with('error', __('Invalid status action.'));
+        }
+
+        return $this->applyInvoiceStatusChange($invoice, 'approved_inactive');
     }
 
     public function inactiveInvoices()
@@ -740,7 +858,7 @@ class InvoiceController extends Controller
                 $query->where('status', InvoiceStatus::APPROVED_INACTIVE);
             }])
             ->orderBy('date')
-            ->orderBy('number')
+            ->orderBy('id')
             ->paginate(30);
 
         $this->validateInvoicesAncillaryCosts($invoices->getCollection());
@@ -823,17 +941,20 @@ class InvoiceController extends Controller
 
     public function transfer(Request $request, Invoice $invoice): RedirectResponse
     {
-        $request->validate(['target_company_id' => 'required|integer|exists:companies,id']);
+        $request->validate([
+            'target_fiscal_year_id' => 'required|integer|exists:fiscal_years,id',
+            'transfer_dependencies' => ['nullable', 'boolean'],
+        ]);
 
-        if (! Auth::user()->accessibleCompanies()->whereKey((int) $request->target_company_id)->exists()) {
+        if (! Auth::user()->fiscalYears->contains((int) $request->target_fiscal_year_id)) {
             abort(403);
         }
 
-        if ((int) $request->target_company_id === getActiveLegacyCompany()) {
+        if ((int) $request->target_fiscal_year_id === getActiveFiscalYear()) {
             return redirect()->route('invoices.show', $invoice)->with('error', __('Cannot transfer to the same fiscal year.'));
         }
 
-        $result = FiscalYearTransferService::transferInvoice($invoice, $request->target_company_id, $request->user());
+        $result = FiscalYearTransferService::transferInvoice($invoice, $request->target_fiscal_year_id, $request->user(), $request->boolean('transfer_dependencies'));
 
         if (! $result['success']) {
             return redirect()->route('invoices.show', $invoice)->withErrors($result['errors']);
@@ -903,5 +1024,13 @@ class InvoiceController extends Controller
         [$msgType, $msg] = $this->invoiceMessage($voidInvoice, 'voided', true);
 
         return redirect()->route('invoices.show', $invoice)->with($msgType, $msg);
+    }
+
+    public function sortNumbers(InvoiceNumberService $invoiceNumberService): RedirectResponse
+    {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+        $invoiceNumberService->sort();
+
+        return redirect()->back()->with('success', __('Invoice numbers sorted successfully.'));
     }
 }

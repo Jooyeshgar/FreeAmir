@@ -4,10 +4,10 @@ namespace Tests\Feature;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\InvoiceItem;
 use App\Models\Product;
@@ -28,7 +28,7 @@ class InventoryTurnoverReportTest extends TestCase
 {
     use RefreshDatabase, SeederHelper;
 
-    private Company $company;
+    private FiscalYear $fiscalYear;
 
     private User $user;
 
@@ -47,30 +47,30 @@ class InventoryTurnoverReportTest extends TestCase
         parent::setUp();
 
         app()->setLocale('en');
-        $this->company = Company::factory()->create(['name' => 'Test Company', 'fiscal_year' => 1405]);
+        $this->fiscalYear = FiscalYear::factory()->create(['year' => 1404]);
         $this->user = User::factory()->create();
-        $this->company->users()->attach($this->user);
-        $this->withCookies(['active-company-id' => (string) $this->company->id]);
-        config(['active-company-id' => $this->company->id]);
-        $this->importSubjects($this->company->id);
-        $this->importConfigs($this->company->id);
+        $this->fiscalYear->users()->attach($this->user);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->fiscalYear->id]);
+        config(['active-fiscal-year-id' => $this->fiscalYear->id]);
+        $this->importSubjects($this->fiscalYear->id);
+        $this->importConfigs($this->fiscalYear->id);
 
         $this->mainWarehouse = Warehouse::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'name' => 'Main warehouse',
             'code' => 'MAIN',
         ]);
         $this->otherWarehouse = Warehouse::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'name' => 'Other warehouse',
             'code' => 'OTHER',
         ]);
 
-        $customerGroup = CustomerGroup::factory()->withSubject()->create(['company_id' => $this->company->id]);
-        $this->customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create(['company_id' => $this->company->id]);
-        $this->group = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->company->id, 'name' => 'Widgets']);
+        $customerGroup = CustomerGroup::factory()->withSubject()->create(['fiscal_year_id' => $this->fiscalYear->id]);
+        $this->customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create(['fiscal_year_id' => $this->fiscalYear->id]);
+        $this->group = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYear->id, 'name' => 'Widgets']);
         $this->product = Product::factory()->withGroup($this->group)->withSubjects()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'code' => 'P-001',
             'name' => 'Widget',
         ]);
@@ -115,8 +115,8 @@ class InventoryTurnoverReportTest extends TestCase
     public function test_full_fiscal_year_values_imports_and_exports_at_the_product_average_cost(): void
     {
         $this->product->update(['average_cost' => 135]);
-        $this->movement(InvoiceType::BUY, '2026-04-05', 4, -400, 1, cogAfter: 100);
-        $this->movement(InvoiceType::SELL, '2026-04-06', 2, 200, 2, cogAfter: 100);
+        $this->movement(InvoiceType::BUY, '2026-02-05', 4, -400, 1, cogAfter: 100);
+        $this->movement(InvoiceType::SELL, '2026-02-06', 2, 200, 2, cogAfter: 100);
 
         $service = app(InventoryTurnoverService::class);
         $report = $service->report();
@@ -217,9 +217,9 @@ class InventoryTurnoverReportTest extends TestCase
 
     public function test_product_group_filter_excludes_products_from_other_groups(): void
     {
-        $otherGroup = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->company->id, 'name' => 'Other']);
+        $otherGroup = ProductGroup::factory()->withSubjects()->create(['fiscal_year_id' => $this->fiscalYear->id, 'name' => 'Other']);
         Product::factory()->withGroup($otherGroup)->withSubjects()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'code' => 'P-002',
             'name' => 'Other product',
         ]);
@@ -283,12 +283,32 @@ class InventoryTurnoverReportTest extends TestCase
         ]))->assertRedirect(route('reports.inventory-turnover'))->assertSessionHasErrors('start_date');
     }
 
+    public function test_report_defaults_to_fiscal_year_and_rejects_dates_outside_it(): void
+    {
+        [$fiscalStart, $fiscalEnd] = $this->fiscalYear->range();
+
+        $report = app(InventoryTurnoverService::class)->report();
+
+        $this->assertSame($fiscalStart->toDateString(), $report['filters']['start_date']);
+        $this->assertSame($fiscalEnd->toDateString(), $report['filters']['end_date']);
+
+        $this->grant('reports.inventory-turnover');
+        $this->actingAs($this->user)->get(route('reports.inventory-turnover', [
+            'start_date' => $fiscalStart->copy()->subDay()->toDateString(),
+            'end_date' => $fiscalEnd->toDateString(),
+        ]))->assertSessionHasErrors('start_date');
+
+        $this->actingAs($this->user)->get(route('reports.inventory-turnover', [
+            'start_date' => $fiscalStart->toDateString(),
+            'end_date' => $fiscalEnd->copy()->addDay()->toDateString(),
+        ]))->assertSessionHasErrors('end_date');
+    }
+
     public function test_pdf_has_company_creation_date_and_page_count_in_its_header(): void
     {
         $data = app(InventoryTurnoverService::class)->report();
         $html = Blade::render(file_get_contents(resource_path('views/reports/inventoryTurnoverPdf.blade.php')), $data);
 
-        $this->assertStringContainsString('Test Company', $html);
         $this->assertStringContainsString('Created at', $html);
         $this->assertStringContainsString('{PAGENO}', $html);
         $this->assertStringContainsString('{nbpg}', $html);
@@ -343,7 +363,7 @@ class InventoryTurnoverReportTest extends TestCase
     ): void {
         $warehouse ??= $this->mainWarehouse;
         $document = Document::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'creator_id' => $this->user->id,
             'number' => $number,
             'date' => $date,
@@ -369,7 +389,7 @@ class InventoryTurnoverReportTest extends TestCase
             'quantity' => $quantity,
             'unit_price' => $quantity > 0 ? abs($balance) / $quantity : 0,
             'cog_after' => $cogAfter ?? ($quantity > 0 ? abs($balance) / $quantity : 0),
-            'unit_discount' => 0,
+            'discount' => 0,
             'vat' => 0,
             'amount' => abs($balance),
         ]);

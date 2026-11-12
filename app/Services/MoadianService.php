@@ -6,8 +6,10 @@ use App\DTO\InvoiceStatusDecision;
 use App\Enums\CustomerType;
 use App\Enums\InvoiceType;
 use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\ValidationException;
 use Jooyeshgar\Moadian\Facades\Moadian;
 use Jooyeshgar\Moadian\Invoice as MoadianInvoice;
 use Jooyeshgar\Moadian\InvoiceHeader;
@@ -26,9 +28,33 @@ class MoadianService
 
     public MoadianInvoice $moadianInvoice;
 
+    public function testConnection(string $username, string $taxId, string $privateKey, string $certificate): bool
+    {
+        $client = Moadian::for($privateKey, $certificate, $username);
+
+        return $client->getServerInfo()->isSuccessful() && $client->getEconomicCodeInformation($taxId)->isSuccessful();
+    }
+
+    private function clientFor(Company $company): \Jooyeshgar\Moadian\Moadian
+    {
+        $privateKey = $company->decryptedPrivateKey();
+        $certificate = $company->decryptedCertificate();
+
+        if (! $company->moadian_username || ! $privateKey || ! $certificate) {
+            throw ValidationException::withMessages([
+                'moadian' => __('Configure the Moadian username, certificate and private key before checking the connection or invoice status.'),
+            ]);
+        }
+
+        return Moadian::for($privateKey, $certificate, $company->moadian_username);
+    }
+
     public function sendInvoice(Invoice $invoice): bool
     {
-        $company = Company::find(getActiveLegacyCompany());
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
+
+        $fiscalyear = FiscalYear::find(getActiveFiscalYear());
+        $company = $fiscalyear->company;
 
         $this->moadian_username = $company->moadian_username;
         $this->taxID = $company->tax_id;
@@ -59,6 +85,13 @@ class MoadianService
     public function validateSendMoadian(Invoice $invoice): InvoiceStatusDecision
     {
         $decision = new InvoiceStatusDecision;
+        $customer = $invoice->customer;
+
+        if ($customer?->type === CustomerType::LEGAL_ENTITY && blank($customer->ecnmcs_code)) {
+            throw ValidationException::withMessages([
+                'ecnmcs_code' => __('validation.required', ['attribute' => __('Economic code')]),
+            ]);
+        }
 
         if (! $invoice->status->isApprovedOrSettled()) {
             $decision->addMessage('error', __('Cannot send an unapproved invoice to moadian.'));
@@ -68,7 +101,8 @@ class MoadianService
             $decision->addMessage('error', __('Cannot send a buy or return buy invoice to moadian.'));
         }
 
-        $company = Company::find(getActiveLegacyCompany());
+        $fiscalYear = FiscalYear::with('company')->findOrFail($invoice->fiscal_year_id);
+        $company = $fiscalYear->company;
 
         if (! $company || ! $company->moadian_username || ! $company->tax_id || ! $company->decryptedPrivateKey() || ! $company->decryptedCertificate()) {
             $decision->addMessage('error', __('Moadian credentials are not fully configured. Please set the username, tax ID, certificate and private key in company settings.'));
@@ -108,18 +142,24 @@ class MoadianService
 
     public function moadianStatus(string $referenceNumber, Invoice $invoice): array
     {
-        $company = Company::find(getActiveLegacyCompany());
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
 
-        $privateKey = $company->decryptedPrivateKey();
-        $certificate = $company->decryptedCertificate();
+        $fiscalYear = FiscalYear::with('company')->findOrFail($invoice->fiscal_year_id);
+        $company = $fiscalYear->company;
+        $client = $this->clientFor($company);
 
         try {
-            $response = Moadian::for($privateKey, $certificate, $company->moadian_username)
-                ->inquiryByReferenceNumbers($referenceNumber);
+            $response = $client->inquiryByReferenceNumbers($referenceNumber);
             $statusData = $response->getBody()[0] ?? [];
+
+            if (! $response->isSuccessful() || empty($statusData['status'])) {
+                throw new \RuntimeException('Invalid Moadian status response.');
+            }
         } catch (\Exception $e) {
             $statusData = ['status' => 'FAILED', 'error' => $e->getMessage()];
         }
+
+        $statusData['referenceNumber'] = $referenceNumber;
 
         $invoice->moadianHistories()->create(['data' => $statusData]);
 
@@ -198,7 +238,7 @@ class MoadianService
         $header->bpc = $this->invoice->customer->postal_code;
 
         $amount = $this->invoice->amount;
-        $discount = $this->invoice->items->sum('unit_discount');
+        $discount = $this->invoice->items->sum('discount');
         $header->tprdis = $amount + $discount - $this->invoice->vat;
         $header->tdis = $discount;
         $header->tadis = $amount - $this->invoice->vat;
@@ -222,7 +262,7 @@ class MoadianService
             $body->am = $item->quantity;
             $body->fee = $item->unit_price;
             $body->prdis = $item->unit_price * $item->quantity;
-            $body->dis = $item->unit_discount;
+            $body->dis = $item->discount;
             $body->adis = $amountAfterDiscount;
             $body->vra = $amountAfterDiscount > 0 ? ($item->vat / ($amountAfterDiscount)) * 100 : 0.0;
             $body->vam = $item->vat;

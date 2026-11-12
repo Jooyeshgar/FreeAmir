@@ -12,16 +12,16 @@
         </div>
 
         <div class="flex flex-wrap items-center justify-start gap-2">
-            <a href="{{ route('products.create') }}" class="btn btn-primary btn-sm gap-1.5">
+            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('products.create') }}" class="btn btn-primary btn-sm gap-1.5">
                 {{ __('Create product') }}
-            </a>
+            </x-closed-year-action-link>
             @can('products.report')
                 <button type="button" class="btn btn-secondary btn-sm gap-1.5" onclick="document.getElementById('report-pdf-modal').showModal()">
                     {{ __('Warehouse Report') }}
                 </button>
             @endcan
             <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('product-csv-modal').showModal()">{{ __('Receive Report') }}</button>
-            <a href="{{ route('products.import') }}" class="btn btn-outline btn-sm">{{ __('Import CSV') }}</a>
+            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('products.import') }}" class="btn btn-outline btn-sm">{{ __('Import CSV') }}</x-closed-year-action-link>
         </div>
     </div>
 
@@ -229,14 +229,14 @@
                                 </td>
                                 <td class="px-4 py-2">
                                     <div class="inline-flex gap-2">
-                                        <a href="{{ route('products.edit', $product) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                        <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('products.edit', $product) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</x-closed-year-action-link>
                                         @if ($product->invoiceItems()->exists())
-                                                <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" title="{{ __('Cannot delete product that is used in invoice items') }}">{{ __('Delete') }}</button>
+                                                <button class="btn btn-sm btn-info btn-disabled cursor-not-allowed" disabled title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Cannot delete product that is used in invoice items') }}">{{ __('Delete') }}</button>
                                         @else
                                             <form action="{{ route('products.destroy', $product) }}" method="POST" class="inline-block">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                                <button type="submit" class="btn btn-sm btn-error" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ __('Delete') }}</button>
                                             </form>
                                         @endif
                                     </div>

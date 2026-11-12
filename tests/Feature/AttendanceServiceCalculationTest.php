@@ -5,8 +5,8 @@ namespace Tests\Feature;
 use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Models\AttendanceLog;
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\PersonnelRequest;
 use App\Models\PublicHoliday;
 use App\Models\WorkShift;
@@ -34,7 +34,7 @@ class AttendanceServiceCalculationTest extends TestCase
 
     private AttendanceService $service;
 
-    private Company $company;
+    private FiscalYear $fiscalYear;
 
     private WorkSite $workSite;
 
@@ -47,11 +47,11 @@ class AttendanceServiceCalculationTest extends TestCase
         parent::setUp();
 
         $this->service = new AttendanceService;
-        $this->company = Company::factory()->create();
-        $this->workSite = WorkSite::factory()->create(['company_id' => $this->company->id]);
+        $this->fiscalYear = FiscalYear::factory()->create();
+        $this->workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYear->id]);
 
-        request()->cookies->set('active-company-id', $this->company->id);
-        $this->withCookies(['active-company-id' => $this->company->id]);
+        request()->cookies->set('active-fiscal-year-id', $this->fiscalYear->id);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYear->id]);
 
         $this->startDate = Carbon::create(2025, 3, 1);
         $this->durationDays = 31;
@@ -64,7 +64,7 @@ class AttendanceServiceCalculationTest extends TestCase
     private function makeShift(array $overrides = []): WorkShift
     {
         return WorkShift::factory()->create(array_merge([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'start_time' => '08:00:00',
             'end_time' => '17:00:00',
             'break' => 60,
@@ -76,7 +76,7 @@ class AttendanceServiceCalculationTest extends TestCase
     private function makeEmployee(?WorkShift $shift = null): Employee
     {
         return Employee::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'work_site_id' => $this->workSite->id,
             'work_shift_id' => $shift?->id,
         ]);
@@ -85,7 +85,7 @@ class AttendanceServiceCalculationTest extends TestCase
     private function insertLog(Employee $employee, string $date, array $data = [], $recalculate = true): AttendanceLog
     {
         $log = AttendanceLog::factory()->create(array_merge([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'employee_id' => $employee->id,
             'log_date' => $date,
             'entry_time' => $data['entry_time'] ?? null,
@@ -113,6 +113,193 @@ class AttendanceServiceCalculationTest extends TestCase
     {
         $shift = $this->makeShift(['start_time' => '08:00:00', 'end_time' => '17:00:00', 'break' => 60]);
         $this->assertSame(540, $this->service->shiftWorkMinutes($shift));
+    }
+
+    public function test_hourly_leave_starting_at_float_boundary_does_not_add_float_to_overtime(): void
+    {
+        $shift = new WorkShift([
+            'start_time' => '07:30:00',
+            'end_time' => '15:30:00',
+            'float' => 60,
+            'max_auto_overtime' => 120,
+        ]);
+        $log = new AttendanceLog([
+            'entry_time' => '10:35:00',
+            'exit_time' => '16:30:00',
+            'paid_leave' => 125,
+        ]);
+        $request = new PersonnelRequest([
+            'start_date' => '2025-03-03 08:30:00',
+            'end_date' => '2025-03-03 10:35:00',
+        ]);
+
+        $columns = $this->service->computeLogColumns($log, $shift, false, false, false, null, 0, collect([$request]));
+
+        $this->assertSame(0, $columns['delay']);
+        $this->assertSame(0, $columns['early_leave']);
+        $this->assertSame(0, $columns['auto_overtime']);
+    }
+
+    public function test_compute_log_columns_with_hourly_leave_around_float_cutoff_before_cutoff_with_float_made_up(): void
+    {
+        $this->computeLogColumnsWithHourlyLeaveAroundFloatCutoff('08:29:00', '16:29:00', 0, 0, 0);
+    }
+
+    public function test_compute_log_columns_with_hourly_leave_around_float_cutoff_before_cutoff_one_minute_short(): void
+    {
+        $this->computeLogColumnsWithHourlyLeaveAroundFloatCutoff('08:29:00', '16:28:00', 0, 1, 0);
+    }
+
+    public function test_compute_log_columns_with_hourly_leave_around_float_cutoff_before_cutoff_with_seven_minutes_overtime(): void
+    {
+        $this->computeLogColumnsWithHourlyLeaveAroundFloatCutoff('08:29:00', '16:36:00', 0, 0, 7);
+    }
+
+    public function test_compute_log_columns_with_hourly_leave_around_float_cutoff_at_cutoff_with_end_shifted_by_float(): void
+    {
+        $this->computeLogColumnsWithHourlyLeaveAroundFloatCutoff('08:30:00', '15:30:00', 0, 60, 0);
+    }
+
+    public function test_compute_log_columns_with_hourly_leave_around_float_cutoff_at_cutoff_one_minute_before_shifted_end(): void
+    {
+        $this->computeLogColumnsWithHourlyLeaveAroundFloatCutoff('08:30:00', '16:29:00', 0, 1, 0);
+    }
+
+    public function test_compute_log_columns_with_hourly_leave_around_float_cutoff_at_cutoff_with_seven_minutes_overtime(): void
+    {
+        $this->computeLogColumnsWithHourlyLeaveAroundFloatCutoff('08:30:00', '16:37:00', 0, 0, 7);
+    }
+
+    public function test_compute_log_columns_with_hourly_leave_around_float_cutoff_at_cutoff_without_overtime_at_shifted_end(): void
+    {
+        $this->computeLogColumnsWithHourlyLeaveAroundFloatCutoff('08:30:00', '16:30:00', 0, 0, 0);
+    }
+
+    public function test_compute_log_columns_with_hourly_leave_around_float_cutoff_at_cutoff_with_overtime_capped_at_two_hours(): void
+    {
+        $this->computeLogColumnsWithHourlyLeaveAroundFloatCutoff('08:30:00', '18:30:00', 0, 0, 120);
+    }
+
+    public function test_compute_log_columns_with_hourly_leave_around_float_cutoff_after_cutoff_with_one_minute_delay(): void
+    {
+        $this->computeLogColumnsWithHourlyLeaveAroundFloatCutoff('08:31:00', '16:30:00', 1, 0, 0);
+    }
+
+    public function test_compute_log_columns_with_hourly_leave_around_float_cutoff_after_cutoff_with_delay_and_overtime(): void
+    {
+        $this->computeLogColumnsWithHourlyLeaveAroundFloatCutoff('08:31:00', '16:37:00', 1, 0, 7);
+    }
+
+    private function computeLogColumnsWithHourlyLeaveAroundFloatCutoff(
+        string $leaveStart, string $exitTime, int $delay, int $earlyLeave, int $autoOvertime
+    ): void {
+        $shift = new WorkShift([
+            'start_time' => '07:30:00', 'end_time' => '15:30:00',
+            'float' => 60, 'max_auto_overtime' => 120,
+        ]);
+        $leaveMinutes = (int) Carbon::parse($leaveStart)->diffInMinutes(Carbon::parse('10:35:00'));
+        $log = new AttendanceLog([
+            'entry_time' => '10:35:00', 'exit_time' => $exitTime, 'paid_leave' => $leaveMinutes,
+        ]);
+        $request = new PersonnelRequest([
+            'request_type' => PersonnelRequestType::LEAVE_HOURLY,
+            'start_date' => '2025-03-03 '.$leaveStart,
+            'end_date' => '2025-03-03 10:35:00',
+        ]);
+
+        // Leave ends at entry, so none of it overlaps physical attendance.
+        $columns = $this->service->computeLogColumns(
+            $log, $shift, midShiftCoverage: 0, hourlyCoverageRequests: collect([$request])
+        );
+
+        $this->assertSame($delay, $columns['delay']);
+        $this->assertSame($earlyLeave, $columns['early_leave']);
+        $this->assertSame(0, $columns['overtime']);
+        $this->assertSame($autoOvertime, $columns['auto_overtime']);
+        $this->assertSame((int) Carbon::parse('10:35:00')->diffInMinutes(Carbon::parse($exitTime)), $columns['worked']);
+    }
+
+    public function test_recalculate_log_with_hourly_leave_around_float_cutoff_before_cutoff_with_float_made_up(): void
+    {
+        $this->recalculateLogWithHourlyLeaveAroundFloatCutoff('08:29:00', '16:29:00', 0, 0, 0);
+    }
+
+    public function test_recalculate_log_with_hourly_leave_around_float_cutoff_before_cutoff_one_minute_short(): void
+    {
+        $this->recalculateLogWithHourlyLeaveAroundFloatCutoff('08:29:00', '16:28:00', 0, 1, 0);
+    }
+
+    public function test_recalculate_log_with_hourly_leave_around_float_cutoff_before_cutoff_with_seven_minutes_overtime(): void
+    {
+        $this->recalculateLogWithHourlyLeaveAroundFloatCutoff('08:29:00', '16:36:00', 0, 0, 7);
+    }
+
+    public function test_recalculate_log_with_hourly_leave_around_float_cutoff_at_cutoff_with_end_shifted_by_float(): void
+    {
+        $this->recalculateLogWithHourlyLeaveAroundFloatCutoff('08:30:00', '15:30:00', 0, 60, 0);
+    }
+
+    public function test_recalculate_log_with_hourly_leave_around_float_cutoff_at_cutoff_one_minute_before_shifted_end(): void
+    {
+        $this->recalculateLogWithHourlyLeaveAroundFloatCutoff('08:30:00', '16:29:00', 0, 1, 0);
+    }
+
+    public function test_recalculate_log_with_hourly_leave_around_float_cutoff_at_cutoff_with_seven_minutes_overtime(): void
+    {
+        $this->recalculateLogWithHourlyLeaveAroundFloatCutoff('08:30:00', '16:37:00', 0, 0, 7);
+    }
+
+    public function test_recalculate_log_with_hourly_leave_around_float_cutoff_at_cutoff_without_overtime_at_shifted_end(): void
+    {
+        $this->recalculateLogWithHourlyLeaveAroundFloatCutoff('08:30:00', '16:30:00', 0, 0, 0);
+    }
+
+    public function test_recalculate_log_with_hourly_leave_around_float_cutoff_at_cutoff_with_overtime_capped_at_two_hours(): void
+    {
+        $this->recalculateLogWithHourlyLeaveAroundFloatCutoff('08:30:00', '18:30:00', 0, 0, 120);
+    }
+
+    public function test_recalculate_log_with_hourly_leave_around_float_cutoff_after_cutoff_with_one_minute_delay(): void
+    {
+        $this->recalculateLogWithHourlyLeaveAroundFloatCutoff('08:31:00', '16:30:00', 1, 0, 0);
+    }
+
+    public function test_recalculate_log_with_hourly_leave_around_float_cutoff_after_cutoff_with_delay_and_overtime(): void
+    {
+        $this->recalculateLogWithHourlyLeaveAroundFloatCutoff('08:31:00', '16:37:00', 1, 0, 7);
+    }
+
+    private function recalculateLogWithHourlyLeaveAroundFloatCutoff(
+        string $leaveStart, string $exitTime, int $delay, int $earlyLeave, int $autoOvertime
+    ): void {
+        $shift = $this->makeShift([
+            'start_time' => '07:30:00', 'end_time' => '15:30:00',
+            'float' => 60, 'max_auto_overtime' => 120,
+        ]);
+        $employee = $this->makeEmployee($shift);
+        PersonnelRequest::factory()->approved()->create([
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'employee_id' => $employee->id,
+            'request_type' => PersonnelRequestType::LEAVE_HOURLY,
+            'start_date' => '2025-03-03 '.$leaveStart,
+            'end_date' => '2025-03-03 10:35:00',
+        ]);
+        // Start with stale cached values to verify recalculation rebuilds them.
+        $log = $this->insertLog($employee, '2025-03-03', [
+            'entry_time' => '10:35:00', 'exit_time' => $exitTime,
+            'paid_leave' => 0, 'delay' => 125, 'early_leave' => 60, 'auto_overtime' => 120,
+        ], false);
+
+        for ($pass = 0; $pass < 2; $pass++) {
+            $log = $this->service->recalculateLog($log);
+
+            $this->assertSame((int) Carbon::parse($leaveStart)->diffInMinutes(Carbon::parse('10:35:00')), $log->paid_leave);
+            $this->assertSame($delay, $log->delay);
+            $this->assertSame($earlyLeave, $log->early_leave);
+            $this->assertSame(0, $log->overtime);
+            $this->assertSame($autoOvertime, $log->auto_overtime);
+            $this->assertSame((int) Carbon::parse('10:35:00')->diffInMinutes(Carbon::parse($exitTime)), $log->worked);
+        }
     }
 
     public function test_two_employees_different_shifts_independent_calculations(): void
@@ -381,7 +568,7 @@ class AttendanceServiceCalculationTest extends TestCase
         $shift = $this->makeShift();
         $employee = $this->makeEmployee($shift);
 
-        PublicHoliday::factory()->create(['company_id' => $this->company->id, 'date' => '2025-03-05']);
+        PublicHoliday::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'date' => '2025-03-05']);
 
         $this->insertLog($employee, '2025-03-05', ['remote_work' => 480]);
 
@@ -401,7 +588,7 @@ class AttendanceServiceCalculationTest extends TestCase
         $employee = $this->makeEmployee($shift);
 
         // Thursday 2025-03-13 as holiday
-        PublicHoliday::factory()->create(['company_id' => $this->company->id, 'date' => '2025-03-13']);
+        PublicHoliday::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'date' => '2025-03-13']);
 
         $this->insertLog($employee, '2025-03-13', ['mission' => 480]);
 
@@ -551,7 +738,7 @@ class AttendanceServiceCalculationTest extends TestCase
         $shift = $this->makeShift();
         $employee = $this->makeEmployee($shift);
 
-        PublicHoliday::factory()->create(['company_id' => $this->company->id, 'date' => '2025-03-11']);
+        PublicHoliday::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'date' => '2025-03-11']);
 
         $friday = $this->startDate->next(Carbon::FRIDAY);
         // Holiday: remote work + mission + overtime
@@ -593,7 +780,7 @@ class AttendanceServiceCalculationTest extends TestCase
         $shift = $this->makeShift();
         $employee = $this->makeEmployee($shift);
 
-        PublicHoliday::factory()->create(['company_id' => $this->company->id, 'date' => '2025-03-27']);
+        PublicHoliday::factory()->create(['fiscal_year_id' => $this->fiscalYear->id, 'date' => '2025-03-27']);
 
         // Mission spanning Thursday (holiday) and Friday
         $this->insertLog($employee, '2025-03-27', ['mission' => 480]); // Thursday holiday
@@ -764,7 +951,7 @@ class AttendanceServiceCalculationTest extends TestCase
         $log = $this->insertLog($employee, '2025-03-10', [], false);
 
         $request = PersonnelRequest::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'employee_id' => $employee->id,
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'start_date' => '2025-03-10 10:00:00',
@@ -797,7 +984,7 @@ class AttendanceServiceCalculationTest extends TestCase
         $log = $this->insertLog($employee, '2025-03-10', [], false);
 
         $request = PersonnelRequest::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'employee_id' => $employee->id,
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'start_date' => '2025-03-10 09:00:00',
@@ -829,7 +1016,7 @@ class AttendanceServiceCalculationTest extends TestCase
         $log = $this->insertLog($employee, '2025-03-10', [], false);
 
         $request = PersonnelRequest::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'employee_id' => $employee->id,
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'start_date' => '2025-03-10 09:00:00',
@@ -873,7 +1060,7 @@ class AttendanceServiceCalculationTest extends TestCase
         ], false);
 
         PersonnelRequest::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'employee_id' => $employee->id,
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'start_date' => '2025-03-10 10:00:00',
@@ -910,7 +1097,7 @@ class AttendanceServiceCalculationTest extends TestCase
         ], false);
 
         PersonnelRequest::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'employee_id' => $employee->id,
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'start_date' => '2025-03-10 09:00:00',
@@ -946,7 +1133,7 @@ class AttendanceServiceCalculationTest extends TestCase
         ], false);
 
         PersonnelRequest::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'employee_id' => $employee->id,
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'start_date' => '2025-03-10 09:00:00',
@@ -983,7 +1170,7 @@ class AttendanceServiceCalculationTest extends TestCase
         ], false);
 
         $request = PersonnelRequest::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'employee_id' => $employee->id,
             'request_type' => PersonnelRequestType::REMOTE_WORK->value,
             'start_date' => '2025-03-10 13:00:00',
@@ -1014,7 +1201,7 @@ class AttendanceServiceCalculationTest extends TestCase
     private function applyHourlyRequest(Employee $employee, PersonnelRequestType $type, string $start, string $end): void
     {
         $request = PersonnelRequest::factory()->create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'employee_id' => $employee->id,
             'request_type' => $type->value,
             'start_date' => $start,

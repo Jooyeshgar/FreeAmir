@@ -1,64 +1,28 @@
 <?php
 
-use App\Models\Company;
 use App\Models\FiscalYear;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
-function getActiveCompany(): int
+function getActiveFiscalYear(): int
 {
-    $configuredCompanyId = config('active-company-id');
-    if ($configuredCompanyId !== null) {
-        return (int) $configuredCompanyId;
+    $configuredFiscalYearId = config('active-fiscal-year-id');
+    if ($configuredFiscalYearId !== null) {
+        return (int) $configuredFiscalYearId;
     }
 
-    // Compatibility for CLI and tests that establish a legacy year context directly.
-    $legacyId = getActiveLegacyCompany();
-    try {
-        return (int) (FiscalYear::where('legacy_company_id', $legacyId)->value('company_identity_id') ?? $legacyId);
-    } catch (Throwable) {
-        return $legacyId;
-    }
-}
-
-function getActiveFiscalYear(): ?int
-{
-    return config('active-fiscal-year-id') === null ? null : (int) config('active-fiscal-year-id');
-}
-
-function getScopedFiscalYear(): int
-{
-    return getActiveFiscalYear() ?? (int) (FiscalYear::query()->where('legacy_company_id', getActiveLegacyCompany())->value('id') ?? 0);
-}
-
-function getActiveLegacyCompany(): int
-{
-    $configuredLegacyId = config('active-legacy-company-id');
-    if ($configuredLegacyId !== null) {
-        return (int) $configuredLegacyId;
-    }
-
-    if (getActiveFiscalYear() !== null) {
-        return (int) (FiscalYear::whereKey(getActiveFiscalYear())->value('legacy_company_id') ?? 0);
-    }
-
-    $configuredCompanyId = config('active-company-id');
-    if ($configuredCompanyId !== null) {
-        return (int) $configuredCompanyId;
-    }
-
-    $cookieCompanyId = Cookie::get('active-company-id');
-    if ($cookieCompanyId !== null) {
-        return (int) $cookieCompanyId;
+    $cookieFiscalYearId = Cookie::get('active-fiscal-year-id');
+    if ($cookieFiscalYearId !== null) {
+        return (int) $cookieFiscalYearId;
     }
 
     // During tests/CLI execution there may be no request cookie. Use the
-    // first persisted company deterministically; fresh databases still use 1
-    // until the companies table is available.
+    // first persisted fiscal year deterministically; fresh databases still use 1
+    // until the fiscal years table is available.
     try {
-        return (int) (Company::withoutGlobalScopes()->orderBy('id')->value('id') ?? 1);
+        return (int) (FiscalYear::orderBy('id')->value('id') ?? 1);
     } catch (Throwable) {
         return 1;
     }
@@ -89,6 +53,41 @@ function formatNumber($number)
     }
 
     return $formattedNumber;
+}
+
+/**
+ * Format a monetary amount using a compact magnitude and the configured currency.
+ *
+ * @return array{value: string, unit: string, formatted: string}
+ */
+function formatCompactCurrencyParts(int|float|string $amount, ?string $currency = null): array
+{
+    $amount = (float) $amount;
+    $absoluteAmount = abs($amount);
+    [$scale, $magnitude] = match (true) {
+        $absoluteAmount >= 1_000_000_000 => [1_000_000_000, 'Billion'],
+        $absoluteAmount >= 1_000_000 => [1_000_000, 'Million'],
+        $absoluteAmount >= 1_000 => [1_000, 'Thousand'],
+        default => [1, null],
+    };
+
+    $currency ??= config('amir.currency') ?? __('Rial');
+    $value = formatNumber($amount / $scale);
+    $unit = $magnitude ? __($magnitude).' '.$currency : $currency;
+
+    return [
+        'value' => $value,
+        'unit' => $unit,
+        'formatted' => $value.' '.$unit,
+    ];
+}
+
+/**
+ * Format a monetary amount as a compact value and unit in one string.
+ */
+function formatCompactCurrency(int|float|string $amount, ?string $currency = null): string
+{
+    return formatCompactCurrencyParts($amount, $currency)['formatted'];
 }
 
 function formatDocumentNumber(float $number)
@@ -201,16 +200,11 @@ function formatMinutesAsTime($minutes): string
 }
 
 /**
- * Format a number for CSV export: returns Farsi digits when locale is fa/fa_IR, otherwise the value as-is.
+ * Normalize structured CSV values without changing separators or leading zeros.
  */
-function csvNumber(int|float|string $value): string
+function csvNumber(int|float|string|null $value): string
 {
-    $locale = App::getLocale();
-    if ($locale === 'fa' || $locale === 'fa_IR') {
-        return convertToFarsi((string) $value);
-    }
-
-    return (string) $value;
+    return toEnglish((string) $value);
 }
 
 /**
@@ -311,21 +305,14 @@ function convertToInt($number)
  */
 function convertToGregorian($date)
 {
-    if (empty($date)) {
-        return $date;
-    }
-
     $locale = App::getLocale();
 
     if ($locale === 'fa' || $locale === 'fa_IR') {
-        $date = str_replace('-', '/', trim($date));
-
         return jalali_to_gregorian_date($date);
     }
 
     return $date;
 }
-
 
 /**
  * Parse a Jalali (or Gregorian) date input from a form field and return a 'Y-m-d' Gregorian string.

@@ -2,7 +2,7 @@
     <x-show-message-bags />
 
     <div class="mb-6 flex items-center gap-1">
-        <h1 class="mt-1 text-xl font-black tracking-tight text-base-content sm:text-2xl">{{ __('My Portal') }}</h1>
+        <h1 class="text-xl font-black tracking-tight text-base-content sm:text-2xl">{{ __('My Portal') }}</h1>
         <x-user-guide-link source="employee-portal/README.md" />
     </div>
 

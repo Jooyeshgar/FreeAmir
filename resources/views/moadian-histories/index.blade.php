@@ -2,7 +2,6 @@
     <div class="card bg-base-100">
         <div class="card-body">
             <h2 class="card-title flex-wrap">
-                <x-user-guide-link source="invoices/sells/moadian-histories/how-to-use-moadian.md" />
                 @if(isset($invoice))
                     {{ __('Moadian Histories') }}
                     <a href="{{ route('invoices.show', $invoice) }}" class="link-hover">
@@ -11,6 +10,7 @@
                 @else
                     {{ __('Moadian Histories') }}
                 @endif
+                <x-user-guide-link source="invoices/sells/moadian-histories/how-to-use-moadian.md" />
             </h2>
 
             <x-show-message-bags />
@@ -40,7 +40,7 @@
             </div>
 
             <div class="overflow-x-auto">
-                <table class="min-w-[48rem] w-full divide-y">
+                <table class="table min-w-[48rem] w-full">
                     <thead>
                         <tr>
                             @if(!isset($invoice))
@@ -49,7 +49,9 @@
                             <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('Status') }}</th>
                             <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('Reference Number') }}</th>
                             <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('UID') }}</th>
+                            <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('Tax ID') }}</th>
                             <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('Date') }}</th>
+                            <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('Details') }}</th>
                             <th scope="col" class="px-2 py-2 text-xs text-gray-500">{{ __('Action') }}</th>
                         </tr>
                     </thead>
@@ -57,12 +59,13 @@
                         @forelse ($moadianHistories as $history)
                             @php
                                 $status = isset($history->data['status']) ? Str::upper($history->data['status']) : 'UNKNOWN';
+                                $fiscalYearClosed = $history->invoice?->fiscalYear?->isClosed() ?? false;
                                 $isLatest = in_array($history->id, $latestHistoryIds, true);
                             @endphp
                             <tr>
                                 @if(!isset($invoice))
                                 <td class="text-gray-500">
-                                    <a class="link" href="{{ route('invoices.show', $history->invoice_id) }}">{{ formatDocumentNumber($history->invoice->number) ?? '' }}</a>
+                                    <a class="link" href="{{ route('invoices.show', $history->invoice_id) }}">{{ $history->invoice?->number !== null ? formatDocumentNumber($history->invoice->number) : '' }}</a>
                                 </td>
                                 @endif
                                 <td>
@@ -73,22 +76,25 @@
                                 </td>
                                 <td class="text-gray-500">{{ $history->data['referenceNumber'] ?? '-' }}</td>
                                 <td class="text-gray-500">{{ $history->data['uid'] ?? '-' }}</td>
+                                <td class="text-gray-500">{{ $status === 'SUCCESS' ? $history->invoice?->taxID : '-' }}</td>
                                 <td class="text-gray-500">{{ localizeNumber($history->created_at->format('Y/m/d H:i')) }}</td>
+                                <td>@include('moadian-histories._details', ['history' => $history])</td>
                                 <td>
-                                    <div class="flex items-center justify-center py-2">
+                                    <div class="flex items-center justify-center gap-2 py-2">
                                         @if($isLatest)
-                                            @if(isset($history->data['referenceNumber']) && $status === 'UNKNOWN')
+                                            @if($history->invoice?->moadianReferenceNumber())
                                                 @can('invoices.moadian-check-status')
                                                     <form method="POST" action="{{ route('invoices.moadian-check-status', $history->invoice_id) }}">
                                                         @csrf
-                                                        <button type="submit" class="btn btn-xs btn-info">{{ __('Check Status') }}</button>
+                                                        <button type="submit" class="btn btn-xs btn-info {{ $fiscalYearClosed ? 'btn-disabled' : '' }}" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ __('Check Status') }}</button>
                                                     </form>
                                                 @endcan
-                                            @elseif($status === 'FAILED')
+                                            @endif
+                                            @if($status === 'FAILED')
                                                 @can('invoices.send-moadian')
                                                     <form method="POST" action="{{ route('invoices.send-moadian', $history->invoice_id) }}">
                                                         @csrf
-                                                        <button type="submit" class="btn btn-xs btn-info">{{ __('Send Again') }}</button>
+                                                        <button type="submit" class="btn btn-xs btn-info {{ $fiscalYearClosed ? 'btn-disabled' : '' }}" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ __('Send Again') }}</button>
                                                     </form>
                                                 @endcan
                                             @elseif($status === 'SUCCESS')
@@ -100,7 +106,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="{{ isset($invoice) ? 5 : 6 }}" class="text-center text-gray-500 p-3">{{ __('No moadian histories found.') }}</td>
+                                <td colspan="{{ isset($invoice) ? 7 : 8 }}" class="text-center text-gray-500 p-3">{{ __('No moadian histories found.') }}</td>
                             </tr>
                         @endforelse
                     </tbody>

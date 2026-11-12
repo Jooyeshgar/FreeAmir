@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FiscalYear;
 use App\Models\OrganizationUnit;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,7 +31,9 @@ class OrganizationUnitController extends Controller
 
         $organizationUnits = $query->paginate(15)->withQueryString();
 
-        return view('organization-units.index', compact('organizationUnits'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('organization-units.index', compact('fiscalYearClosed', 'organizationUnits'));
     }
 
     public function create(): View
@@ -44,7 +47,7 @@ class OrganizationUnitController extends Controller
     {
         OrganizationUnit::create(array_merge(
             $this->validatePayload($request),
-            ['company_id' => getActiveLegacyCompany()]
+            ['fiscal_year_id' => getActiveFiscalYear()]
         ));
 
         return redirect()->route('hr.organization-units.index')
@@ -59,7 +62,9 @@ class OrganizationUnitController extends Controller
             'employees' => fn ($query) => $query->with('workSite')->orderBy('code'),
         ]);
 
-        return view('organization-units.show', compact('organizationUnit'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('organization-units.show', compact('fiscalYearClosed', 'organizationUnit'));
     }
 
     public function edit(OrganizationUnit $organizationUnit): View
@@ -89,9 +94,9 @@ class OrganizationUnitController extends Controller
 
     private function validatePayload(Request $request, ?OrganizationUnit $organizationUnit = null): array
     {
-        $companyId = getActiveLegacyCompany();
+        $fiscalYearId = getActiveFiscalYear();
         $codeRule = Rule::unique('organization_units', 'code')
-            ->where('company_id', $companyId);
+            ->where('fiscal_year_id', $fiscalYearId);
 
         if ($organizationUnit !== null) {
             $codeRule->ignore($organizationUnit->id);
@@ -108,7 +113,7 @@ class OrganizationUnitController extends Controller
             'parent_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('organization_units', 'id')->where('company_id', $companyId),
+                Rule::exists('organization_units', 'id')->where('fiscal_year_id', $fiscalYearId),
             ],
             'description' => ['nullable', 'string'],
             'is_active' => ['boolean'],

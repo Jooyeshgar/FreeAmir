@@ -2,188 +2,79 @@
 
 namespace Tests\Feature\Api;
 
-use App\Models\Company;
-use App\Models\Customer;
-use App\Models\CustomerGroup;
-use App\Models\Product;
-use App\Models\ProductGroup;
+use App\Models\FiscalYear;
 use App\Models\User;
-use App\Models\Warehouse;
-use App\Models\WarehouseProductStock;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
-use Tests\Helpers\SeederHelper;
 use Tests\TestCase;
 
 class InvoiceApiTest extends TestCase
 {
-    use RefreshDatabase, SeederHelper;
+    use RefreshDatabase;
 
-    private Company $company;
+    private FiscalYear $fiscalYear;
 
     private User $user;
-
-    private Customer $customer;
-
-    private Product $product;
-
-    private Warehouse $warehouse;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->company = Company::factory()->create();
-        config(['active-company-id' => $this->company->id]);
-
+        $this->fiscalYear = FiscalYear::factory()->create();
         $this->user = User::factory()->create();
-        $this->company->users()->attach($this->user);
-
-        $this->importSubjects($this->company->id);
-        $this->importConfigs($this->company->id);
-
-        $productGroup = ProductGroup::factory()->withSubjects()->create(['company_id' => $this->company->id]);
-        $customerGroup = CustomerGroup::factory()->withSubject()->create(['company_id' => $this->company->id]);
-
-        $this->customer = Customer::factory()
-            ->withGroup($customerGroup)
-            ->withSubject()
-            ->create(['company_id' => $this->company->id]);
-
-        $this->warehouse = Warehouse::create([
-            'company_id' => $this->company->id,
-            'name' => 'انبار اصلی',
-            'code' => 'MAIN',
-        ]);
-
-        $this->product = Product::factory()
-            ->withGroup($productGroup)
-            ->withSubjects()
-            ->create([
-                'company_id' => $this->company->id,
-                'quantity' => 0,
-                'average_cost' => 100,
-            ]);
-
-        WarehouseProductStock::firstOrCreate(
-            ['warehouse_id' => $this->warehouse->id, 'product_id' => $this->product->id],
-            ['quantity' => 0, 'average_cost' => 100]
-        );
+        $this->fiscalYear->users()->attach($this->user);
+        config(['active-fiscal-year-id' => $this->fiscalYear->id]);
     }
 
-    private function grant(User $user, array $permissions): void
-    {
-        foreach ($permissions as $permission) {
-            $user->givePermissionTo(Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']));
-        }
-    }
-
-    /**
-     * Build the Authorization header for a Sanctum token that carries the given abilities.
-     */
-    private function apiHeaders(User $user, array $abilities): array
+    private function headers(array $abilities): array
     {
         return [
-            'Authorization' => 'Bearer '.$user->createToken('test', $abilities)->plainTextToken,
+            'Authorization' => 'Bearer '.$this->user->createToken('api-test', $abilities)->plainTextToken,
         ];
     }
 
-    private function invoicePayload(array $overrides = []): array
+    private function grant(string $permission): void
     {
-        return array_merge([
-            'invoice_type' => 'buy',
-            'date' => now()->toDateString(),
-            'customer_id' => $this->customer->id,
-            'warehouse_id' => $this->warehouse->id,
-            'invoice_number' => 1001,
-            'document_number' => 1001,
-            'title' => 'API buy invoice',
-            'items' => [
-                [
-                    'item_type' => 'product',
-                    'item_id' => $this->product->id,
-                    'quantity' => 2,
-                    'unit_price' => 500,
-                    'unit_discount' => 0,
-                    'vat' => 0,
-                ],
-            ],
-        ], $overrides);
+        $this->user->givePermissionTo(Permission::firstOrCreate([
+            'name' => $permission,
+            'guard_name' => 'web',
+        ]));
     }
 
-    public function test_store_invoice_requires_invoices_store_permission(): void
+    public function test_invoice_index_requires_authentication(): void
     {
-        $limitedUser = User::factory()->create();
-        $this->company->users()->attach($limitedUser);
-        $this->grant($limitedUser, ['api.access', 'invoices.index']);
-
-        $this->postJson(
-            "/api/companies/{$this->company->id}/invoices",
-            $this->invoicePayload(),
-            $this->apiHeaders($limitedUser, ['api.access', 'invoices.index'])
-        )->assertForbidden();
-
-        $this->assertDatabaseCount('invoices', 0);
+        $this->getJson('/api/companies/'.$this->fiscalYear->id.'/invoices')->assertUnauthorized();
     }
 
-    public function test_store_invoice_creates_a_buy_invoice_with_permission(): void
+    public function test_invoice_index_requires_permission(): void
     {
-        $this->grant($this->user, ['api.access', 'invoices.store']);
-
-        $response = $this->postJson(
-            "/api/companies/{$this->company->id}/invoices",
-            $this->invoicePayload(),
-            $this->apiHeaders($this->user, ['api.access', 'invoices.store'])
-        );
-
-        $response->assertCreated()
-            ->assertJsonPath('data.invoice_type', 'buy')
-            ->assertJsonPath('data.customer_id', $this->customer->id)
-            ->assertJsonPath('data.warehouse_id', $this->warehouse->id)
-            ->assertJsonPath('data.items_count', 1);
-
-        $this->assertDatabaseHas('invoices', [
-            'id' => $response->json('data.id'),
-            'company_id' => $this->company->id,
-            'customer_id' => $this->customer->id,
-        ]);
-    }
-
-    public function test_show_invoice_returns_404_for_non_numeric_id(): void
-    {
-        $this->grant($this->user, ['api.access', 'invoices.show']);
+        $this->grant('api.access');
 
         $this->getJson(
-            "/api/companies/{$this->company->id}/invoices/abc",
-            $this->apiHeaders($this->user, ['api.access', 'invoices.show'])
-        )->assertNotFound();
+            '/api/companies/'.$this->fiscalYear->id.'/invoices',
+            $this->headers(['api.access'])
+        )->assertForbidden();
     }
 
-    public function test_change_status_requires_invoices_change_status_permission(): void
+    public function test_invoice_index_is_available_to_a_permitted_user(): void
     {
-        $this->grant($this->user, ['api.access', 'invoices.store']);
+        $this->grant('api.access');
+        $this->grant('invoices.index');
 
-        $created = $this->postJson(
-            "/api/companies/{$this->company->id}/invoices",
-            $this->invoicePayload(),
-            $this->apiHeaders($this->user, ['api.access', 'invoices.store'])
-        )->assertCreated();
+        $this->getJson(
+            '/api/companies/'.$this->fiscalYear->id.'/invoices',
+            $this->headers(['api.access', 'invoices.index'])
+        )->assertOk()->assertJsonStructure(['data', 'current_page', 'total', 'per_page', 'last_page']);
+    }
 
-        $invoiceId = $created->json('data.id');
+    public function test_invoice_show_returns_not_found_for_a_missing_invoice(): void
+    {
+        $this->grant('api.access');
+        $this->grant('invoices.show');
 
-        $approver = User::factory()->create();
-        $this->company->users()->attach($approver);
-        $this->grant($approver, ['api.access', 'invoices.index', 'invoices.approve']);
-
-        $this->postJson(
-            "/api/companies/{$this->company->id}/invoices/{$invoiceId}/change-status/approved",
-            [],
-            $this->apiHeaders($approver, ['api.access', 'invoices.index', 'invoices.approve'])
-        )->assertForbidden();
-
-        $this->assertDatabaseHas('invoices', [
-            'id' => $invoiceId,
-            'status' => 1,
-        ]);
+        $this->getJson(
+            '/api/companies/'.$this->fiscalYear->id.'/invoices/999999',
+            $this->headers(['api.access', 'invoices.show'])
+        )->assertNotFound();
     }
 }

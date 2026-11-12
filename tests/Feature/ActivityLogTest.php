@@ -6,6 +6,7 @@ use App\Models\Activity;
 use App\Models\Company;
 use App\Models\Config;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use App\Models\Subject;
 use App\Models\Transaction;
@@ -169,8 +170,7 @@ class ActivityLogTest extends TestCase
 
         $this->assertSame(1, Activity::query()->count());
         $activity = Activity::query()->sole();
-        $models = collect($activity->details->get('models'))
-            ->where('model_type', Company::class)->values();
+        $models = collect($activity->details->get('models'));
 
         $this->assertSame('request', $activity->source);
         $this->assertSame('POST', $activity->details->get('method'));
@@ -181,6 +181,122 @@ class ActivityLogTest extends TestCase
         $this->assertArrayNotHasKey('name', $models->first()['old']);
     }
 
+    public function test_document_duplication_stores_and_displays_one_activity_with_all_created_models(): void
+    {
+        $actor = User::factory()->create();
+        $actor->givePermissionTo(Permission::firstOrCreate(['name' => 'documents.duplicate']));
+        $actor->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+        $fiscalYear = FiscalYear::factory()->create(['year' => 1405]);
+        config(['active-fiscal-year-id' => $fiscalYear->id]);
+        $subject = Subject::create([
+            'parent_id' => null,
+            'name' => 'Cash',
+            'code' => '001',
+            'type' => 3,
+        ]);
+        $document = Document::create([
+            'fiscal_year_id' => $fiscalYear->id,
+            'number' => 101,
+            'date' => '2026-03-21',
+            'creator_id' => $actor->id,
+            'title' => 'Duplication audit',
+        ]);
+        foreach ([100, 200, -300] as $value) {
+            Transaction::create([
+                'subject_id' => $subject->id,
+                'document_id' => $document->id,
+                'user_id' => $actor->id,
+                'value' => $value,
+                'desc' => 'Duplicated transaction '.$value,
+            ]);
+        }
+
+        Activity::query()->delete();
+        $this->actingAs($actor)->get(route('documents.duplicate', $document))->assertStatus(405);
+        $this->assertSame(1, Document::query()->count());
+        $this->assertDatabaseCount('activity_log', 0);
+
+        $response = $this->post(route('documents.duplicate', $document));
+        $duplicate = Document::query()->where('id', '!=', $document->id)->sole();
+        $response->assertRedirect(route('documents.edit', $duplicate));
+
+        $activity = Activity::query()->sole();
+        $models = collect($activity->details->get('models'));
+        $this->assertSame('request', $activity->source);
+        $this->assertSame($actor->id, $activity->user_id);
+        $this->assertSame('documents.duplicate', $activity->details->get('route'));
+        $this->assertSame('POST', $activity->details->get('method'));
+        $this->assertSame($fiscalYear->id, $activity->details->get('fiscal_year_id'));
+        $this->assertCount(4, $models);
+        $this->assertTrue($models->every(fn (array $model): bool => $model['event'] === 'created'));
+        $this->assertSame([$duplicate->id], $models->where('model_type', Document::class)->pluck('model_id')->all());
+        $this->assertEqualsCanonicalizing(
+            $duplicate->transactions->pluck('id')->all(),
+            $models->where('model_type', Transaction::class)->pluck('model_id')->all()
+        );
+        $this->assertCount(3, $duplicate->transactions);
+
+        $this->get(route('management.activity-logs.index'))
+            ->assertOk()
+            ->assertViewHas('activities', fn ($activities): bool => $activities->total() === 1
+                && $activities->count() === 1
+                && $activities->first()['id'] === $activity->id);
+        $this->getJson(route('management.activity-logs.details', $activity))
+            ->assertOk()
+            ->assertJsonPath('html', function (string $html) use ($duplicate): bool {
+                return str_contains($html, $duplicate->title)
+                    && $duplicate->transactions->every(fn (Transaction $transaction): bool => str_contains($html, $transaction->desc));
+            });
+        $this->assertDatabaseCount('activity_log', 1);
+    }
+
+    public function test_ordinary_get_requests_do_not_record_request_activities(): void
+    {
+        $actor = User::factory()->create();
+        Route::get('/test/activity-log/read-only', fn () => response()->noContent())->middleware('web');
+
+        Activity::query()->delete();
+        $this->actingAs($actor)->get('/test/activity-log/read-only')->assertNoContent();
+
+        $this->assertDatabaseCount('activity_log', 0);
+    }
+
+    public function test_missing_document_duplication_does_not_record_a_successful_activity(): void
+    {
+        $actor = User::factory()->create();
+        $actor->givePermissionTo(Permission::firstOrCreate(['name' => 'documents.duplicate']));
+        $fiscalYear = FiscalYear::factory()->create(['year' => 1405]);
+        config(['active-fiscal-year-id' => $fiscalYear->id]);
+
+        Activity::query()->delete();
+        $this->actingAs($actor)->post(route('documents.duplicate', 999999))->assertNotFound();
+
+        $this->assertDatabaseCount('activity_log', 0);
+    }
+
+    public function test_closed_year_document_duplication_does_not_create_models_or_activity(): void
+    {
+        $actor = User::factory()->create();
+        $actor->givePermissionTo(Permission::firstOrCreate(['name' => 'documents.duplicate']));
+        $fiscalYear = FiscalYear::factory()->create(['year' => 1405]);
+        config(['active-fiscal-year-id' => $fiscalYear->id]);
+        $document = Document::create([
+            'fiscal_year_id' => $fiscalYear->id,
+            'number' => 101,
+            'date' => '2026-03-21',
+            'creator_id' => $actor->id,
+        ]);
+        $fiscalYear->update(['closed_at' => now()]);
+
+        Activity::query()->delete();
+        $this->actingAs($actor)->postJson(route('documents.duplicate', $document))
+            ->assertUnprocessable()->assertJsonValidationErrors('fiscal_year');
+
+        $this->assertSame(1, Document::query()->count());
+        $this->assertDatabaseCount('transactions', 0);
+        $this->assertDatabaseCount('activity_log', 0);
+    }
+
     public function test_activity_log_listing_does_not_load_request_model_snapshots(): void
     {
         $actor = User::factory()->create();
@@ -189,7 +305,7 @@ class ActivityLogTest extends TestCase
             'description' => 'POST test',
             'event' => 'post',
             'user_id' => $actor->id,
-            'properties' => ['route' => 'test', 'models' => [['model_type' => Company::class, 'model_id' => 1]]],
+            'properties' => ['route' => 'test', 'models' => [['model_type' => FiscalYear::class, 'model_id' => 1]]],
         ]);
 
         $service = app(ActivityLogService::class);
@@ -212,7 +328,7 @@ class ActivityLogTest extends TestCase
             'properties' => [
                 'route' => 'test',
                 'models' => [[
-                    'model_type' => Company::class,
+                    'model_type' => FiscalYear::class,
                     'model_id' => 1,
                     'event' => 'created',
                     'attributes' => ['name' => 'Acme'],
@@ -230,24 +346,24 @@ class ActivityLogTest extends TestCase
     {
         $actor = User::factory()->create();
         $actor->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
-        $company = Company::factory()->create(['name' => 'Seeded company']);
+        $fiscalYear = FiscalYear::factory()->create(['year' => 1405]);
 
         $activity = Activity::create([
             'log_name' => 'model',
             'description' => 'created',
             'event' => 'created',
             'user_id' => $actor->id,
-            'subject_type' => Company::class,
-            'subject_id' => $company->id,
+            'subject_type' => FiscalYear::class,
+            'subject_id' => $fiscalYear->id,
             'properties' => [
-                'model_label' => $company->name,
-                'attributes' => ['name' => $company->name],
+                'model_label' => 'Seeded fiscal year',
+                'attributes' => ['year' => $fiscalYear->year],
             ],
         ]);
 
         $response = $this->actingAs($actor)->getJson(route('management.activity-logs.details', $activity));
 
-        $response->assertOk()->assertJsonPath('html', fn (string $html): bool => str_contains($html, 'Seeded company'));
+        $response->assertOk()->assertJsonPath('html', fn (string $html): bool => str_contains($html, 'year'));
     }
 
     public function test_a_write_request_only_keeps_attributes_that_really_changed(): void
@@ -279,19 +395,19 @@ class ActivityLogTest extends TestCase
     public function test_document_delete_request_records_the_document_and_every_transaction(): void
     {
         $actor = User::factory()->create();
-        $company = Company::factory()->create(['fiscal_year' => 1403]);
-        $actor->companies()->syncWithoutDetaching([$company->id]);
-        config(['active-company-id' => $company->id, 'active-company-fiscal-year' => 1403]);
+        $fiscalYear = FiscalYear::factory()->create(['year' => 1403]);
+        $actor->fiscalYears()->syncWithoutDetaching([$fiscalYear->id]);
+        config(['active-fiscal-year-id' => $fiscalYear->id, 'active-company-fiscal-year' => 1403]);
 
         $subject = Subject::withoutGlobalScopes()->create([
-            'company_id' => $company->id,
+            'fiscal_year_id' => $fiscalYear->id,
             'parent_id' => null,
             'name' => 'Cash',
             'code' => '001',
             'type' => 3,
         ]);
         $document = Document::withoutGlobalScopes()->create([
-            'company_id' => $company->id,
+            'fiscal_year_id' => $fiscalYear->id,
             'number' => 101,
             'date' => '2024-03-21',
             'creator_id' => $actor->id,
@@ -329,26 +445,26 @@ class ActivityLogTest extends TestCase
     public function test_subject_transfer_request_records_every_updated_transaction(): void
     {
         $actor = User::factory()->create();
-        $company = Company::factory()->create(['fiscal_year' => 1403]);
-        $actor->companies()->syncWithoutDetaching([$company->id]);
-        config(['active-company-id' => $company->id, 'active-company-fiscal-year' => 1403]);
+        $fiscalYear = FiscalYear::factory()->create(['year' => 1403]);
+        $actor->fiscalYears()->syncWithoutDetaching([$fiscalYear->id]);
+        config(['active-fiscal-year-id' => $fiscalYear->id, 'active-company-fiscal-year' => 1403]);
 
         $source = Subject::withoutGlobalScopes()->create([
-            'company_id' => $company->id,
+            'fiscal_year_id' => $fiscalYear->id,
             'parent_id' => null,
             'name' => 'Source',
             'code' => '001',
             'type' => 3,
         ]);
         $destination = Subject::withoutGlobalScopes()->create([
-            'company_id' => $company->id,
+            'fiscal_year_id' => $fiscalYear->id,
             'parent_id' => null,
             'name' => 'Destination',
             'code' => '002',
             'type' => 3,
         ]);
         $document = Document::withoutGlobalScopes()->create([
-            'company_id' => $company->id,
+            'fiscal_year_id' => $fiscalYear->id,
             'number' => 102,
             'date' => '2024-03-21',
             'creator_id' => $actor->id,
@@ -384,7 +500,7 @@ class ActivityLogTest extends TestCase
         $actor = User::factory()->create();
 
         Route::post('/test/activity-log/failure', function () {
-            Company::factory()->create();
+            FiscalYear::factory()->create();
 
             throw new \RuntimeException('request failed');
         })->middleware('web');
@@ -405,16 +521,17 @@ class ActivityLogTest extends TestCase
     {
         $superAdmin = User::factory()->create();
         $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
-        $company = Company::factory()->create(['name' => 'Audit Company']);
+        $fiscalYear = FiscalYear::factory()->create(['year' => 1403]);
+        $fiscalYear->company->update(['name' => 'Audit Company']);
 
         activity('model')
             ->causedBy($superAdmin)
-            ->performedOn($company)
+            ->performedOn($fiscalYear->company)
             ->event('created')
             ->withProperties([
-                'company_id' => $company->id,
-                'model_label' => $company->name,
-                'attributes' => ['name' => $company->name],
+                'fiscal_year_id' => $fiscalYear->id,
+                'model_label' => $fiscalYear->company->name,
+                'attributes' => ['name' => $fiscalYear->company->name],
             ])
             ->log('created');
         activity('request')
@@ -424,10 +541,10 @@ class ActivityLogTest extends TestCase
             ->log('POST locale');
 
         $this->actingAs($superAdmin)
-            ->get(route('management.activity-logs.index', ['action' => 'created', 'company_id' => $company->id]))
+            ->get(route('management.activity-logs.index', ['action' => 'created', 'fiscal_year_id' => $fiscalYear->id]))
             ->assertOk()
             ->assertSee('Audit Company')
-            ->assertSee(__('Company').' #'.$company->id)
+            ->assertSee(__('Company').' #'.$fiscalYear->company->id)
             ->assertDontSee('POST locale')
             ->assertViewHas('activities', fn ($activities): bool => $activities->getCollection()->first()['changes']->contains(fn (array $change): bool => $change['field'] === 'name'))
             ->assertViewHas('modelOptions', fn ($options): bool => $options->contains(fn (array $option): bool => $option === [
@@ -569,10 +686,11 @@ class ActivityLogTest extends TestCase
             })
             ->assertSee('companies.store')
             ->assertSee(__('Company').' #'.$company->id)
-            ->assertSee('127.0.0.1')
-            ->assertSee('Created Company');
+            ->assertSee('127.0.0.1');
         $requestActivity = Activity::query()->where('source', 'request')->latest('id')->firstOrFail();
-        $this->actingAs($superAdmin)->getJson(route('management.activity-logs.details', $requestActivity))->assertOk();
+        $this->actingAs($superAdmin)->getJson(route('management.activity-logs.details', $requestActivity))
+            ->assertOk()
+            ->assertJsonPath('html', fn (string $html): bool => str_contains($html, 'Created Company'));
     }
 
     public function test_model_event_with_no_real_changes_is_not_recorded(): void
@@ -813,7 +931,7 @@ class ActivityLogTest extends TestCase
         $this->assertDatabaseHas('configs', [
             'key' => 'app_activity_logger_enabled',
             'value' => 'false',
-            'company_id' => null,
+            'fiscal_year_id' => null,
         ]);
         $this->assertDatabaseMissing('configs', ['key' => 'activity_logger_enabled']);
 
@@ -832,13 +950,15 @@ class ActivityLogTest extends TestCase
     {
         $superAdmin = User::factory()->create(['name' => 'Audit Administrator']);
         $superAdmin->givePermissionTo(Permission::firstOrCreate(['name' => 'access-super-admin-panel']));
+        $fiscalYear = FiscalYear::factory()->create(['year' => 1406]);
         $company = Company::factory()->create(['name' => 'Dashboard Audit Company']);
+        $fiscalYear->update(['company_id' => $company->id]);
 
         activity('model')
             ->causedBy($superAdmin)
             ->performedOn($company)
             ->event('updated')
-            ->withProperties(['company_id' => $company->id, 'model_label' => $company->name])
+            ->withProperties(['fiscal_year_id' => $fiscalYear->id, 'model_label' => $company->name])
             ->log('updated');
         activity('request')
             ->causedBy($superAdmin)
@@ -860,7 +980,7 @@ class ActivityLogTest extends TestCase
     public function test_initial_migration_creates_the_final_schema_and_renames_the_config_key(): void
     {
         Config::withoutGlobalScope(FiscalYearScope::class)->updateOrCreate(
-            ['key' => 'app_activity_logger_enabled', 'company_id' => null],
+            ['key' => 'app_activity_logger_enabled', 'fiscal_year_id' => null],
             ['value' => null, 'type' => 3, 'category' => 1, 'desc' => __('app_activity_logger_enabled')],
         );
 
@@ -882,7 +1002,7 @@ class ActivityLogTest extends TestCase
         $this->assertDatabaseHas('configs', [
             'key' => 'app_activity_logger_enabled',
             'value' => null,
-            'company_id' => null,
+            'fiscal_year_id' => null,
         ]);
     }
 
@@ -957,7 +1077,7 @@ class ActivityLogTest extends TestCase
 
         $activity = Activity::query()->where('source', 'request')->latest('id')->firstOrFail();
 
-        $this->assertCount(3, collect($activity->details->get('models'))->where('model_type', Company::class));
+        $this->assertCount(3, $activity->details->get('models'));
         $this->assertSame($impersonator->id, (int) $activity->user_id);
         $this->assertSame($impersonated->id, (int) $activity->details->get('impersonated_user_id'));
         $this->assertLessThanOrEqual(1, $impersonatorLookupCount);

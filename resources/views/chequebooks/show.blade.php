@@ -67,7 +67,7 @@
                                 </button>
                             </span>
                         @else
-                            <a href="{{ route('cheques.create', [
+                            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('cheques.create', [
                                 'direction' => \App\Enums\ChequeType::PAYABLE->value,
                                 'bank_account_id' => $chequebook->bank_account_id,
                                 'chequebook_id' => $chequebook->id,
@@ -76,24 +76,24 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6" />
                                 </svg>
                                 {{ __('Register cheque') }}
-                            </a>
+                            </x-closed-year-action-link>
                         @endif
                     @endcan
                     @can('chequebooks.edit')
-                        <a href="{{ route('chequebooks.edit', $chequebook) }}" class="btn btn-primary btn-sm gap-1.5">
+                        <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('chequebooks.edit', $chequebook) }}" class="btn btn-primary btn-sm gap-1.5">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L8.582 18.07a4.5 4.5 0 0 1-1.897 1.13L3 20.25l1.05-3.685a4.5 4.5 0 0 1 1.13-1.897l11.682-11.681Z" />
                             </svg>
                             {{ __('Edit') }}
-                        </a>
+                        </x-closed-year-action-link>
                     @endcan
                     @can('chequebooks.destroy')
                         <form method="POST" action="{{ route('chequebooks.destroy', $chequebook) }}">
                             @csrf
                             @method('DELETE')
                             <button class="btn btn-error btn-outline btn-sm gap-1.5"
-                                onclick="return confirm('{{ __('Delete this chequebook? Its cheques will be preserved and unlinked.') }}')">
+                                onclick="return confirm('{{ __('Delete this chequebook? Its cheques will be preserved and unlinked.') }}')" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21L18.16 19.673A2.25 2.25 0 0 1 15.916 21H8.084a2.25 2.25 0 0 1-2.244-1.827L4.772 5.79m14.456 0H4.772m10.978 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916" />
@@ -183,7 +183,7 @@
                     </div>
                     @can('cheques.create')
                         @unless ($isExhausted)
-                            <a href="{{ route('cheques.create', [
+                            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('cheques.create', [
                                 'direction' => \App\Enums\ChequeType::PAYABLE->value,
                                 'bank_account_id' => $chequebook->bank_account_id,
                                 'chequebook_id' => $chequebook->id,
@@ -192,7 +192,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6" />
                                 </svg>
                                 {{ __('Register cheque') }}
-                            </a>
+                            </x-closed-year-action-link>
                         @endunless
                     @endcan
                 </div>
@@ -241,13 +241,13 @@
                                                 </a>
                                                 @can('cheques.edit')
                                                     @if (! $cheque->has_lifecycle_actions)
-                                                        <a href="{{ route('cheques.edit', $cheque) }}"
+                                                        <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('cheques.edit', $cheque) }}"
                                                             class="btn btn-ghost btn-square btn-xs" title="{{ __('Edit') }}">
                                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                                     d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L8.582 18.07a4.5 4.5 0 0 1-1.897 1.13L3 20.25l1.05-3.685a4.5 4.5 0 0 1 1.13-1.897l11.682-11.681Z" />
                                                             </svg>
-                                                        </a>
+                                                        </x-closed-year-action-link>
                                                     @endif
                                                 @endcan
                                                 @can('cheques.destroy')
@@ -255,7 +255,7 @@
                                                         onsubmit="return confirm('{{ __('Delete this cheque and all of its accounting entries and payments?') }}')">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button type="submit" class="btn btn-ghost btn-square btn-xs text-error" title="{{ __('Delete') }}">
+                                                        <button type="submit" class="btn btn-ghost btn-square btn-xs text-error"  @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">
                                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                                     d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21L18.16 19.673A2.25 2.25 0 0 1 15.916 21H8.084a2.25 2.25 0 0 1-2.244-1.827L4.772 5.79m14.456 0H4.772m10.978 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916" />

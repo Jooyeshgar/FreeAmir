@@ -29,7 +29,7 @@ class MoadianHistoryController extends Controller
             $query->whereDate('created_at', $request->input('date'));
         }
 
-        $moadianHistories = $query->latest()->paginate(10)->withQueryString();
+        $moadianHistories = $query->latest()->paginate(30)->withQueryString();
 
         $latestHistoryIds = MoadianHistory::whereIn('invoice_id', $moadianHistories->pluck('invoice_id')->unique())
             ->selectRaw('MAX(id) as id')
@@ -55,20 +55,26 @@ class MoadianHistoryController extends Controller
             $query->whereDate('created_at', $request->input('date'));
         }
 
-        $moadianHistories = $query->latest()->paginate(10)->withQueryString();
+        $moadianHistories = $query->latest()->paginate(30)->withQueryString();
 
-        return view('moadian-histories.show', compact('moadianHistories', 'invoice', 'latestHistoryStatus'));
+        $referenceNumber = $invoice->moadianReferenceNumber();
+
+        $fiscalYearClosed = $invoice->fiscalYear?->isClosed() ?? false;
+
+        return view('moadian-histories.show', compact('moadianHistories', 'invoice', 'latestHistoryStatus', 'referenceNumber', 'fiscalYearClosed'));
     }
 
     public function checkStatus(Invoice $invoice): RedirectResponse
     {
-        $latestHistory = $invoice->moadianHistories()->latest()->first();
+        $hasAccess = auth()->user()->fiscalYears()->whereKey($invoice->fiscal_year_id)->exists();
+        abort_unless($hasAccess, 403);
+        $referenceNumber = $invoice->moadianReferenceNumber();
 
-        if (! $latestHistory || ! isset($latestHistory->data['referenceNumber'])) {
+        if (! $referenceNumber) {
             return redirect()->back()->with('error', __('No reference number available to check status.'));
         }
 
-        $statusData = $this->moadianService->moadianStatus($latestHistory->data['referenceNumber'], $invoice);
+        $statusData = $this->moadianService->moadianStatus($referenceNumber, $invoice);
 
         if (strtoupper($statusData['status'] ?? '') === 'FAILED') {
             return redirect()->back()->with('error', __('Failed to check status from Moadian. Please try again.'));

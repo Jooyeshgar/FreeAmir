@@ -1,11 +1,18 @@
 <x-app-layout :title="__('Moadian Histories') . ' ' . __('Invoice #') . formatDocumentNumber($invoice->number ?? $invoice->id)">
     <div class="card bg-base-100">
         <div class="card-body">
-            <h2 class="card-title">
-                <x-user-guide-link source="invoices/sells/moadian-histories/how-to-use-moadian.md" />
-                <a href="{{ route('invoices.show', $invoice) }}" class="link-hover">
-                    {{ __('Invoice') . ' ' . $invoice->invoice_type->label() . ' #' . formatDocumentNumber($invoice->number ?? $invoice->id) }}
-                </a>
+            <h2 class="card-title flex items-center w-full">
+                <div class="flex items-center gap-2">
+                    <a href="{{ route('invoices.show', $invoice) }}" class="link-hover">
+                        {{ __('Invoice') . ' ' . $invoice->invoice_type->label() . ' #' . formatDocumentNumber($invoice->number ?? $invoice->id) }}
+                    </a>
+                    <x-user-guide-link source="invoices/sells/moadian-histories/how-to-use-moadian.md" />
+                </div>
+
+                @if (\App\Enums\MoadianStatus::fromData($invoice->latestMoadianHistory?->data['status'] ?? null) !== null &&
+                    \App\Enums\MoadianStatus::fromData($invoice->latestMoadianHistory?->data['status'] ?? null)?->label() !== __('SUCCESS'))
+                    <span class="badge badge-sm md:badge-md lg:badge-lg badge-ghost font-normal ms-auto">{{ $invoice->taxID }}</span>
+                @endif
             </h2>
 
             <x-show-message-bags />
@@ -32,31 +39,37 @@
                     </div>
                 </form>
 
-                <div>
-                    @if ($latestHistoryStatus === 'UNKNOWN')
-                        <form method="POST" action="{{ route('invoices.moadian-check-status', $invoice) }}">
-                            @csrf
-                            <button type="submit" class="btn btn-sm btn-warning">{{ __('Check Status') }}</button>
-                        </form>
-                    @elseif($latestHistoryStatus === 'FAILED')
-                        <form method="POST" action="{{ route('invoices.send-moadian', $invoice) }}">
-                            @csrf
-                            <button type="submit" class="btn btn-sm btn-secondary">{{ __('Send Again') }}</button>
-                        </form>
-                    @elseif($latestHistoryStatus === 'SUCCESS')
-                        <span class="btn btn-sm btn-disabled">{{ __('Sent') }}</span>
-                    @endif
+                <div class="flex flex-wrap items-center gap-2">
+                    @can('invoices.moadian-check-status')
+                        @if ($referenceNumber)
+                            <form method="POST" action="{{ route('invoices.moadian-check-status', $invoice) }}">
+                                @csrf
+                                <button type="submit" class="btn btn-sm btn-warning {{ $fiscalYearClosed ? 'btn-disabled' : '' }}" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ __('Check Status') }}</button>
+                            </form>
+                        @endif
+                    @endcan
+                    @can('invoices.send-moadian')
+                        @if($latestHistoryStatus === 'FAILED')
+                            <form method="POST" action="{{ route('invoices.send-moadian', $invoice) }}">
+                                @csrf
+                                <button type="submit" class="btn btn-sm btn-secondary {{ $fiscalYearClosed ? 'btn-disabled' : '' }}" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ __('Send Again') }}</button>
+                            </form>
+                        @elseif($latestHistoryStatus === 'SUCCESS')
+                            <span class="btn btn-sm btn-disabled">{{ __('Sent') }}</span>
+                        @endif
+                    @endcan
                 </div>
             </div>
 
-            <div>
-                <table class="w-full divide-y">
+            <div class="overflow-x-auto">
+                <table class="table w-full">
                     <thead>
                         <tr>
                             <th class="px-2 py-2 text-xs text-gray-500">{{ __('Status') }}</th>
                             <th class="px-2 py-2 text-xs text-gray-500">{{ __('Reference Number') }}</th>
                             <th class="px-2 py-2 text-xs text-gray-500">{{ __('UID') }}</th>
                             <th class="px-2 py-2 text-xs text-gray-500">{{ __('Date') }}</th>
+                            <th class="px-2 py-2 text-xs text-gray-500">{{ __('Details') }}</th>
                         </tr>
                     </thead>
                     <tbody class="text-center">
@@ -73,6 +86,7 @@
                                 <td class="px-2 py-1 text-gray-500">{{ $history->data['referenceNumber'] ?? '-' }}</td>
                                 <td class="px-2 py-1 text-gray-500">{{ $history->data['uid'] ?? '-' }}</td>
                                 <td class="px-2 py-1 text-gray-500">{{ localizeNumber($history->created_at->format('Y/m/d H:i')) }}</td>
+                                <td class="px-2 py-1">@include('moadian-histories._details', ['history' => $history])</td>
                             </tr>
                         @empty
                             <tr>

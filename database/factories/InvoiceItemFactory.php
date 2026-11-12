@@ -37,7 +37,7 @@ class InvoiceItemFactory extends Factory
             'itemable_type' => $itemableType,
             'quantity' => $quantity,
             'unit_price' => $unit_price,
-            'unit_discount' => 0,
+            'discount' => 0,
             'vat' => 0,
             'amount' => $quantity * $unit_price,
         ];

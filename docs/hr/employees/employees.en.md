@@ -97,7 +97,7 @@ Search the list for that value. National ID must have 10 characters. Edit an exi
 
 ### Employee cannot access the portal
 
-A record alone is insufficient. Check the user–employee link, account activity, and company context.
+A record alone is insufficient. Check the user–employee link, account activity, and active fiscal-year access.
 
 ### List or export differs from expectations
 

@@ -8,7 +8,7 @@
         </div>
 
         <div class="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
-            <a href="{{ route('warehouses.transfer') }}" class="btn btn-sm btn-primary w-full sm:w-auto">{{ __('Transfer Product') }}</a>
+            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('warehouses.transfer') }}" class="btn btn-sm btn-primary w-full sm:w-auto">{{ __('Transfer Product') }}</x-closed-year-action-link>
             <a href="{{ route('warehouses.index') }}" class="btn btn-sm btn-outline w-full sm:w-auto">{{ __('Warehouses') }}</a>
         </div>
     </div>

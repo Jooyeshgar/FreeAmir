@@ -25,10 +25,10 @@ class DocumentController extends Controller
         }
 
         if (strlen($key) > 100) {
-            return response()->json(['message' => 'Idempotency-Key نباید بیشتر از ۱۰۰ کاراکتر باشد.'], 422);
+            return response()->json(['message' => __('Idempotency-Key نباید بیشتر از ۱۰۰ کاراکتر باشد.')], 422);
         }
 
-        $cacheKey = 'idempotency:documents:'.$request->user()->id.':'.getScopedFiscalYear().':'.hash('sha256', $key);
+        $cacheKey = 'idempotency:documents:'.$request->user()->id.':'.getActiveFiscalYear().':'.hash('sha256', $key);
         $payloadHash = hash('sha256', json_encode($request->validated()));
 
         try {
@@ -38,13 +38,13 @@ class DocumentController extends Controller
                 if ($saved) {
                     if ($saved['hash'] !== $payloadHash) {
                         return response()->json([
-                            'message' => 'این Idempotency-Key قبلاً با اطلاعات دیگری استفاده شده است.',
+                            'message' => __('این Idempotency-Key قبلاً با اطلاعات دیگری استفاده شده است.'),
                         ], 422);
                     }
 
                     $document = Document::withoutGlobalScopes()
                         ->with('transactions.subject')
-                        ->where('fiscal_year_id', getScopedFiscalYear())
+                        ->where('fiscal_year_id', getActiveFiscalYear())
                         ->find($saved['document_id']);
 
                     if ($document) {
@@ -65,7 +65,7 @@ class DocumentController extends Controller
                 return $response;
             });
         } catch (LockTimeoutException $e) {
-            return response()->json(['message' => 'درخواست قبلی با همین کلید هنوز در حال پردازش است. چند لحظه بعد دوباره تلاش کنید.'], 409);
+            return response()->json(['message' => __('درخواست قبلی با همین کلید هنوز در حال پردازش است. چند لحظه بعد دوباره تلاش کنید.')], 409);
         }
     }
 
@@ -79,7 +79,7 @@ class DocumentController extends Controller
 
         if ($ledger && ! $request->boolean('ledger_confirmation')) {
             return response()->json([
-                'message' => 'برای این تاریخ قبلاً دفتر تجاری صادر شده ('
+                'message' => __('برای این تاریخ قبلاً دفتر تجاری صادر شده (')
                     .$ledger->from_date->format('Y-m-d').' تا '.$ledger->to_date->format('Y-m-d')
                     .'). اگر مطمئن هستید، ledger_confirmation=true را هم بفرستید.',
                 'needs_confirmation' => true,
@@ -101,7 +101,7 @@ class DocumentController extends Controller
     {
         $document = Document::withoutGlobalScopes()
             ->with(['transactions.subject', 'documentFiles'])
-            ->where('fiscal_year_id', getScopedFiscalYear())
+            ->where('fiscal_year_id', getActiveFiscalYear())
             ->findOrFail($documentId);
 
         return response()->json(['data' => $this->formatDocument($document, true)]);
@@ -114,7 +114,7 @@ class DocumentController extends Controller
         int $documentId
     ): JsonResponse {
         $document = Document::withoutGlobalScopes()
-            ->where('fiscal_year_id', getScopedFiscalYear())
+            ->where('fiscal_year_id', getActiveFiscalYear())
             ->findOrFail($documentId);
         $data = $request->validated();
         $data['document_id'] = $document->id;
@@ -130,18 +130,18 @@ class DocumentController extends Controller
     {
         if (! in_array($status, ['approved', 'unapproved'], true)) {
             throw ValidationException::withMessages([
-                'status' => ['وضعیت نامعتبر است. وضعیت‌های مجاز: approved, unapproved'],
+                'status' => __('وضعیت نامعتبر است. وضعیت‌های مجاز: approved, unapproved'),
             ]);
         }
 
         $document = Document::withoutGlobalScopes()
             ->with('transactions')
-            ->where('fiscal_year_id', getScopedFiscalYear())
+            ->where('fiscal_year_id', getActiveFiscalYear())
             ->findOrFail($documentId);
 
         if ($document->documentable_id) {
             throw ValidationException::withMessages([
-                'status' => ['این سند خودکار (مثلاً از فاکتور) ساخته شده و وضعیتش را فقط از طریق مبدأ می‌توان تغییر داد.'],
+                'status' => __('این سند خودکار (مثلاً از فاکتور) ساخته شده و وضعیتش را فقط از طریق مبدأ می‌توان تغییر داد.'),
             ]);
         }
 
@@ -149,7 +149,7 @@ class DocumentController extends Controller
 
         if (($status === 'approved' && $isApproved) || ($status === 'unapproved' && ! $isApproved)) {
             throw ValidationException::withMessages([
-                'status' => ['سند از قبل در این وضعیت است.'],
+                'status' => __('سند از قبل در این وضعیت است.'),
             ]);
         }
 
@@ -179,7 +179,7 @@ class DocumentController extends Controller
         ]);
 
         $query = Document::withoutGlobalScopes()
-            ->where('fiscal_year_id', getScopedFiscalYear())
+            ->where('fiscal_year_id', getActiveFiscalYear())
             ->withCount('transactions')
             ->withSum(['transactions as total_credit' => fn ($q) => $q->where('value', '>', 0)], 'value')
             ->orderByDesc('date')

@@ -38,7 +38,7 @@ class AncillaryCostFactory extends Factory
             'number' => $this->faker->unique()->numerify('#####'),
             'type' => $this->faker->randomElement(AncillaryCostType::cases()),
             'date' => $invoice->date,
-            'company_id' => $invoice->company_id,
+            'fiscal_year_id' => $invoice->fiscal_year_id,
             'customer_id' => $invoice->customer_id,
             'status' => $this->faker->randomElement([InvoiceStatus::APPROVED, InvoiceStatus::UNAPPROVED]),
             'vat' => 0,
@@ -71,7 +71,7 @@ class AncillaryCostFactory extends Factory
             $payload = [
                 'invoice_id' => $invoice->id,
                 'customer_id' => $invoice->customer_id,
-                'company_id' => $invoice->company_id,
+                'fiscal_year_id' => $invoice->fiscal_year_id,
                 'date' => Carbon::parse($ancillaryCost->date ?? now())->toDateString(),
                 'type' => $ancillaryCost->type->value,
                 'amount' => $amount,

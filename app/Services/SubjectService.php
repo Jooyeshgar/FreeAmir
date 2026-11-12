@@ -6,6 +6,7 @@ use App\Enums\SubjectType;
 use App\Models\BankAccount;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\Transaction;
 use Illuminate\Support\Collection;
@@ -120,7 +121,6 @@ class SubjectService
 
             $transactions = (clone $transactionQuery)
                 ->join('documents', 'documents.id', '=', 'transactions.document_id')
-                ->where('documents.fiscal_year_id', getScopedFiscalYear())
                 ->when($approvedOnly, fn ($query) => $query->whereNotNull('documents.approved_at'))
                 ->whereBetween('documents.date', [$startDate, $endDate])
                 ->selectRaw('DATE(documents.date) as date, SUM(transactions.value) as total')
@@ -159,7 +159,6 @@ class SubjectService
         if ($approvedOnly) {
             return (float) Transaction::query()
                 ->join('documents', 'documents.id', '=', 'transactions.document_id')
-                ->where('documents.fiscal_year_id', getScopedFiscalYear())
                 ->whereNotNull('documents.approved_at')
                 ->whereIn('transactions.subject_id', self::subjectAndDescendantIds($subject))
                 ->when(! $both, fn ($query) => $query->where('transactions.value', $debit ? '<' : '>', 0))
@@ -226,6 +225,8 @@ class SubjectService
      */
     public function createSubject(array $data): Subject
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($data['fiscal_year_id'] ?? getActiveFiscalYear());
+
         $name = $data['name'] ?? null;
         if (! $name) {
             throw new \InvalidArgumentException('The name field is required.');
@@ -236,25 +237,25 @@ class SubjectService
             $parentId = null; // normalize to null for roots
         }
 
-        $companyId = $data['company_id'] ?? getActiveLegacyCompany();
-        if (! $companyId) {
-            throw new \InvalidArgumentException('The company_id is required or must be available in session.');
+        $fiscalYearId = $data['fiscal_year_id'] ?? getActiveFiscalYear();
+        if (! $fiscalYearId) {
+            throw new \InvalidArgumentException('The fiscal_year_id is required or must be available in session.');
         }
 
         $parentSubject = null;
         if ($parentId !== null) {
-            $parentSubject = Subject::withoutGlobalScopes()->where('company_id', $companyId)->find($parentId);
+            $parentSubject = Subject::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->find($parentId);
 
             if (! $parentSubject) {
-                throw new \InvalidArgumentException(__('Parent subject not found in the given company.'));
+                throw new \InvalidArgumentException(__('Parent subject not found in the given fiscal year.'));
             }
         }
 
         if (isset($data['code']) && $data['code'] !== '') {
-            $code = $this->buildCodeWithParent($data['code'], $parentId, (int) $companyId);
-            $this->validateCodeUniqueness($code, (int) $companyId);
+            $code = $this->buildCodeWithParent($data['code'], $parentId, (int) $fiscalYearId);
+            $this->validateCodeUniqueness($code, (int) $fiscalYearId);
         } else {
-            $code = $this->generateCode($parentId, (int) $companyId);
+            $code = $this->generateCode($parentId, (int) $fiscalYearId);
         }
 
         if (isset($data['type'], $data['is_permanent'])) {
@@ -268,7 +269,7 @@ class SubjectService
         $attributes = [
             'name' => $name,
             'parent_id' => $parentId,
-            'company_id' => $companyId,
+            'fiscal_year_id' => $fiscalYearId,
             'type' => $resolvedType,
             'code' => $code,
             'is_permanent' => $is_permanent,
@@ -287,11 +288,13 @@ class SubjectService
      */
     public function editSubject(Subject $subject, array $data): Subject
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($subject, $data['fiscal_year_id'] ?? null);
+
         if (! $subject->exists) {
             throw new \InvalidArgumentException(__('Subject does not exist.'));
         }
 
-        $companyId = $subject->company_id;
+        $fiscalYearId = $subject->fiscal_year_id;
 
         $parentIdChanged = array_key_exists('parent_id', $data) && $data['parent_id'] !== $subject->parent_id;
 
@@ -308,10 +311,10 @@ class SubjectService
                 }
 
                 $newParent = Subject::withoutGlobalScopes()
-                    ->where('company_id', $companyId)
+                    ->where('fiscal_year_id', $fiscalYearId)
                     ->find($newParentId);
                 if (! $newParent) {
-                    throw new \InvalidArgumentException(__('New parent subject not found in the given company.'));
+                    throw new \InvalidArgumentException(__('New parent subject not found in the given fiscal year.'));
                 }
 
                 $data['is_permanent'] = $newParent->is_permanent;
@@ -319,10 +322,10 @@ class SubjectService
             }
 
             if (isset($data['code']) && ! empty($data['code'])) {
-                $newCode = $this->buildCodeWithParent($data['code'], $newParentId, $companyId);
-                $this->validateCodeUniqueness($newCode, $companyId, $subject->id);
+                $newCode = $this->buildCodeWithParent($data['code'], $newParentId, $fiscalYearId);
+                $this->validateCodeUniqueness($newCode, $fiscalYearId, $subject->id);
             } else {
-                $newCode = $this->generateCode($newParentId, $companyId);
+                $newCode = $this->generateCode($newParentId, $fiscalYearId);
             }
             $data['code'] = $newCode;
             if (isset($data['type'])) {
@@ -340,8 +343,8 @@ class SubjectService
                 $oldIsPermanent = $subject->is_permanent;
 
                 if (isset($allowedFields['code']) && ! empty($allowedFields['code'])) {
-                    $newCode = $this->buildCodeWithParent($allowedFields['code'], $subject->parent_id, $companyId);
-                    $this->validateCodeUniqueness($newCode, $companyId, $subject->id);
+                    $newCode = $this->buildCodeWithParent($allowedFields['code'], $subject->parent_id, $fiscalYearId);
+                    $this->validateCodeUniqueness($newCode, $fiscalYearId, $subject->id);
                 } else {
                     $newCode = $subject->code; // If code is not being changed, keep the old code to avoid unnecessary updates and descendant code regenerations
                 }
@@ -403,15 +406,15 @@ class SubjectService
     /**
      * Build a complete code by combining parent code with provided code portion.
      */
-    private function buildCodeWithParent(string $codePortion, ?int $parentId, int $companyId): string
+    private function buildCodeWithParent(string $codePortion, ?int $parentId, int $fiscalYearId): string
     {
         // Sanitize the code portion (remove any non-numeric characters)
         $codePortion = preg_replace('/[^0-9]/', '', $codePortion);
 
         if ($parentId) {
-            $parent = Subject::withoutGlobalScopes()->where('company_id', $companyId)->find($parentId);
+            $parent = Subject::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->find($parentId);
             if (! $parent) {
-                throw new \InvalidArgumentException(__('Parent subject not found in the given company.'));
+                throw new \InvalidArgumentException(__('Parent subject not found in the given fiscal year.'));
             }
 
             // Ensure the code portion is 3 digits
@@ -434,10 +437,10 @@ class SubjectService
     /**
      * Validate that the code is unique within the company.
      */
-    private function validateCodeUniqueness(string $code, int $companyId, ?int $excludeId = null): void
+    private function validateCodeUniqueness(string $code, int $fiscalYearId, ?int $excludeId = null): void
     {
         $query = Subject::withoutGlobalScopes()
-            ->where('company_id', $companyId)
+            ->where('fiscal_year_id', $fiscalYearId)
             ->where('code', $code);
 
         if ($excludeId !== null) {
@@ -445,24 +448,24 @@ class SubjectService
         }
 
         if ($query->exists()) {
-            throw new \InvalidArgumentException(__('The code :code already exists in this company.', ['code' => $code]));
+            throw new \InvalidArgumentException(__('The code :code already exists in this fiscal year.', ['code' => $code]));
         }
     }
 
     /**
      * Generate hierarchical subject code for the given company and parent.
      */
-    private function generateCode(?int $parentId, int $companyId): string
+    private function generateCode(?int $parentId, int $fiscalYearId): string
     {
         if ($parentId) {
-            $parent = Subject::withoutGlobalScopes()->where('company_id', $companyId)->find($parentId);
+            $parent = Subject::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->find($parentId);
             if (! $parent) {
-                throw new \InvalidArgumentException('Parent subject not found in the given company.');
+                throw new \InvalidArgumentException('Parent subject not found in the given fiscal year.');
             }
 
             $parentCode = $parent->code;
             $lastChild = Subject::withoutGlobalScopes()
-                ->where('company_id', $companyId)
+                ->where('fiscal_year_id', $fiscalYearId)
                 ->where('parent_id', $parentId)
                 ->orderBy('code', 'desc')
                 ->first();
@@ -477,9 +480,9 @@ class SubjectService
                 $code = $parentCode.str_pad($next, 3, '0', STR_PAD_LEFT);
 
                 try {
-                    $this->validateCodeUniqueness($code, $companyId);
+                    $this->validateCodeUniqueness($code, $fiscalYearId);
                 } catch (\Exception $e) {
-                    while (Subject::withoutGlobalScopes()->where('company_id', $companyId)->where('code', $code)->exists()) {
+                    while (Subject::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->where('code', $code)->exists()) {
                         $next++;
                         if ($next > 999) {
                             throw new \Exception("Maximum of 999 children reached for parent {$parentCode}");
@@ -496,7 +499,7 @@ class SubjectService
 
         // Root subject generation
         $lastRoot = Subject::withoutGlobalScopes()
-            ->where('company_id', $companyId)
+            ->where('fiscal_year_id', $fiscalYearId)
             ->whereNull('parent_id')
             ->orderBy('code', 'desc')
             ->first();
@@ -527,6 +530,8 @@ class SubjectService
 
     public function transferSubject(Subject $source, Subject $destination, bool $transferSubjectable = false, bool $removeSource = false): array
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($source, $destination->fiscal_year_id);
+
         if ($source->id === $destination->id) {
             throw new \InvalidArgumentException(__('Source and destination subjects must be different.'));
         }
@@ -535,8 +540,7 @@ class SubjectService
             throw new \InvalidArgumentException(__('Cannot transfer to a descendant of the source subject.'));
         }
 
-        $year = (int) (config('active-company-fiscal-year') ?? toEnglish(jdate('Y')));
-        $startDate = jalali_to_gregorian($year, 1, 1, '-');
+        [$startDate] = FiscalYear::findOrFail(getActiveFiscalYear())->range();
         $endDate = now()->format('Y-m-d');
 
         $result = DB::transaction(function () use ($source, $destination, $startDate, $endDate, $transferSubjectable) {
@@ -583,6 +587,8 @@ class SubjectService
 
     public function transferSubjectToNewUnderParent(Subject $source, Subject $parentDestination, bool $transferSubjectable = false, bool $removeSource = false): array
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($source, $parentDestination->fiscal_year_id);
+
         if ($source->id === $parentDestination->id) {
             throw new \InvalidArgumentException(__('Source and parent destination subjects must be different.'));
         }
@@ -595,9 +601,9 @@ class SubjectService
         $result = DB::transaction(function () use ($source, $parentDestination, $transferSubjectable) {
             $newSubject = Subject::create([
                 'name' => $source->name,
-                'code' => $this->generateCode($parentDestination->id, $source->company_id),
+                'code' => $this->generateCode($parentDestination->id, $source->fiscal_year_id),
                 'parent_id' => $parentDestination->id,
-                'company_id' => $source->company_id,
+                'fiscal_year_id' => $source->fiscal_year_id,
                 'type' => $this->resolveTypeForParent($parentDestination, $source->type),
                 'is_permanent' => $parentDestination->is_permanent,
             ]);
@@ -614,8 +620,7 @@ class SubjectService
                 $source->save();
             }
 
-            $year = (int) (config('active-company-fiscal-year') ?? toEnglish(jdate('Y')));
-            $startDate = jalali_to_gregorian($year, 1, 1, '-');
+            [$startDate] = FiscalYear::findOrFail(getActiveFiscalYear())->range();
             $endDate = now()->format('Y-m-d');
 
             $query = Transaction::where('subject_id', $source->id)->whereHas('document', function ($q) use ($startDate, $endDate) {

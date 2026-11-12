@@ -24,7 +24,7 @@ class UpdateProductRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'code' => ['nullable', Rule::unique('products', 'code')->ignore($this->route('product'))->where('fiscal_year_id', getScopedFiscalYear())],
+            'code' => ['nullable', Rule::unique('products', 'code')->ignore($this->route('product'))->where('fiscal_year_id', getActiveFiscalYear())],
             'name' => 'required|max:20|string|regex:/^[\w\d\s\-\:\.]*$/u',
             'group' => 'required|exists:product_groups,id|integer',
             'location' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
@@ -59,7 +59,7 @@ class UpdateProductRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->merge([
-            'oversell' => $this->has('oversell') ? 1 : 0,
+            'oversell' => $this->boolean('oversell') ? 1 : 0,
         ]);
     }
 

@@ -2,17 +2,14 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\HasFiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class WarehouseTransfer extends Model
 {
-    use HasFiscalYear;
-
     protected $fillable = [
-        'company_id',
+        'fiscal_year_id',
         'product_id',
         'from_warehouse_id',
         'to_warehouse_id',
@@ -34,7 +31,7 @@ class WarehouseTransfer extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function (WarehouseTransfer $transfer) {
-            $transfer->company_id ??= getActiveLegacyCompany();
+            $transfer->fiscal_year_id ??= getActiveFiscalYear();
         });
     }
 

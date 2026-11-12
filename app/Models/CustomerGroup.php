@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\HasFiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +9,6 @@ use Illuminate\Database\Eloquent\Model;
 class CustomerGroup extends Model
 {
     use HasFactory;
-    use HasFiscalYear;
 
     public $timestamps = false;
 
@@ -18,7 +16,7 @@ class CustomerGroup extends Model
         'subject_id',
         'name',
         'description',
-        'company_id',
+        'fiscal_year_id',
     ];
 
     protected static function boot()
@@ -28,7 +26,7 @@ class CustomerGroup extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function ($model) {
-            $model->company_id ??= getActiveLegacyCompany();
+            $model->fiscal_year_id ??= getActiveFiscalYear();
         });
     }
 

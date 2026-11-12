@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\Document;
 use App\Models\DocumentFile;
-use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -37,7 +36,8 @@ class DocumentService
             $data['number'] = Document::max('number') + 1;
         }
 
-        $data['company_id'] = isset($data['company_id']) ? $data['company_id'] : getActiveLegacyCompany();
+        $data['fiscal_year_id'] = isset($data['fiscal_year_id']) ? $data['fiscal_year_id'] : getActiveFiscalYear();
+        app(FiscalYearMutationGuard::class)->ensureOpen($data['fiscal_year_id']);
 
         $document = null;
         DB::transaction(function () use ($data, $transactions, $user, &$document) {
@@ -95,6 +95,8 @@ class DocumentService
      */
     public static function updateDocument(Document $document, array $data)
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($document);
+
         $validator = Validator::make($data, [
             'number' => 'nullable|decimal:0,2',
             'title' => 'nullable|string|min:3|max:255',
@@ -121,6 +123,8 @@ class DocumentService
      */
     public static function createTransaction(Document $document, array $data)
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($document);
+
         $validator = Validator::make($data, [
             'subject_id' => 'required|integer',
             'desc' => 'nullable|string',
@@ -133,12 +137,6 @@ class DocumentService
         }
 
         $transaction = new Transaction;
-        if (! Subject::withoutGlobalScopes()->whereKey($data['subject_id'])
-            ->where('fiscal_year_id', $document->fiscal_year_id)->exists()) {
-            throw ValidationException::withMessages([
-                'subject_id' => [__('The selected subject is invalid for this fiscal year.')],
-            ]);
-        }
         $data['user_id'] ??= Auth::id();
         $transaction->fill($data);
         $transaction->document_id = $document->id;
@@ -154,6 +152,8 @@ class DocumentService
      */
     public static function updateTransaction(Transaction $transaction, array $data)
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($transaction);
+
         $validator = Validator::make($data, [
             'subject_id' => 'integer',
             'user_id' => 'integer',
@@ -166,12 +166,6 @@ class DocumentService
         }
 
         $transaction->fill($data);
-        if (isset($data['subject_id']) && ! Subject::withoutGlobalScopes()->whereKey($data['subject_id'])
-            ->where('fiscal_year_id', $transaction->document?->fiscal_year_id)->exists()) {
-            throw ValidationException::withMessages([
-                'subject_id' => [__('The selected subject is invalid for this fiscal year.')],
-            ]);
-        }
         $transaction->save();
 
         return $transaction;
@@ -179,6 +173,9 @@ class DocumentService
 
     public static function updateDocumentTransactions(int $documentId, array $transactionsData): void
     {
+        $document = Document::findOrFail($documentId);
+        app(FiscalYearMutationGuard::class)->ensureOpen($document);
+
         DB::beginTransaction();
 
         $existingTransactionIds = [];
@@ -203,11 +200,13 @@ class DocumentService
 
     public static function deleteDocument(int $documentId): void
     {
-        $documentFileService = new DocumentFileService;
-        DB::transaction(function () use ($documentId, $documentFileService) {
+        $document = Document::findOrFail($documentId);
+        app(FiscalYearMutationGuard::class)->ensureOpen($document);
+
+        DB::transaction(function () use ($documentId) {
             $documentFiles = DocumentFile::where('document_id', $documentId)->get();
             foreach ($documentFiles as $documentFile) {
-                $documentFileService->delete($documentFile);
+                app(DocumentFileService::class)->delete($documentFile);
             }
 
             app(ActivityLogService::class)->deleteModels(Transaction::where('document_id', $documentId));
@@ -217,6 +216,8 @@ class DocumentService
 
     public static function changeDocumentStatus(Document $document, User $user, string $status): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($document);
+
         DB::transaction(function () use ($document, $user, $status) {
             match ($status) {
                 'approved' => self::approveDocument($user, $document),

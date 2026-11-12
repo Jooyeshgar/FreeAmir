@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -20,17 +20,17 @@ class CustomerImportExportTest extends TestCase
 
     protected CustomerGroup $customerGroup;
 
-    protected int $companyId;
+    protected int $fiscalYearId;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create();
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo([
             Permission::firstOrCreate(['name' => 'customers.index']),
@@ -39,12 +39,12 @@ class CustomerImportExportTest extends TestCase
             Permission::firstOrCreate(['name' => 'customers.import.store']),
         ]);
 
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
         // Mirror the active company for direct model access in the test body
         // (the cookie alone only takes effect during HTTP requests).
-        config(['active-company-id' => $this->companyId]);
+        config(['active-fiscal-year-id' => $this->fiscalYearId]);
 
-        $this->customerGroup = CustomerGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
+        $this->customerGroup = CustomerGroup::factory()->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
     }
 
     private function upload(string $csv): UploadedFile
@@ -57,7 +57,7 @@ class CustomerImportExportTest extends TestCase
         $customer = Customer::factory()
             ->withGroup($this->customerGroup)
             ->withSubject()
-            ->create(['company_id' => $this->companyId, 'name' => 'Acme Co']);
+            ->create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Acme Co']);
 
         $response = $this->actingAs($this->user)->get(route('customers.export'));
 
@@ -81,7 +81,7 @@ class CustomerImportExportTest extends TestCase
         $response->assertRedirect(route('customers.index'));
         $response->assertSessionHas('success');
 
-        $this->assertDatabaseHas('customer_groups', ['name' => 'Brand New Group', 'company_id' => $this->companyId]);
+        $this->assertDatabaseHas('customer_groups', ['name' => 'Brand New Group', 'fiscal_year_id' => $this->fiscalYearId]);
 
         $customer = Customer::where('name', 'New Customer')->first();
         $this->assertNotNull($customer);
@@ -103,7 +103,7 @@ class CustomerImportExportTest extends TestCase
 
         // No duplicate group should have been created for the existing name.
         $this->assertSame(1, CustomerGroup::withoutGlobalScopes()
-            ->where('company_id', $this->companyId)
+            ->where('fiscal_year_id', $this->fiscalYearId)
             ->where('name', $this->customerGroup->name)
             ->count());
 
@@ -150,7 +150,7 @@ class CustomerImportExportTest extends TestCase
         $existing = Customer::factory()
             ->withGroup($this->customerGroup)
             ->withSubject()
-            ->create(['company_id' => $this->companyId, 'name' => 'Old Name', 'phone' => '111']);
+            ->create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Old Name', 'phone' => '111']);
 
         $code = $existing->subject->code;
 
@@ -183,7 +183,7 @@ class CustomerImportExportTest extends TestCase
         $orphan = Subject::factory()
             ->withParent($this->customerGroup->subject)
             ->create([
-                'company_id' => $this->companyId,
+                'fiscal_year_id' => $this->fiscalYearId,
                 'name' => 'Orphan Subject',
             ]);
 
@@ -211,7 +211,7 @@ class CustomerImportExportTest extends TestCase
         Customer::factory()
             ->withGroup($this->customerGroup)
             ->withSubject()
-            ->create(['company_id' => $this->companyId, 'name' => 'Duplicate Name']);
+            ->create(['fiscal_year_id' => $this->fiscalYearId, 'name' => 'Duplicate Name']);
 
         $csv = "name,group_name,subject_code\n".
             "Duplicate Name,{$this->customerGroup->name},\n";

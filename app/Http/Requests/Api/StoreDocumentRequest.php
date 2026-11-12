@@ -19,20 +19,20 @@ class StoreDocumentRequest extends FormRequest
             'number' => [
                 'nullable',
                 'decimal:0,2',
-                Rule::unique('documents', 'number')->where('fiscal_year_id', getScopedFiscalYear()),
+                Rule::unique('documents', 'number')->where('fiscal_year_id', getActiveFiscalYear()),
             ],
             'date' => ['required', 'date_format:Y-m-d'],
             'transactions' => ['required', 'array', 'min:2'],
             'transactions.*.subject_id' => [
                 'required',
                 'integer',
-                Rule::exists('subjects', 'id')->where('fiscal_year_id', getScopedFiscalYear()),
+                Rule::exists('subjects', 'id')->where('fiscal_year_id', getActiveFiscalYear()),
             ],
             'transactions.*.value' => ['required', 'decimal:0,2'],
             'transactions.*.desc' => ['required', 'string'],
-            'ledger_confirmation' => ['nullable', 'boolean'],
         ];
     }
+
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
@@ -42,12 +42,12 @@ class StoreDocumentRequest extends FormRequest
                 return;
             }
 
-            $sum = collect($transactions)->sum(fn ($t) => (float) ($t['value'] ?? 0));
+            $sum = collect($transactions)->sum(fn ($transaction) => (float) ($transaction['value'] ?? 0));
 
             if (round($sum, 2) != 0) {
                 $validator->errors()->add(
                     'transactions',
-                    'مجموع مبالغ باید صفر باشد (بدهکار منفی، بستانکار مثبت).'
+                    __('The transaction values must sum to zero (debits are negative and credits are positive).')
                 );
             }
         });

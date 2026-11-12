@@ -74,7 +74,7 @@
                                 {{ $conflict->customer->name }}
                             </a>
                         @else
-                            {{ $conflict->customer->name }}
+                            -
                         @endif
                     </td>
                     <td class="px-4 py-2">{{ formatNumber($conflict->amount - $conflict->subtraction) }}</td>

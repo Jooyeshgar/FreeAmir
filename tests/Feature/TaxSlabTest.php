@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\TaxSlab;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,30 +15,30 @@ class TaxSlabTest extends TestCase
 
     protected User $user;
 
-    protected int $companyId;
+    protected int $fiscalYearId;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create();
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'salary.tax-slabs.*'])
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
     }
 
     private function makeTaxSlab(array $overrides = []): TaxSlab
     {
         return TaxSlab::factory()->create(array_merge([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
         ], $overrides));
     }
 
@@ -84,7 +84,7 @@ class TaxSlabTest extends TestCase
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('tax_slabs', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'tax_rate' => 10,
         ]);
     }
@@ -104,7 +104,7 @@ class TaxSlabTest extends TestCase
 
         $response->assertRedirect(route('salary.tax-slabs.index'));
         $this->assertDatabaseHas('tax_slabs', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'income_to' => null,
         ]);
     }

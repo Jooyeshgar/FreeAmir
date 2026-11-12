@@ -13,8 +13,10 @@ class CustomerService
 
     public function create(array $data): Customer
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($data['fiscal_year_id'] ?? getActiveFiscalYear());
+
         return DB::transaction(function () use ($data) {
-            $data['company_id'] ??= getActiveLegacyCompany();
+            $data['fiscal_year_id'] ??= getActiveFiscalYear();
             $subjectCode = $data['subject_code'] ?? null;
             unset($data['subject_code']);
 
@@ -27,6 +29,8 @@ class CustomerService
 
     public function update(Customer $customer, array $data): Customer
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($customer, $data['fiscal_year_id'] ?? null);
+
         return DB::transaction(function () use ($customer, $data) {
             $subjectCode = $data['subject_code'] ?? null;
             unset($data['subject_code']);
@@ -42,6 +46,8 @@ class CustomerService
 
     public function delete(Customer $customer): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($customer);
+
         DB::transaction(function () use ($customer) {
             app(ActivityLogService::class)->deleteModels($customer->comments()->getQuery());
             $customer->delete();
@@ -54,10 +60,10 @@ class CustomerService
         $customer->loadMissing('group', 'subject');
 
         $group = $customer->group;
-        $companyId = $customer->company_id ?? $group?->company_id ?? getActiveLegacyCompany();
+        $fiscalYearId = $customer->fiscal_year_id ?? $group?->fiscal_year_id ?? getActiveFiscalYear();
 
-        if (! $companyId) {
-            throw new \RuntimeException('Unable to determine company for customer subject synchronization.');
+        if (! $fiscalYearId) {
+            throw new \RuntimeException('Unable to determine fiscal year for customer subject synchronization.');
         }
 
         $subject = $customer->subject;
@@ -73,7 +79,7 @@ class CustomerService
         $resolvedCode = $this->resolveSubjectCode($subjectCode, $group->subject);
 
         if ($resolvedCode !== null) {
-            $existingSubject = Subject::withoutGlobalScopes()->where('company_id', $companyId)->where('code', $resolvedCode)->first();
+            $existingSubject = Subject::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)->where('code', $resolvedCode)->first();
 
             if ($existingSubject) {
                 if ((int) $existingSubject->parent_id !== $parentId) {
@@ -114,7 +120,7 @@ class CustomerService
             $attributes = [
                 'name' => $targetName,
                 'parent_id' => $parentId,
-                'company_id' => $companyId,
+                'fiscal_year_id' => $fiscalYearId,
             ];
 
             if ($resolvedCode !== null) {

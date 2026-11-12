@@ -7,6 +7,7 @@ use App\Enums\PersonnelRequestType;
 use App\Enums\ThursdayStatus;
 use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\PersonnelRequest;
 use App\Models\User;
 use App\Models\WorkShift;
@@ -21,7 +22,7 @@ class PersonnelRequestTest extends TestCase
 
     protected User $user;
 
-    protected int $companyId;
+    protected int $fiscalYearId;
 
     protected Employee $employee;
 
@@ -31,29 +32,29 @@ class PersonnelRequestTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create();
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'hr.personnel-requests.*'])
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
 
-        $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $this->workShift = WorkShift::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'start_time' => '08:00',
             'end_time' => '17:00',
             'float' => 30,
         ]);
 
         $this->employee = Employee::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'work_site_id' => $workSite->id,
             'work_shift_id' => $this->workShift->id,
         ]);
@@ -62,7 +63,7 @@ class PersonnelRequestTest extends TestCase
     private function makePersonnelRequest(array $overrides = []): PersonnelRequest
     {
         return PersonnelRequest::factory()->create(array_merge([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'request_type' => PersonnelRequestType::LEAVE_DAILY,
             'status' => PersonnelRequestStatus::PENDING,
@@ -200,7 +201,7 @@ class PersonnelRequestTest extends TestCase
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('personnel_requests', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'request_type' => PersonnelRequestType::LEAVE_HOURLY->value,
             'status' => PersonnelRequestStatus::PENDING->value,
@@ -498,9 +499,9 @@ class PersonnelRequestTest extends TestCase
 
     public function test_approve_sets_approved_by_to_current_user_employee(): void
     {
-        $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $approverEmployee = Employee::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'work_site_id' => $workSite->id,
             'user_id' => $this->user->id,
         ]);
@@ -518,9 +519,9 @@ class PersonnelRequestTest extends TestCase
 
     public function test_reject_sets_approved_by_to_current_user_employee(): void
     {
-        $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
+        $workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $approverEmployee = Employee::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'work_site_id' => $workSite->id,
             'user_id' => $this->user->id,
         ]);
@@ -542,15 +543,15 @@ class PersonnelRequestTest extends TestCase
 
     public function test_cannot_see_another_companys_requests(): void
     {
-        $otherCompany = Company::factory()->create();
-        $otherWorkSite = WorkSite::factory()->create(['company_id' => $otherCompany->id]);
+        $otherFiscalYear = FiscalYear::factory()->create();
+        $otherWorkSite = WorkSite::factory()->create(['fiscal_year_id' => $otherFiscalYear->id]);
         $otherEmployee = Employee::factory()->create([
-            'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherFiscalYear->id,
             'work_site_id' => $otherWorkSite->id,
         ]);
 
         PersonnelRequest::factory()->create([
-            'company_id' => $otherCompany->id,
+            'fiscal_year_id' => $otherFiscalYear->id,
             'employee_id' => $otherEmployee->id,
             'request_type' => PersonnelRequestType::LEAVE_DAILY,
             'status' => PersonnelRequestStatus::PENDING,

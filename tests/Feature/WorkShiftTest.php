@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\User;
 use App\Models\WorkShift;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,30 +15,30 @@ class WorkShiftTest extends TestCase
 
     protected User $user;
 
-    protected int $companyId;
+    protected int $fiscalYearId;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create();
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'attendance.work-shifts.*'])
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
     }
 
     private function makeWorkShift(array $overrides = []): WorkShift
     {
         return WorkShift::factory()->create(array_merge([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
         ], $overrides));
     }
 
@@ -73,8 +73,8 @@ class WorkShiftTest extends TestCase
 
     public function test_index_does_not_show_other_company_work_shifts(): void
     {
-        $otherCompany = Company::factory()->create();
-        WorkShift::factory()->create(['company_id' => $otherCompany->id, 'name' => 'Other Shift']);
+        $otherFiscalYear = FiscalYear::factory()->create();
+        WorkShift::factory()->create(['fiscal_year_id' => $otherFiscalYear->id, 'name' => 'Other Shift']);
 
         $response = $this->get(route('attendance.work-shifts.index'));
 
@@ -115,7 +115,7 @@ class WorkShiftTest extends TestCase
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('work_shifts', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Morning Shift',
             'start_time' => '08:00:00',
             'end_time' => '17:00:00',
@@ -163,7 +163,7 @@ class WorkShiftTest extends TestCase
         $response->assertRedirect(route('attendance.work-shifts.index'));
 
         $this->assertDatabaseHas('work_shifts', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Morning Shift',
             'auto_overtime_coefficient' => 0,
             'max_auto_overtime' => 0,
@@ -214,8 +214,8 @@ class WorkShiftTest extends TestCase
 
     public function test_cannot_edit_other_company_work_shift(): void
     {
-        $otherCompany = Company::factory()->create();
-        $otherShift = WorkShift::factory()->create(['company_id' => $otherCompany->id]);
+        $otherFiscalYear = FiscalYear::factory()->create();
+        $otherShift = WorkShift::factory()->create(['fiscal_year_id' => $otherFiscalYear->id]);
 
         $response = $this->get(route('attendance.work-shifts.edit', $otherShift));
 
@@ -240,8 +240,8 @@ class WorkShiftTest extends TestCase
 
     public function test_cannot_delete_other_company_work_shift(): void
     {
-        $otherCompany = Company::factory()->create();
-        $otherShift = WorkShift::factory()->create(['company_id' => $otherCompany->id]);
+        $otherFiscalYear = FiscalYear::factory()->create();
+        $otherShift = WorkShift::factory()->create(['fiscal_year_id' => $otherFiscalYear->id]);
 
         $response = $this->delete(route('attendance.work-shifts.destroy', $otherShift));
 
@@ -257,7 +257,7 @@ class WorkShiftTest extends TestCase
         $this->post(route('attendance.work-shifts.store'), $payload);
 
         $this->assertDatabaseHas('work_shifts', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Morning Shift',
             'is_active' => true,
         ]);

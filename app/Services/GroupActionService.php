@@ -7,7 +7,6 @@ use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
 use App\Models\Invoice;
 use App\Models\Product;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
@@ -25,27 +24,34 @@ class GroupActionService
 
     public function approveInactiveInvoices(): void
     {
-        $invoices = Invoice::where('status', InvoiceStatus::APPROVED_INACTIVE)->orderBy('date')->orderBy('number')
-            ->orWhereHas('ancillaryCosts', function ($query) {
-                $query->where('status', InvoiceStatus::APPROVED_INACTIVE);
-            })->get();
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
+        // Match status validation and inventory costing: date, then internal ID.
+        $invoices = Invoice::where(function ($query) {
+            $query->where('status', InvoiceStatus::APPROVED_INACTIVE)
+                ->orWhereHas('ancillaryCosts', fn ($costs) => $costs->where('status', InvoiceStatus::APPROVED_INACTIVE));
+        })->orderBy('date')->orderBy('id')->get();
 
         DB::transaction(function () use ($invoices) {
             foreach ($invoices as $invoice) {
-                $decision = $this->invoiceService->getChangeStatusDecision($invoice, 'approved');
+                if ($invoice->status === InvoiceStatus::APPROVED_INACTIVE) {
+                    $decision = $this->invoiceService->getChangeStatusDecision($invoice, 'approved');
 
-                if ($decision->hasErrors()) {
+                    if ($decision->hasErrors()) {
 
-                    $conflicts = $decision->toText();
+                        $conflicts = $decision->toText();
 
-                    throw ValidationException::withMessages([
-                        'invoice' => [__('Invoice #:number cannot be approved because it has conflicts with: :conflicts', ['number' => $invoice->number, 'conflicts' => $conflicts])],
-                    ]);
+                        throw ValidationException::withMessages([
+                            'invoice' => [__('Invoice #:number cannot be approved because it has conflicts with: :conflicts', ['number' => $invoice->number, 'conflicts' => $conflicts])],
+                        ]);
+                    }
+
+                    $this->invoiceService->changeInvoiceStatus($invoice, 'approved');
                 }
 
-                $this->invoiceService->changeInvoiceStatus($invoice, 'approved');
-
-                foreach ($invoice->ancillaryCosts as $ancillaryCost) {
+                // Restore costs before payments: a fully paid purchase may also
+                // include ancillary costs in its payable amount.
+                foreach ($invoice->ancillaryCosts()->where('status', InvoiceStatus::APPROVED_INACTIVE)->get() as $ancillaryCost) {
                     $validation = $this->ancillaryCostService->getChangeStatusValidation($ancillaryCost);
 
                     if (! $validation['allowed']) {
@@ -58,6 +64,19 @@ class GroupActionService
                     $this->ancillaryCostService->changeAncillaryCostStatus($ancillaryCost, 'approve');
                 }
 
+                foreach ($invoice->payments()->whereNull('document_id')->whereNull('cheque_id')->get() as $payment) {
+                    $decision = $this->paymentService->createPaymentDocument(auth()->user(), $payment->fresh('invoice'));
+                    if ($decision->hasErrors()) {
+                        throw ValidationException::withMessages([
+                            'payment' => $decision->messages->map(fn ($message) => __('Invoice #:invoice_number: Payment #:id cannot be restored due to: :reason', [
+                                'invoice_number' => $invoice->number,
+                                'id' => $payment->id,
+                                'reason' => $message->text,
+                            ]))->all(),
+                        ]);
+                    }
+                }
+
                 $this->paymentService->syncInvoiceStatus($invoice->fresh());
             }
         });
@@ -65,15 +84,17 @@ class GroupActionService
 
     public function inactivateDependentInvoices(Invoice $invoice): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
+
         // Find all conflicting invoices recursively (only invoices, not products or ancillary costs)
         $conflictingInvoices = $this->getConflictingInvoices($invoice);
 
-        // Sort by date DESC, then number DESC (latest first for unapproving)
-        $sortedInvoices = collect($conflictingInvoices)->sortByDesc(function ($inv) {
-            $date = $inv->date instanceof Carbon ? $inv->date->format('Y-m-d') : $inv->date;
-
-            return $date.str_pad((string) $inv->number, 10, '0', STR_PAD_LEFT);
-        })->values()->all();
+        // Reverse the approval order so later inventory movements are undone first.
+        $sortedInvoices = collect($conflictingInvoices)->unique('id')
+            ->filter(fn ($conflict) => $conflict->status->isApprovedOrSettled())->sortBy([
+                ['date', 'desc'],
+                ['id', 'desc'],
+            ])->values()->all();
 
         DB::transaction(function () use ($sortedInvoices) {
             foreach ($sortedInvoices as $conflictInvoice) {
@@ -169,7 +190,7 @@ class GroupActionService
                 $q->where('date', '>', $invoice->date)
                     ->orWhere(function ($sub) use ($invoice) {
                         $sub->where('date', $invoice->date)
-                            ->where('number', '>', $invoice->number);
+                            ->where('id', '>', $invoice->id);
                     });
             })
             ->whereIn('status', InvoiceStatus::approvedOrSettled())
@@ -177,6 +198,11 @@ class GroupActionService
                 ->whereIn('itemable_id', $productIds)
             )
             ->get();
+
+        if ($invoice->invoice_type->isBeginningInventory()) {
+            $subsequentInvoices = $subsequentInvoices->merge(Invoice::normalInventoryMovements()
+                ->whereIn('status', InvoiceStatus::approvedOrSettled())->get())->unique('id');
+        }
 
         // Recursively find conflicts for each subsequent invoice
         foreach ($subsequentInvoices as $subsequentInvoice) {

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\User;
 use App\Models\WorkSite;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,30 +15,30 @@ class WorkSiteTest extends TestCase
 
     protected User $user;
 
-    protected int $companyId;
+    protected int $fiscalYearId;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create();
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'salary.work-sites.*'])
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
     }
 
     private function makeWorkSite(array $overrides = []): WorkSite
     {
         return WorkSite::factory()->create(array_merge([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
         ], $overrides));
     }
 
@@ -71,8 +71,8 @@ class WorkSiteTest extends TestCase
 
     public function test_index_does_not_show_other_company_work_sites(): void
     {
-        $otherCompany = Company::factory()->create();
-        WorkSite::factory()->create(['company_id' => $otherCompany->id, 'name' => 'Other Site']);
+        $otherFiscalYear = FiscalYear::factory()->create();
+        WorkSite::factory()->create(['fiscal_year_id' => $otherFiscalYear->id, 'name' => 'Other Site']);
 
         $response = $this->get(route('salary.work-sites.index'));
 
@@ -101,7 +101,7 @@ class WorkSiteTest extends TestCase
         $response->assertSessionHas('success');
 
         $this->assertDatabaseHas('work_sites', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Main Construction Site',
             'code' => 'WS-001',
             'is_active' => true,
@@ -132,7 +132,7 @@ class WorkSiteTest extends TestCase
 
         $response->assertRedirect(route('salary.work-sites.index'));
         $this->assertDatabaseHas('work_sites', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'code' => 'WS-001',
             'address' => null,
             'phone' => null,

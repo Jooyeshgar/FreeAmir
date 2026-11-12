@@ -5,9 +5,9 @@
 namespace Tests\Feature;
 
 use App\Enums\InvoiceType;
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\ProductGroup;
 use App\Models\User;
 use App\Services\AncillaryCostService;
@@ -28,7 +28,7 @@ class ReturnInvoiceValidationTest extends TestCase
 
     protected Customer $customer;
 
-    protected int $companyId;
+    protected int $fiscalYearId;
 
     protected int $nextInvoiceNumber = 6000;
 
@@ -36,28 +36,26 @@ class ReturnInvoiceValidationTest extends TestCase
     {
         parent::setUp();
 
-        $this->companyId = Company::firstOrCreate(['id' => 1], ['name' => 'Test Company', 'fiscal_year' => 1405])->id;
+        $this->fiscalYearId = FiscalYear::factory()->create(['year' => 1405])->id;
 
-        Cache::forever('active_company_id', $this->companyId);
-        Cookie::queue('active-company-id', (string) $this->companyId);
-        $_COOKIE['active-company-id'] = (string) $this->companyId;
+        Cache::forever('active_fiscal_year_id', $this->fiscalYearId);
+        Cookie::queue('active-fiscal-year-id', (string) $this->fiscalYearId);
+        $_COOKIE['active-fiscal-year-id'] = (string) $this->fiscalYearId;
 
         $this->user = User::factory()->create();
-        Company::findOrFail($this->companyId)->users()->attach($this->user);
-        $this->withCookies(['active-fiscal-year-id' => (string) Company::findOrFail($this->companyId)->fiscalYear->id]);
         $this->user->givePermissionTo([
             Permission::firstOrCreate(['name' => 'invoices.store']),
         ]);
         $this->actingAs($this->user);
 
-        $this->importSubjects($this->companyId);
-        $this->importConfigs($this->companyId);
+        $this->importSubjects($this->fiscalYearId);
+        $this->importConfigs($this->fiscalYearId);
 
-        ProductGroup::factory()->withSubjects()->create(['name' => 'عمومی', 'vat' => 10, 'company_id' => $this->companyId]);
+        ProductGroup::factory()->withSubjects()->create(['name' => 'عمومی', 'vat' => 10, 'fiscal_year_id' => $this->fiscalYearId]);
 
-        $customerGroup = CustomerGroup::factory()->withSubject()->create(['name' => 'عمومی', 'description' => 'گروه مشتریان عمومی', 'company_id' => $this->companyId]);
+        $customerGroup = CustomerGroup::factory()->withSubject()->create(['name' => 'عمومی', 'description' => 'گروه مشتریان عمومی', 'fiscal_year_id' => $this->fiscalYearId]);
 
-        $this->customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create(['company_id' => $this->companyId]);
+        $this->customer = Customer::factory()->withGroup($customerGroup)->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
     }
 
     // -------------------------------------------------------------------------
@@ -407,7 +405,7 @@ class ReturnInvoiceValidationTest extends TestCase
         AncillaryCostService::createAncillaryCost($this->user, [
             'invoice_id' => $buy->id,
             'customer_id' => $this->customer->id,
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'date' => '2026-06-02',
             'type' => 'Shipping',
             'amount' => 200,
@@ -449,7 +447,7 @@ class ReturnInvoiceValidationTest extends TestCase
         AncillaryCostService::createAncillaryCost($this->user, [
             'invoice_id' => $buy->id,
             'customer_id' => $this->customer->id,
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'date' => '2026-06-02',
             'type' => 'Other',
             'amount' => 100,
@@ -558,7 +556,7 @@ class ReturnInvoiceValidationTest extends TestCase
         AncillaryCostService::createAncillaryCost($this->user, [
             'invoice_id' => $buy->id,
             'customer_id' => $this->customer->id,
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'date' => '2026-06-02',
             'type' => 'Shipping',
             'amount' => 100,
@@ -600,7 +598,7 @@ class ReturnInvoiceValidationTest extends TestCase
         AncillaryCostService::createAncillaryCost($this->user, [
             'invoice_id' => $buy->id,
             'customer_id' => $this->customer->id,
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'date' => '2026-06-02',
             'type' => 'Other',
             'amount' => 150,

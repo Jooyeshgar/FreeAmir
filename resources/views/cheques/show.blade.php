@@ -1,16 +1,4 @@
-@php
-    $actionLabels = [
-        'deposit' => __('Deposit to bank'),
-        'clear' => __('Clear / cash'),
-        'endorse' => __('Endorse / transfer'),
-        'bounce' => __('Mark dishonoured'),
-        'return' => __('Return to customer'),
-        'cancel' => __('Cancel / take back'),
-        'execute' => __('Execute guarantee'),
-    ];
-@endphp
-
-<x-app-layout :title="$cheque->title ?? $cheque->cheque_number ? __('Cheque #:number', ['number' => $cheque->cheque_number]) : __('Cheque')">
+<x-app-layout :title="$cheque->title ? $cheque->title : ($cheque->cheque_number ? __('Cheque #:number', ['number' => $cheque->cheque_number]) : __('Cheque'))">
     <x-show-message-bags />
 
     <div class="space-y-5 px-1 pb-6">
@@ -73,21 +61,21 @@
                             </span>
                         </div>
 
-                        @if ($cheque->histories->whereNotNull('from_status')->isEmpty())
-                            <a class="btn btn-primary btn-sm gap-1.5" href="{{ route('cheques.edit', $cheque) }}">
+                        @can('cheques.edit')
+                            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" class="btn btn-primary btn-sm gap-1.5" href="{{ route('cheques.edit', $cheque) }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L8.582 18.07a4.5 4.5 0 0 1-1.897 1.13L3 20.25l1.05-3.685a4.5 4.5 0 0 1 1.13-1.897l11.682-11.681Z" />
                                 </svg>
                                 {{ __('Edit') }}
-                            </a>
-                        @endif
+                            </x-closed-year-action-link>
+                        @endcan
                         <form method="POST" action="{{ route('cheques.destroy', $cheque) }}">
                             @csrf
                             @method('DELETE')
                             <button class="btn btn-error btn-outline btn-sm gap-1.5"
-                                onclick="return confirm('{{ __('Delete this cheque and all of its accounting entries and payments?') }}')">
+                                onclick="return confirm('{{ __('Delete this cheque and all of its accounting entries and payments?') }}')" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none"
                                     viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -132,7 +120,7 @@
                         ['label' => __('Bank'), 'value' => $cheque->bankAccount?->bank?->name, 'url' => null],
         ['label' => __('Bank account'), 'value' => $cheque->bankAccount?->name, 'url' => $cheque->bankAccount ? route('bank-accounts.show', $cheque->bankAccount) : null],
         ['label' => __('Chequebook'), 'value' => $cheque->chequebook?->bankAccount?->name, 'url' => $cheque->chequebook ? route('chequebooks.show', $cheque->chequebook) : null],
-        ['label' => __('Endorsed to'), 'value' => $cheque->endorsedTo?->name, 'url' => $cheque->endorsedTo ? route('customers.show', $cheque->endorsedTo) : null],
+        ['label' => __('Endorsed to'), 'value' => $endorsedSubject?->formattedName() ?? $cheque->endorsedTo?->name, 'url' => $endorsedSubject ? route('subjects.show', $endorsedSubject) : ($cheque->endorsedTo ? route('customers.show', $cheque->endorsedTo) : null)],
     ] as $item)
                         <div class="min-w-0 rounded-xl border border-base-200 bg-base-200/25 p-4">
                             <p class="text-xs font-medium text-base-content/45">{{ $item['label'] }}</p>
@@ -162,7 +150,7 @@
             </div>
         </div>
 
-        @if (count($cheque->availableActions()))
+        @can('cheques.transition')
             {{-- Lifecycle Actions --}}
             <div class="card border border-base-200 bg-base-100 shadow-sm">
                 <div class="card-body p-5 sm:p-6">
@@ -178,11 +166,12 @@
                     </div>
 
                     <div class="grid gap-4 lg:grid-cols-2">
-                        @foreach ($cheque->availableActions() as $action)
+                        @foreach ([...$cheque->availableActions(), 'fee'] as $action)
                             <form method="POST" action="{{ route('cheques.transition', [$cheque, $action]) }}"
                                 class="rounded-xl border border-base-200 bg-base-200/25 p-4 transition hover:border-primary/25 hover:shadow-sm
                                     [&_.input]:h-10 [&_.input]:min-h-10 [&_.input]:max-h-10">
                                 @csrf
+                                <input type="hidden" name="fee_action" value="{{ $action }}">
                                 <h3 class="mb-3 font-bold">{{ $actionLabels[$action] }}</h3>
                                 @if ($action === 'deposit')
                                     <select name="bank_account_id" class="select select-sm w-full border-slate-400"
@@ -193,30 +182,34 @@
                                         @endforeach
                                     </select>
                                 @elseif($action === 'endorse')
-                                    @php
-                                        $initialEndorseeId = old('customer_id');
-                                        $initialEndorseeValue = $initialEndorseeId
-                                            ? "customer-{$initialEndorseeId}"
-                                            : '';
-                                    @endphp
                                     <div x-data="{
-                                        accountSideId: @js((string) $initialEndorseeId),
-                                        selectedAccountSide: @js($initialEndorseeValue),
+                                        selectedId: @js($selectedSubject?->id),
+                                        selectedName: @js($selectedSubject?->name ?? ''),
+                                        selectedCode: @js($selectedSubject?->code ?? ''),
                                     }">
-                                        <x-select-box :options="[['headerGroup' => 'customer', 'options' => $accountSides]]" x-model="selectedAccountSide"
-                                            placeholder="{{ __('Vendor / endorsee') }}"
-                                            @selected="accountSideId = $event.detail.id" />
-                                        <x-input name="customer_id" x-bind:value="accountSideId" hidden />
+                                        <x-subject-select :subjects="$subjects"
+                                            placeholder="{{ __('Destination Subject') }}"
+                                            @selected="
+                                                selectedId = $event.detail.id;
+                                                selectedName = $event.detail.name;
+                                                selectedCode = $event.detail.code;
+                                            " />
+                                        <x-input name="subject_id" x-bind:value="selectedId" hidden />
                                     </div>
                                 @endif
-                                <div class="mt-3 grid gap-2 sm:grid-cols-2">
+                                <div class="mt-3 grid gap-2 sm:grid-cols-2" x-data="{ chequeFee: @js((string) old('bank_service_fee', 0)) }">
                                     <x-date-picker name="date" :id="'date_' . $action" :value="toEnglish(formatDate(now()))"
-                                        :placeholder="__('Action date')" />
-                                    <x-text-input name="description" placeholder="{{ __('Note') }}" />
+                                        title="{{ __('date') }}" :placeholder="__('Action date')" />
+                                    <x-text-input title="{{ __('Bank service fee') }}" input_name="bank_service_fee" :id_input="'cheque_' . $action . '_fee'" input_class="locale-number" :input_value="old('bank_service_fee', 0)"
+                                        inputmode="decimal" x-model="chequeFee" @input="chequeFee = $store.utils.cleanupNumber($event.target.value)" label_text_class="text-sm text-gray-500"
+                                        x-effect="$el.value = $store.utils.convertToFarsi($store.utils.formatNumber(chequeFee))" />
+                                </div>
+                                <div class="mt-3">
+                                    <x-text-input input_name="description" :input_value="old('description')" placeholder="{{ __('Note') }}" />
                                 </div>
                                 <div class="mt-3 flex justify-end">
                                     <button class="btn btn-primary btn-sm"
-                                        onclick="return confirm('{{ __('Continue with this action?') }}')">
+                                        onclick="return confirm('{{ __('Continue with this action?') }}')" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">
                                         {{ $actionLabels[$action] }}
                                     </button>
                                 </div>
@@ -225,7 +218,7 @@
                     </div>
                 </div>
             </div>
-        @endif
+        @endcan
 
         {{-- History --}}
         <div class="card border border-base-200 bg-base-100 shadow-sm">
@@ -285,6 +278,12 @@
                                     </span>
                                 @endif
                             </div>
+
+                            @if ((float) $history->bank_service_fee > 0 || ($history->from_status === null && (float) $history->payment?->bank_service_fee > 0))
+                                <div class="mt-3 text-sm">
+                                    <p>{{ __('Bank service fee') }}: {{ formatNumber(((float) $history->bank_service_fee ?: (float) $history->payment?->bank_service_fee)) }}</p>
+                                </div>
+                            @endif
 
                             @if ($history->desc)
                                 <p class="mt-3 rounded-lg bg-base-200/60 px-3 py-2 text-xs leading-relaxed text-base-content/60">

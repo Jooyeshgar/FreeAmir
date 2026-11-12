@@ -6,11 +6,13 @@ use App\Enums\AttendanceImportType;
 use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\MonthlyAttendance;
 use App\Models\PersonnelRequest;
 use App\Models\PublicHoliday;
 use App\Services\AttendanceLogImportService;
 use App\Services\AttendanceService;
+use App\Services\FiscalYearMutationGuard;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -48,7 +50,9 @@ class AttendanceLogController extends Controller
         $attendanceLogs = $query->paginate(15);
         $employees = Employee::orderBy('first_name')->get();
 
-        return view('attendance-logs.index', compact('attendanceLogs', 'employees'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('attendance-logs.index', compact('fiscalYearClosed', 'attendanceLogs', 'employees'));
     }
 
     public function create(): View
@@ -60,8 +64,6 @@ class AttendanceLogController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        $gregorianLogDate = $request->has('log_date') ? jalaliInputToGregorian($request->input('log_date'), 'log_date') : null;
-
         $validated = $request->validate([
             'employee_id' => ['required', 'integer', 'exists:employees,id'],
             'log_date' => ['required', 'string'],
@@ -71,10 +73,15 @@ class AttendanceLogController extends Controller
             'description' => ['nullable', 'string', 'max:1000'],
         ]);
 
+        $employee = Employee::findOrFail($validated['employee_id']);
+        app(FiscalYearMutationGuard::class)->ensureOpen($employee);
+
+        $gregorianLogDate = $request->has('log_date') ? jalaliInputToGregorian($request->input('log_date'), 'log_date') : null;
+
         AttendanceLog::create(array_merge(
             $validated,
             [
-                'company_id' => getActiveLegacyCompany(),
+                'fiscal_year_id' => getActiveFiscalYear(),
                 'log_date' => $gregorianLogDate,
                 'is_manual' => $request->boolean('is_manual'),
             ]
@@ -102,6 +109,8 @@ class AttendanceLogController extends Controller
 
     public function update(Request $request, AttendanceLog $attendanceLog): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($attendanceLog);
+
         $gregorianLogDate = $request->has('log_date') ? jalaliInputToGregorian($request->input('log_date'), 'log_date') : null;
 
         $validated = $request->validate([
@@ -137,6 +146,8 @@ class AttendanceLogController extends Controller
 
     public function destroy(Request $request, AttendanceLog $attendanceLog): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($attendanceLog);
+
         $attendanceLog->delete();
 
         return redirect()->route('attendance.attendance-logs.index', $request->query())
@@ -237,7 +248,10 @@ class AttendanceLogController extends Controller
             }
         }
 
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
         return view('attendance-logs.show', compact(
+            'fiscalYearClosed',
             'attendanceLog',
             'employee',
             'workShift',
@@ -258,6 +272,8 @@ class AttendanceLogController extends Controller
 
     public function recalculate(AttendanceLog $attendanceLog): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($attendanceLog);
+
         $this->attendanceService->recalculateLog($attendanceLog);
 
         return redirect()->back()->with('success', __('Attendance log recalculated successfully.'));
@@ -265,6 +281,8 @@ class AttendanceLogController extends Controller
 
     public function recalculateAll(MonthlyAttendance $monthlyAttendance): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($monthlyAttendance);
+
         foreach ($monthlyAttendance->logs as $log) {
             $this->attendanceService->recalculateLog($log);
         }
@@ -331,14 +349,18 @@ class AttendanceLogController extends Controller
             'override' => ['nullable', 'boolean'],
         ]);
 
+        foreach ($validated['employee_ids'] as $employeeId) {
+            app(FiscalYearMutationGuard::class)->ensureOpen(Employee::findOrFail((int) $employeeId));
+        }
+
         $override = $request->boolean('override');
 
         $startDate = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($validated['start_date']));
         $endDate = $startDate->copy()->addDays((int) $validated['duration'] - 1);
-        $companyId = getActiveLegacyCompany();
+        $fiscal_year_id = getActiveFiscalYear();
 
         $holidayDates = PublicHoliday::withoutGlobalScopes()
-            ->where('company_id', $companyId)
+            ->where('fiscal_year_id', $fiscal_year_id)
             ->whereBetween('date', [$startDate->toDateString(), $endDate->toDateString()])
             ->pluck('date')
             ->map(fn ($d) => $d instanceof Carbon ? $d->toDateString() : (string) $d)
@@ -349,7 +371,7 @@ class AttendanceLogController extends Controller
 
         $existingLogs = [];
         if (! $override) {
-            $existingLogs = AttendanceLog::where('company_id', $companyId)
+            $existingLogs = AttendanceLog::where('fiscal_year_id', $fiscal_year_id)
                 ->whereIn('employee_id', $validated['employee_ids'])
                 ->whereBetween('log_date', [$startDate->toDateString(), $endDate->toDateString()])
                 ->get(['employee_id', 'log_date'])
@@ -361,7 +383,7 @@ class AttendanceLogController extends Controller
                 ->toArray();
         }
 
-        DB::transaction(function () use ($validated, $startDate, $companyId, $holidayDates, $employees, $override, $existingLogs) {
+        DB::transaction(function () use ($validated, $startDate, $fiscal_year_id, $holidayDates, $employees, $override, $existingLogs) {
             foreach ($validated['employee_ids'] as $employeeId) {
                 $employee = $employees->get($employeeId);
                 if (! $employee) {
@@ -405,7 +427,7 @@ class AttendanceLogController extends Controller
                     }
 
                     $log = AttendanceLog::updateOrCreate(
-                        ['employee_id' => $employeeId, 'company_id' => $companyId, 'log_date' => $dateStr],
+                        ['employee_id' => $employeeId, 'fiscal_year_id' => $fiscal_year_id, 'log_date' => $dateStr],
                         ['entry_time' => $defaultEntry, 'exit_time' => $exitTime, 'is_manual' => false],
                     );
 
@@ -454,7 +476,7 @@ class AttendanceLogController extends Controller
         $preview = $importService->preview(
             $request->file('file'),
             $type,
-            getActiveLegacyCompany(),
+            getActiveFiscalYear(),
             $dateFrom,
             $dateTo
         );
@@ -464,6 +486,8 @@ class AttendanceLogController extends Controller
 
     public function importStore(Request $request, AttendanceLogImportService $importService): RedirectResponse
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $request->validate([
             'import_type' => ['required', 'string', new Enum(AttendanceImportType::class)],
             'tmp_path' => ['required', 'string'],
@@ -488,7 +512,7 @@ class AttendanceLogController extends Controller
         $result = $importService->import(
             $tmpPath,
             $type,
-            getActiveLegacyCompany(),
+            getActiveFiscalYear(),
             $dateFrom,
             $dateTo,
             $duplicateMode

@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -21,18 +21,18 @@ class CustomerTest extends TestCase
 
     protected $customer;
 
-    protected $company;
+    protected $fiscalYear;
 
-    protected int $companyId;
+    protected int $fiscalYearId;
 
     protected function setUp(): void
     {
         parent::setUp();
-        $company = Company::factory()->create();
-        $this->companyId = $company->id;
+        $this->fiscalYear = FiscalYear::factory()->create();
+        $this->fiscalYearId = $this->fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $this->fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo([
             Permission::firstOrCreate(['name' => 'customers.index']),
@@ -44,10 +44,10 @@ class CustomerTest extends TestCase
             Permission::firstOrCreate(['name' => 'customers.destroy']),
         ]);
 
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
 
-        $this->customerGroup = CustomerGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
-        $this->customer = Customer::factory()->withGroup($this->customerGroup)->withSubject()->create(['company_id' => $this->companyId]);
+        $this->customerGroup = CustomerGroup::factory()->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $this->customer = Customer::factory()->withGroup($this->customerGroup)->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
     }
 
     public function test_it_displays_customer_index_page()
@@ -144,7 +144,7 @@ class CustomerTest extends TestCase
         $subject = Subject::factory()
             ->withParent($this->customerGroup->subject)
             ->create([
-                'company_id' => $this->companyId,
+                'fiscal_year_id' => $this->fiscalYearId,
                 'name' => 'Existing Account',
             ]);
         $subjectCount = Subject::withoutGlobalScopes()->count();
@@ -189,7 +189,7 @@ class CustomerTest extends TestCase
         $subject = Subject::factory()
             ->withParent($this->customerGroup->subject)
             ->create([
-                'company_id' => $this->companyId,
+                'fiscal_year_id' => $this->fiscalYearId,
                 'name' => 'Matching Name',
             ]);
         $subjectCount = Subject::withoutGlobalScopes()->count();
@@ -225,7 +225,7 @@ class CustomerTest extends TestCase
 
     public function test_it_rejects_a_subject_code_outside_the_selected_customer_group(): void
     {
-        $otherGroup = CustomerGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
+        $otherGroup = CustomerGroup::factory()->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $foreignGroupCode = $otherGroup->subject->code.'777';
 
         $response = $this->actingAs($this->user)->post(route('customers.store'), [
@@ -238,7 +238,7 @@ class CustomerTest extends TestCase
         $response->assertSessionHasErrors('subject_code');
         $this->assertDatabaseMissing('customers', ['name' => 'Wrong Group Customer']);
         $this->assertDatabaseMissing('subjects', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'code' => $foreignGroupCode,
         ]);
     }
@@ -293,7 +293,7 @@ class CustomerTest extends TestCase
         $this->assertEquals($this->customerGroup->subject_id, $subject->parent_id);
         $this->assertStringStartsWith($this->customerGroup->subject->code, $subject->code);
 
-        $newCustomerGroup = CustomerGroup::factory()->withSubject()->create(['company_id' => $this->companyId]);
+        $newCustomerGroup = CustomerGroup::factory()->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
 
         $newCustomerData = [
             'name' => 'new name with new customer group',
@@ -571,7 +571,7 @@ class CustomerTest extends TestCase
         $newSubject = Subject::factory()
             ->withParent($this->customerGroup->subject)
             ->create([
-                'company_id' => $this->companyId,
+                'fiscal_year_id' => $this->fiscalYearId,
                 'name' => 'Shared Account Name',
             ]);
 
@@ -627,7 +627,7 @@ class CustomerTest extends TestCase
         $otherCustomer = Customer::factory()
             ->withGroup($this->customerGroup)
             ->withSubject()
-            ->create(['company_id' => $this->companyId]);
+            ->create(['fiscal_year_id' => $this->fiscalYearId]);
 
         $response = $this->actingAs($this->user)->put(route('customers.update', $this->customer), [
             'name' => 'Name Must Roll Back',

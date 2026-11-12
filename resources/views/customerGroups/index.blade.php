@@ -9,7 +9,7 @@
         </div>
 
         <div class="flex flex-wrap items-center justify-start gap-2">
-            <a href="{{ route('customer-groups.create') }}" class="btn btn-primary btn-sm gap-1.5">{{ __('Create Customer Group') }}</a>
+            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('customer-groups.create') }}" class="btn btn-primary btn-sm gap-1.5">{{ __('Create Customer Group') }}</x-closed-year-action-link>
         </div>
     </div>
 
@@ -72,12 +72,12 @@
                                 <div class="flex flex-nowrap items-center gap-2">
                                     <a href="{{ route('customer-groups.show', $customerGroup) }}"
                                         class="btn btn-sm btn-info">{{ __('View') }}</a>
-                                    <a href="{{ route('customer-groups.edit', $customerGroup) }}"
-                                        class="btn btn-sm btn-info">{{ __('Edit') }}</a>
+                                    <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('customer-groups.edit', $customerGroup) }}"
+                                        class="btn btn-sm btn-info">{{ __('Edit') }}</x-closed-year-action-link>
                                     <form action="{{ route('customer-groups.destroy', $customerGroup) }}" method="POST">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
+                                        <button type="submit" class="btn btn-sm btn-error" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ __('Delete') }}</button>
                                     </form>
                                 </div>
                             </td>

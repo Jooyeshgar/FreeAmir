@@ -97,13 +97,13 @@
                 </svg>
                 {{ __('Customers') }}
             </a>
-            <a href="{{ route('customer-groups.edit', $customerGroup) }}" class="btn btn-sm btn-primary gap-1.5" dir="rtl">
+            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('customer-groups.edit', $customerGroup) }}" class="btn btn-sm btn-primary gap-1.5" dir="rtl">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L8.582 18.07a4.5 4.5 0 0 1-1.897 1.13L3 20.25l1.05-3.685a4.5 4.5 0 0 1 1.13-1.897l11.682-11.681Z" />
                 </svg>
                 {{ __('Edit') }}
-            </a>
+            </x-closed-year-action-link>
             <a href="{{ route('customer-groups.index') }}" class="btn btn-sm btn-ghost gap-1.5" dir="rtl">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />

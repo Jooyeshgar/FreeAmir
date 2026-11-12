@@ -80,9 +80,6 @@ class FiscalYearExportCommand extends Command
 
         try {
             $exportData = FiscalYearService::exportData($sourceYearId, $sectionsToExport);
-            if ($sectionsToExport === null || in_array('document_files', $sectionsToExport, true)) {
-                FiscalYearService::documentFilesInBase64($exportData);
-            }
 
             $jsonContent = json_encode($exportData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 

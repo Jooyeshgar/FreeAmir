@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\OrganizationUnit;
 use App\Models\User;
 use App\Models\WorkShift;
@@ -18,34 +18,34 @@ class OrganizationUnitTest extends TestCase
 
     private User $user;
 
-    private int $companyId;
+    private int $fiscalYearId;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create(['year' => 1405]);
+        $this->fiscalYearId = $fiscalYear->id;
 
         $this->user = User::factory()->create();
-        $company->users()->attach($this->user);
+        $fiscalYear->users()->attach($this->user);
         $this->user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'hr.organization-units.*']),
             Permission::firstOrCreate(['name' => 'hr.employees.*'])
         );
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
     }
 
     public function test_index_lists_units_for_active_company(): void
     {
         OrganizationUnit::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Finance',
         ]);
         OrganizationUnit::factory()->create([
-            'company_id' => Company::factory()->create()->id,
+            'fiscal_year_id' => FiscalYear::factory()->create(['year' => 1406])->id,
             'name' => 'Foreign Unit',
         ]);
 
@@ -67,7 +67,7 @@ class OrganizationUnitTest extends TestCase
 
         $response->assertRedirect(route('hr.organization-units.index'));
         $this->assertDatabaseHas('organization_units', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Finance',
             'code' => 'FIN',
         ]);
@@ -76,7 +76,7 @@ class OrganizationUnitTest extends TestCase
     public function test_store_rejects_parent_from_another_company(): void
     {
         $foreignParent = OrganizationUnit::factory()->create([
-            'company_id' => Company::factory()->create()->id,
+            'fiscal_year_id' => FiscalYear::factory()->create(['year' => 1406])->id,
         ]);
 
         $response = $this->post(route('hr.organization-units.store'), [
@@ -88,7 +88,7 @@ class OrganizationUnitTest extends TestCase
 
         $response->assertSessionHasErrors('parent_id');
         $this->assertDatabaseMissing('organization_units', [
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Finance',
             'parent_id' => $foreignParent->id,
         ]);
@@ -96,9 +96,9 @@ class OrganizationUnitTest extends TestCase
 
     public function test_employee_can_be_assigned_to_organization_unit(): void
     {
-        $unit = OrganizationUnit::factory()->create(['company_id' => $this->companyId]);
-        $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
-        $workShift = WorkShift::factory()->create(['company_id' => $this->companyId]);
+        $unit = OrganizationUnit::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $workShift = WorkShift::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
 
         $response = $this->post(route('hr.employees.store'), [
             'code' => 'EMP-UNIT-1',
@@ -121,10 +121,10 @@ class OrganizationUnitTest extends TestCase
     public function test_employee_cannot_be_assigned_to_organization_unit_from_another_company(): void
     {
         $foreignUnit = OrganizationUnit::factory()->create([
-            'company_id' => Company::factory()->create()->id,
+            'fiscal_year_id' => FiscalYear::factory()->create(['year' => 1406])->id,
         ]);
-        $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
-        $workShift = WorkShift::factory()->create(['company_id' => $this->companyId]);
+        $workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $workShift = WorkShift::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
 
         $response = $this->post(route('hr.employees.store'), [
             'code' => 'EMP-UNIT-FOREIGN',
@@ -147,11 +147,11 @@ class OrganizationUnitTest extends TestCase
     public function test_show_lists_assigned_employees(): void
     {
         $unit = OrganizationUnit::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Finance',
         ]);
         Employee::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'organization_unit_id' => $unit->id,
             'first_name' => 'Sara',
             'last_name' => 'Karimi',

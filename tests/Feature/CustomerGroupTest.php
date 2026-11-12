@@ -2,9 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
@@ -16,15 +16,15 @@ class CustomerGroupTest extends TestCase
 
     protected $user;
 
-    protected $company;
+    protected $fiscalYear;
 
     protected function setUp(): void
     {
         parent::setUp();
 
-        $this->company = Company::factory()->create();
+        $this->fiscalYear = FiscalYear::factory()->create();
         $this->user = User::factory()->create();
-        $this->company->users()->attach($this->user);
+        $this->fiscalYear->users()->attach($this->user);
 
         $this->user->givePermissionTo([
             Permission::firstOrCreate(['name' => 'customer-groups.index']),
@@ -36,7 +36,7 @@ class CustomerGroupTest extends TestCase
             Permission::firstOrCreate(['name' => 'customer-groups.destroy']),
         ]);
 
-        $this->withCookies(['active-company-id' => $this->company->id]);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYear->id]);
     }
 
     public function test_it_displays_customer_group_index_page()
@@ -248,9 +248,9 @@ class CustomerGroupTest extends TestCase
         ]);
     }
 
-    public function test_it_sets_company_id_from_session_on_creation()
+    public function test_it_sets_fiscal_year_id_from_session_on_creation()
     {
-        // This test verifies that company_id is automatically set from session
+        // This test verifies that fiscal_year_id is automatically set from session
         // during customer group creation
         $groupData = [
             'name' => 'Auto Company Group',
@@ -261,10 +261,10 @@ class CustomerGroupTest extends TestCase
 
         $response->assertRedirect(route('customer-groups.index'));
 
-        // Should use the company_id from session (set in setUp)
+        // Should use the fiscal_year_id from session (set in setUp)
         $this->assertDatabaseHas('customer_groups', [
             'name' => 'Auto Company Group',
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
         ]);
     }
 
@@ -322,8 +322,8 @@ class CustomerGroupTest extends TestCase
 
         $customerGroup = CustomerGroup::where('name', 'Test Group')->first();
 
-        $customer1 = Customer::create(['name' => 'Customer 1', 'group_id' => $customerGroup->id, 'company_id' => $this->company->id]);
-        $customer2 = Customer::create(['name' => 'Customer 2', 'group_id' => $customerGroup->id, 'company_id' => $this->company->id]);
+        $customer1 = Customer::create(['name' => 'Customer 1', 'group_id' => $customerGroup->id, 'fiscal_year_id' => $this->fiscalYear->id]);
+        $customer2 = Customer::create(['name' => 'Customer 2', 'group_id' => $customerGroup->id, 'fiscal_year_id' => $this->fiscalYear->id]);
 
         $this->assertCount(2, $customerGroup->customers);
         $this->assertTrue($customerGroup->customers->contains($customer1));

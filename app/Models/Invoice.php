@@ -4,15 +4,14 @@ namespace App\Models;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\Concerns\HasFiscalYear;
 use App\Models\Scopes\FiscalYearScope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Invoice extends Model
 {
     use HasFactory;
-    use HasFiscalYear;
 
     public $timestamps = true;
 
@@ -34,7 +33,7 @@ class Invoice extends Model
         'amount',
         'title',
         'returned_invoice_id',
-        'company_id',
+        'fiscal_year_id',
         'warehouse_id',
         'taxID',
     ];
@@ -45,13 +44,14 @@ class Invoice extends Model
         'date' => 'date',
         'ship_date' => 'date',
         'active' => 'boolean',
+        'is_bookmarked' => 'boolean',
     ];
 
     public static function booted(): void
     {
         static::addGlobalScope(new FiscalYearScope);
         static::creating(function ($model) {
-            $model->company_id = getActiveLegacyCompany();
+            $model->fiscal_year_id = getActiveFiscalYear();
         });
     }
 
@@ -65,9 +65,9 @@ class Invoice extends Model
         return $this->belongsTo(Customer::class, 'customer_id');
     }
 
-    public function company()
+    public function fiscalYear()
     {
-        return $this->belongsTo(Company::class);
+        return $this->belongsTo(FiscalYear::class);
     }
 
     public function warehouse()
@@ -80,9 +80,27 @@ class Invoice extends Model
         return $this->hasMany(InvoiceItem::class, 'invoice_id');
     }
 
+    public function scopeNormalInventoryMovements(Builder $query): void
+    {
+        $query->where('invoice_type', '!=', InvoiceType::BEGINNING_INVENTORY)
+            ->whereHas('items', fn ($items) => $items->where('itemable_type', Product::class));
+    }
+
     public function ancillaryCosts()
     {
         return $this->hasMany(AncillaryCost::class, 'invoice_id');
+    }
+
+    public function moadianReferenceNumber(): ?string
+    {
+        foreach ($this->moadianHistories()->orderByDesc('id')->get() as $history) {
+            $referenceNumber = $history->data['referenceNumber'] ?? null;
+            if (is_string($referenceNumber) && trim($referenceNumber) !== '') {
+                return $referenceNumber;
+            }
+        }
+
+        return null;
     }
 
     public function moadianHistories()

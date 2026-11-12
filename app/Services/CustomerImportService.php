@@ -76,15 +76,17 @@ class CustomerImportService
      *
      * @throws ValidationException
      */
-    public function import(UploadedFile|string $file, int $companyId): array
+    public function import(UploadedFile|string $file, int $fiscalYearId): array
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($fiscalYearId);
+
         $rows = $this->parse($file);
 
         if (empty($rows)) {
             throw ValidationException::withMessages(['file' => __('The import file is empty or has no data rows.')]);
         }
 
-        return DB::transaction(function () use ($rows, $companyId) {
+        return DB::transaction(function () use ($rows, $fiscalYearId) {
             $imported = 0;
             $updated = 0;
             $groupsCreated = 0;
@@ -115,7 +117,7 @@ class CustomerImportService
                     if (! $group) {
                         $group = $this->customerGroupService->create([
                             'name' => $groupName,
-                            'company_id' => $companyId,
+                            'fiscal_year_id' => $fiscalYearId,
                         ]);
                         $groupsCreated++;
                     }
@@ -154,7 +156,7 @@ class CustomerImportService
                 $data = [
                     'name' => $name,
                     'group_id' => $group->id,
-                    'company_id' => $companyId,
+                    'fiscal_year_id' => $fiscalYearId,
                     'type' => $this->normalizeType($row['type'] ?? null)->value,
                 ];
 

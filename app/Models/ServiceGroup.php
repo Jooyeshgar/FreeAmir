@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\HasFiscalYear;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,14 +10,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ServiceGroup extends Model
 {
     use HasFactory;
-    use HasFiscalYear;
 
     protected $fillable = [
         'code',
         'name',
         'vat',
         'sstid',
-        'company_id',
+        'fiscal_year_id',
         'subject_id',
         'cogs_subject_id',
         'sales_returns_subject_id',
@@ -29,7 +27,7 @@ class ServiceGroup extends Model
         static::addGlobalScope(new FiscalYearScope);
 
         static::creating(function ($model) {
-            $model->company_id ??= getActiveLegacyCompany();
+            $model->fiscal_year_id ??= getActiveFiscalYear();
         });
     }
 

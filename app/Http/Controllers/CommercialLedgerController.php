@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Enums\CommercialLedgerType;
 use App\Models\CommercialLedgerExport;
-use App\Models\Company;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Services\CommercialLedgerService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,8 +22,8 @@ class CommercialLedgerController extends Controller
 
     public function index(): View
     {
-        $company = Company::query()->findOrFail(getActiveLegacyCompany());
-        [$fiscalStart, $fiscalEnd] = $company->fiscalYearRange();
+        $fiscalYear = FiscalYear::query()->findOrFail(getActiveFiscalYear());
+        [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
 
         $unapprovedDocumentsCount = Document::query()
             ->whereNull('approved_at')
@@ -65,6 +65,11 @@ class CommercialLedgerController extends Controller
             }
         };
 
+        $fiscalYear = FiscalYear::findOrFail(getActiveFiscalYear());
+        [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
+        $fiscalStartDate = $fiscalStart->toDateString();
+        $fiscalEndDate = $fiscalEnd->toDateString();
+
         $validator = Validator::make($request->all(), [
             'from_date' => ['bail', 'required', 'string', $jalaliDate],
             'to_date' => ['bail', 'required', 'string', $jalaliDate],
@@ -73,13 +78,21 @@ class CommercialLedgerController extends Controller
             'ledger_type' => ['required', Rule::enum(CommercialLedgerType::class)],
         ]);
 
-        $validator->after(function ($validator) use ($request): void {
+        $validator->after(function ($validator) use ($request, $fiscalStartDate, $fiscalEndDate): void {
             if ($validator->errors()->hasAny(['from_date', 'to_date'])) {
                 return;
             }
 
             $fromDate = jalali_to_gregorian_date($request->input('from_date'), '-', '/');
             $toDate = jalali_to_gregorian_date($request->input('to_date'), '-', '/');
+
+            if ($fromDate < $fiscalStartDate || $fromDate > $fiscalEndDate) {
+                $validator->errors()->add('from_date', __('The start date must be within the active fiscal year.'));
+            }
+
+            if ($toDate < $fiscalStartDate || $toDate > $fiscalEndDate) {
+                $validator->errors()->add('to_date', __('The end date must be within the active fiscal year.'));
+            }
 
             if ($fromDate > $toDate) {
                 $validator->errors()->add('from_date', __('From date cannot be greater than to date.'));
@@ -93,7 +106,6 @@ class CommercialLedgerController extends Controller
 
     public function show(Request $request, CommercialLedgerExport $commercialLedger): View
     {
-        abort_unless((int) $commercialLedger->fiscal_year_id === getScopedFiscalYear(), 404);
         $allRows = $this->service->rows(
             $commercialLedger->from_date->toDateString(),
             $commercialLedger->to_date->toDateString(),
@@ -115,7 +127,6 @@ class CommercialLedgerController extends Controller
 
     public function download(CommercialLedgerExport $commercialLedger): StreamedResponse
     {
-        abort_unless((int) $commercialLedger->fiscal_year_id === getScopedFiscalYear(), 404);
         abort_unless(Storage::disk('local')->exists($commercialLedger->file_path), 404);
 
         return Storage::disk('local')->download(
@@ -129,7 +140,6 @@ class CommercialLedgerController extends Controller
 
     public function destroy(CommercialLedgerExport $commercialLedger): RedirectResponse
     {
-        abort_unless((int) $commercialLedger->fiscal_year_id === getScopedFiscalYear(), 404);
         $this->service->delete($commercialLedger);
 
         return redirect()->route('commercial-ledgers.index')->with('success', __('Commercial ledger deleted successfully.'));

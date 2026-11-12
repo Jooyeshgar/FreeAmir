@@ -6,9 +6,9 @@ use App\Enums\PayrollStatus;
 use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Enums\ThursdayStatus;
-use App\Models\Company;
 use App\Models\DecreeBenefit;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\MonthlyAttendance;
 use App\Models\OrgChart;
 use App\Models\Payroll;
@@ -57,7 +57,7 @@ class PayrollServiceTest extends TestCase
 
     private PayrollService $service;
 
-    private int $companyId;
+    private int $fiscalYearId;
 
     private Employee $employee;
 
@@ -72,25 +72,25 @@ class PayrollServiceTest extends TestCase
     {
         parent::setUp();
 
-        $company = Company::factory()->create();
-        $this->companyId = $company->id;
+        $fiscalYear = FiscalYear::factory()->create();
+        $this->fiscalYearId = $fiscalYear->id;
 
         $user = User::factory()->create();
-        $company->users()->attach($user);
+        $fiscalYear->users()->attach($user);
         $user->givePermissionTo(
             Permission::firstOrCreate(['name' => 'payrolls.*'])
         );
         $this->actingAs($user);
-        request()->cookies->set('active-company-id', $this->companyId);
-        $this->withCookies(['active-company-id' => $this->companyId]);
+        request()->cookies->set('active-fiscal-year-id', $this->fiscalYearId);
+        $this->withCookies(['active-fiscal-year-id' => $this->fiscalYearId]);
 
-        $workSite = WorkSite::factory()->create(['company_id' => $this->companyId]);
-        $this->orgChart = OrgChart::factory()->create(['company_id' => $this->companyId]);
+        $workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $this->orgChart = OrgChart::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
 
-        $this->shift = $this->makeShift(['company_id' => $this->companyId]);
+        $this->shift = $this->makeShift(['fiscal_year_id' => $this->fiscalYearId]);
 
         $this->employee = Employee::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'work_site_id' => $workSite->id,
             'work_shift_id' => $this->shift->id,
             'children_count' => 0,
@@ -109,7 +109,7 @@ class PayrollServiceTest extends TestCase
     private function makeShift(array $overrides = []): WorkShift
     {
         return WorkShift::factory()->create(array_merge([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'name' => 'Standard',
             'start_time' => '08:00:00',
             'end_time' => '16:00:00',
@@ -149,7 +149,7 @@ class PayrollServiceTest extends TestCase
         $keyed = [];
         foreach ($definitions as $def) {
             $element = PayrollElement::factory()->create(array_merge([
-                'company_id' => $this->companyId,
+                'fiscal_year_id' => $this->fiscalYearId,
                 'title' => $def['system_code'],
             ], $def));
             $keyed[$def['system_code']] = $element;
@@ -168,17 +168,17 @@ class PayrollServiceTest extends TestCase
     private function seedTaxSlabs(): void
     {
         TaxSlab::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'income_to' => 500_000_000,
             'tax_rate' => 10,
         ]);
         TaxSlab::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'income_to' => 1_000_000_000,
             'tax_rate' => 15,
         ]);
         TaxSlab::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'income_to' => null,
             'tax_rate' => 20,
         ]);
@@ -190,7 +190,7 @@ class PayrollServiceTest extends TestCase
     private function makeDecree(array $overrides = []): SalaryDecree
     {
         return SalaryDecree::factory()->create(array_merge([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'daily_wage' => self::DAILY_WAGE,
             'is_active' => true,
@@ -204,7 +204,7 @@ class PayrollServiceTest extends TestCase
     private function makeAttendance(array $overrides = []): MonthlyAttendance
     {
         return MonthlyAttendance::factory()->create(array_merge([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'year' => 1404,
             'month' => 1,
@@ -245,7 +245,7 @@ class PayrollServiceTest extends TestCase
         $decree = $this->makeDecree();
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         $expectedBase = self::DAILY_WAGE * 26; // 15,600,000
 
@@ -264,7 +264,7 @@ class PayrollServiceTest extends TestCase
         // 26 work days, 2 absent
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 2]);
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         $proratedDays = 24; // 26 - 2
         $expectedBase = self::DAILY_WAGE * $proratedDays;
@@ -289,7 +289,7 @@ class PayrollServiceTest extends TestCase
 
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         // system_code HOUSING_ALLOWANCE uses prorateAllowance; calc_type is 'fixed' so no proration
         $housingKey = 'HOUSING_ALLOWANCE_'.$this->elements[2]->id;
@@ -314,7 +314,7 @@ class PayrollServiceTest extends TestCase
         // 26 work days, 2 absent → 24 prorated
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 2]);
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         $foodKey = 'FOOD_ALLOWANCE_'.$this->elements[3]->id;
         $expectedFood = round($monthlyFood / 26 * 24, 2); // 2,400,000
@@ -334,7 +334,7 @@ class PayrollServiceTest extends TestCase
         $overtimeMinutes = 120; // 2 hours
         $attendance = $this->makeAttendance(['overtime' => $overtimeMinutes]);
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         $hours = $overtimeMinutes / 60; // 2.0
         $coeff = 1.4;
@@ -352,7 +352,7 @@ class PayrollServiceTest extends TestCase
         $autoOvertimeMinutes = 120; // 2 hours
         $attendance = $this->makeAttendance(['auto_overtime' => $autoOvertimeMinutes]);
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         $hours = $autoOvertimeMinutes / 60;
         $coeff = 1.2;
@@ -374,7 +374,7 @@ class PayrollServiceTest extends TestCase
         $fridayMinutes = 480; // 8 hours
         $attendance = $this->makeAttendance(['friday' => $fridayMinutes]);
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         $hours = $fridayMinutes / 60;
         $coeff = 1.5;
@@ -395,7 +395,7 @@ class PayrollServiceTest extends TestCase
         $holidayMinutes = 240; // 4 hours
         $attendance = $this->makeAttendance(['holiday' => $holidayMinutes]);
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         $hours = $holidayMinutes / 60;
         $coeff = 1.5;
@@ -416,7 +416,7 @@ class PayrollServiceTest extends TestCase
         $missionMinutes = 480;
         $attendance = $this->makeAttendance(['mission' => $missionMinutes]);
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         $hours = $missionMinutes / 60;
         $coeff = 1.4;
@@ -437,7 +437,7 @@ class PayrollServiceTest extends TestCase
         ]);
 
         $request = PersonnelRequest::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'request_type' => PersonnelRequestType::MISSION_DAILY,
             'start_date' => '2025-03-06 08:00:00', // Thursday
@@ -453,7 +453,7 @@ class PayrollServiceTest extends TestCase
             'mission' => $missionMinutes,
         ]);
 
-        $result = $this->service->calculate($attendance, $this->makeDecree(), $this->companyId);
+        $result = $this->service->calculate($attendance, $this->makeDecree(), $this->fiscalYearId);
 
         $this->assertSame(240, $missionMinutes, 'The dated Thursday half-day shift must contribute four mission hours.');
         $this->assertSame(25, $result['prorated_days']);
@@ -465,7 +465,7 @@ class PayrollServiceTest extends TestCase
     {
         $this->seedTaxSlabs();
         PersonnelRequest::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'request_type' => PersonnelRequestType::MISSION_DAILY,
             'start_date' => '2025-03-07 08:00:00', // Friday
@@ -478,7 +478,7 @@ class PayrollServiceTest extends TestCase
             'mission' => self::SHIFT_MINUTES,
         ]);
 
-        $result = $this->service->calculate($attendance, $this->makeDecree(), $this->companyId);
+        $result = $this->service->calculate($attendance, $this->makeDecree(), $this->fiscalYearId);
 
         $this->assertSame(26, $result['prorated_days']);
         $this->assertEquals(self::DAILY_WAGE * 26, $result['earnings']['base_salary']['amount']);
@@ -496,7 +496,7 @@ class PayrollServiceTest extends TestCase
         $undertimeMinutes = 60; // 1 hour late
         $attendance = $this->makeAttendance(['undertime' => $undertimeMinutes]);
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         $hours = $undertimeMinutes / 60;
         $coeff = 2.0; // undertime_coefficient
@@ -516,7 +516,7 @@ class PayrollServiceTest extends TestCase
         $decree = $this->makeDecree();
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         $expectedInsuranceBase = self::DAILY_WAGE * 26;
         $expectedInsurance = round($expectedInsuranceBase * self::EMP_INS_RATE, 2);
@@ -537,7 +537,7 @@ class PayrollServiceTest extends TestCase
         $decree = $this->makeDecree();
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         $expectedEmployerInsurance = round($result['insurance_base'] * self::EMPLOYER_INS_RATE, 2);
 
@@ -556,7 +556,7 @@ class PayrollServiceTest extends TestCase
 
         $this->expectException(ValidationException::class);
 
-        $this->service->calculate($attendance, $decree, $this->companyId);
+        $this->service->calculate($attendance, $decree, $this->fiscalYearId);
     }
 
     // -----------------------------------------------------------------------
@@ -571,7 +571,7 @@ class PayrollServiceTest extends TestCase
         // Full month, no absences
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0, 'month' => 1]);
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         // 1. Gross Salary = 26 * 600,000 = 15,600,000
         // 2. Employee Insurance = 15,600,000 * 0.07 = 1,092,000
@@ -605,7 +605,7 @@ class PayrollServiceTest extends TestCase
 
         // Persist a payroll for month 1 manually so month 2 picks it up
         Payroll::withoutGlobalScopes()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'decree_id' => $decree->id,
             'monthly_attendance_id' => null,
@@ -621,7 +621,7 @@ class PayrollServiceTest extends TestCase
         ]);
 
         $attendance2 = $this->makeAttendance(['month' => 2, 'work_days' => 26, 'absent_days' => 0]);
-        $result = $this->service->calculate($attendance2, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance2, $decree, $this->fiscalYearId);
 
         // 1. Month 2 Gross = 15,600,000
         // 2. Month 2 Employee Insurance = 1,092,000
@@ -647,7 +647,7 @@ class PayrollServiceTest extends TestCase
         $taxBaseMonth1 = $monthBase - ($monthBase * self::EMP_INS_RATE);
 
         Payroll::withoutGlobalScopes()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'decree_id' => $decree->id,
             'monthly_attendance_id' => null,
@@ -663,7 +663,7 @@ class PayrollServiceTest extends TestCase
         ]);
 
         $attendance2 = $this->makeAttendance(['month' => 2, 'work_days' => 26, 'absent_days' => 0]);
-        $result = $this->service->calculate($attendance2, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance2, $decree, $this->fiscalYearId);
 
         $taxAmount = $result['income_tax'] ?? $result['deductions']['income_tax']['amount'];
 
@@ -681,7 +681,7 @@ class PayrollServiceTest extends TestCase
         $this->addBenefit($decree, 2, 1_000_000);
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         $expectedNet = $result['total_earnings'] - $result['total_deductions'];
 
@@ -699,7 +699,7 @@ class PayrollServiceTest extends TestCase
         $decree = $this->makeDecree();
         $attendance = $this->makeAttendance();
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         $requiredKeys = [
             'prorated_days', 'daily_wage', 'hourly_wage',
@@ -725,7 +725,7 @@ class PayrollServiceTest extends TestCase
         $decree = $this->makeDecree();
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 2, 'overtime' => 120]);
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         $positiveCount = 0;
         $negativeCount = 0;
@@ -752,13 +752,13 @@ class PayrollServiceTest extends TestCase
         $decree = $this->makeDecree();
         $attendance = $this->makeAttendance(['year' => 1404, 'month' => 1]);
 
-        $payroll = $this->service->createFromAttendance($attendance, $decree, $this->companyId);
+        $payroll = $this->service->createFromAttendance($attendance, $decree, $this->fiscalYearId);
 
         $this->assertInstanceOf(Payroll::class, $payroll);
 
         $this->assertDatabaseHas('payrolls', [
             'id' => $payroll->id,
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $this->employee->id,
             'decree_id' => $decree->id,
             'monthly_attendance_id' => $attendance->id,
@@ -779,7 +779,7 @@ class PayrollServiceTest extends TestCase
         $this->addBenefit($decree, 2, 1_500_000);
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
 
-        $payroll = $this->service->createFromAttendance($attendance, $decree, $this->companyId);
+        $payroll = $this->service->createFromAttendance($attendance, $decree, $this->fiscalYearId);
 
         $items = PayrollItem::where('payroll_id', $payroll->id)->get();
 
@@ -801,12 +801,12 @@ class PayrollServiceTest extends TestCase
         $decree = $this->makeDecree();
         $attendance = $this->makeAttendance(['year' => 1404, 'month' => 3]);
 
-        $first = $this->service->createFromAttendance($attendance, $decree, $this->companyId);
-        $second = $this->service->createFromAttendance($attendance, $decree, $this->companyId);
+        $first = $this->service->createFromAttendance($attendance, $decree, $this->fiscalYearId);
+        $second = $this->service->createFromAttendance($attendance, $decree, $this->fiscalYearId);
 
         // Only the latest payroll should exist for this employee/year/month
         $count = Payroll::withoutGlobalScopes()
-            ->where('company_id', $this->companyId)
+            ->where('fiscal_year_id', $this->fiscalYearId)
             ->where('employee_id', $this->employee->id)
             ->where('year', 1404)
             ->where('month', 3)
@@ -829,8 +829,8 @@ class PayrollServiceTest extends TestCase
         $decree = $this->makeDecree();
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
 
-        $breakdown = $this->service->calculate($attendance, $decree, $this->companyId);
-        $payroll = $this->service->createFromAttendance($attendance, $decree, $this->companyId);
+        $breakdown = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
+        $payroll = $this->service->createFromAttendance($attendance, $decree, $this->fiscalYearId);
 
         $this->assertEquals(
             round($breakdown['net_payment'], 2),
@@ -847,7 +847,7 @@ class PayrollServiceTest extends TestCase
         $this->seedTaxSlabs();
         // Create a custom deduction element (not a system-reserved code)
         $customDeduction = PayrollElement::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'system_code' => 15,
             'category' => 2,
             'calc_type' => 1,
@@ -864,7 +864,7 @@ class PayrollServiceTest extends TestCase
 
         $attendance = $this->makeAttendance();
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         $this->assertArrayHasKey('deduction_'.$customDeduction->id, $result['deductions']);
         $this->assertEquals(500000, $result['deductions']['deduction_'.$customDeduction->id]['amount']);
@@ -885,20 +885,20 @@ class PayrollServiceTest extends TestCase
         ]);
 
         $employee6h = Employee::factory()->create([
-            'company_id' => $this->companyId,
-            'work_site_id' => WorkSite::factory()->create(['company_id' => $this->companyId])->id,
+            'fiscal_year_id' => $this->fiscalYearId,
+            'work_site_id' => WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId])->id,
             'work_shift_id' => $shift6h->id,
         ]);
 
         $decree6h = SalaryDecree::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $employee6h->id,
             'daily_wage' => self::DAILY_WAGE,
             'is_active' => true,
         ]);
 
         $attendance6h = MonthlyAttendance::factory()->create([
-            'company_id' => $this->companyId,
+            'fiscal_year_id' => $this->fiscalYearId,
             'employee_id' => $employee6h->id,
             'year' => 1404,
             'month' => 1,
@@ -913,7 +913,7 @@ class PayrollServiceTest extends TestCase
             'holiday' => 0,
         ]);
 
-        $result = $this->service->calculate($attendance6h, $decree6h, $this->companyId);
+        $result = $this->service->calculate($attendance6h, $decree6h, $this->fiscalYearId);
 
         // 6-hour shift: 360 min → hourly = 600,000 / 6 = 100,000
         $expectedHourly = round(self::DAILY_WAGE / 6, 4);
@@ -930,7 +930,7 @@ class PayrollServiceTest extends TestCase
         $decree = $this->makeDecree(['daily_wage' => 0]);
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         $this->assertEquals(0.0, $result['gross_salary']);
         $this->assertEquals(0.0, $result['employee_insurance']);
@@ -952,7 +952,7 @@ class PayrollServiceTest extends TestCase
 
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         $baseSalaryOnly = self::DAILY_WAGE * 26;
 
@@ -971,7 +971,7 @@ class PayrollServiceTest extends TestCase
         $highDecree = $this->makeDecree(['daily_wage' => 50000000]);
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 0]);
 
-        $result = $this->service->calculate($attendance, $highDecree, $this->companyId);
+        $result = $this->service->calculate($attendance, $highDecree, $this->fiscalYearId);
 
         // With daily_wage = 50M, monthly = 50M × 26 = 1,300,000,000
         // projected annual = 1,300,000,000 × 12 = 15,600,000,000 → clearly above all slabs
@@ -1000,7 +1000,7 @@ class PayrollServiceTest extends TestCase
         // Month 6 = Shahrivar (شهریور) in Jalali
         $attendance = $this->makeAttendance(['year' => 1404, 'month' => 6]);
 
-        $payroll = $this->service->createFromAttendance($attendance, $decree, $this->companyId);
+        $payroll = $this->service->createFromAttendance($attendance, $decree, $this->fiscalYearId);
 
         $jalaliMonthName = MonthlyAttendance::MONTH_NAMES[6]; // شهریور
 
@@ -1018,7 +1018,7 @@ class PayrollServiceTest extends TestCase
         $decree = $this->makeDecree();
         $attendance = $this->makeAttendance(['work_days' => 26, 'absent_days' => 3]);
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         $absence = $result['deductions']['ABSENCE_DEDUCTION'];
 
@@ -1040,7 +1040,7 @@ class PayrollServiceTest extends TestCase
 
         $attendance = $this->makeAttendance(['overtime' => 60]);
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         $overtimeElementId = $this->elements[5]->id;
 
@@ -1056,7 +1056,7 @@ class PayrollServiceTest extends TestCase
 
         $attendance = $this->makeAttendance(['auto_overtime' => 60]);
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         $autoOvertimeElementId = $this->elements[6]->id;
 
@@ -1081,7 +1081,7 @@ class PayrollServiceTest extends TestCase
             'undertime' => 60,  // 1 h × 75,000 × 2.0 = 150,000
         ]);
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         $baseSalary = self::DAILY_WAGE * 25;    // 25 prorated days
         $absenceDeduction = self::DAILY_WAGE * 1;
@@ -1115,7 +1115,7 @@ class PayrollServiceTest extends TestCase
             'undertime' => 0,
         ]);
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         $this->assertSame(25, $result['prorated_days']);
         $this->assertEquals(self::DAILY_WAGE * 25, $result['earnings']['base_salary']['amount']);
@@ -1136,7 +1136,7 @@ class PayrollServiceTest extends TestCase
             'undertime' => 0,
         ]);
 
-        $result = $this->service->calculate($attendance, $decree, $this->companyId);
+        $result = $this->service->calculate($attendance, $decree, $this->fiscalYearId);
 
         $this->assertSame(26, $result['prorated_days']);
         $this->assertArrayNotHasKey('undertime', $result['deductions']);

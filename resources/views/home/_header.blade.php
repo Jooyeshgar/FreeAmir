@@ -56,7 +56,7 @@
 
             <div class="min-w-0 pt-0.5">
                 <div class="flex items-center gap-1">
-                    <h1 class="mt-1 text-xl font-black tracking-tight text-base-content sm:text-2xl">{{ __('Welcome back, :name', ['name' => auth()->user()->name]) }}</h1>
+                    <h1 class="text-xl font-black tracking-tight text-base-content sm:text-2xl">{{ __('Welcome back, :name', ['name' => auth()->user()->name]) }}</h1>
                     <x-user-guide-link source="management/system/companies/getting-started-fiscal-year.md" />
                 </div>
                 @php

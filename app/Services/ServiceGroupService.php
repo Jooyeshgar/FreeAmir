@@ -13,6 +13,8 @@ class ServiceGroupService
 
     public function create(array $data): ServiceGroup
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($data['fiscal_year_id'] ?? getActiveFiscalYear());
+
         $serviceGroup = ServiceGroup::create($data);
 
         $this->syncSubjects($serviceGroup);
@@ -22,6 +24,8 @@ class ServiceGroupService
 
     public function update(ServiceGroup $serviceGroup, array $data): ServiceGroup
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($serviceGroup, $data['fiscal_year_id'] ?? null);
+
         $serviceGroup->fill($data);
         $serviceGroup->save();
 
@@ -32,6 +36,8 @@ class ServiceGroupService
 
     public function delete(ServiceGroup $serviceGroup): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($serviceGroup);
+
         DB::transaction(function () use ($serviceGroup): void {
             $this->ensureCanDelete($serviceGroup);
 
@@ -76,7 +82,7 @@ class ServiceGroupService
     {
         $serviceGroup->loadMissing('subject', 'cogsSubject', 'salesReturnsSubject');
 
-        $companyId = $serviceGroup->company_id ?? getActiveLegacyCompany();
+        $fiscalYearId = $serviceGroup->fiscal_year_id ?? getActiveFiscalYear();
 
         $subjectsConfig = [
             'subject_id' => [
@@ -104,7 +110,7 @@ class ServiceGroupService
                 $subject = $this->subjectService->createSubject([
                     'name' => $serviceGroup->name,
                     'parent_id' => $parentId,
-                    'company_id' => $companyId,
+                    'fiscal_year_id' => $fiscalYearId,
                 ]);
             }
 

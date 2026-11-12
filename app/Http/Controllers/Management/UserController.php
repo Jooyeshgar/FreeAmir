@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Management;
 
 use App\Http\Controllers\Controller;
-use App\Models\Company;
 use App\Models\Employee;
 use App\Models\FiscalYear;
 use App\Models\User;
@@ -33,10 +32,10 @@ class UserController extends Controller
 
         $users = User::query()
             ->unless($actor->can('access-super-admin-panel'), function ($query) use ($actor) {
-                $companyIds = $actor->fiscalYears()->pluck('fiscal_years.id');
+                $fiscalYearIds = $actor->fiscalYears()->pluck('fiscal_years.id');
 
                 $query->whereHas('fiscalYears', fn ($query) => $query->where('fiscal_years.id', getActiveFiscalYear()))
-                    ->whereDoesntHave('fiscalYears', fn ($query) => $query->whereNotIn('fiscal_years.id', $companyIds));
+                    ->whereDoesntHave('fiscalYears', fn ($query) => $query->whereNotIn('fiscal_years.id', $fiscalYearIds));
             })
             ->unless($isManagementUserIndex, fn ($query) => $query
                 ->whereDoesntHave('roles', fn ($query) => $query->where('name', 'Super-Admin'))
@@ -52,7 +51,7 @@ class UserController extends Controller
             ->when($request->input('verification') === 'verified', fn ($query) => $query->whereNotNull('email_verified_at'))
             ->when($request->input('verification') === 'pending', fn ($query) => $query->whereNull('email_verified_at'))
             ->with(['employee', 'roles:id,name'])
-            ->withCount(['fiscalYears as companies_count'])
+            ->withCount('fiscalYears')
             ->latest()
             ->paginate(12)
             ->withQueryString();
@@ -68,9 +67,9 @@ class UserController extends Controller
     public function create()
     {
         $roles = $this->assignableRoles();
-        $companies = $this->assignableCompanies();
+        $fiscalYears = $this->assignableFiscalYears();
 
-        return view('users.create', compact('roles', 'companies'));
+        return view('users.create', compact('roles', 'fiscalYears'));
     }
 
     /**
@@ -85,15 +84,15 @@ class UserController extends Controller
             'password_confirmation' => 'required|string|min:8',
             'role' => 'required|array|min:1',
             'role.*' => 'required|string|exists:roles,name',
-            'company' => 'required|array|min:1',
-            'company.*' => 'required|integer|exists:companies,id',
+            'fiscal_year' => 'required|array|min:1',
+            'fiscal_year.*' => 'required|integer|exists:fiscal_years,id',
         ]);
 
         $this->validateAssignments($request);
 
         DB::transaction(function () use ($request, &$user) {
             $role = $this->rolesWithInheritance(array_values($request->role));
-            $company = array_values($request->company);
+            $fiscalYear = array_values($request->fiscal_year);
             $user = new User;
             $user->name = $request->input('name');
             $user->email = $request->input('email');
@@ -101,8 +100,7 @@ class UserController extends Controller
             $user->save();
 
             $user->syncRoles($role);
-            $user->companies()->sync($company);
-            $user->fiscalYears()->sync(FiscalYear::whereIn('legacy_company_id', $company)->pluck('id'));
+            $user->fiscalYears()->sync($fiscalYear);
         });
 
         try {
@@ -124,8 +122,10 @@ class UserController extends Controller
         abort_unless(auth()->user()->can('access-super-admin-panel'), 403);
 
         $this->ensureUserAccess($user);
-        $user->load('roles:id,name');
-        $user->setRelation('companies', $user->accessibleCompanies()->orderByDesc('fiscal_year')->orderBy('name')->get());
+        $user->load([
+            'roles:id,name',
+            'fiscalYears' => fn ($query) => $query->orderByDesc('year'),
+        ]);
 
         return view('users.show', compact('user'));
     }
@@ -138,13 +138,11 @@ class UserController extends Controller
         $this->ensureUserRoleManagementAccess($user);
         $this->ensureUserAccess($user);
 
-        $user->setRelation('companies', $user->accessibleCompanies()->get());
-
         $roles = $this->assignableRoles();
-        $companies = $this->assignableCompanies();
+        $fiscalYears = $this->assignableFiscalYears();
         $employees = $user->employee ? collect([$user->employee]) : Employee::all();
 
-        return view('users.edit', compact('user', 'roles', 'companies', 'employees'));
+        return view('users.edit', compact('user', 'roles', 'fiscalYears', 'employees'));
     }
 
     /**
@@ -163,8 +161,8 @@ class UserController extends Controller
             'employee_id' => 'nullable|exists:employees,id',
             'role' => 'required|array|min:1',
             'role.*' => 'required|string|exists:roles,name',
-            'company' => 'required|array|min:1',
-            'company.*' => 'required|integer|exists:companies,id',
+            'fiscal_year' => 'required|array|min:1',
+            'fiscal_year.*' => 'required|integer|exists:fiscal_years,id',
         ]);
 
         $this->validateAssignments($request);
@@ -185,7 +183,7 @@ class UserController extends Controller
             $user->name = $request->input('name');
             $user->email = $request->input('email');
             $role = $this->rolesWithInheritance(array_values($request->role));
-            $company = array_values($request->company);
+            $fiscalYear = array_values($request->fiscal_year);
 
             if ($request->input('password')) {
                 $user->password = bcrypt($request->input('password'));
@@ -198,8 +196,7 @@ class UserController extends Controller
             }
 
             $user->syncRoles($role);
-            $user->companies()->sync($company);
-            $user->fiscalYears()->sync(FiscalYear::whereIn('legacy_company_id', $company)->pluck('id'));
+            $user->fiscalYears()->sync($fiscalYear);
         });
 
         return redirect()->route('users.index')->with('success', __('User updated successfully!'));
@@ -256,6 +253,10 @@ class UserController extends Controller
 
         $request->session()->regenerate();
 
+        if ($request->user()->can('access-super-admin-panel')) {
+            $request->session()->put('interface_mode', 'management');
+        }
+
         return redirect()->route('users.index')->with('success', __('Impersonation ended.'));
     }
 
@@ -263,7 +264,7 @@ class UserController extends Controller
     {
         $this->ensureUserAccess($user);
 
-        $companyId = getActiveLegacyCompany();
+        $fiscalYearId = getActiveFiscalYear();
 
         $existingEmployee = $user->employee()->first();
         if ($existingEmployee) {
@@ -281,7 +282,7 @@ class UserController extends Controller
         [$firstName, $lastName] = $this->splitName($user->name);
 
         $employee = Employee::create([
-            'company_id' => $companyId,
+            'fiscal_year_id' => $fiscalYearId,
             'code' => $this->uniqueEmployeeCode($user->id),
             'first_name' => $firstName,
             'last_name' => $lastName,
@@ -315,30 +316,30 @@ class UserController extends Controller
         return array_values(array_unique($roles));
     }
 
-    private function assignableCompanies()
+    private function assignableFiscalYears()
     {
         $user = auth()->user();
 
-        return ($user->can('access-super-admin-panel') ? Company::query() : $user->accessibleCompanies())->get();
+        return ($user->can('access-super-admin-panel') ? FiscalYear::query() : $user->fiscalYears())->get();
     }
 
     private function validateAssignments(Request $request): void
     {
         $allowedRoles = $this->assignableRoles()->pluck('name');
-        $allowedCompanies = $this->assignableCompanies()->pluck('id')->map(fn ($id) => (string) $id);
+        $allowedFiscalYears = $this->assignableFiscalYears()->pluck('id')->map(fn ($id) => (string) $id);
 
         $invalidRoles = collect($request->input('role', []))->diff($allowedRoles);
-        $invalidCompanies = collect($request->input('company', []))->map(fn ($id) => (string) $id)->diff($allowedCompanies);
+        $invalidFiscalYears = collect($request->input('fiscal_year', []))->map(fn ($id) => (string) $id)->diff($allowedFiscalYears);
 
-        if ($invalidRoles->isNotEmpty() || $invalidCompanies->isNotEmpty()) {
+        if ($invalidRoles->isNotEmpty() || $invalidFiscalYears->isNotEmpty()) {
             $errors = [];
 
             if ($invalidRoles->isNotEmpty()) {
-                $errors['role'] = __('You may only assign roles and companies available to you.');
+                $errors['role'] = __('You may only assign roles and fiscal years available to you.');
             }
 
-            if ($invalidCompanies->isNotEmpty()) {
-                $errors['company'] = __('You may only assign roles and companies available to you.');
+            if ($invalidFiscalYears->isNotEmpty()) {
+                $errors['fiscal_year'] = __('You may only assign roles and fiscal years available to you.');
             }
 
             throw ValidationException::withMessages($errors);
@@ -353,11 +354,11 @@ class UserController extends Controller
             return;
         }
 
-        $companyIds = $actor->fiscalYears()->pluck('fiscal_years.id');
-        $hasActiveCompany = $user->fiscalYears()->where('fiscal_years.id', getActiveFiscalYear())->exists();
-        $hasInaccessibleCompany = $user->fiscalYears()->whereNotIn('fiscal_years.id', $companyIds)->exists();
+        $fiscalYearIds = $actor->fiscalYears()->pluck('fiscal_years.id');
+        $hasActiveFiscalYear = $user->fiscalYears()->where('fiscal_years.id', getActiveFiscalYear())->exists();
+        $hasInaccessibleFiscalYear = $user->fiscalYears()->whereNotIn('fiscal_years.id', $fiscalYearIds)->exists();
 
-        abort_unless($hasActiveCompany && ! $hasInaccessibleCompany, 403);
+        abort_unless($hasActiveFiscalYear && ! $hasInaccessibleFiscalYear, 403);
     }
 
     private function ensureUserRoleManagementAccess(User $user): void

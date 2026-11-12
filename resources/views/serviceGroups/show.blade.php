@@ -55,22 +55,22 @@
                     {{ __('Back') }}
                 </a>
                 <div class="flex flex-wrap items-center gap-2">
-                    <a href="{{ route('service-groups.edit', $serviceGroup) }}" class="btn btn-primary gap-2">
+                    <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('service-groups.edit', $serviceGroup) }}" class="btn btn-primary gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
                         {{ __('Edit') }}
-                    </a>
+                    </x-closed-year-action-link>
 
                     @if ($deleteBlockingReason)
                         <span class="tooltip" data-tip="{{ $deleteBlockingReason }}">
-                            <button class="btn btn-error btn-disabled cursor-not-allowed" disabled title="{{ $deleteBlockingReason }}">{{ __('Delete') }}</button>
+                            <button class="btn btn-error btn-disabled cursor-not-allowed" disabled title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : $deleteBlockingReason }}">{{ __('Delete') }}</button>
                         </span>
                     @else
                         <form action="{{ route('service-groups.destroy', $serviceGroup) }}" method="POST" class="inline-block">
                             @csrf
                             @method('DELETE')
-                            <button type="submit" class="btn btn-error">{{ __('Delete') }}</button>
+                            <button type="submit" class="btn btn-error" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">{{ __('Delete') }}</button>
                         </form>
                     @endif
                 </div>

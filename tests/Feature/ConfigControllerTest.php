@@ -4,8 +4,8 @@ namespace Tests\Feature;
 
 use App\Enums\ConfigTitle;
 use App\Enums\SubjectType;
-use App\Models\Company;
 use App\Models\Config;
+use App\Models\FiscalYear;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -18,15 +18,15 @@ class ConfigControllerTest extends TestCase
 
     private User $user;
 
-    private Company $company;
+    private FiscalYear $fiscalYear;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->user = User::factory()->create();
-        $this->company = Company::factory()->create();
-        $this->company->users()->syncWithoutDetaching([$this->user->id]);
+        $this->fiscalYear = FiscalYear::factory()->create();
+        $this->fiscalYear->users()->syncWithoutDetaching([$this->user->id]);
         $this->user->givePermissionTo([
             Permission::firstOrCreate(['name' => 'configs.index']),
             Permission::firstOrCreate(['name' => 'configs.edit']),
@@ -34,8 +34,8 @@ class ConfigControllerTest extends TestCase
         ]);
 
         $this->actingAs($this->user);
-        $this->withCookies(['active-company-id' => (string) $this->company->id]);
-        config(['active-company-id' => $this->company->id]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->fiscalYear->id]);
+        config(['active-fiscal-year-id' => $this->fiscalYear->id]);
     }
 
     public function test_index_lists_supported_settings_without_unused_cash_setting(): void
@@ -47,6 +47,7 @@ class ConfigControllerTest extends TestCase
 
             return ! in_array('CASH', $keys, true)
                 && in_array('CASH_BOOK', $keys, true)
+                && in_array('BANK_SERVICE_FEE', $keys, true)
                 && in_array('PAYROLL', $keys, true)
                 && in_array('SALES_RETURNS', $keys, true)
                 && in_array('COST_OF_GOODS_SOLD', $keys, true)
@@ -60,7 +61,7 @@ class ConfigControllerTest extends TestCase
         $this->get(route('configs.edit', 'cash'))->assertNotFound();
 
         $this->assertDatabaseMissing('configs', [
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'key' => 'cash',
         ]);
     }
@@ -68,7 +69,7 @@ class ConfigControllerTest extends TestCase
     public function test_update_rejects_unused_config_key(): void
     {
         DB::table('subjects')->insert([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'code' => '001',
             'name' => 'Cash subject',
             'type' => SubjectType::BOTH->value,
@@ -76,7 +77,7 @@ class ConfigControllerTest extends TestCase
             'updated_at' => now(),
         ]);
         $cash = Config::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'key' => 'cash',
             'value' => '0',
             'desc' => 'Cash',
@@ -92,58 +93,6 @@ class ConfigControllerTest extends TestCase
         $this->assertSame('0', $cash->fresh()->value);
     }
 
-    public function test_migration_removes_stored_cash_config_without_removing_cash_book(): void
-    {
-        foreach (['cash', 'cash_book'] as $key) {
-            Config::create([
-                'company_id' => $this->company->id,
-                'key' => $key,
-                'value' => '1',
-                'desc' => $key,
-                'type' => '2',
-                'category' => '1',
-            ]);
-        }
-
-        $migration = require database_path('migrations/2026_09_09_000002_remove_unused_cash_config.php');
-        $migration->up();
-
-        $this->assertDatabaseMissing('configs', [
-            'company_id' => $this->company->id,
-            'key' => 'cash',
-        ]);
-        $this->assertDatabaseHas('configs', [
-            'company_id' => $this->company->id,
-            'key' => 'cash_book',
-        ]);
-    }
-
-    public function test_migration_renames_stored_wage_config_to_payroll(): void
-    {
-        Config::create([
-            'company_id' => $this->company->id,
-            'key' => 'wage',
-            'value' => '42',
-            'desc' => 'حقوق پرسنل',
-            'type' => '3',
-            'category' => '1',
-        ]);
-
-        $migration = require database_path('migrations/2026_09_12_000001_rename_wage_config_to_payroll.php');
-        $migration->up();
-
-        $this->assertDatabaseMissing('configs', [
-            'company_id' => $this->company->id,
-            'key' => 'wage',
-        ]);
-        $this->assertDatabaseHas('configs', [
-            'company_id' => $this->company->id,
-            'key' => 'payroll',
-            'value' => '42',
-            'desc' => 'حقوق و دستمزد',
-        ]);
-    }
-
     public function test_edit_still_accepts_every_supported_config_key(): void
     {
         foreach (ConfigTitle::cases() as $title) {
@@ -151,7 +100,7 @@ class ConfigControllerTest extends TestCase
 
             $this->get(route('configs.edit', $key))->assertOk();
             $this->assertDatabaseHas('configs', [
-                'company_id' => $this->company->id,
+                'fiscal_year_id' => $this->fiscalYear->id,
                 'key' => $key,
             ]);
         }

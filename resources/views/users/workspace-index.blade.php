@@ -1,6 +1,9 @@
 <x-app-layout :title="__('Users')">
     <x-show-message-bags />
-    <x-user-guide-link source="management/system/users/users.md" />
+    <div class="card-title flex-wrap mb-4">
+        {{ __('Users') }}
+        <x-user-guide-link source="management/system/users/users.md" />
+    </div>
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
             <div class="card-actions">

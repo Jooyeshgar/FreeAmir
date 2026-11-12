@@ -17,9 +17,6 @@
                         <x-input name="name" id="name" title="{{ __('Company name') }}" :value="old('name', $company->name ?? '')" required />
                     </div>
                     <div class="col-span-2 md:col-span-1">
-                        <x-input name="fiscal_year" id="fiscal_year" title="{{ __('Fiscal year') }}" :value="old('fiscal_year', $company->fiscal_year ?? '')" required />
-                    </div>
-                    <div class="col-span-2 md:col-span-1">
                         <x-input name="currency" id="currency" title="{{ __('Currency') }}" :value="old('currency', $company->currency ?? '')" />
                     </div>
                     <div class="flex flex-wrap gap-2">
@@ -28,7 +25,43 @@
                         </div>
                     </div>
                     <img class="block w-12 h-auto rounded-full" src="{{ asset("storage/{$company->logo}") }}">
-                    <fieldset class="col-span-2 grid grid-cols-1 gap-6 border p-5 sm:grid-cols-2">
+                    <fieldset class="col-span-2 grid grid-cols-1 gap-6 border p-5 sm:grid-cols-2"
+                        x-data="{
+                            testing: false,
+                            message: '',
+                            connected: false,
+                            async testConnection() {
+                                this.testing = true;
+                                this.message = '';
+                                const data = new FormData();
+                                const form = this.$el.closest('form');
+                                for (const name of ['_token', 'moadian_username', 'tax_id']) {
+                                    data.append(name, form.elements[name].value);
+                                }
+                                for (const name of ['certificate', 'private_key']) {
+                                    if (form.elements[name].files[0]) {
+                                        data.append(name, form.elements[name].files[0]);
+                                    }
+                                }
+                                try {
+                                    const response = await fetch(@js($testFiscalYear ? route('companies.test-moadian-connection', $testFiscalYear) : ''), {
+                                        method: 'POST',
+                                        headers: { Accept: 'application/json' },
+                                        body: data,
+                                    });
+                                    const result = await response.json();
+                                    this.connected = response.ok &amp;&amp; result.connected === true;
+                                    this.message = result.errors
+                                        ? Object.values(result.errors).flat().join(' ')
+                                        : result.message;
+                                } catch (error) {
+                                    this.connected = false;
+                                    this.message = @js(__('Connection to Moadian failed. Please check the entered settings and try again.'));
+                                } finally {
+                                    this.testing = false;
+                                }
+                            }
+                        }">
                         <legend>
                             <span class="inline-flex items-center gap-1">
                                 {{ __('Moadian') }}
@@ -43,16 +76,31 @@
                         </div>
                         <div>
                             <x-file-input name="certificate" title="{{ __('SSL Certificate') }}" accept=".crt,.cer" />
+                            <p class="text-sm text-base-content/60 mt-1">{{ __('Allowed certificate files: .crt or .cer with a valid X.509 certificate.') }}</p>
                             @if ($company->certificate_path)
                                 <p class="text-sm text-base-content/60 mt-1">{{ __('Current file') }}: {{ basename($company->certificate_path) }}</p>
                             @endif
                         </div>
                         <div>
-                            <x-file-input name="private_key" title="{{ __('Private Key') }}" accept=".pem" />
+                            <x-file-input name="private_key" title="{{ __('Private Key') }}" accept=".pem,.key" />
+                            <p class="text-sm text-base-content/60 mt-1">{{ __('Allowed private key files: .pem or .key with PEM-formatted content.') }}</p>
                             @if ($company->private_key_path)
                                 <p class="text-sm text-base-content/60 mt-1">{{ __('Current file') }}: {{ basename($company->private_key_path) }}</p>
                             @endif
                         </div>
+                        @can('companies.test-moadian-connection')
+                            <div class="sm:col-span-2">
+                                @if ($testFiscalYear)
+                                    <button type="button" @click="testConnection()" :disabled="testing" class="btn btn-outline">
+                                        <span x-show="testing" class="loading loading-spinner loading-sm"></span>
+                                        {{ __('Test Moadian Connection') }}
+                                    </button>
+                                @endif
+                                <p class="text-sm mt-2">{{ __('For each key, the connection test uses its uploaded file if selected, or the saved company file otherwise. It uses the username and tax ID entered above.') }}</p>
+                                <p x-cloak x-show="message" x-text="message" role="status" aria-live="polite"
+                                    :class="connected ? 'text-success' : 'text-error'" class="text-sm mt-2"></p>
+                            </div>
+                        @endcan
                     </fieldset>
                     <div class="col-span-2">
                         <div class="col-span-2">

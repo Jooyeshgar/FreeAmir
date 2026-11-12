@@ -5,12 +5,14 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreTransactionRequest;
 use App\Models\CommercialLedgerExport;
 use App\Models\Document;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Services\DocumentImportExport\DocumentImportExportService;
 use App\Services\DocumentImportExport\DocumentImportFormatRegistry;
 use App\Services\DocumentNumberService;
 use App\Services\DocumentService;
+use App\Services\FiscalYearMutationGuard;
 use App\Services\FiscalYearTransferService;
 use App\Services\ReportExportService;
 use App\Services\SubjectService;
@@ -18,6 +20,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -25,7 +28,8 @@ class DocumentController extends Controller
 {
     public function __construct(
         private readonly DocumentNumberService $documentNumberService,
-        private readonly DocumentImportExportService $documentImportExportService
+        private readonly DocumentImportExportService $documentImportExportService,
+        private readonly FiscalYearMutationGuard $fiscalYearMutationGuard
     ) {}
 
     public function index()
@@ -54,6 +58,7 @@ class DocumentController extends Controller
         // It would use query instead of Elequent
         $approvedDocumentsNumber = Document::whereNot('approved_at', null)->count();
         $unapprovedDocumentsNumber = Document::where('approved_at', null)->count();
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
 
         if (request()->has('status') && request('status') && request('status') !== 'all') {
             $status = request('status');
@@ -66,11 +71,13 @@ class DocumentController extends Controller
 
         $documents = $query->paginate(10);
 
-        return view('documents.index', compact('documents', 'approvedDocumentsNumber', 'unapprovedDocumentsNumber'));
+        return view('documents.index', compact('documents', 'approvedDocumentsNumber', 'unapprovedDocumentsNumber', 'fiscalYearClosed'));
     }
 
     public function create()
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         $subjects = Subject::whereIsRoot()->with('children')->orderBy('code')->limit(15)->get();
 
         $transactions = old('transactions')
@@ -86,6 +93,8 @@ class DocumentController extends Controller
 
     public function store(StoreTransactionRequest $request)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         if ($prompt = $this->commercialLedgerPrompt($request->date)) {
             return redirect()->back()->withInput()->with('ledger_confirmation_prompt', $prompt);
         }
@@ -138,9 +147,13 @@ class DocumentController extends Controller
 
     public function show(Document $document)
     {
-        $fiscalYears = auth()->user()->accessibleCompanies()->where('id', '!=', getActiveLegacyCompany())->get();
+        $fiscalYears = FiscalYear::whereHas('users', function ($q) {
+            $q->where('users.id', Auth::id());
+        })->where('id', '!=', getActiveFiscalYear())->whereNull('closed_at')->get();
 
-        return view('documents.show', compact('document', 'fiscalYears'));
+        $fiscalYearClosed = FiscalYear::find($document->fiscal_year_id)?->isClosed() ?? false;
+
+        return view('documents.show', compact('document', 'fiscalYears', 'fiscalYearClosed'));
     }
 
     public function print(Document $document)
@@ -150,14 +163,19 @@ class DocumentController extends Controller
 
     public function sortNumbers(Request $request)
     {
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
         return view('documents.sort-numbers', [
             'statistics' => $this->documentNumberService->sortStats(),
             'progress' => $this->documentNumberService->getProgress($request->user()->id),
+            'fiscalYearClosed' => $fiscalYearClosed,
         ]);
     }
 
     public function startSorting(Request $request)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         $stats = $this->documentNumberService->sortStats();
 
         if ((int) ($stats['unused_document_numbers_count'] ?? 0) === 0) {
@@ -177,6 +195,8 @@ class DocumentController extends Controller
 
     public function processSorting(Request $request)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         $progress = $this->documentNumberService->processNextSortingBatch($request->user()->id);
 
         if ($request->expectsJson()) {
@@ -192,6 +212,8 @@ class DocumentController extends Controller
 
     public function edit($id)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         $document = Document::find($id);
         if ($document) {
             if ($document->documentable) {
@@ -263,6 +285,8 @@ class DocumentController extends Controller
      */
     public function update(StoreTransactionRequest $request, $id)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         $document = Document::findOrFail($id);
 
         if ($prompt = $this->commercialLedgerPrompt($request->date)) {
@@ -278,6 +302,8 @@ class DocumentController extends Controller
 
     public function destroy(int $documentId)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         DocumentService::deleteDocument($documentId);
 
         return redirect()->route('documents.index')->with('success', __('Document deleted successfully.'));
@@ -291,6 +317,8 @@ class DocumentController extends Controller
      */
     public function duplicate($id)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         $originalDocument = Document::with('transactions')->findOrFail($id);
 
         // Get the next document number
@@ -335,12 +363,15 @@ class DocumentController extends Controller
     public function importForm()
     {
         $formats = (new DocumentImportFormatRegistry)->options();
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
 
-        return view('documents.import', compact('formats'));
+        return view('documents.import', compact('formats', 'fiscalYearClosed'));
     }
 
     public function import(Request $request): RedirectResponse
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         $this->documentImportExportService->validateImportRequest($request);
 
         $file = $request->file('file');
@@ -402,23 +433,38 @@ class DocumentController extends Controller
 
     public function transfer(Request $request, Document $document): RedirectResponse
     {
-        $request->validate(['target_company_id' => 'required|integer|exists:companies,id']);
+        $data = $request->validate([
+            'target_fiscal_year_id' => 'required|integer|exists:fiscal_years,id',
+            'transaction_ids' => 'nullable|array',
+            'transaction_ids.*' => ['required', 'integer', 'distinct', Rule::exists('transactions', 'id')->where('document_id', $document->id)],
+            'remove_from_source' => 'sometimes|boolean',
+            'transfer_attachments' => 'sometimes|boolean',
+        ]);
 
-        if (! Auth::user()->accessibleCompanies()->whereKey((int) $request->target_company_id)->exists()) {
+        if (! Auth::user()->fiscalYears()->whereKey($request->integer('target_fiscal_year_id'))->exists()) {
             abort(403);
         }
 
-        if ((int) $request->target_company_id === getActiveLegacyCompany()) {
+        if ((int) $request->target_fiscal_year_id === getActiveFiscalYear()) {
             return redirect()->route('documents.show', $document)->with('error', __('Cannot transfer to the same fiscal year.'));
         }
 
-        $result = FiscalYearTransferService::transferDocument($document, $request->target_company_id, $request->user());
+        $this->fiscalYearMutationGuard->ensureOpen($document, $request->integer('target_fiscal_year_id'));
+
+        $result = FiscalYearTransferService::transferDocument(
+            $document,
+            $request->integer('target_fiscal_year_id'),
+            $request->user(),
+            ($data['transaction_ids'] ?? []) ?: null,
+            $request->boolean('remove_from_source'),
+            $request->boolean('transfer_attachments'),
+        );
 
         if (! $result['success']) {
             return redirect()->route('documents.show', $document)->withErrors($result['errors']);
         }
 
-        $redirect = redirect()->route('documents.show', $document)
+        $redirect = ($result['source_deleted'] ? redirect()->route('documents.index') : redirect()->route('documents.show', $document))
             ->with('success', __('Document transferred successfully to the target fiscal year.'));
 
         if (! empty($result['warnings'])) {
@@ -430,6 +476,8 @@ class DocumentController extends Controller
 
     public function changeStatus(Document $document, Request $request)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         $status = $document->approved_at ? 'unapproved' : 'approved';
         DocumentService::changeDocumentStatus($document, $request->user(), $status);
 
@@ -438,6 +486,8 @@ class DocumentController extends Controller
 
     public function approveAll(Request $request)
     {
+        $this->fiscalYearMutationGuard->ensureOpen();
+
         $result = DocumentService::approveAll($request->user());
 
         $message = trans_choice(

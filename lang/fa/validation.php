@@ -181,7 +181,7 @@ return [
                 'subject_id' => 'سرفصل',
                 'total' => 'جمع',
                 'unit' => 'قیمت واحد',
-                'unit_discount' => 'تخفیف واحد',
+                'discount' => 'تخفیف',
                 'vat' => 'مالیات',
                 'off' => 'تخفیف',
             ],

@@ -67,6 +67,8 @@ class AttendanceService
      */
     public function recalculateLog(AttendanceLog $log): AttendanceLog
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($log);
+
         $logDate = $log->log_date instanceof Carbon
             ? $log->log_date
             : Carbon::parse($log->log_date);
@@ -287,7 +289,7 @@ class AttendanceService
                     $start = $reqStart;
                     $end = min($reqEnd, $entryTime);
                     if ($start < $end) {
-                        $explicitDelayCoverage += Carbon::parse($start)->diffInMinutes(Carbon::parse($end));
+                        $explicitDelayCoverage += (int) Carbon::parse($start)->diffInMinutes(Carbon::parse($end));
                     }
                 }
 
@@ -296,7 +298,7 @@ class AttendanceService
                     $start = max($reqStart, $exitTime);
                     $end = $reqEnd;
                     if ($start < $end) {
-                        $explicitEarlyLeaveCoverage += Carbon::parse($start)->diffInMinutes(Carbon::parse($end));
+                        $explicitEarlyLeaveCoverage += (int) Carbon::parse($start)->diffInMinutes(Carbon::parse($end));
                     }
                 }
             }
@@ -377,7 +379,9 @@ class AttendanceService
      */
     public function calculateAndStore(int $employeeId, Carbon $startDate, int $durationDays, int $jalaliYear, int $jalaliMonth): MonthlyAttendance
     {
-        $companyId = getActiveLegacyCompany();
+        $employee = Employee::findOrFail($employeeId);
+        app(FiscalYearMutationGuard::class)->ensureOpen($employee);
+        $fiscalYearId = getActiveFiscalYear();
         $endDate = $startDate->copy()->addDays($durationDays - 1);
 
         $employee = Employee::with('workShift')->find($employeeId);
@@ -397,13 +401,13 @@ class AttendanceService
         /** @var MonthlyAttendance $attendance */
         $attendance = MonthlyAttendance::updateOrCreate(
             [
-                'company_id' => $companyId,
+                'fiscal_year_id' => $fiscalYearId,
                 'employee_id' => $employeeId,
                 'year' => $jalaliYear,
                 'month' => $jalaliMonth,
             ],
             array_merge($totals, [
-                'company_id' => $companyId,
+                'fiscal_year_id' => $fiscalYearId,
                 'employee_id' => $employeeId,
                 'year' => $jalaliYear,
                 'month' => $jalaliMonth,
@@ -556,6 +560,7 @@ class AttendanceService
      */
     public function syncPersonnelRequestLogs(PersonnelRequest $personnelRequest, bool $subtract = false): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($personnelRequest);
 
         $field = match ($personnelRequest->request_type) {
             PersonnelRequestType::LEAVE_HOURLY,
@@ -576,7 +581,7 @@ class AttendanceService
 
         $start = $personnelRequest->start_date;
         $end = $personnelRequest->end_date;
-        $companyId = $personnelRequest->company_id;
+        $companyId = $personnelRequest->fiscal_year_id;
         $employeeId = $personnelRequest->employee_id;
         $delta = $subtract ? -1 : 1;
 
@@ -931,7 +936,11 @@ class AttendanceService
         if ($coverageStart !== null) {
             $uncoveredBeforeCoverage = max(0, (int) $shiftStart->diffInMinutes($coverageStart, false));
             $arrivalDelay = max(0, $lateMinutes);
-            $adjustedEnd = $shiftEnd->copy()->addMinutes($uncoveredBeforeCoverage);
+
+            // Treat the leave start as the effective check-in, including the exact float cutoff.
+            // The same offset must extend the shift end so float is not counted as overtime.
+            $endExtension = min($uncoveredBeforeCoverage, $float);
+            $adjustedEnd = $shiftEnd->copy()->addMinutes($endExtension);
         } elseif ($coverageEnd !== null && $coverageEnd->greaterThanOrEqualTo($entry)) {
             // Coverage fills the complete entry gap. Keep the scheduled shift end so any late exit,
             // plus attendance that overlaps the end of coverage, remains automatic overtime.
@@ -968,7 +977,7 @@ class AttendanceService
      * a signed delta to the specified field.
      * Returns the log (or null if nothing was changed).
      */
-    private function applyDeltaToLog(int $employeeId, int $companyId, Carbon $date, string $field, int $minutes): ?AttendanceLog
+    private function applyDeltaToLog(int $employeeId, int $fiscalYearId, Carbon $date, string $field, int $minutes): ?AttendanceLog
     {
         $log = AttendanceLog::where('employee_id', $employeeId)
             ->where('log_date', $date->toDateString())
@@ -980,7 +989,7 @@ class AttendanceService
             }
             $log = AttendanceLog::create([
                 'employee_id' => $employeeId,
-                'company_id' => $companyId,
+                'fiscal_year_id' => $fiscalYearId,
                 'log_date' => $date->toDateString(),
             ]);
         }

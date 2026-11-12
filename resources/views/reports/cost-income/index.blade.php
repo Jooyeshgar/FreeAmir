@@ -23,7 +23,7 @@
                     </div>
 
                     @if (auth()->user()->can('budgets.store') && auth()->user()->can('budgets.search-subjects'))
-                        <button type="button" class="btn btn-primary btn-sm gap-1.5" onclick="document.getElementById('cost-income-forecast-modal').showModal()">
+                        <button type="button" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}" class="btn btn-primary btn-sm gap-1.5" onclick="document.getElementById('cost-income-forecast-modal').showModal()">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-7-7h14" />
                             </svg>
@@ -119,7 +119,7 @@
                             <button type="button" class="btn btn-ghost" onclick="document.getElementById('cost-income-forecast-modal').close()">
                                 {{ __('Cancel') }}
                             </button>
-                            <button type="submit" class="btn btn-primary">{{ __('Save Forecast') }}</button>
+                            <button type="submit" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}" class="btn btn-primary">{{ __('Save Forecast') }}</button>
                         </div>
                     </form>
                 </div>

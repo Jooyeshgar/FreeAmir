@@ -6,9 +6,7 @@ use App\Notifications\ResetPasswordNotification;
 use App\Notifications\UserVerificationNotification;
 use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailTrait;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -85,24 +83,9 @@ class User extends Authenticatable implements MustVerifyEmail
         $this->notify(new ResetPasswordNotification($token));
     }
 
-    public function companies()
-    {
-        return $this->belongsToMany(Company::class)->using(CompanyUserPivot::class);
-    }
-
-    public function fiscalYears(): BelongsToMany
+    public function fiscalYears()
     {
         return $this->belongsToMany(FiscalYear::class);
-    }
-
-    public function canAccessFiscalYear(Company $company): bool
-    {
-        return $this->fiscalYears()->where('legacy_company_id', $company->id)->exists();
-    }
-
-    public function accessibleCompanies(): Builder
-    {
-        return Company::query()->whereIn('companies.id', $this->fiscalYears()->select('legacy_company_id'));
     }
 
     public function employee(): HasOne

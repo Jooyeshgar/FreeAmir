@@ -6,8 +6,8 @@ use App\DTO\InvoiceStatusDecision;
 use App\Enums\ChequeType;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Models\BankAccount;
 use App\Models\Cheque;
+use App\Models\Config;
 use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\Payment;
@@ -19,28 +19,15 @@ use Illuminate\Validation\ValidationException;
 
 class PaymentService
 {
-    public function settlementSubjectIds(): array
+    public function settlementSubjects(string $search = ''): Collection
     {
-        $bankRootId = (int) config('amir.bank');
-        $cashBookId = (int) config('amir.cash_book');
+        $code = str_replace('/', '', toEnglish($search));
 
-        $bankSubjectIds = BankAccount::query()->whereNotNull('subject_id')->pluck('subject_id')->all();
-        $cashSubtreeIds = $cashBookId ? (Subject::find($cashBookId)?->getAllDescendantIds() ?? []) : [];
-        $ids = array_map('intval', array_merge($bankSubjectIds, $cashSubtreeIds));
-        $ids = array_diff($ids, [$bankRootId, $cashBookId]);
-
-        return array_values(array_unique($ids));
-    }
-
-    public function settlementSubjects(): Collection
-    {
-        $ids = $this->settlementSubjectIds();
-
-        if (empty($ids)) {
-            return new Collection;
-        }
-
-        return Subject::query()->with('parent')->whereIn('id', $ids)->orderBy('code')->get();
+        return Subject::query()->with('parent')->whereNotNull('parent_id')
+            ->when($search !== '', fn ($query) => $query->where(fn ($query) => $query
+                ->where('name', 'like', "%{$search}%")
+                ->orWhere('code', 'like', "%{$code}%")))
+            ->orderBy('code')->orderBy('id')->limit(25)->get();
     }
 
     public function paidAmount(Invoice $invoice, ?Payment $except = null): float
@@ -75,12 +62,19 @@ class PaymentService
             $decision->addMessage('error', __('This invoice is fully paid.'));
         }
 
-        if (isset($data['subject_id']) && ! in_array((int) $data['subject_id'], $this->settlementSubjectIds(), true)) {
-            $decision->addMessage('error', __('The selected settlement account is not a valid bank or cash subject.'));
+        if (isset($data['subject_id']) && ! Subject::query()->whereNotNull('parent_id')->whereKey($data['subject_id'])->exists()) {
+            $decision->addMessage('error', __('The selected settlement account is invalid.'));
         }
 
         if (isset($data['amount']) && $data['amount'] > $this->remainingAmount($invoice, $except) + 0.001) {
             $decision->addMessage('error', __('Payment amount exceeds the remaining balance of the invoice.'));
+        }
+
+        $fee = ($data['bank_service_fee'] ?? '') === '' ? 0 : $data['bank_service_fee'];
+        if (! is_numeric($fee) || ! is_finite((float) $fee) || $fee < 0) {
+            $decision->addMessage('error', __('Bank service fee must be zero or greater.'));
+        } elseif ($fee > 0 && ! $this->bankServiceFeeSubjectId()) {
+            $decision->addMessage('error', __('Configure a bank service fee expense account for the active fiscal year.'));
         }
 
         return $decision;
@@ -88,6 +82,8 @@ class PaymentService
 
     public function createPayment(User $user, Invoice $invoice, array $data): InvoiceStatusDecision
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
+
         return DB::transaction(function () use ($user, $invoice, $data) {
             $decision = $this->validateInvoicePayment($invoice, $data);
             if ($decision->hasErrors()) {
@@ -96,12 +92,14 @@ class PaymentService
 
             $subjectId = (int) $data['subject_id'];
             $date = $data['date'] ?? now()->toDateString();
-            $document = $this->paymentDocument($user, $invoice, $subjectId, $data['amount'], $date);
+            $fee = round((float) ($data['bank_service_fee'] ?? 0), 2);
+            $document = $this->paymentDocument($user, $invoice, $subjectId, $data['amount'], $date, $fee);
 
             $payment = Payment::create([
                 'invoice_id' => $invoice->id,
                 'payer_id' => $invoice->customer_id,
                 'amount' => $data['amount'],
+                'bank_service_fee' => $fee,
                 'date' => $date,
                 'description' => $data['description'] ?? null,
                 'reference_number' => $data['reference_number'] ?? null,
@@ -118,11 +116,53 @@ class PaymentService
         });
     }
 
-    public function saveChequePayment(User $user, ?Invoice $invoice, Cheque $cheque, Document $document, int $settlementSubjectId, ?Payment $payment = null): Payment
+    public function updatePayment(User $user, Payment $payment, array $data): InvoiceStatusDecision
     {
+        return DB::transaction(function () use ($user, $payment, $data) {
+            $payment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
+            $invoice = Invoice::query()->lockForUpdate()->findOrFail($payment->invoice_id);
+            app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
+
+            if ($payment->cheque_id) {
+                throw ValidationException::withMessages([
+                    'payment' => __('A cheque payment document is managed through the cheque lifecycle.'),
+                ]);
+            }
+
+            $decision = $this->validateInvoicePayment($invoice, $data, $payment);
+            if ($decision->hasErrors()) {
+                return $decision;
+            }
+
+            $payment->update([
+                'amount' => $data['amount'],
+                'bank_service_fee' => round((float) ($data['bank_service_fee'] ?? 0), 2),
+                'settlement_subject_id' => (int) $data['subject_id'],
+                'date' => $data['date'] ?? $payment->date?->toDateString() ?? now()->toDateString(),
+                'description' => $data['description'] ?? null,
+                'reference_number' => $data['reference_number'] ?? null,
+            ]);
+
+            if ($payment->document_id) {
+                $this->paymentDocument($user, $invoice, $payment->settlement_subject_id,
+                    (float) $payment->amount, $payment->date->toDateString(),
+                    (float) $payment->bank_service_fee, $payment->document);
+            }
+
+            $this->syncInvoiceStatus($invoice);
+
+            return $decision;
+        });
+    }
+
+    public function saveChequePayment(User $user, ?Invoice $invoice, Cheque $cheque, Document $document, int $settlementSubjectId, ?Payment $payment = null, float $fee = 0): Payment
+    {
+        app(FiscalYearMutationGuard::class)->ensureOpen($invoice ?? $cheque);
+
         if ($invoice) {
             $decision = $this->validateInvoicePayment($invoice, [
                 'amount' => (float) $cheque->amount,
+                'bank_service_fee' => $fee,
                 'date' => $cheque->write_date->toDateString(),
             ], $payment);
             if ($decision->hasErrors()) {
@@ -137,6 +177,7 @@ class PaymentService
             'cheque_id' => $cheque->id,
             'payer_id' => $cheque->direction === ChequeType::RECEIVABLE ? $cheque->customer_id : null,
             'amount' => $cheque->amount,
+            'bank_service_fee' => $fee,
             'date' => $cheque->write_date,
             'description' => $cheque->desc,
             'reference_number' => $cheque->sayad_number,
@@ -179,7 +220,34 @@ class PaymentService
         }
     }
 
-    private function paymentDocument(User $user, Invoice $invoice, int $settlementSubjectId, float $amount, ?string $date = null)
+    private function bankServiceFeeSubjectId(): ?int
+    {
+        // Read the scoped setting directly to avoid using another fiscal year's cached config.
+        $subjectId = (int) Config::where('key', 'bank_service_fee')->value('value');
+
+        return $subjectId && Subject::whereKey($subjectId)->exists() ? $subjectId : null;
+    }
+
+    public function bankServiceFeeTransactions(float $fee, int $settlementSubjectId): array
+    {
+        if ($fee <= 0) {
+            return [];
+        }
+
+        $expenseSubjectId = $this->bankServiceFeeSubjectId();
+        if (! $expenseSubjectId) {
+            throw ValidationException::withMessages([
+                'bank_service_fee' => __('Configure a bank service fee expense account for the active fiscal year.'),
+            ]);
+        }
+
+        return [
+            ['subject_id' => $expenseSubjectId, 'desc' => __('Bank service fee'), 'value' => -$fee],
+            ['subject_id' => $settlementSubjectId, 'desc' => __('Bank service fee'), 'value' => $fee],
+        ];
+    }
+
+    private function paymentDocument(User $user, Invoice $invoice, int $settlementSubjectId, float $amount, ?string $date = null, float $fee = 0, ?Document $document = null)
     {
         $customerSubjectId = $invoice->customer->subject?->id ?? $invoice->customer->subject_id;
         $customerSign = in_array($invoice->invoice_type, [InvoiceType::SELL, InvoiceType::RETURN_BUY]) ? 1 : -1;
@@ -197,12 +265,26 @@ class PaymentService
                 'value' => -$customerSign * $amount,
             ],
         ];
+        $transactions = array_merge($transactions, $this->bankServiceFeeTransactions($fee, $settlementSubjectId));
 
         $documentData = [
             'date' => $date ?? now()->toDateString(),
             'title' => __('Payment of').' '.(__('Invoice #').localizeNumber($invoice->number ?? $invoice->id)),
             'number' => null,
         ];
+        if ($document) {
+            DocumentService::updateDocument($document, [
+                'date' => $documentData['date'],
+                'documentable' => $document->documentable,
+            ]);
+            app(ActivityLogService::class)->deleteModels($document->transactions()->getQuery());
+            foreach ($transactions as $transactionData) {
+                DocumentService::createTransaction($document, $transactionData);
+            }
+
+            return $document;
+        }
+
         $document = DocumentService::createDocument($user, $documentData, $transactions);
         DocumentService::changeDocumentStatus($document, $user, 'approved');
 
@@ -211,6 +293,8 @@ class PaymentService
 
     public function deletePayment(Payment $payment): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($payment);
+
         DB::transaction(function () use ($payment) {
             $lockedPayment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
 
@@ -254,6 +338,8 @@ class PaymentService
 
     public function removePaymentDocument(Payment $payment): void
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($payment);
+
         DB::transaction(function () use ($payment) {
             if ($payment->cheque_id) {
                 throw ValidationException::withMessages([
@@ -276,6 +362,8 @@ class PaymentService
 
     public function createPaymentDocument(User $user, Payment $payment): InvoiceStatusDecision
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($payment);
+
         return DB::transaction(function () use ($user, $payment) {
             $decision = new InvoiceStatusDecision;
 
@@ -300,7 +388,16 @@ class PaymentService
                 return $decision;
             }
 
-            $document = $this->paymentDocument($user, $invoice, $settlementSubjectId, (float) $payment->amount, $payment->date?->toDateString());
+            $decision = $this->validateInvoicePayment($invoice, [
+                'amount' => (float) $payment->amount,
+                'subject_id' => $settlementSubjectId,
+                'bank_service_fee' => (float) $payment->bank_service_fee,
+            ], $payment);
+            if ($decision->hasErrors()) {
+                return $decision;
+            }
+
+            $document = $this->paymentDocument($user, $invoice, $settlementSubjectId, (float) $payment->amount, $payment->date?->toDateString(), (float) $payment->bank_service_fee);
 
             $payment->document_id = $document->id;
             $payment->save();

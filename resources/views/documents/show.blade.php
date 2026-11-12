@@ -2,6 +2,7 @@
     $sumCredit = $document->transactions->where('value', '>', 0)->sum('value');
     $sumDebit = $document->transactions->where('value', '<', 0)->reduce(fn($carry, $transaction) => $carry + abs($transaction->value), 0);
     $documentFiles = $document->documentFiles ?? collect();
+    $canTransfer = auth()->user()->can('documents.transfer') && $fiscalYears->isNotEmpty() && ! $document->documentable_type && ! $fiscalYearClosed;
 @endphp
 
 <x-app-layout :title="__('Document') . ' #' . formatDocumentNumber($document->number)">
@@ -14,13 +15,14 @@
                     @if ($document->title)
                         - {{ $document->title }}
                     @endif
+                    <x-user-guide-link source="accounting/document-list/accounting-documents.md" />
                 </h2>
-                <p class="mt-1 float-end">
+                <p class="mt-1 md:float-end">
                     {{ __('Issued on :date', ['date' => $document->date ? formatDate($document->date) : __('Unknown')]) }}
                 </p>
             </div>
-            <div class="flex flex-wrap gap-2 mt-2">
-                <span class="badge badge-lg badge-primary gap-2">
+            <div class="flex flex-wrap gap-2 mt-2 whitespace-nowrap">
+                <span class="badge badge-sm md:badge-md lg:badge-lg badge-primary gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M7 7h.01M7 3h10a2 2 0 012 2v4a2 2 0 01-.586 1.414l-7 7a2 2 0 01-2.828 0l-4.586-4.586A2 2 0 014 12V5a2 2 0 012-2z" />
@@ -41,7 +43,7 @@
                     };
                 @endphp
                 @if ($document->documentable && $documentableRoute)
-                    <span class="badge badge-lg badge-info gap-2">
+                    <span class="badge badge-sm md:badge-md lg:badge-lg badge-info gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m2 8H7a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2z" />
                         </svg>
@@ -50,7 +52,7 @@
                         </a>
                     </span>
                 @endif
-                <span class="badge badge-lg {{ $document->approved_at ? 'badge-outline' : 'badge-warning' }} gap-2">
+                <span class="badge badge-sm md:badge-md lg:badge-lg {{ $document->approved_at ? 'badge-outline' : 'badge-warning' }} gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
@@ -100,6 +102,9 @@
                     <table class="table w-full">
                         <thead>
                             <tr>
+                                @if ($canTransfer)
+                                    <th class="px-4 py-3"></th>
+                                @endif
                                 <th class="px-4 py-3">#</th>
                                 <th class="px-4 py-3 text-right">{{ __('Code') }}</th>
                                 <th class="px-4 py-3 text-right">{{ __('Account') }}</th>
@@ -111,6 +116,9 @@
                         <tbody>
                             @forelse ($document->transactions as $index => $transaction)
                                 <tr class="hover:bg-base-300">
+                                    @if ($canTransfer)
+                                        <td class="px-4 py-3"><input type="checkbox" name="transaction_ids[]" value="{{ $transaction->id }}" form="document-transfer-form" class="transaction-checkbox checkbox checkbox-sm" aria-label="{{ __('Select entry :number', ['number' => localizeNumber($index + 1)]) }}" @checked(in_array($transaction->id, old('transaction_ids', [])))></td>
+                                    @endif
                                     <td class="px-4 py-3">{{ localizeNumber($index + 1) }}</td>
                                     <td class="px-4 py-3">
                                         <a href="{{ route('transactions.index', ['subject_id' => $transaction->subject_id]) }}" class="link link-hover"
@@ -121,7 +129,7 @@
                                     <td class="px-4 py-3">
                                         {{ $transaction->subject?->name ?? '—' }}
                                     </td>
-                                    <td class="px-4 py-3">{{ $transaction->desc ?? '—' }}</td>
+                                    <td class="px-4 py-3 max-w-xs truncate" title="{{ $transaction->desc ?? '—' }}">{{ \Illuminate\Support\Str::limit($transaction->desc ?? '—', 50) }}</td>
                                     <td class="px-4 py-3 text-right">
                                         {{ $transaction->value < 0 ? formatNumber(abs($transaction->value)) : formatNumber(0) }}
                                     </td>
@@ -131,7 +139,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="6" class="px-4 py-6 text-center text-gray-500 dark:text-slate-400">
+                                    <td colspan="{{ $canTransfer ? 7 : 6 }}" class="px-4 py-6 text-center text-gray-500 dark:text-slate-400">
                                         {{ __('There are no transactions in this document yet.') }}
                                     </td>
                                 </tr>
@@ -139,7 +147,7 @@
                         </tbody>
                         <tfoot>
                             <tr>
-                                <td colspan="3" class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
+                                <td colspan="{{ $canTransfer ? 4 : 3 }}" class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
                                     {{ __('Total entries: :count', ['count' => localizeNumber($document->transactions->count())]) }}
                                 </td>
                                 <td class="px-4 py-3 text-right text-sm text-gray-600 dark:text-slate-300">
@@ -263,18 +271,26 @@
                                             {{ __('Download') }}
                                         </a>
                                         <div class="flex gap-1">
-                                            <a href="{{ route('documents.files.edit', [$document, $documentFile]) }}" class="btn btn-sm btn-warning btn-square"
-                                                title="{{ __('Edit') }}">
+                                            @if ($fiscalYearClosed)
+                                                <button type="button" class="btn btn-sm btn-warning btn-square btn-disabled" disabled title="{{ __('This fiscal year is already closed.') }}">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                    </svg>
+                                                </button>
+                                            @else
+                                                <a href="{{ route('documents.files.edit', [$document, $documentFile]) }}" class="btn btn-sm btn-warning btn-square"
+                                                    title="{{ __('Edit') }}">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                                 </svg>
-                                            </a>
+                                                </a>
+                                            @endif
                                             <form action="{{ route('documents.files.destroy', [$document, $documentFile]) }}" method="POST" class="inline-block"
                                                 onsubmit="return confirm('{{ __('Are you sure you want to delete this file?') }}')">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-error btn-square" title="{{ __('Delete') }}">
+                                                <button type="submit" class="btn btn-sm btn-error btn-square" @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Delete') }}">
                                                     <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                                             d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -289,12 +305,20 @@
                     </div>
                 @endif
                 <div class="mt-4 flex justify-end">
-                    <a href="{{ route('documents.files.create', $document->id) }}" class="btn btn-primary gap-2">
+                    @if ($fiscalYearClosed)
+                        <button type="button" class="btn btn-primary gap-2 btn-disabled" disabled title="{{ __('This fiscal year is already closed.') }}">
+                    @else
+                        <a href="{{ route('documents.files.create', $document->id) }}" class="btn btn-primary gap-2">
+                    @endif
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                         </svg>
                         {{ __('Add new file') }}
-                    </a>
+                    @if ($fiscalYearClosed)
+                        </button>
+                    @else
+                        </a>
+                    @endif
                 </div>
             </div>
 
@@ -308,13 +332,17 @@
 
                 <div class="flex flex-wrap gap-2">
                     @can('documents.transfer')
-                        @if ($fiscalYears->isNotEmpty() && ! $document->documentable)
+                        @if ($fiscalYears->isNotEmpty() && ! $document->documentable_type)
+                            @if ($fiscalYearClosed)
+                                <button type="button" class="btn gap-2 btn-disabled" disabled title="{{ __('This fiscal year is already closed.') }}">{{ __('Transfer to another Fiscal Year') }}</button>
+                            @else
                             <button type="button" onclick="document.getElementById('doc-transfer-modal').showModal()" class="btn gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                                 </svg>
                                 {{ __('Transfer to another Fiscal Year') }}
                             </button>
+                            @endif
                         @endif
                     @endcan
 
@@ -326,9 +354,9 @@
                         {{ __('Print PDF') }}
                     </a>
 
-                    @if ($document->documentable)
+                    @if ($fiscalYearClosed || $document->documentable)
                         <span class="tooltip"
-                            data-tip="{{ __('Cannot edit this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
+                            data-tip="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Cannot edit this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
                             <button class="btn btn-primary gap-2 btn-disabled cursor-not-allowed" disabled>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -338,7 +366,7 @@
                             </button>
                         </span>
                         <span class="tooltip"
-                            data-tip="{{ __('Cannot change status of this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
+                            data-tip="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Cannot change status of this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
                             <button class="btn btn-primary gap-2 btn-disabled cursor-not-allowed" disabled>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -366,9 +394,9 @@
                         </form>
                     @endif
 
-                    @if ($document->documentable)
+                    @if ($fiscalYearClosed || $document->documentable)
                         <span class="tooltip"
-                            data-tip="{{ __('Cannot delete this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
+                            data-tip="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Cannot delete this document because it is linked to') . ' ' . __(class_basename($document->documentable_type)) . '.' }}">
                             <button class="btn btn-error gap-2 btn-disabled cursor-not-allowed" disabled>
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -397,22 +425,34 @@
     </div>
 
     @can('documents.transfer')
-        @if ($fiscalYears->isNotEmpty() && ! $document->documentable)
+        @if ($canTransfer)
             <dialog id="doc-transfer-modal" class="modal">
                 <div class="modal-box">
                     <h3 class="font-bold text-lg">{{ __('Transfer to another Fiscal Year') }}</h3>
-                    <form action="{{ route('documents.transfer', $document) }}" method="POST" class="mt-4">
+                    <p class="mt-2 text-sm">{{ __('You can transfer selected transactions instead of the whole document.') }}</p>
+                    <form id="document-transfer-form" action="{{ route('documents.transfer', $document) }}" method="POST" class="mt-4" onsubmit="return confirmTransfer()">
                         @csrf
                         <div class="form-control w-full">
                             <label class="label">
-                                <span class="label-text font-semibold">{{ __('Target Fiscal Year') }}</span>
+                                <span class="label-text text-sm font-semibold">{{ __('Target Fiscal Year') }}</span>
                             </label>
-                            <select name="target_company_id" class="select select-bordered w-full" required>
+                            <select name="target_fiscal_year_id" class="select select-bordered w-full" required>
                                 <option value="">{{ __('-- Select fiscal year --') }}</option>
                                 @foreach ($fiscalYears as $year)
-                                    <option value="{{ $year->id }}">{{ $year->name }}</option>
+                                    <option value="{{ $year->id }}">{{ $year->company->name }} - {{ $year->year }}</option>
                                 @endforeach
                             </select>
+                        </div>
+                        <label class="label cursor-pointer justify-start gap-3 mt-3">
+                            <input type="checkbox" name="remove_from_source" value="1" class="checkbox checkbox-sm" id="remove-from-source">
+                            <span class="label-text text-sm">{{ __('Remove selected entries from source') }}</span>
+                        </label>
+                        <label class="label cursor-pointer justify-start gap-3">
+                            <input type="checkbox" name="transfer_attachments" value="1" class="checkbox checkbox-sm">
+                            <span class="label-text text-sm">{{ __('Transfer attachments') }}</span>
+                        </label>
+                        <div class="alert alert-warning mt-3 text-sm">
+                            {{ __('Transferring entries can affect financial reports. Confirm that you reviewed the selected entries before continuing.') }}
                         </div>
                         <div class="modal-action">
                             <button type="button" onclick="document.getElementById('doc-transfer-modal').close()" class="btn btn-sm md:btn-sm lg:btn-md">{{ __('Cancel') }}</button>
@@ -426,4 +466,17 @@
             </dialog>
         @endif
     @endcan
+    <script>
+        document.getElementById('remove-from-source')?.addEventListener('change', (event) => {
+            const alert = document.querySelector('#doc-transfer-modal .alert');
+            if (alert) alert.textContent = event.target.checked
+                ? @json(__('Transferring entries can affect financial reports. Selected source entries will be deleted and approval may be revoked. Confirm to continue.'))
+                : @json(__('Transferring entries can affect financial reports. Confirm that you reviewed the selected entries before continuing.'));
+        });
+        function confirmTransfer() {
+            return confirm(document.getElementById('remove-from-source')?.checked
+                ? @json(__('This may affect financial reports. Selected source entries will be deleted and approval may be revoked. Continue?'))
+                : @json(__('This may affect financial reports. Continue transferring the selected entries?')));
+        }
+    </script>
 </x-app-layout>

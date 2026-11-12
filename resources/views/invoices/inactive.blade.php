@@ -1,6 +1,13 @@
 <x-app-layout :title="__('Approve Inactive')">
     <x-show-message-bags />
 
+    @php $fiscalYearClosed = \App\Models\FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false; @endphp
+    @if ($fiscalYearClosed)
+        <div class="alert alert-warning mb-4">
+            <span>{{ __('This fiscal year is already closed.') }} {{ __('Invoice and settlement operations are read-only.') }}</span>
+        </div>
+    @endif
+
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body p-4 sm:p-6">
             <form method="POST" action="{{ route('invoices.inactive.approve') }}">
@@ -26,9 +33,11 @@
                                     </a>
                                 </td>
                                 <td>
-                                    <a href="{{ route('customers.show', $invoice->customer) }}" class="text-primary link link-hover">
-                                        {{ $invoice->customer->name }}
-                                    </a>
+                                    @if ($invoice->customer)
+                                        <a href="{{ route('customers.show', $invoice->customer) }}" class="text-primary link link-hover">
+                                            {{ $invoice->customer->name }}
+                                        </a>
+                                    @endif
                                 </td>
                                 <td>{{ $invoice->date ? formatDate($invoice->date) : '' }}</td>
                                 <td>{{ formatNumber($invoice->amount - $invoice->subtraction) }}</td>
@@ -44,9 +53,11 @@
                                             {{ formatDocumentNumber($ancillaryCost->invoice->number) }}</a>
                                     </td>
                                     <td>
-                                        <a href="{{ route('customers.show', $ancillaryCost->customer) }}" class="text-primary link link-hover">
-                                            {{ $ancillaryCost->customer->name ?? '' }}
-                                        </a>
+                                        @if ($ancillaryCost->customer)
+                                            <a href="{{ route('customers.show', $ancillaryCost->customer) }}" class="text-primary link link-hover">
+                                                {{ $ancillaryCost->customer->name }}
+                                            </a>
+                                        @endif
                                     </td>
                                     <td>{{ $ancillaryCost->date ? formatDate($ancillaryCost->date) : '' }}</td>
                                     <td>{{ formatNumber($ancillaryCost->amount - $ancillaryCost->subtraction) }}</td>
@@ -58,7 +69,8 @@
                 </div>
 
                 <div class="flex justify-end mt-4 gap-3">
-                    <button type="submit" class="btn btn-primary btn-sm gap-2">
+                    <button type="submit" class="btn btn-primary btn-sm gap-2 {{ $fiscalYearClosed ? 'btn-disabled cursor-not-allowed' : '' }}"
+                        @disabled($fiscalYearClosed) title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : '' }}">
                         <span id="toggle-text">{{ __('Approve All') }}</span>
                     </button>
 

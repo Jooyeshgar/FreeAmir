@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\DecreeBenefit;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\OrgChart;
 use App\Models\PayrollElement;
 use App\Models\SalaryDecree;
@@ -30,7 +31,9 @@ class SalaryDecreeController extends Controller
         $decrees = $query->paginate(15);
         $employees = Employee::orderBy('first_name')->get();
 
-        return view('salary-decrees.index', compact('decrees', 'employees'));
+        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        return view('salary-decrees.index', compact('fiscalYearClosed', 'decrees', 'employees'));
     }
 
     public function create(): View
@@ -62,7 +65,7 @@ class SalaryDecreeController extends Controller
             $validated['end_date'] = isset($validated['end_date']) ? jalaliInputToGregorian($validated['end_date'], 'end_date') : null;
 
             $decree = SalaryDecree::create([
-                'company_id' => getActiveLegacyCompany(),
+                'fiscal_year_id' => getActiveFiscalYear(),
                 'employee_id' => $validated['employee_id'],
                 'name' => $validated['name'] ?? null,
                 'start_date' => $validated['start_date'],

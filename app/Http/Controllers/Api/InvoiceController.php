@@ -14,7 +14,7 @@ use Illuminate\Http\Request;
 
 class InvoiceController extends Controller
 {
-    public function show(int $company, int $id): JsonResponse
+    public function show(int $fiscalYear, int $id): JsonResponse
     {
         $invoice = Invoice::query()
             ->with([
@@ -24,7 +24,7 @@ class InvoiceController extends Controller
                 'items.itemable',
                 'returnedInvoice',
             ])
-            ->where('company_id', $company)
+            
             ->findOrFail($id);
 
         $items = $invoice->items->map(function ($item) {
@@ -70,7 +70,7 @@ class InvoiceController extends Controller
             'customer'            => $invoice->customer ? [
                 'id'   => $invoice->customer->id,
                 'name' => $invoice->customer->name ?? null,
-                'code' => $invoice->customer->code ?? null,
+                ?? null,
             ] : null,
             'warehouse_id'        => $invoice->warehouse_id,
             'warehouse'           => $invoice->warehouse ? [
@@ -102,18 +102,8 @@ class InvoiceController extends Controller
         ]);
     }
 
-    /**
-     * لیست فاکتورها
-     *
-     * Query params:
-     * - invoice_type (optional): buy | sell | return_buy | return_sell | void | beginning_inventory
-     * - status (optional): pending | pre_invoice | approved | unapproved | approved_inactive | rejected | ready_to_approve | partially_paid | paid
-     * - start_date (optional): تاریخ شروع (YYYY-MM-DD یا شمسی)
-     * - end_date (optional): تاریخ پایان (YYYY-MM-DD یا شمسی)
-     * - number (optional): شماره فاکتور
-     * - q (optional): جستجو در عنوان / نام مشتری
-     */
-    public function index(Request $request, $company): JsonResponse
+    
+    public function index(Request $request, $fiscalYear): JsonResponse
     {
         $request->validate([
             'invoice_type' => ['nullable', 'string'],
@@ -122,34 +112,30 @@ class InvoiceController extends Controller
             'end_date'     => ['nullable', 'string'],
             'number'       => ['nullable', 'string', 'max:50'],
             'q'            => ['nullable', 'string', 'max:100'],
-            'per_page'     => ['nullable', 'integer', 'min:1', 'max:100'], // اختیاری
+            'per_page'     => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
         $invoiceType = InvoiceType::tryFromName($request->input('invoice_type'));
         $status      = InvoiceStatus::tryFromName($request->input('status'));
 
         $query = Invoice::query()
-            ->with(['customer:id,name,code'])
-            ->where('company_id', $company)
+            ->with(['customer:id,name'])
+            
             ->orderByDesc('date')
             ->orderByDesc('number');
 
-        // فیلتر نوع فاکتور
         if ($invoiceType !== null) {
             $query->where('invoice_type', $invoiceType);
         }
 
-        // فیلتر وضعیت
         if ($status !== null) {
             $query->where('status', $status);
         }
 
-        // فیلتر شماره
         if ($request->filled('number')) {
             $query->where('number', $request->input('number'));
         }
 
-        // فیلتر بازه تاریخ
         if ($request->filled('start_date')) {
             $startDate = function_exists('convertToGregorian')
                 ? convertToGregorian($request->input('start_date'))
@@ -164,23 +150,20 @@ class InvoiceController extends Controller
             $query->where('date', '<=', $endDate);
         }
 
-        // جستجو
         if ($request->filled('q')) {
             $q = $request->input('q');
             $query->where(function ($builder) use ($q) {
                 $builder->where('title', 'like', "%{$q}%")
                     ->orWhereHas('customer', function ($customer) use ($q) {
                         $customer->where('name', 'like', "%{$q}%")
-                            ->orWhere('code', 'like', "%{$q}%");
+                            
                     });
             });
         }
 
-        // Pagination
         $perPage = $request->integer('per_page', 15);
         $invoices = $query->paginate($perPage);
 
-        // تبدیل enum به مقدار خوانا
         $data = $invoices->map(function (Invoice $invoice) {
             return [
                 'id'                   => $invoice->id,
@@ -198,8 +181,7 @@ class InvoiceController extends Controller
                 'customer'             => $invoice->customer ? [
                     'id'   => $invoice->customer->id,
                     'name' => $invoice->customer->name,
-                    'code' => $invoice->customer->code,
-                ] : null,
+                    ] : null,
                 'warehouse_id'         => $invoice->warehouse_id,
                 'document_id'          => $invoice->document_id,
                 'returned_invoice_id'  => $invoice->returned_invoice_id,
@@ -217,13 +199,13 @@ class InvoiceController extends Controller
             'last_page'    => $invoices->lastPage(),
         ]);
     }
-    public function store(Request $request, int $company): JsonResponse
+    public function store(Request $request, int $fiscalYear): JsonResponse
     {
         $validated = $request->validate([
             'invoice_type'         => ['required', 'string', Rule::in(['buy', 'sell', 'return_buy', 'return_sell'])],
             'date'                 => ['required', 'string'],
-            'customer_id'          => ['required', 'integer', Rule::exists('customers', 'id')->where('fiscal_year_id', getScopedFiscalYear())],
-            'warehouse_id'         => ['required', 'integer', Rule::exists('warehouses', 'id')->where('fiscal_year_id', getScopedFiscalYear())],
+            'customer_id'          => ['required', 'integer', Rule::exists('customers', 'id')->where('fiscal_year_id', getActiveFiscalYear())],
+            'warehouse_id'         => ['required', 'integer', Rule::exists('warehouses', 'id')->where('fiscal_year_id', getActiveFiscalYear())],
             'invoice_number'       => ['required', 'integer'],
             'document_number'      => ['required', 'numeric'],
             'title'                => ['nullable', 'string', 'max:255'],
@@ -245,7 +227,7 @@ class InvoiceController extends Controller
 
         if (! preg_match('/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/', $normalizedDate, $dateParts)) {
             throw ValidationException::withMessages([
-                'date' => ['فرمت تاریخ نامعتبر است. مثال: 1405/08/10 (شمسی) یا 2026-11-01 (میلادی)'],
+                'date' => __('فرمت تاریخ نامعتبر است. مثال: 1405/08/10 (شمسی) یا 2026-11-01 (میلادی)'),
             ]);
         }
 
@@ -253,13 +235,11 @@ class InvoiceController extends Controller
 
         try {
             if ($dateYear < 1700) {
-                // تاریخ شمسی
                 if (! jcheckdate($dateMonth, $dateDay, $dateYear)) {
                     throw new \InvalidArgumentException('invalid jalali date');
                 }
                 $date = \Carbon\Carbon::createFromFormat('Y/n/j', jalali_to_gregorian_date($normalizedDate))->format('Y-m-d');
             } else {
-                // تاریخ میلادی
                 if (! checkdate($dateMonth, $dateDay, $dateYear)) {
                     throw new \InvalidArgumentException('invalid gregorian date');
                 }
@@ -267,7 +247,7 @@ class InvoiceController extends Controller
             }
         } catch (\Throwable $e) {
             throw ValidationException::withMessages([
-                'date' => ['تاریخ نامعتبر است. مثال: 1405/08/10 (شمسی) یا 2026-11-01 (میلادی)'],
+                'date' => __('تاریخ نامعتبر است. مثال: 1405/08/10 (شمسی) یا 2026-11-01 (میلادی)'),
             ]);
         }
         $invoiceTypeEnum = InvoiceType::fromName($validated['invoice_type']);
@@ -277,20 +257,20 @@ class InvoiceController extends Controller
 
             if (! $returned) {
                 throw ValidationException::withMessages([
-                    'returned_invoice_id' => ['برای فاکتور برگشتی، شناسه فاکتور اصلی الزامی و باید معتبر باشد.'],
+                    'returned_invoice_id' => __('برای فاکتور برگشتی، شناسه فاکتور اصلی الزامی و باید معتبر باشد.'),
                 ]);
             }
 
             $expectedType = $validated['invoice_type'] === 'return_buy' ? InvoiceType::BUY : InvoiceType::SELL;
             if ($returned->invoice_type !== $expectedType) {
                 throw ValidationException::withMessages([
-                    'returned_invoice_id' => ['نوع فاکتور اصلی با نوع فاکتور برگشتی نمی‌خواند.'],
+                    'returned_invoice_id' => __('نوع فاکتور اصلی با نوع فاکتور برگشتی نمی‌خواند.'),
                 ]);
             }
 
             if (\Carbon\Carbon::parse($date)->lt($returned->date)) {
                 throw ValidationException::withMessages([
-                    'date' => ['تاریخ فاکتور برگشتی نمی‌تواند قبل از فاکتور اصلی باشد.'],
+                    'date' => __('تاریخ فاکتور برگشتی نمی‌تواند قبل از فاکتور اصلی باشد.'),
                 ]);
             }
 
@@ -306,7 +286,7 @@ class InvoiceController extends Controller
 
                 if (! $original) {
                     throw ValidationException::withMessages([
-                        "items.$index.item_id" => ['این کالا یا خدمت در فاکتور اصلی وجود ندارد.'],
+                        "items.$index.item_id" => __('این کالا یا خدمت در فاکتور اصلی وجود ندارد.'),
                     ]);
                 }
 
@@ -317,7 +297,7 @@ class InvoiceController extends Controller
 
                 if ($original->quantity < $item['quantity'] + $alreadyReturned) {
                     throw ValidationException::withMessages([
-                        "items.$index.quantity" => ["تعداد برگشتی (با برگشتی‌های قبلی) از تعداد فاکتور اصلی ({$original->quantity}) بیشتر است."],
+                        "items.$index.quantity" => __("تعداد برگشتی (با برگشتی‌های قبلی) از تعداد فاکتور اصلی ({$original->quantity}) بیشتر است."),
                     ]);
                 }
             }
@@ -338,7 +318,7 @@ class InvoiceController extends Controller
 
                 if ($isFullReturn) {
                     throw ValidationException::withMessages([
-                        'items' => ['برگشت کامل همه اقلام با تعداد اصلی معادل ابطال فاکتور فروش است؛ تعداد حداقل یک قلم را کمتر کنید.'],
+                        'items' => __('برگشت کامل همه اقلام با تعداد اصلی معادل ابطال فاکتور فروش است؛ تعداد حداقل یک قلم را کمتر کنید.'),
                     ]);
                 }
             }
@@ -351,7 +331,7 @@ class InvoiceController extends Controller
 
         if ($numberExists) {
             throw ValidationException::withMessages([
-                'invoice_number' => [__('The invoice number has already been taken.')],
+                'invoice_number' => __('The invoice number has already been taken.'),
             ]);
         }
 
@@ -396,7 +376,7 @@ class InvoiceController extends Controller
 
         if ($approved && ! $request->user()->can('invoices.approve')) {
             throw ValidationException::withMessages([
-                'approve' => [__('You do not have permission to approve invoices.')],
+                'approve' => __('You do not have permission to approve invoices.'),
             ]);
         }
 
@@ -432,12 +412,12 @@ class InvoiceController extends Controller
                 'approved'    => $invoice->status?->valueName() === 'approved',
                 'document_id' => $result['document']?->id,
                 'next_action' => $invoice->status?->valueName() === 'ready_to_approve'
-                    ? "POST /api/companies/{$company}/invoices/{$invoice->id}/change-status/approved"
+                    ? "POST /api/companies/{$fiscalYear}/invoices/{$invoice->id}/change-status/approved"
                     : null,
             ],
         ], 201);
     }
-    public function changeStatus(Request $request, int $company, int $invoice, string $status): JsonResponse
+    public function changeStatus(Request $request, int $fiscalYear, int $invoice, string $status): JsonResponse
     {
         $invoice = Invoice::findOrFail($invoice);
 
@@ -453,13 +433,13 @@ class InvoiceController extends Controller
 
         if (in_array($status, ['approved', 'unapproved'], true) && ! $request->user()->can('invoices.approve')) {
             throw ValidationException::withMessages([
-                'status' => ['شما اجازه تأیید یا لغو تأیید فاکتور را ندارید.'],
+                'status' => __('شما اجازه تأیید یا لغو تأیید فاکتور را ندارید.'),
             ]);
         }
 
         if ($invoice->status->isPartiallyPaid() || $invoice->status->isPaid()) {
             throw ValidationException::withMessages([
-                'status' => ['ابتدا پرداخت‌های ثبت‌شده فاکتور را حذف کنید.'],
+                'status' => __('ابتدا پرداخت‌های ثبت‌شده فاکتور را حذف کنید.'),
             ]);
         }
 
@@ -476,10 +456,8 @@ class InvoiceController extends Controller
             ]);
         }
 
-        // بخش confirm را قبلاً حذف کرده بودیم، پس مستقیم ادامه می‌دهیم
         $invoiceService->changeInvoiceStatus($invoice, $status);
 
-        // --- این قسمت را اضافه کن ---
         if ($status === 'approved') {
             $invoice->approver_id = $request->user()->id;
             $invoice->save();
@@ -489,7 +467,6 @@ class InvoiceController extends Controller
             $invoice->approver_id = null;
             $invoice->save();
         }
-        // ---------------------------
 
         $invoice->refresh();
 
@@ -499,7 +476,7 @@ class InvoiceController extends Controller
                 'number'      => $invoice->number,
                 'status'      => $invoice->status?->valueName(),
                 'document_id' => $invoice->document_id,
-                'approver_id' => $invoice->approver_id, // برای اطمینان در پاسخ هم برگردان
+                'approver_id' => $invoice->approver_id,
             ],
         ]);
     }

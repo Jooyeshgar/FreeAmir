@@ -21,9 +21,9 @@
 
             <div class="card-actions">
                 @can('salary.payroll-elements.create')
-                    <a href="{{ route('salary.payroll-elements.create') }}" class="btn btn-sm btn-primary">
+                    <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('salary.payroll-elements.create') }}" class="btn btn-sm btn-primary">
                         {{ __('Create Payroll Element') }}
-                    </a>
+                    </x-closed-year-action-link>
                 @endcan
             </div>
 
@@ -70,9 +70,9 @@
                                 <td>
                                     <div class="inline-flex gap-2">
                                         @can('salary.payroll-elements.edit')
-                                            <a href="{{ route('salary.payroll-elements.edit', $element) }}" class="btn btn-sm btn-info">
+                                            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('salary.payroll-elements.edit', $element) }}" class="btn btn-sm btn-info">
                                                 {{ __('Edit') }}
-                                            </a>
+                                            </x-closed-year-action-link>
                                         @endcan
                                         @can('salary.payroll-elements.delete')
                                             @unless ($element->is_system_locked)
@@ -80,7 +80,7 @@
                                                     onsubmit="return confirm('{{ __('Are you sure?') }}')">
                                                     @csrf
                                                     @method('DELETE')
-                                                    <button type="submit" class="btn btn-sm btn-error">
+                                                    <button type="submit" @disabled($fiscalYearClosed) class="btn btn-sm btn-error {{ $fiscalYearClosed ? 'opacity-60' : '' }}" title="{{ $fiscalYearClosed ? __('This fiscal year is already closed.') : __('Delete') }}">
                                                         {{ __('Delete') }}
                                                     </button>
                                                 </form>

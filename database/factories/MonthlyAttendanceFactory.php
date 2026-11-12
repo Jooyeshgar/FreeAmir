@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\Company;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\MonthlyAttendance;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -18,7 +18,7 @@ class MonthlyAttendanceFactory extends Factory
         $absentDays = $workDays - $presentDays;
 
         return [
-            'company_id' => Company::factory(),
+            'fiscal_year_id' => FiscalYear::factory(),
             'employee_id' => Employee::factory(),
             'year' => $this->faker->numberBetween(1401, 1403),
             'month' => $this->faker->numberBetween(1, 12),

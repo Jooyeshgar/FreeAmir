@@ -21,6 +21,8 @@ This index is for developers and contributors. If you plan to change Laravel cod
 | [project-structure.md](project-structure.en.md) | Laravel architecture, folders, and code organization |
 | [database-guide.md](database-guide.en.md) | Tables, relationships, and database notes |
 | [testing-guide.md](testing-guide.en.md) | Running tests and writing Feature and Unit tests |
+| [extensions.md](extensions.en.md) | Extension contracts, registries, slots, and host context |
+| [package-frontend.md](package-frontend.en.md) | Package pages, navigation, and frontend integration |
 | [../script/README.md](../../script/README.md) | Data migration and utility scripts |
 
 ## Accounting Domain Documentation for Development

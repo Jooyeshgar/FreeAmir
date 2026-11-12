@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@source "../../vendor/amir";
 @plugin 'daisyui' {
   themes: light --default, dark --prefersdark;
 }
@@ -219,6 +220,13 @@ main {
     position: relative;
     z-index: 2;
     padding: 0 .4rem;
+}
+
+@media (width < 768px) {
+    .invoice-show .tooltip::before,
+    .invoice-show .tooltip::after {
+        display: none;
+    }
 }
 
 @media (max-width: 639px) {

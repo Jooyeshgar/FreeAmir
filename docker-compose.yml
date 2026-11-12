@@ -75,6 +75,7 @@ services:
             PMA_USER: ${DB_USERNAME}
             PMA_PASSWORD: ${DB_PASSWORD}
             PMA_ARBITRARY: 1
+            UPLOAD_LIMIT: 100M
         depends_on:
             - mariadb
         networks:

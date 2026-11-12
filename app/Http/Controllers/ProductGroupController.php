@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models;
+use App\Models\FiscalYear;
 use App\Services\ProductGroupService;
 use Illuminate\Http\Request;
 
@@ -20,7 +21,7 @@ class ProductGroupController extends Controller
             $productGroup->setAttribute('delete_blocking_reason', $this->productGroupService->deleteBlockingReason($productGroup));
         });
 
-        return view('productGroups.index', compact('productGroups'));
+        return view('productGroups.index', compact('productGroups'))->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function create()
@@ -55,7 +56,7 @@ class ProductGroupController extends Controller
         $productGroup->load('incomeSubject', 'salesReturnsSubject', 'cogsSubject', 'inventorySubject')->loadCount('products');
         $deleteBlockingReason = $this->productGroupService->deleteBlockingReason($productGroup);
 
-        return view('productGroups.show', compact('productGroup', 'deleteBlockingReason'));
+        return view('productGroups.show', compact('productGroup', 'deleteBlockingReason'))->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function update(Request $request, Models\ProductGroup $productGroup)

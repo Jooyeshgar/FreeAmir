@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FiscalYear;
 use App\Services\CostIncomeService;
 use App\Services\MonthlyBudgetService;
 use App\Services\SubjectService;
@@ -41,6 +42,7 @@ class CostIncomeController extends Controller
         $monthsWithoutDocumentsLabel = Arr::join($monthsWithoutDocuments, config('app.locale') === 'fa' ? '، ' : ', ', ' '.__('and').' ');
 
         return view('reports.cost-income.index', [
+            'fiscalYearClosed' => FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false,
             'totalIncome' => $summary['totalIncome'],
             'totalCost' => $summary['totalCost'],
             'profit' => $summary['profit'],

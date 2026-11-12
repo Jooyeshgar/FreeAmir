@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreBankAccountRequest;
 use App\Models;
 use App\Models\Bank;
+use App\Models\FiscalYear;
+use App\Services\FiscalYearMutationGuard;
 use App\Services\SubjectService;
 use Illuminate\Http\Request;
 
@@ -16,7 +18,7 @@ class BankAccountController extends Controller
     {
         $bankAccounts = Models\BankAccount::with('bank')->paginate(12);
 
-        return view('bankAccounts.index', compact('bankAccounts'));
+        return view('bankAccounts.index', compact('bankAccounts'))->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function create()
@@ -28,6 +30,8 @@ class BankAccountController extends Controller
 
     public function store(StoreBankAccountRequest $request)
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen();
+
         $validatedData = $request->validated();
 
         $bankAccount = Models\BankAccount::create($validatedData);
@@ -47,7 +51,7 @@ class BankAccountController extends Controller
 
     public function show(Models\BankAccount $bankAccount)
     {
-        return view('bankAccounts.show', compact('bankAccount'));
+        return view('bankAccounts.show', compact('bankAccount'))->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function edit(Models\BankAccount $bankAccount)
@@ -61,6 +65,8 @@ class BankAccountController extends Controller
 
     public function update(StoreBankAccountRequest $request, Models\BankAccount $bankAccount)
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($bankAccount);
+
         $validatedData = $request->validated();
 
         $bankAccount->update($validatedData);
@@ -72,6 +78,8 @@ class BankAccountController extends Controller
 
     public function destroy(Models\BankAccount $bankAccount)
     {
+        app(FiscalYearMutationGuard::class)->ensureOpen($bankAccount);
+
         $bankAccount->delete();
         $bankAccount->subject->delete();
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FiscalYear;
 use App\Models\ServiceGroup;
 use App\Services\ServiceGroupService;
 use Illuminate\Http\Request;
@@ -20,7 +21,7 @@ class ServiceGroupController extends Controller
             $serviceGroup->setAttribute('delete_blocking_reason', $this->serviceGroupService->deleteBlockingReason($serviceGroup));
         });
 
-        return view('serviceGroups.index', compact('serviceGroups'));
+        return view('serviceGroups.index', compact('serviceGroups'))->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function create()
@@ -37,7 +38,7 @@ class ServiceGroupController extends Controller
         $serviceGroup->load('subject', 'cogsSubject', 'salesReturnsSubject')->loadCount('services');
         $deleteBlockingReason = $this->serviceGroupService->deleteBlockingReason($serviceGroup);
 
-        return view('serviceGroups.show', compact('serviceGroup', 'deleteBlockingReason'));
+        return view('serviceGroups.show', compact('serviceGroup', 'deleteBlockingReason'))->with('fiscalYearClosed', FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false);
     }
 
     public function store(Request $request)

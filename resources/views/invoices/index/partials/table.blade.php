@@ -1,7 +1,50 @@
-<div class="overflow-x-auto lg:overflow-x-hidden">
+<div class="overflow-x-auto lg:overflow-x-hidden"
+    x-data="{
+        tooltipText: '',
+        tooltipStyle: {},
+        tooltipDirection: 'rtl',
+        activeTrigger: null,
+        hideTooltip() {
+            this.tooltipText = '';
+            this.activeTrigger = null;
+        },
+        showTooltip(event) {
+            const trigger = event.target.closest('[data-tip]');
+            if (!trigger || !trigger.dataset.tip.trim() || trigger === this.activeTrigger) return;
+            if (!trigger.classList.contains('tooltip') &amp;&amp; !window.matchMedia('(min-width: 1024px)').matches) return;
+            this.activeTrigger = trigger;
+            this.tooltipText = trigger.dataset.tip;
+            this.tooltipDirection = getComputedStyle(trigger).direction;
+            this.$nextTick(() => {
+                if (this.activeTrigger !== trigger) return;
+                const rect = trigger.getBoundingClientRect();
+                const tooltip = this.$refs.floatingTooltip;
+                const gap = 8;
+                const left = Math.max(gap, Math.min(rect.left + (rect.width - tooltip.offsetWidth) / 2, window.innerWidth - tooltip.offsetWidth - gap));
+                const top = rect.top >= tooltip.offsetHeight + gap * 2 ? rect.top - tooltip.offsetHeight - gap : rect.bottom + gap;
+                this.tooltipStyle = {
+                    left: left + 'px',
+                    top: Math.max(gap, Math.min(top, window.innerHeight - tooltip.offsetHeight - gap)) + 'px',
+                };
+            });
+        },
+        leaveTooltip(event) {
+            if (this.activeTrigger &amp;&amp; !this.activeTrigger.contains(event.relatedTarget)) this.hideTooltip();
+        },
+    }"
+    :class="'invoice-tooltips-ready [&_[data-tip]::before]:hidden [&_[data-tip]::after]:hidden'"
+    @pointerover="showTooltip($event)" @pointerout="leaveTooltip($event)"
+    @focusin="showTooltip($event)" @focusout="leaveTooltip($event)"
+    @keydown.escape.window="hideTooltip()" @scroll.window.capture="hideTooltip()" @resize.window="hideTooltip()">
+    <template x-teleport="body">
+        <div x-ref="floatingTooltip" x-show="tooltipText" x-cloak role="tooltip"
+            x-text="tooltipText" :style="tooltipStyle" :dir="tooltipDirection"
+            class="fixed z-[100] w-max max-w-[min(20rem,calc(100vw-1rem))] rounded-field bg-neutral px-2 py-1 text-center text-sm leading-tight text-neutral-content whitespace-pre-line break-words pointer-events-none"></div>
+    </template>
     <table class="table w-full">
         <thead>
             <tr>
+                <th class="px-4 py-2">{{ __('Bookmark') }}</th>
                 <th class="px-4 py-2">{{ __('Invoice Number') }}</th>
                 <th class="px-4 py-2">{{ __('Customer') }}</th>
                 <th class="px-4 py-2">{{ __('Document') }}</th>
@@ -18,23 +61,29 @@
             @foreach ($invoices as $invoice)
                 @php
                     $isVoided = $isSellWorkflow && (bool) $invoice->voidInvoice;
+                    $fiscalYearClosed = $invoice->fiscalYear?->isClosed() ?? false;
+                    $fiscalYearClosedMessage = __('This fiscal year is already closed.');
                     $canApprove = ($isSellWorkflow ? false : $invoice->status->isPending())
                         || $invoice->status->isReadyToApprove()
                         || $invoice->status->isUnapproved()
                         || $invoice->status->isApprovedInactive();
                     $canUnapprove = $invoice->status->isApproved();
                     $isSettled = $invoice->status->isPartiallyPaid() || $invoice->status->isPaid();
-                    $canChangeStatus = $canApprove || $canUnapprove;
-                    $editDisabled = $isVoidWorkflow || $invoice->status->isApprovedOrSettled() || $isVoided;
-                    $deleteDisabled = $invoice->status->isApprovedOrSettled() || $isVoided;
+                    $canChangeStatus = ($canApprove || $canUnapprove) && !$fiscalYearClosed;
+                    $editDisabled = $fiscalYearClosed || $isVoidWorkflow || $invoice->status->isApprovedOrSettled() || $isVoided;
+                    $deleteDisabled = $fiscalYearClosed || $invoice->status->isApprovedOrSettled() || $isVoided;
                     $settledTooltip = __('A paid or partially paid invoice cannot change its status until its payments (or their payment documents) are removed.');
-                    $editTooltip = $isVoidWorkflow ? __('Editing is not allowed for void invoices.') : ($isVoided ? __('Voided invoices cannot be edited') : ($isSettled ? $settledTooltip : __('Unapprove the invoice first to edit')));
-                    $deleteTooltip = $isVoided ? __('Voided invoices cannot be deleted') : ($isSettled ? $settledTooltip : __('Unapprove the invoice first to delete'));
+                    $editTooltip = $fiscalYearClosed ? $fiscalYearClosedMessage : ($isVoidWorkflow ? __('Editing is not allowed for void invoices.') : ($isVoided ? __('Voided invoices cannot be edited') : ($isSettled ? $settledTooltip : __('Unapprove the invoice first to edit'))));
+                    $deleteTooltip = $fiscalYearClosed ? $fiscalYearClosedMessage : ($isVoided ? __('Voided invoices cannot be deleted') : ($isSettled ? $settledTooltip : __('Unapprove the invoice first to delete')));
                     $moadianStatus = $showMoadianColumn ? \App\Enums\MoadianStatus::fromData($invoice->latestMoadianHistory?->data['status'] ?? null) : null;
                 @endphp
                 <tr class="{{ $isVoided ? 'text-gray-500' : '' }}">
+                    <td class="px-4 py-2"><x-invoice-bookmark :invoice="$invoice" /></td>
                     <td class="px-4 py-2">
-                        <a href="{{ route('invoices.show', $invoice) }}" class="link link-hover">{{ formatDocumentNumber($invoice->number) }}</a>
+                        <div class="inline-flex items-center gap-1.5">
+                            <a href="{{ route('invoices.show', $invoice) }}" class="link link-hover">{{ formatDocumentNumber($invoice->number) }}</a>
+                            <x-extension-slot slot="invoice.index.row.badges" :context="['invoice' => $invoice]" />
+                        </div>
                     </td>
                     <td class="px-4 py-2">
                         <a href="{{ route('customers.show', $invoice->customer) }}">{{ $invoice->customer->name ?? '' }}</a>
@@ -75,37 +124,50 @@
 
                         @can('invoices.approve')
                             @if ($isSellWorkflow && ($invoice->status->isPreInvoice() || $invoice->status->isRejected()))
+                                @if ($fiscalYearClosed)
+                                    <button class="btn btn-sm btn-success btn-disabled cursor-not-allowed" disabled title="{{ $fiscalYearClosedMessage }}">{{ __('Issue') }}</button>
+                                @else
                                 <form action="{{ route('invoices.change-status', [$invoice, 'ready_to_approve']) }}" method="POST">
                                     @csrf
                                     <button type="submit" class="btn btn-sm btn-success">{{ __('Issue') }}</button>
                                 </form>
+                                @endif
                             @endif
                             @if ($isSellWorkflow && $invoice->status->isPreInvoice())
+                                @if ($fiscalYearClosed)
+                                    <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed" disabled title="{{ $fiscalYearClosedMessage }}">{{ __('Reject') }}</button>
+                                @else
                                 <form action="{{ route('invoices.change-status', [$invoice, 'rejected']) }}" method="POST">
                                     @csrf
                                     <button type="submit" class="btn btn-sm btn-error">{{ __('Reject') }}</button>
                                 </form>
+                                @endif
                             @endif
                             @if ($canChangeStatus)
                                 @if ($invoice->changeStatusValidation->hasErrors())
                                     <a data-tip="{{ $invoice->changeStatusValidation->toText() }}" href="{{ route('invoices.conflicts', $invoice) }}"
-                                        class="btn btn-sm btn-accent inline-flex tooltip">{{ __('Fix Conflict') }}</a>
+                                        class="btn btn-sm btn-accent inline-flex tooltip {{ $loop->first ? 'tooltip-bottom' : '' }}">{{ __('Fix Conflict') }}</a>
                                 @elseif ($isVoided)
-                                    <span class="lg:tooltip" data-tip="{{ __('To change the status, first unapprove the voiding invoice.') }}">
+                                    <span class="lg:tooltip {{ $loop->first ? 'lg:tooltip-bottom' : '' }}" data-tip="{{ __('To change the status, first unapprove the voiding invoice.') }}">
                                         <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed">{{ __('Unapprove') }}</button>
                                     </span>
                                 @else
-                                    <form action="{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}{{ $invoice->changeStatusValidation->hasWarning() ? '?confirm=1' : '' }}"
-                                        method="POST" class="inline-block {{ $invoice->changeStatusValidation->hasWarning() ? 'change-status-form' : '' }}">
+                                    <form action="{{ route('invoices.change-status', [$invoice, $canUnapprove ? 'unapproved' : 'approved']) }}{{ ($invoice->changeStatusValidation->hasWarning() || $isSettled) ? '?confirm=1' : '' }}"
+                                        method="POST" class="inline-block {{ ($invoice->changeStatusValidation->hasWarning() || $isSettled) ? 'change-status-form' : '' }}"
+                                        data-confirm-message="{{ $isSettled ? __('Deactivating this paid or partially paid invoice will remove its payment accounting documents while keeping the payment records. Are you sure?') : __('This invoice has warnings for change its status, are you sure to change status?') }}">
                                         @csrf
                                         <button type="submit" x-data="{}" data-tip="{{ $invoice->changeStatusValidation->toText() }}"
-                                            class="btn btn-sm inline-flex tooltip {{ $canUnapprove ? 'btn-warning' : 'btn-success' }} {{ $canApprove && $invoice->changeStatusValidation->hasWarning() ? 'btn-outline' : '' }}">
+                                            class="btn btn-sm inline-flex tooltip {{ $loop->first ? 'tooltip-bottom' : '' }} {{ $canUnapprove ? 'btn-warning' : 'btn-success' }} {{ $canApprove && $invoice->changeStatusValidation->hasWarning() ? 'btn-outline' : '' }}">
                                             {{ $canUnapprove ? __('Unapprove') : __('Approve') }}
                                         </button>
                                     </form>
                                 @endif
+                            @elseif ($fiscalYearClosed)
+                                <span class="lg:tooltip {{ $loop->first ? 'lg:tooltip-bottom' : '' }}" data-tip="{{ $fiscalYearClosedMessage }}">
+                                    <button class="btn btn-sm btn-warning btn-disabled cursor-not-allowed" disabled>{{ __('Change status') }}</button>
+                                </span>
                             @elseif ($isSettled)
-                                <span class="lg:tooltip" data-tip="{{ $settledTooltip }}">
+                                <span class="lg:tooltip {{ $loop->first ? 'lg:tooltip-bottom' : '' }}" data-tip="{{ $settledTooltip }}">
                                     <button class="btn btn-sm btn-warning btn-disabled cursor-not-allowed">{{ __('Unapprove') }}</button>
                                 </span>
                             @endif
@@ -114,19 +176,19 @@
                         @if (!$editDisabled)
                             <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm btn-info">{{ __('Edit') }}</a>
                         @else
-                            <span class="lg:tooltip" data-tip="{{ $editTooltip }}">
+                            <span class="lg:tooltip lg:tooltip-right" data-tip="{{ $editTooltip }}">
                                 <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed">{{ __('Edit') }}</button>
                             </span>
                         @endif
 
                         @if (!$deleteDisabled)
-                            <form action="{{ route('invoices.destroy', $invoice) }}" method="POST">
+                            <form action="{{ route('invoices.destroy', $invoice) }}{{ $isSettled ? '?confirm=1' : '' }}" method="POST" class="{{ $isSettled ? 'delete-settled-form' : '' }}">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-sm btn-error">{{ __('Delete') }}</button>
                             </form>
                         @else
-                            <span class="lg:tooltip" data-tip="{{ $deleteTooltip }}">
+                            <span class="lg:tooltip lg:tooltip-right" data-tip="{{ $deleteTooltip }}">
                                 <button class="btn btn-sm btn-error btn-disabled cursor-not-allowed">{{ __('Delete') }}</button>
                             </span>
                         @endif
@@ -141,6 +203,9 @@
 @if (request('status') !== null)
     @php
         $backParams = ['invoice_type' => $invoiceType];
+        if (request()->boolean('bookmarked')) {
+            $backParams['bookmarked'] = 1;
+        }
         if (in_array($invoiceType, ['buy', 'return_buy'])) {
             $backParams['service_buy'] = request('service_buy');
         }
