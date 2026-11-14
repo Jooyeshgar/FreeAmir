@@ -26,7 +26,7 @@
                 <x-stat-card :title="__('Account number')" :value="localizeNumber($bankAccount->number)" type="success" />
                 <x-stat-card :title="__('Account type')" :value="$bankAccount->type?->label()" type="info" />
                 <x-stat-card :title="__('IBAN')" type="info">
-                    <span dir="ltr" class="block text-left">{{ $bankAccount->iban }}</span>
+                    <span dir="ltr" class="block max-w-full overflow-x-auto text-left text-base whitespace-nowrap">{{ $bankAccount->iban }}</span>
                 </x-stat-card>
                 <x-stat-card :title="__('Owner')" :value="$bankAccount->owner ?? '-'" type="info" />
                 @can('reports.ledger')
@@ -41,7 +41,14 @@
                 <x-stat-card :title="__('Name')" :value="$bankAccount->bank->name" type="info" />
                 <x-stat-card :title="__('Phone')" :value="localizeNumber($bankAccount->bank_phone ?? '-')" type="info" />
                 <x-stat-card :title="__('Website')" type="info">
-                    <span dir="ltr" class="block text-left">{{ $bankAccount->bank_web_page ?? '-' }}</span>
+                    @if ($bankAccount->bank_web_page)
+                        <a dir="ltr" class="block max-w-full overflow-x-auto text-left text-base whitespace-nowrap underline underline-offset-2"
+                            href="{{ $bankAccount->bank_web_page }}" target="_blank" rel="noopener noreferrer">
+                            {{ $bankAccount->bank_web_page }}
+                        </a>
+                    @else
+                        <span dir="ltr" class="block text-left text-base">-</span>
+                    @endif
                 </x-stat-card>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
