@@ -205,7 +205,7 @@ class MoadianService
         if ($this->invoice->invoice_type === InvoiceType::SELL) {
             $header->ins = 1;
             $header->inty = match ($this->invoice->customer->type) {
-                CustomerType::INDIVIDUAL => $this->invoice->customer->ecnmcs_code ? 1 : 2,
+                CustomerType::INDIVIDUAL => filled($this->invoice->customer->ecnmcs_code) ? 1 : 2,
                 CustomerType::LEGAL_ENTITY => 1,
                 CustomerType::CIVIL_PARTNERSHIP => null,
                 CustomerType::FOREIGN_NATIONAL => null,
@@ -233,9 +233,9 @@ class MoadianService
             CustomerType::CIVIL_PARTNERSHIP => 3,
             CustomerType::FOREIGN_NATIONAL => 4,
         };
-        $header->bid = $this->invoice->customer->personal_code;
-        $header->tinb = $this->invoice->customer->ecnmcs_code;
-        $header->bpc = $this->invoice->customer->postal_code;
+        $header->bid = blank($this->invoice->customer->personal_code) ? null : $this->invoice->customer->personal_code;
+        $header->tinb = blank($this->invoice->customer->ecnmcs_code) ? null : $this->invoice->customer->ecnmcs_code;
+        $header->bpc = blank($this->invoice->customer->postal_code) ? null : $this->invoice->customer->postal_code;
 
         $amount = $this->invoice->amount;
         $discount = $this->invoice->items->sum('discount');

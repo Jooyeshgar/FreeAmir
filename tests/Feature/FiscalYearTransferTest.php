@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\AncillaryCostType;
+use App\Enums\CustomerType;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Enums\SubjectType;
@@ -22,12 +23,14 @@ use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Services\FiscalYearTransferService;
+use App\Services\MoadianService;
 use App\Services\PaymentService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Jooyeshgar\Moadian\Invoice as MoadianInvoice;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -507,6 +510,11 @@ class FiscalYearTransferTest extends TestCase
     public function test_transfers_an_invoice_with_items_and_document_into_target_year(): void
     {
         $customer = $this->makeCustomer($this->source, 'ACME');
+        $customer->update([
+            'personal_code' => 'source-personal',
+            'ecnmcs_code' => 'source-economic',
+            'postal_code' => 'source-postal',
+        ]);
         $product = $this->makeProduct($this->source, 'Widget', 'P1');
         $subject = $this->makeSubject($this->source, '201', 'Purchases');
 
@@ -516,7 +524,12 @@ class FiscalYearTransferTest extends TestCase
         $invoice->document_id = $document->id;
         $invoice->save();
 
-        $this->makeCustomer($this->target, 'ACME');
+        $targetCustomer = $this->makeCustomer($this->target, 'ACME');
+        $targetCustomer->update([
+            'personal_code' => 'target-personal',
+            'ecnmcs_code' => 'target-economic',
+            'postal_code' => 'target-postal',
+        ]);
         $targetProduct = $this->makeProduct($this->target, 'Widget', 'P1');
 
         $result = FiscalYearTransferService::transferInvoice($invoice, $this->target->id, $this->user);
@@ -531,6 +544,10 @@ class FiscalYearTransferTest extends TestCase
         $this->assertSame(1, (int) $newInvoice->number);
         $this->assertNotEquals($invoice->number, $newInvoice->number);
         $this->assertSame(InvoiceType::BUY, $newInvoice->invoice_type);
+        $this->assertSame($targetCustomer->id, $newInvoice->customer_id);
+        $this->assertSame('target-personal', $targetCustomer->fresh()->personal_code);
+        $this->assertSame('target-economic', $targetCustomer->fresh()->ecnmcs_code);
+        $this->assertSame('target-postal', $targetCustomer->fresh()->postal_code);
 
         $newItem = InvoiceItem::where('invoice_id', $newInvoice->id)->first();
         $this->assertNotNull($newItem);
@@ -544,6 +561,122 @@ class FiscalYearTransferTest extends TestCase
         $this->assertSame($newInvoice->id, $newDoc->documentable_id);
 
         $this->assertSame($this->source->id, (int) $invoice->fresh()->fiscal_year_id);
+    }
+
+    public function test_transferred_invoice_serializes_existing_customer_empty_strings(): void
+    {
+        $this->assertTransferredCustomerIdentifiers(true, ['', '', ''], [null, null, null], 2);
+    }
+
+    public function test_transferred_invoice_serializes_existing_customer_null_identifiers(): void
+    {
+        $this->assertTransferredCustomerIdentifiers(true, [null, null, null], [null, null, null], 2);
+    }
+
+    public function test_transferred_invoice_serializes_existing_customer_whitespace_identifiers(): void
+    {
+        $this->assertTransferredCustomerIdentifiers(true, [" \t", '  ', "\n"], [null, null, null], 2);
+    }
+
+    public function test_transferred_invoice_serializes_existing_customer_leading_zeros(): void
+    {
+        $this->assertTransferredCustomerIdentifiers(true, ['0012345678', '00123456789012', '0012345678'], ['0012345678', '00123456789012', '0012345678'], 1);
+    }
+
+    public function test_transferred_invoice_serializes_existing_customer_mixed_identifiers(): void
+    {
+        $this->assertTransferredCustomerIdentifiers(true, ['0012345678', '', '0012345678'], ['0012345678', null, '0012345678'], 2);
+    }
+
+    public function test_transferred_invoice_serializes_created_customer_empty_strings(): void
+    {
+        $this->assertTransferredCustomerIdentifiers(false, ['', '', ''], [null, null, null], 2);
+    }
+
+    public function test_transferred_invoice_serializes_created_customer_null_identifiers(): void
+    {
+        $this->assertTransferredCustomerIdentifiers(false, [null, null, null], [null, null, null], 2);
+    }
+
+    public function test_transferred_invoice_serializes_created_customer_whitespace_identifiers(): void
+    {
+        $this->assertTransferredCustomerIdentifiers(false, [" \t", '  ', "\n"], [null, null, null], 2);
+    }
+
+    public function test_transferred_invoice_serializes_created_customer_leading_zeros(): void
+    {
+        $this->assertTransferredCustomerIdentifiers(false, ['0012345678', '00123456789012', '0012345678'], ['0012345678', '00123456789012', '0012345678'], 1);
+    }
+
+    public function test_transferred_invoice_serializes_created_customer_mixed_identifiers(): void
+    {
+        $this->assertTransferredCustomerIdentifiers(false, ['0012345678', '', '0012345678'], ['0012345678', null, '0012345678'], 2);
+    }
+
+    private function assertTransferredCustomerIdentifiers(
+        bool $existingCustomer,
+        array $identifiers,
+        array $expected,
+        int $invoiceType,
+    ): void {
+        $fields = ['personal_code', 'ecnmcs_code', 'postal_code'];
+        $customer = $this->makeCustomer($this->source, 'ACME');
+        $customer->update(array_combine($fields, $existingCustomer ? ['source-id', 'source-economic', 'source-postal'] : $identifiers) + ['type' => CustomerType::INDIVIDUAL]);
+        $invoice = $this->makeInvoice($this->source, ['customer_id' => $customer->id, 'invoice_type' => InvoiceType::SELL]);
+
+        if ($existingCustomer) {
+            $targetCustomer = $this->makeCustomer($this->target, 'ACME');
+            $targetCustomer->update(array_combine($fields, $identifiers) + ['type' => CustomerType::INDIVIDUAL]);
+        }
+
+        $result = FiscalYearTransferService::transferInvoice($invoice, $this->target->id, $this->user, ! $existingCustomer);
+        $this->assertTrue($result['success'], json_encode($result));
+        $this->activate($this->target);
+        $transferred = $this->targetInvoices()->sole();
+        $this->assertNotEquals($customer->id, $transferred->customer_id);
+        if ($existingCustomer) {
+            $this->assertSame($targetCustomer->id, $transferred->customer_id);
+        }
+        foreach ($fields as $index => $field) {
+            $this->assertSame($identifiers[$index], $transferred->customer->$field);
+        }
+
+        $payload = $this->buildMoadianPayload($transferred);
+        $header = json_decode(json_encode($payload->toArray(), JSON_THROW_ON_ERROR), true, flags: JSON_THROW_ON_ERROR)['header'];
+        $this->assertSame($expected, [$header['bid'], $header['tinb'], $header['bpc']]);
+        $this->assertSame($invoiceType, $header['inty']);
+
+        foreach ($fields as $index => $field) {
+            $this->assertSame($identifiers[$index], $transferred->customer->fresh()->$field);
+        }
+    }
+
+    private function buildMoadianPayload(Invoice $invoice): MoadianInvoice
+    {
+        $service = app(MoadianService::class);
+        $reflection = new \ReflectionClass($service);
+        $username = $reflection->getProperty('moadian_username');
+        $username->setValue($service, 'ABC123');
+        $taxId = $reflection->getProperty('taxID');
+        $taxId->setValue($service, '12345678901234');
+        $method = $reflection->getMethod('moadianData');
+        $method->invoke($service, $invoice);
+
+        return $service->moadianInvoice;
+    }
+
+    public function test_legal_entity_still_requires_an_economic_code_before_moadian_submission(): void
+    {
+        $customer = $this->makeCustomer($this->source, 'ACME');
+        $customer->update(['type' => CustomerType::LEGAL_ENTITY, 'ecnmcs_code' => '  ']);
+        $invoice = $this->makeInvoice($this->source, ['customer_id' => $customer->id, 'invoice_type' => InvoiceType::SELL]);
+
+        try {
+            app(MoadianService::class)->validateSendMoadian($invoice);
+            $this->fail('Legal entities must supply an economic code.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('ecnmcs_code', $exception->errors());
+        }
     }
 
     public function test_invoice_transfer_uses_the_next_target_number_for_the_same_invoice_type(): void
@@ -629,6 +762,12 @@ class FiscalYearTransferTest extends TestCase
         $root = $this->makeSubject($this->source, '700', 'Source root');
         $customerSubject = $this->makeSubject($this->source, '700001', 'ACME', $root);
         $customer = $this->makeCustomer($this->source, 'ACME');
+        $customer->update(['type' => CustomerType::INDIVIDUAL]);
+        $customer->update([
+            'personal_code' => 'source-personal',
+            'ecnmcs_code' => 'source-economic',
+            'postal_code' => 'source-postal',
+        ]);
         $customer->subject_id = $customerSubject->id;
         $customer->saveQuietly();
         $customerSubject->subjectable()->associate($customer);
@@ -659,6 +798,9 @@ class FiscalYearTransferTest extends TestCase
         $targetProduct = Product::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->where('name', 'Widget')->first();
         $targetService = Service::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->where('name', 'Consulting')->first();
         $this->assertNotNull($targetCustomer);
+        $this->assertSame('source-personal', $targetCustomer->personal_code);
+        $this->assertSame('source-economic', $targetCustomer->ecnmcs_code);
+        $this->assertSame('source-postal', $targetCustomer->postal_code);
         $this->assertNotNull($targetProduct);
         $this->assertNotNull($targetService);
         $this->assertNotNull($targetCustomer->subject_id);
