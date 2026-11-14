@@ -86,10 +86,12 @@ class InvoiceActivationTest extends TestCase
         $product = $this->createProduct(['quantity' => 10]);
         $invoice = $this->sell([$this->productItem($product, 2, 150)])['invoice'];
         $documentId = $invoice->document_id;
+        $quantityAfterFirstApproval = (float) $product->fresh()->quantity;
         (new InvoiceService)->changeInvoiceStatus($invoice->fresh(), 'approved');
         $invoice->refresh();
 
         $this->assertSame($documentId, $invoice->document_id);
+        $this->assertSame($quantityAfterFirstApproval, (float) $product->fresh()->quantity);
         $this->assertSame(1, Document::where('documentable_type', Invoice::class)->where('documentable_id', $invoice->id)->count());
     }
 
