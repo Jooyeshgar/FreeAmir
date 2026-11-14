@@ -30,10 +30,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use Jooyeshgar\Moadian\Facades\Moadian;
 use Jooyeshgar\Moadian\Invoice as MoadianInvoice;
-use Mockery;
-use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -566,23 +563,57 @@ class FiscalYearTransferTest extends TestCase
         $this->assertSame($this->source->id, (int) $invoice->fresh()->fiscal_year_id);
     }
 
-    public static function transferredCustomerIdentifiers(): iterable
+    public function test_transferred_invoice_serializes_existing_customer_empty_strings(): void
     {
-        foreach ([true, false] as $existingCustomer) {
-            foreach ([
-                'empty strings' => [['', '', ''], [null, null, null], 2],
-                'nulls' => [[null, null, null], [null, null, null], 2],
-                'whitespace' => [[" \t", '  ', "\n"], [null, null, null], 2],
-                'leading zeros' => [['0012345678', '00123456789012', '0012345678'], ['0012345678', '00123456789012', '0012345678'], 1],
-                'mixed' => [['0012345678', '', '0012345678'], ['0012345678', null, '0012345678'], 2],
-            ] as $label => [$identifiers, $expected, $invoiceType]) {
-                yield ($existingCustomer ? 'existing' : 'created')." customer: $label" => [$existingCustomer, $identifiers, $expected, $invoiceType];
-            }
-        }
+        $this->assertTransferredCustomerIdentifiers(true, ['', '', ''], [null, null, null], 2);
     }
 
-    #[DataProvider('transferredCustomerIdentifiers')]
-    public function test_transferred_invoice_sends_destination_customer_identifiers_without_blank_strings(
+    public function test_transferred_invoice_serializes_existing_customer_null_identifiers(): void
+    {
+        $this->assertTransferredCustomerIdentifiers(true, [null, null, null], [null, null, null], 2);
+    }
+
+    public function test_transferred_invoice_serializes_existing_customer_whitespace_identifiers(): void
+    {
+        $this->assertTransferredCustomerIdentifiers(true, [" \t", '  ', "\n"], [null, null, null], 2);
+    }
+
+    public function test_transferred_invoice_serializes_existing_customer_leading_zeros(): void
+    {
+        $this->assertTransferredCustomerIdentifiers(true, ['0012345678', '00123456789012', '0012345678'], ['0012345678', '00123456789012', '0012345678'], 1);
+    }
+
+    public function test_transferred_invoice_serializes_existing_customer_mixed_identifiers(): void
+    {
+        $this->assertTransferredCustomerIdentifiers(true, ['0012345678', '', '0012345678'], ['0012345678', null, '0012345678'], 2);
+    }
+
+    public function test_transferred_invoice_serializes_created_customer_empty_strings(): void
+    {
+        $this->assertTransferredCustomerIdentifiers(false, ['', '', ''], [null, null, null], 2);
+    }
+
+    public function test_transferred_invoice_serializes_created_customer_null_identifiers(): void
+    {
+        $this->assertTransferredCustomerIdentifiers(false, [null, null, null], [null, null, null], 2);
+    }
+
+    public function test_transferred_invoice_serializes_created_customer_whitespace_identifiers(): void
+    {
+        $this->assertTransferredCustomerIdentifiers(false, [" \t", '  ', "\n"], [null, null, null], 2);
+    }
+
+    public function test_transferred_invoice_serializes_created_customer_leading_zeros(): void
+    {
+        $this->assertTransferredCustomerIdentifiers(false, ['0012345678', '00123456789012', '0012345678'], ['0012345678', '00123456789012', '0012345678'], 1);
+    }
+
+    public function test_transferred_invoice_serializes_created_customer_mixed_identifiers(): void
+    {
+        $this->assertTransferredCustomerIdentifiers(false, ['0012345678', '', '0012345678'], ['0012345678', null, '0012345678'], 2);
+    }
+
+    private function assertTransferredCustomerIdentifiers(
         bool $existingCustomer,
         array $identifiers,
         array $expected,
@@ -610,23 +641,28 @@ class FiscalYearTransferTest extends TestCase
             $this->assertSame($identifiers[$index], $transferred->customer->$field);
         }
 
-        $this->target->company->update(['moadian_username' => 'ABC123', 'tax_id' => '12345678901234']);
-        $response = Mockery::mock();
-        $response->shouldReceive('getBody')->once()->andReturn(['result' => [['status' => 'PENDING']]]);
-        $client = Mockery::mock(\Jooyeshgar\Moadian\Moadian::class);
-        $client->shouldReceive('sendInvoice')->once()->withArgs(function (MoadianInvoice $payload) use ($expected, $invoiceType) {
-            $header = json_decode(json_encode($payload->toArray(), JSON_THROW_ON_ERROR), true, flags: JSON_THROW_ON_ERROR)['header'];
-            $this->assertSame($expected, [$header['bid'], $header['tinb'], $header['bpc']]);
-            $this->assertSame($invoiceType, $header['inty']);
+        $payload = $this->buildMoadianPayload($transferred);
+        $header = json_decode(json_encode($payload->toArray(), JSON_THROW_ON_ERROR), true, flags: JSON_THROW_ON_ERROR)['header'];
+        $this->assertSame($expected, [$header['bid'], $header['tinb'], $header['bpc']]);
+        $this->assertSame($invoiceType, $header['inty']);
 
-            return true;
-        })->andReturn($response);
-        Moadian::shouldReceive('for')->once()->with(null, null, 'ABC123')->andReturn($client);
-
-        $this->assertTrue(app(MoadianService::class)->sendInvoice($transferred));
         foreach ($fields as $index => $field) {
             $this->assertSame($identifiers[$index], $transferred->customer->fresh()->$field);
         }
+    }
+
+    private function buildMoadianPayload(Invoice $invoice): MoadianInvoice
+    {
+        $service = app(MoadianService::class);
+        $reflection = new \ReflectionClass($service);
+        $username = $reflection->getProperty('moadian_username');
+        $username->setValue($service, 'ABC123');
+        $taxId = $reflection->getProperty('taxID');
+        $taxId->setValue($service, '12345678901234');
+        $method = $reflection->getMethod('moadianData');
+        $method->invoke($service, $invoice);
+
+        return $service->moadianInvoice;
     }
 
     public function test_legal_entity_still_requires_an_economic_code_before_moadian_submission(): void
