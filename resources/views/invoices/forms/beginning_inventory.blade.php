@@ -1,6 +1,6 @@
 <x-card class_body="p-4">
     <div class="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-4 xl:flex xl:items-center xl:justify-start">
-        @include('invoices.forms.warehouse-select', ['warehouseClass' => 'w-full xl:w-1/6'])
+        @include('invoices.forms.warehouse-select', ['warehouseClass' => 'w-full xl:w-1/4'])
         <x-input id="invoice_type" name="invoice_type" value="beginning_inventory" hidden />
         <x-text-input input_value="{{ old('invoice_id') ?? ($invoice->id ?? '') }}" input_name="invoice_id"
             label_text_class="text-gray-500" label_class="w-full hidden"></x-text-input>
@@ -30,7 +30,7 @@
     <x-extension-slot :slot="$extensionSlot ?? 'invoice.create.fields'" :context="['invoice' => $invoice]" />
 </x-card>
 <x-card class="mt-4 rounded-2xl w-full" class_body="p-0 pt-0 mt-4" x-data="transactionForm">
-    <div class="max-w-full overflow-visible">
+    <div class="invoice-transactions-scroll max-w-full">
         <div class="w-max min-w-full">
             <div class="flex w-max min-w-full gap-2 items-center px-4">
                 <div class="text-sm flex-1 max-w-8 text-center text-gray-500 pt-3">*</div>
