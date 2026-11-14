@@ -598,10 +598,12 @@ class InvoiceService
 
     public function changeInvoiceStatus(Invoice $invoice, string $status): void
     {
+        // Fail fast for closed years before opening a transaction or waiting on the invoice row lock.
         app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
 
         DB::transaction(function () use ($invoice, $status) {
             $invoice = Invoice::withoutGlobalScopes()->whereKey($invoice->id)->lockForUpdate()->firstOrFail();
+            // Recheck against the freshly loaded invoice after locking; the caller's model may be stale.
             app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
 
             // A repeated or concurrent approval must not post another accounting document for an invoice that is already approved.
