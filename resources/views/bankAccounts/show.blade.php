@@ -25,7 +25,9 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-3">
                 <x-stat-card :title="__('Account number')" :value="localizeNumber($bankAccount->number)" type="success" />
                 <x-stat-card :title="__('Account type')" :value="$bankAccount->type?->label()" type="info" />
-                <x-stat-card :title="__('IBAN')" :value="$bankAccount->iban" type="info" />
+                <x-stat-card :title="__('IBAN')" type="info">
+                    <span dir="ltr" class="block text-left">{{ $bankAccount->iban }}</span>
+                </x-stat-card>
                 <x-stat-card :title="__('Owner')" :value="$bankAccount->owner ?? '-'" type="info" />
                 @can('reports.ledger')
                     <x-stat-card-link :title="__('Subject Balance')" :value="formatNumber(\App\Services\SubjectService::sumSubject($bankAccount->subject, true, false) ?? 0)"
@@ -38,7 +40,9 @@
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-3">
                 <x-stat-card :title="__('Name')" :value="$bankAccount->bank->name" type="info" />
                 <x-stat-card :title="__('Phone')" :value="localizeNumber($bankAccount->bank_phone ?? '-')" type="info" />
-                <x-stat-card :title="__('Website')" :value="$bankAccount->bank_web_page ?? '-'" type="info" />
+                <x-stat-card :title="__('Website')" type="info">
+                    <span dir="ltr" class="block text-left">{{ $bankAccount->bank_web_page ?? '-' }}</span>
+                </x-stat-card>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-3">
                 <x-stat-card :title="__('Branch')" :value="$bankAccount->bank_branch ?? '-'" type="info" />
@@ -108,6 +112,32 @@
         .bank-account-show .text-sm {
             font-size: 0.75rem;
             line-height: 1.125rem;
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .bank-account-show .alert {
+            font-size: 0.875rem;
+            line-height: 1.5rem;
+        }
+
+        .bank-account-show .btn {
+            font-size: 0.875rem;
+        }
+
+        .bank-account-show .text-xl {
+            font-size: 1.125rem;
+            line-height: 1.625rem;
+        }
+
+        .bank-account-show .text-lg {
+            font-size: 1rem;
+            line-height: 1.5rem;
+        }
+
+        .bank-account-show .text-sm {
+            font-size: 0.8125rem;
+            line-height: 1.25rem;
         }
     }
 
