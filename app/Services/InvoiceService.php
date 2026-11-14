@@ -601,6 +601,15 @@ class InvoiceService
         app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
 
         DB::transaction(function () use ($invoice, $status) {
+            $invoice = Invoice::whereKey($invoice->id)->lockForUpdate()->firstOrFail();
+            app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
+
+            // A repeated or concurrent approval must not post another accounting
+            // document for an invoice that is already approved.
+            if ($status === 'approved' && $invoice->status->isApprovedOrSettled() && $invoice->document_id !== null) {
+                return;
+            }
+
             $reactivating = $status === 'approved' && $invoice->status->isApprovedInactive();
             if ($status === 'approved_inactive' || $reactivating) {
                 $decision = self::getChangeStatusDecision($invoice, $status);
@@ -625,6 +634,7 @@ class InvoiceService
             }
         });
 
+        $invoice->refresh();
     }
 
     /**
