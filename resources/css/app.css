@@ -1,8 +1,10 @@
 @import 'tailwindcss';
 @source "../../vendor/amir";
+
 @plugin 'daisyui' {
-  themes: light --default, dark --prefersdark;
+    themes: light --default, dark --prefersdark;
 }
+
 @import '@majidh1/jalalidatepicker/dist/jalalidatepicker.css' layer(base);
 @import './style.scss' layer(base);
 
@@ -17,134 +19,135 @@
   color utility to any element that depends on these defaults.
 */
 @layer base {
-  *,
-  ::after,
-  ::before,
-  ::backdrop,
-  ::file-selector-button {
-    border-color: var(--color-gray-200, currentcolor);
-  }
+
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--color-gray-200, currentcolor);
+    }
 }
 
 @utility home-dashboard {
-  @apply mt-8 space-y-4;
+    @apply mt-8 space-y-4;
 }
 
 @utility home-page-title {
-  @apply text-2xl font-bold text-slate-700 dark:text-slate-100;
+    @apply text-2xl font-bold text-slate-700 dark:text-slate-100;
 }
 
 @utility warehouse-dashboard {
-  @apply mt-6 space-y-5;
+    @apply mt-6 space-y-5;
 }
 
 @utility warehouse-page-title {
-  @apply text-2xl font-bold text-slate-800 dark:text-slate-50;
+    @apply text-2xl font-bold text-slate-800 dark:text-slate-50;
 }
 
 @utility warehouse-panel {
-  @apply rounded-lg border border-slate-200/80 bg-white/95 shadow-xs shadow-slate-200/70 dark:border-slate-700/80 dark:bg-slate-900/95 dark:shadow-none;
+    @apply rounded-lg border border-slate-200/80 bg-white/95 shadow-xs shadow-slate-200/70 dark:border-slate-700/80 dark:bg-slate-900/95 dark:shadow-none;
 }
 
 @utility warehouse-panel-header {
-  @apply flex min-h-[62px] items-center justify-between gap-3 border-b border-slate-100 px-4 dark:border-slate-800;
+    @apply flex min-h-[62px] items-center justify-between gap-3 border-b border-slate-100 px-4 dark:border-slate-800;
 }
 
 @utility warehouse-panel-title {
-  @apply text-sm font-semibold text-slate-700 dark:text-slate-100;
+    @apply text-sm font-semibold text-slate-700 dark:text-slate-100;
 }
 
 @utility warehouse-panel-subtitle {
-  @apply mt-1 text-xs text-slate-500 dark:text-slate-400;
+    @apply mt-1 text-xs text-slate-500 dark:text-slate-400;
 }
 
 @utility warehouse-table {
-  @apply w-full text-right text-sm text-slate-600 dark:text-slate-300;
+    @apply w-full text-right text-sm text-slate-600 dark:text-slate-300;
 
-  & th {
-    @apply border-b border-slate-200 pb-3 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-400;
-  }
+    & th {
+        @apply border-b border-slate-200 pb-3 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-400;
+    }
 
-  & td {
-    @apply border-b border-slate-100 py-3 dark:border-slate-800;
-  }
+    & td {
+        @apply border-b border-slate-100 py-3 dark:border-slate-800;
+    }
 }
 
 @utility warehouse-link {
-  @apply text-slate-800 transition-colors hover:text-emerald-600 dark:text-slate-100 dark:hover:text-emerald-300;
+    @apply text-slate-800 transition-colors hover:text-emerald-600 dark:text-slate-100 dark:hover:text-emerald-300;
 }
 
 @utility warehouse-mini-stat {
-  @apply rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950/30;
+    @apply rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-950/30;
 
-  & span {
-    @apply block text-xs text-slate-500 dark:text-slate-400;
-  }
+    & span {
+        @apply block text-xs text-slate-500 dark:text-slate-400;
+    }
 
-  & strong {
-    @apply mt-3 block text-lg font-bold text-slate-900 dark:text-white;
-  }
+    & strong {
+        @apply mt-3 block text-lg font-bold text-slate-900 dark:text-white;
+    }
 
-  & small {
-    @apply mt-1 block text-xs text-slate-500 dark:text-slate-400;
-  }
+    & small {
+        @apply mt-1 block text-xs text-slate-500 dark:text-slate-400;
+    }
 }
 
 @utility home-card {
-  @apply relative rounded-lg border border-slate-200/80 bg-white/95 shadow-xs shadow-slate-200/70 dark:border-slate-700/80 dark:bg-slate-900/95 dark:shadow-none;
+    @apply relative rounded-lg border border-slate-200/80 bg-white/95 shadow-xs shadow-slate-200/70 dark:border-slate-700/80 dark:bg-slate-900/95 dark:shadow-none;
 }
 
 @utility home-card-header {
-  @apply flex min-h-[62px] items-center justify-between gap-3 px-3;
+    @apply flex min-h-[62px] items-center justify-between gap-3 px-3;
 }
 
 @utility home-card-title {
-  @apply text-sm font-semibold text-slate-600 dark:text-slate-100;
+    @apply text-sm font-semibold text-slate-600 dark:text-slate-100;
 }
 
 @utility home-card-body {
-  @apply text-slate-600 dark:text-slate-300;
+    @apply text-slate-600 dark:text-slate-300;
 
-  & a {
-    @apply text-slate-700 transition-colors hover:text-emerald-600 dark:text-slate-200 dark:hover:text-emerald-300;
-  }
+    & a {
+        @apply text-slate-700 transition-colors hover:text-emerald-600 dark:text-slate-200 dark:hover:text-emerald-300;
+    }
 }
 
 @utility home-card-action {
-  @apply flex h-12 min-w-20 items-center justify-center rounded-lg bg-slate-100 px-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700;
+    @apply flex h-12 min-w-20 items-center justify-center rounded-lg bg-slate-100 px-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700;
 }
 
 @utility home-table {
-  @apply w-full text-center text-[13px] text-slate-600 dark:text-slate-300;
+    @apply w-full text-center text-[13px] text-slate-600 dark:text-slate-300;
 
-  & th {
-    @apply border-b border-slate-200 pb-3 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-400;
-  }
+    & th {
+        @apply border-b border-slate-200 pb-3 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-400;
+    }
 
-  & td {
-    @apply border-b border-slate-100 py-2 dark:border-slate-800;
-  }
+    & td {
+        @apply border-b border-slate-100 py-2 dark:border-slate-800;
+    }
 }
 
 @utility home-link {
-  @apply text-slate-700 transition-colors hover:text-emerald-600 dark:text-slate-200 dark:hover:text-emerald-300;
+    @apply text-slate-700 transition-colors hover:text-emerald-600 dark:text-slate-200 dark:hover:text-emerald-300;
 }
 
 @utility app-background {
-  @apply pointer-events-none fixed inset-0;
-  z-index: 0;
-  background-image:
-    linear-gradient(rgb(248 250 252 / 0.68), rgb(248 250 252 / 0.68)),
-    url('../images/inbg.jpeg');
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: cover;
-
-  [data-theme='dark'] & {
+    @apply pointer-events-none fixed inset-0;
+    z-index: 0;
     background-image:
-      linear-gradient(rgb(2 6 23 / 0.76), rgb(2 6 23 / 0.76)),
-      url('../images/inbg-dark.jpeg');
-  }
+        linear-gradient(rgb(248 250 252 / 0.68), rgb(248 250 252 / 0.68)),
+        url('../images/inbg.jpeg');
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+
+    [data-theme='dark'] & {
+        background-image:
+            linear-gradient(rgb(2 6 23 / 0.76), rgb(2 6 23 / 0.76)),
+            url('../images/inbg-dark.jpeg');
+    }
 }
 
 @font-face {
@@ -171,25 +174,61 @@ body {
     font-family: Vazirmatn, sans-serif !important;
 }
 
-[x-cloak] { display: none !important; }
+[x-cloak] {
+    display: none !important;
+}
 
-.admin-shell main { z-index: auto; }
+.admin-shell main {
+    z-index: auto;
+}
 
 .grid-paper {
     background-image: linear-gradient(rgb(255 255 255 / 0.045) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.045) 1px, transparent 1px);
     background-size: 24px 24px;
 }
 
-.scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
-.scrollbar::-webkit-scrollbar-thumb { border-radius: 10px; background: #d5dddc; }
+.scrollbar::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+
+.scrollbar::-webkit-scrollbar-thumb {
+    border-radius: 10px;
+    background: #d5dddc;
+}
 
 @media (prefers-reduced-motion: no-preference) {
-    .admin-rise { animation: admin-rise .55s ease both; }
-    .admin-rise:nth-child(2) { animation-delay: .08s; }
-    .admin-rise:nth-child(3) { animation-delay: .16s; }
-    .admin-rise:nth-child(4) { animation-delay: .24s; }
-    .admin-rise:nth-child(5) { animation-delay: .32s; }
-    @keyframes admin-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+    .admin-rise {
+        animation: admin-rise .55s ease both;
+    }
+
+    .admin-rise:nth-child(2) {
+        animation-delay: .08s;
+    }
+
+    .admin-rise:nth-child(3) {
+        animation-delay: .16s;
+    }
+
+    .admin-rise:nth-child(4) {
+        animation-delay: .24s;
+    }
+
+    .admin-rise:nth-child(5) {
+        animation-delay: .32s;
+    }
+
+    @keyframes admin-rise {
+        from {
+            opacity: 0;
+            transform: translateY(12px);
+        }
+
+        to {
+            opacity: 1;
+            transform: none;
+        }
+    }
 }
 
 .printable {
@@ -223,6 +262,7 @@ main {
 }
 
 @media (width < 768px) {
+
     .invoice-show .tooltip::before,
     .invoice-show .tooltip::after {
         display: none;
@@ -262,7 +302,7 @@ main {
         gap: .5rem;
     }
 
-    main :is(.flex.justify-end, .card-actions) > :is(.btn, button, a) {
+    main :is(.flex.justify-end, .card-actions)> :is(.btn, button, a) {
         max-width: 100%;
     }
 
@@ -291,12 +331,10 @@ main {
     --freeamir-control-focus-shadow: rgb(248 250 252 / 0.08);
 }
 
-:where(
-    .input:not(.input-neutral):not(.input-primary):not(.input-secondary):not(.input-accent):not(.input-info):not(.input-success):not(.input-warning):not(.input-error),
+:where(.input:not(.input-neutral):not(.input-primary):not(.input-secondary):not(.input-accent):not(.input-info):not(.input-success):not(.input-warning):not(.input-error),
     .select:not(.select-neutral):not(.select-primary):not(.select-secondary):not(.select-accent):not(.select-info):not(.select-success):not(.select-warning):not(.select-error),
     .textarea:not(.textarea-neutral):not(.textarea-primary):not(.textarea-secondary):not(.textarea-accent):not(.textarea-info):not(.textarea-success):not(.textarea-warning):not(.textarea-error),
-    .file-input:not(.file-input-neutral):not(.file-input-primary):not(.file-input-secondary):not(.file-input-accent):not(.file-input-info):not(.file-input-success):not(.file-input-warning):not(.file-input-error)
-):is(:focus, :focus-within) {
+    .file-input:not(.file-input-neutral):not(.file-input-primary):not(.file-input-secondary):not(.file-input-accent):not(.file-input-info):not(.file-input-success):not(.file-input-warning):not(.file-input-error)):is(:focus, :focus-within) {
     --input-color: var(--freeamir-control-focus-color);
     border-color: var(--freeamir-control-focus-color);
     outline: 1px solid var(--freeamir-control-focus-color);
@@ -305,12 +343,12 @@ main {
 }
 
 @layer components {
-    .app-main-menu > li > details {
+    .app-main-menu>li>details {
         overflow: visible;
     }
 
-    .app-main-menu > li > a,
-    .app-main-menu > li > details > summary,
+    .app-main-menu>li>a,
+    .app-main-menu>li>details>summary,
     .app-main-menu .app-main-menu-panel :is(a, summary) {
         white-space: nowrap;
         text-wrap: nowrap;
@@ -321,7 +359,7 @@ main {
         min-width: 100%;
     }
 
-    .app-mobile-menu .app-main-menu-panel li > details > summary::after {
+    .app-mobile-menu .app-main-menu-panel li>details>summary::after {
         margin-inline-end: .5rem;
     }
 
@@ -330,18 +368,18 @@ main {
         @apply bg-base-100 border border-base-content/10 shadow-lg shadow-base-content/10 rounded-xl;
     }
 
-    .app-main-menu > li > a,
-    .app-main-menu > li > details > summary {
+    .app-main-menu>li>a,
+    .app-main-menu>li>details>summary {
         @apply rounded-lg text-sm font-medium text-base-content/80 transition-colors;
     }
 
-    .app-main-menu > li > a:hover,
-    .app-main-menu > li > details > summary:hover {
+    .app-main-menu>li>a:hover,
+    .app-main-menu>li>details>summary:hover {
         @apply bg-base-200 text-base-content;
     }
 
-    .super-admin-content > .card,
-    .super-admin-content > form > .card {
+    .super-admin-content>.card,
+    .super-admin-content>form>.card {
         @apply overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none;
     }
 
@@ -504,4 +542,81 @@ main {
 
 #transactions input {
     box-shadow: none;
+}
+
+.bank-account-show .flex-grow {
+    min-width: 0;
+}
+
+@media (max-width: 1023.98px) {
+    .bank-account-show .alert {
+        font-size: 0.875rem;
+        line-height: 1.5rem;
+    }
+
+    .bank-account-show .btn {
+        min-height: 2rem;
+        height: auto;
+        padding: 0.375rem 0.625rem;
+        font-size: 0.75rem;
+    }
+
+    .bank-account-show .btn svg {
+        width: 1rem;
+        height: 1rem;
+        flex-shrink: 0;
+    }
+
+    .bank-account-show .btn .text-lg {
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+    }
+
+    .bank-account-show .text-xl {
+        font-size: 1rem;
+        line-height: 1.5rem;
+    }
+
+    .bank-account-show .text-lg {
+        font-size: 0.9375rem;
+        line-height: 1.375rem;
+    }
+
+    .bank-account-show .text-sm {
+        font-size: 0.75rem;
+        line-height: 1.125rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .bank-account-show .alert {
+        font-size: 0.875rem;
+        line-height: 1.5rem;
+    }
+
+    .bank-account-show .btn {
+        font-size: 0.875rem;
+    }
+
+    .bank-account-show .text-xl {
+        font-size: 1.125rem;
+        line-height: 1.625rem;
+    }
+
+    .bank-account-show .text-lg {
+        font-size: 1rem;
+        line-height: 1.5rem;
+    }
+
+    .bank-account-show .text-sm {
+        font-size: 0.8125rem;
+        line-height: 1.25rem;
+    }
+}
+
+@media (min-width: 640px) and (max-width: 1023.98px) {
+    .bank-account-show .text-xl {
+        font-size: 1.125rem;
+        line-height: 1.625rem;
+    }
 }
