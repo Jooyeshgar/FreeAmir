@@ -15,8 +15,8 @@ use App\Models\Product;
 use App\Models\Service;
 use App\Models\User;
 use App\Models\WarehouseProductStock;
-use Exception;
 use Closure;
+use Exception;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -29,11 +29,10 @@ class InvoiceService
      *
      * @param  array  $invoiceData  - Invoice details including customer_id, date, invoice_type, etc.
      * @param  array  $items  - Invoice items with product_id, quantity, discount, etc.
+     * @param  Closure(Invoice): void|null  $extensionPersister  runs inside the invoice's save transaction
      * @return array ['document' => Document, 'invoice' => Invoice]
      *
      * @throws ValidationException
-     *
-     * @param  Closure(Invoice): void|null  $extensionPersister  runs inside the invoice's save transaction
      */
     public static function createInvoice(User $user, array $invoiceData, array $items = [], bool $approved = false, ?Closure $extensionPersister = null): array
     {
@@ -171,11 +170,12 @@ class InvoiceService
     /**
      * Update an existing invoice and its related document/transactions.
      *
+     *
+     *
+     * @param  Closure(Invoice): void|null  $extensionPersister  runs inside the invoice's update transaction
      * @return array ['document' => Document, 'invoice' => Invoice]
      *
      * @throws ValidationException
-     *
-     * @param  Closure(Invoice): void|null  $extensionPersister  runs inside the invoice's update transaction
      */
     public static function updateInvoice(int $invoiceId, array $invoiceData, array $items = [], bool $approved = false, ?Closure $extensionPersister = null): array
     {
@@ -604,8 +604,7 @@ class InvoiceService
             $invoice = Invoice::withoutGlobalScopes()->whereKey($invoice->id)->lockForUpdate()->firstOrFail();
             app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
 
-            // A repeated or concurrent approval must not post another accounting
-            // document for an invoice that is already approved.
+            // A repeated or concurrent approval must not post another accounting document for an invoice that is already approved.
             if ($status === 'approved' && $invoice->status->isApprovedOrSettled() && $invoice->document_id !== null) {
                 return;
             }
