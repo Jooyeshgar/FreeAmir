@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\Document;
 use App\Models\FiscalYear;
+use App\Models\Invoice;
 use App\Models\ProductGroup;
 use App\Models\Subject;
 use App\Models\User;
@@ -78,6 +79,20 @@ class InvoiceActivationTest extends TestCase
     public function test_detail_actions_round_trip_accounting_and_inventory_return_sell(): void
     {
         $this->detailActionsRoundTripAccountingAndInventory(InvoiceType::RETURN_SELL);
+    }
+
+    public function test_repeated_approval_does_not_create_a_second_invoice_document(): void
+    {
+        $product = $this->createProduct(['quantity' => 10]);
+        $invoice = $this->sell([$this->productItem($product, 2, 150)])['invoice'];
+        $documentId = $invoice->document_id;
+        $quantityAfterFirstApproval = (float) $product->fresh()->quantity;
+        (new InvoiceService)->changeInvoiceStatus($invoice->fresh(), 'approved');
+        $invoice->refresh();
+
+        $this->assertSame($documentId, $invoice->document_id);
+        $this->assertSame($quantityAfterFirstApproval, (float) $product->fresh()->quantity);
+        $this->assertSame(1, Document::where('documentable_type', Invoice::class)->where('documentable_id', $invoice->id)->count());
     }
 
     private function detailActionsRoundTripAccountingAndInventory(InvoiceType $type): void
