@@ -7,6 +7,7 @@ use App\Models\FiscalYear;
 use App\Models\Invoice;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -31,6 +32,10 @@ class FiscalYearMutationGuard
             ]);
         }
 
+        if (DB::transactionLevel() > 0) {
+            $fiscalYear = FiscalYear::query()->lockForUpdate()->findOrFail($fiscalYear->id);
+        }
+
         if ($fiscalYear->isClosed()) {
             throw ValidationException::withMessages([
                 'fiscal_year' => __('This fiscal year is already closed.'),
@@ -44,6 +49,10 @@ class FiscalYearMutationGuard
                 throw ValidationException::withMessages([
                     'fiscal_year' => __('The fiscal year could not be resolved.'),
                 ]);
+            }
+
+            if (DB::transactionLevel() > 0) {
+                $destination = FiscalYear::query()->lockForUpdate()->findOrFail($destination->id);
             }
 
             if ($destination->isClosed()) {

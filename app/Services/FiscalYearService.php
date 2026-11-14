@@ -3234,6 +3234,8 @@ class FiscalYearService
         $validationErrors = [];
 
         DB::transaction(function () use ($fiscalYear, &$newFiscalYear, &$validationErrors, $user) {
+            $fiscalYear = FiscalYear::query()->lockForUpdate()->findOrFail($fiscalYear->id);
+
             $validationErrors = self::validateClosingFiscalYear($fiscalYear);
 
             if (! empty($validationErrors)) {

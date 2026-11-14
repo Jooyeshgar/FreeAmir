@@ -602,6 +602,14 @@ class InvoiceService
         app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
 
         DB::transaction(function () use ($invoice, $status) {
+            $fiscalYear = app(FiscalYearMutationGuard::class)->resolveFiscalYear($invoice);
+            if ($fiscalYear === null) {
+                throw ValidationException::withMessages([
+                    'fiscal_year' => __('The fiscal year could not be resolved.'),
+                ]);
+            }
+            FiscalYear::query()->lockForUpdate()->findOrFail($fiscalYear->id);
+
             $invoice = Invoice::withoutGlobalScopes()->whereKey($invoice->id)->lockForUpdate()->firstOrFail();
             // Recheck against the freshly loaded invoice after locking; the caller's model may be stale.
             app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
