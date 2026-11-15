@@ -1,4 +1,5 @@
 {
+    "MCP Server URL": "MCP Server URL",
     "A beginning inventory already exists for the selected warehouse.": "A beginning inventory already exists for the selected warehouse.",
     " with number ": " with number ",
     "(From amount) - (To amount) : Discount amount": "(From amount) - (To amount) : Discount amount",
@@ -678,6 +679,9 @@
     "Controls the runtime environment used by the application.": "Controls the runtime environment used by the application.",
     "Convert to CSV": "Convert to CSV",
     "Copy": "Copy",
+    "Copy URL": "Copy URL",
+    "Copied": "Copied",
+    "Automatic copy failed. Copy the selected text manually.": "Automatic copy failed. Copy the selected text manually.",
     "Copy Data From": "Copy Data From",
     "Copy Previous Month": "Replace with Previous Month",
     "Copy the previous month forecast into :month. Existing values for this month will be replaced.": "Copy manual forecasts from the previous month into :month? Existing manual forecasts for this month will be replaced.",

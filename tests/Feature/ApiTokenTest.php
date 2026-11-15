@@ -12,6 +12,12 @@ class ApiTokenTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->withoutVite();
+    }
+
     public function test_user_can_open_create_token_page(): void
     {
         $user = User::factory()->create();
@@ -106,5 +112,35 @@ class ApiTokenTest extends TestCase
             ])
             ->assertRedirect(route('api-tokens.index'))
             ->assertSessionHas('plainTextToken');
+    }
+
+    public function test_financial_abilities_can_be_granted_only_with_user_permission(): void
+    {
+        $user = User::factory()->create();
+        foreach (['api-tokens.*', 'api.access', 'reports.cost-income', 'customers.show'] as $permission) {
+            $user->givePermissionTo(Permission::findOrCreate($permission, 'web'));
+        }
+
+        $this->actingAs($user)->get(route('api-tokens.create'))
+            ->assertOk()->assertSee('reports.cost-income')->assertSee('customers.show')
+            ->assertDontSee('reports.trial-balance');
+        $this->post(route('api-tokens.store'), [
+            'name' => 'MCP reader', 'permissions' => ['reports.cost-income', 'customers.show'],
+        ])->assertRedirect(route('api-tokens.index'));
+        self::assertSame(['reports.cost-income', 'customers.show'], $user->tokens()->first()->abilities);
+        $this->post(route('api-tokens.store'), [
+            'name' => 'Forbidden', 'permissions' => ['reports.trial-balance'],
+        ])->assertSessionHasErrors('permissions.0');
+    }
+
+    public function test_token_page_shows_the_registered_mcp_endpoint(): void
+    {
+        $user = User::factory()->create();
+        $user->givePermissionTo(Permission::findOrCreate('api-tokens.index', 'web'));
+        $this->actingAs($user)->get(route('api-tokens.index'))
+            ->assertOk()
+            ->assertSee(route('mcp.handle'))
+            ->assertSee(__('MCP Server URL'))
+            ->assertSee(__('Copy URL'));
     }
 }

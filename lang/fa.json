@@ -1,4 +1,5 @@
 {
+    "MCP Server URL": "نشانی سرور MCP",
     "A beginning inventory already exists for the selected warehouse.": "موجودی ابتدای دوره برای انبار انتخاب‌شده قبلاً ثبت شده است.",
     " with number ": "شماره",
     "(From amount) - (To amount) : Discount amount": "(از مقدار) - (به مبلغ) : مبلغ تخفیف",
@@ -674,6 +675,9 @@
     "Controls the runtime environment used by the application.": "محیط اجرایی مورد استفاده برنامه را تعیین می‌کند.",
     "Convert to CSV": "تبدیل به CSV",
     "Copy": "کپی کردن",
+    "Copy URL": "کپی نشانی",
+    "Copied": "کپی شد",
+    "Automatic copy failed. Copy the selected text manually.": "کپی خودکار انجام نشد. متن انتخاب‌شده را دستی کپی کنید.",
     "Copy Data From": "کپی کردن داده‌ها از",
     "Copy Previous Month": "جایگزینی با ماه قبل",
     "Copy the previous month forecast into :month. Existing values for this month will be replaced.": "پیش‌بینی‌های دستی ماه قبل در :month کپی شوند؟ پیش‌بینی‌های دستی فعلی این ماه جایگزین خواهند شد.",

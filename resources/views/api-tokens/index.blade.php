@@ -3,6 +3,23 @@
 
     <div class="card bg-base-100 shadow-xl">
         <div class="card-body">
+            @if (\Illuminate\Support\Facades\Route::has('mcp.handle'))
+                <div class="mb-4 rounded-lg border border-info/30 bg-info/10 p-4" x-data="{ copied: false, failed: false }">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="min-w-0 flex-1">
+                            <label for="mcp-url" class="font-semibold">{{ __('MCP Server URL') }}</label>
+                            <input id="mcp-url" x-ref="value" readonly value="{{ route('mcp.handle') }}"
+                                class="input input-bordered mt-2 w-full font-mono text-sm text-left" dir="ltr" @click="$el.select()">
+                        </div>
+                        <button type="button" class="btn btn-sm btn-info btn-outline shrink-0 gap-2"
+                            @click="(async () => { try { await navigator.clipboard.writeText($refs.value.value); failed = false; copied = true; setTimeout(() => copied = false, 1500) } catch { copied = false; failed = true; $refs.value.focus(); $refs.value.select() } })()">
+                            <span aria-live="polite" x-text="copied ? @js(__('Copied')) : @js(__('Copy URL'))">{{ __('Copy URL') }}</span>
+                        </button>
+                    </div>
+                    <p x-cloak x-show="failed" role="status" class="mt-2 text-sm">{{ __('Automatic copy failed. Copy the selected text manually.') }}</p>
+                </div>
+            @endif
+
             <div class="flex items-center justify-between gap-4">
                 <span class="card-title">{{ __('API Tokens') }}</span>
 
@@ -12,11 +29,19 @@
             </div>
 
             @if (session('plainTextToken'))
-                <div class="alert alert-warning">
-                    <div>
-                        <div>{{ __('Copy this token now. It will not be shown again.') }}</div>
-                        <code class="break-all">{{ session('plainTextToken') }}</code>
+                <div class="rounded-lg border border-warning/30 bg-warning/10 p-4" x-data="{ copied: false, failed: false }">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                        <div class="min-w-0 flex-1">
+                            <label for="new-api-token" class="font-semibold">{{ __('Copy this token now. It will not be shown again.') }}</label>
+                            <input id="new-api-token" x-ref="value" readonly value="{{ session('plainTextToken') }}"
+                                class="input input-bordered mt-2 w-full font-mono text-sm text-left" dir="ltr" @click="$el.select()">
+                        </div>
+                        <button type="button" class="btn btn-sm btn-warning btn-outline shrink-0 gap-2"
+                            @click="(async () => { try { await navigator.clipboard.writeText($refs.value.value); failed = false; copied = true; setTimeout(() => copied = false, 1500) } catch { copied = false; failed = true; $refs.value.focus(); $refs.value.select() } })()">
+                            <span aria-live="polite" x-text="copied ? @js(__('Copied')) : @js(__('Copy'))">{{ __('Copy') }}</span>
+                        </button>
                     </div>
+                    <p x-cloak x-show="failed" role="status" class="mt-2 text-sm">{{ __('Automatic copy failed. Copy the selected text manually.') }}</p>
                 </div>
             @endif
 
