@@ -1986,7 +1986,7 @@
             "version": "v1.2.0",
             "dist": {
                 "type": "zip",
-                "url": "http://192.168.1.110:8081/repository/composer-proxy/laravel/mcp/v1.2.0/laravel-mcp-v1.2.0",
+                "url": "https://api.github.com/repos/laravel/mcp/zipball/4df5077a6002e629bb587560b9b48e1ccaea6478",
                 "reference": "4df5077a6002e629bb587560b9b48e1ccaea6478",
                 "shasum": ""
             },
