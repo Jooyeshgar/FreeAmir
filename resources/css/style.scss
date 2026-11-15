@@ -62,3 +62,8 @@ input[type="email"]:focus {
 .transaction.deactivated-transaction-row .transaction-count {
     display: inline-block;
 }
+
+.invoice-transactions-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}

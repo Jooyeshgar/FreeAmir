@@ -162,7 +162,7 @@
 </x-card>
 <x-card class="mt-4 min-w-0 max-w-full rounded-2xl w-full" class_body="p-0 pt-0 mt-4" x-data="transactionForm"
     x-on:include-last-years-invoices-changed.window="lastYearsInvoices = $event.detail.enabled">
-    <div class="max-w-full overflow-visible">
+    <div class="invoice-transactions-scroll max-w-full">
         <div class="w-max min-w-full">
             <div class="flex w-max min-w-full gap-2 items-center px-4">
         <div class="text-sm flex-1 max-w-8 text-center text-gray-500 pt-3">*</div>
