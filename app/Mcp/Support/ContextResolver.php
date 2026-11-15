@@ -65,11 +65,13 @@ class ContextResolver
     {
         $previousFiscalYear = config('active-fiscal-year-id');
         $previousCompany = config('active-company-id');
+        $previousFiscalYearNumber = config('active-company-fiscal-year');
         try {
             $fiscalYear = self::resolveFiscalYear($arguments);
             config([
                 'active-fiscal-year-id' => (int) $fiscalYear->id,
                 'active-company-id' => (int) $fiscalYear->company_id,
+                'active-company-fiscal-year' => (int) $fiscalYear->year,
             ]);
 
             return $callback();
@@ -77,6 +79,7 @@ class ContextResolver
             config([
                 'active-fiscal-year-id' => $previousFiscalYear,
                 'active-company-id' => $previousCompany,
+                'active-company-fiscal-year' => $previousFiscalYearNumber,
             ]);
         }
     }

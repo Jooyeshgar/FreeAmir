@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Services\CostIncomeService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery;
+use PHPUnit\Framework\Attributes\TestWith;
 use RuntimeException;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
@@ -141,14 +142,57 @@ class McpServerIntegrationTest extends TestCase
         self::assertNull(config('active-fiscal-year-id'));
     }
 
-    public function test_nonzero_financial_reports_match_approved_host_ledger(): void
+    public function test_customer_balances_and_statuses_match_the_host_ledger(): void
     {
         config(['active-fiscal-year-id' => $this->year->id]);
+        $document = Document::create([
+            'number' => 1, 'date' => '2026-10-26', 'creator_id' => $this->user->id,
+            'approved_at' => now(), 'approver_id' => $this->user->id, 'title' => 'Customer ledger fixture', 'fiscal_year_id' => $this->year->id,
+        ]);
+        $customers = [];
+        foreach ([[-700, 'بدهکار'], [400, 'بستانکار'], [0, 'تسویه (صفر)']] as [$balance, $status]) {
+            $customer = Customer::create([
+                'name' => 'Ledger customer '.count($customers), 'balance' => 999,
+                'fiscal_year_id' => $this->year->id,
+            ]);
+            if ($balance !== 0) {
+                $subject = Subject::factory()->create(['is_permanent' => true, 'fiscal_year_id' => $this->year->id]);
+                $subject->subjectable()->associate($customer);
+                $subject->save();
+                $customer->update(['subject_id' => $subject->id]);
+                Transaction::create([
+                    'subject_id' => $subject->id, 'value' => $balance, 'document_id' => $document->id,
+                    'user_id' => $this->user->id, 'desc' => 'Customer ledger fixture',
+                ]);
+            }
+            $customers[] = [$customer, $balance, $status];
+        }
+        $counter = Subject::factory()->create(['is_permanent' => true, 'fiscal_year_id' => $this->year->id]);
+        Transaction::create([
+            'subject_id' => $counter->id, 'value' => 300, 'document_id' => $document->id,
+            'user_id' => $this->user->id, 'desc' => 'Customer ledger fixture',
+        ]);
+        config(['active-fiscal-year-id' => null]);
+        foreach ($customers as [$customer, $balance, $status]) {
+            $report = $this->callTool('get_customer_balance', ['query' => $customer->name, 'fiscal_year_id' => $this->year->id]);
+            self::assertSame($customer->id, $report['customers'][0]['id']);
+            self::assertSame($balance, $report['customers'][0]['balance']);
+            self::assertSame($status, $report['customers'][0]['balance_status']);
+        }
+        self::assertNull(config('active-fiscal-year-id'));
+    }
+
+    #[TestWith([1404, '2025-10-26'])]
+    #[TestWith([1405, '2026-10-26'])]
+    public function test_nonzero_financial_reports_match_approved_host_ledger(int $year, string $date): void
+    {
+        $this->year->update(['year' => $year]);
+        config(['active-fiscal-year-id' => $this->year->id, 'active-company-fiscal-year' => 1403]);
         $income = Subject::factory()->create(['name' => 'Revenue', 'is_permanent' => false, 'fiscal_year_id' => $this->year->id]);
         $cost = Subject::factory()->create(['name' => 'Expense', 'is_permanent' => false, 'fiscal_year_id' => $this->year->id]);
         $counter = Subject::factory()->create(['name' => 'Counter', 'is_permanent' => true, 'fiscal_year_id' => $this->year->id]);
         $document = Document::create([
-            'number' => 1, 'date' => '2026-10-26', 'creator_id' => $this->user->id,
+            'number' => 1, 'date' => $date, 'creator_id' => $this->user->id,
             'approved_at' => now(), 'approver_id' => $this->user->id, 'title' => 'Integration fixture', 'fiscal_year_id' => $this->year->id,
         ]);
         foreach ([[$income, 1000], [$cost, -400], [$counter, -600]] as [$subject,$value]) {
@@ -164,10 +208,12 @@ class McpServerIntegrationTest extends TestCase
         $monthly = $this->callTool('get_profit_loss', ['fiscal_year_id' => $this->year->id, 'month' => 8]);
         self::assertSame(600, $monthly['net_profit']);
         self::assertNull(config('active-fiscal-year-id'));
+        self::assertSame(1403, config('active-company-fiscal-year'));
     }
 
     public function test_internal_service_exception_does_not_disclose_sql_and_restores_context(): void
     {
+        config(['active-company-fiscal-year' => 1403]);
         $service = Mockery::mock(CostIncomeService::class);
         $service->shouldReceive('summary')->once()->andThrow(new RuntimeException('SQL secret_schema internal-path'));
         app()->instance(CostIncomeService::class, $service);
@@ -176,6 +222,7 @@ class McpServerIntegrationTest extends TestCase
         ])->assertOk()->assertJsonPath('result.isError', true);
         self::assertStringNotContainsString('secret_schema', $response->getContent());
         self::assertNull(config('active-fiscal-year-id'));
+        self::assertSame(1403, config('active-company-fiscal-year'));
         self::assertNull(ContextResolver::authContext());
     }
 

@@ -4,6 +4,7 @@ namespace App\Mcp\Tools;
 
 use App\Mcp\Support\ContextResolver;
 use App\Models\Customer;
+use App\Services\SubjectService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Response;
 
@@ -53,7 +54,7 @@ class GetCustomerBalanceTool extends AccountingTool
             $query->where('name', 'like', "%{$queryStr}%");
         }
 
-        $customers = $query->take($limit)->get();
+        $customers = $query->with('subject')->take($limit)->get();
 
         if ($customers->isEmpty()) {
             return $this->success([
@@ -66,10 +67,10 @@ class GetCustomerBalanceTool extends AccountingTool
 
         $results = [];
         foreach ($customers as $c) {
-            $balance = (int) ($c->balance ?? 0);
+            $balance = (int) SubjectService::sumSubject($c->subject);
             $status = match (true) {
-                $balance > 0 => 'بدهکار',
-                $balance < 0 => 'بستانکار',
+                $balance < 0 => 'بدهکار',
+                $balance > 0 => 'بستانکار',
                 default => 'تسویه (صفر)',
             };
 
