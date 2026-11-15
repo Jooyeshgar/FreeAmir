@@ -17,6 +17,12 @@ class ApiTokenAbilityService
             ->flatMap(fn ($route) => collect($route->gatherMiddleware())
                 ->filter(fn (string $middleware) => str_starts_with($middleware, 'check-permission:'))
                 ->map(fn (string $middleware) => substr($middleware, strlen('check-permission:'))))
+            ->concat([
+                'invoices.index', 'invoices.show',
+                'reports.cost-income', 'reports.result',
+                'reports.company-overview', 'reports.trial-balance', 'reports.ledger',
+                'customers.index', 'customers.show',
+            ])
             ->reject(fn (string $permission) => in_array($permission, [
                 'api.access',
                 'api-tokens.index',
