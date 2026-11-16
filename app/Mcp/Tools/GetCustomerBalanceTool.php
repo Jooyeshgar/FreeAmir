@@ -77,7 +77,7 @@ class GetCustomerBalanceTool extends AccountingTool
             $results[] = [
                 'id' => $c->id,
                 'name' => $c->name,
-                'phone' => $c->phone ?? $c->mobile,
+                'phone' => $c->phone ?: $c->mobile,
                 'balance' => $balance,
                 'formatted_balance' => number_format(abs($balance)).' ریال ('.$status.')',
                 'balance_status' => $status,

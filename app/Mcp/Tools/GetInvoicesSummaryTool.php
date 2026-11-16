@@ -131,44 +131,31 @@ class GetInvoicesSummaryTool extends AccountingTool
             ];
         }
 
-        // 12-month breakdown for the entire fiscal year
-        $monthlyBreakdown = [];
-        $allFiscalInvoices = (clone $baseQuery)->select(['id', 'invoice_type', 'date', 'amount'])->lazyById(500);
-
+        // 12-month breakdown for the entire fiscal year via single aggregated database query
+        $fiscalYearNumber = $periodInfo['fiscal_year_number'];
+        $selects = [];
         for ($m = 1; $m <= 12; $m++) {
-            $monthlyBreakdown[$m] = [
-                'month_number' => $m,
-                'month_name' => ContextResolver::MONTH_NAMES[$m],
-                'sales_count' => 0,
-                'sales_amount' => 0,
-                'purchases_count' => 0,
-                'purchases_amount' => 0,
-            ];
+            $range = ContextResolver::getJalaliMonthGregorianRange($fiscalYearNumber, $m);
+            $start = $range['start'];
+            $end = $range['end'];
+            $selects[] = "COUNT(CASE WHEN invoice_type = 2 AND date BETWEEN '{$start}' AND '{$end}' THEN 1 END) AS s_cnt_{$m}";
+            $selects[] = "COALESCE(SUM(CASE WHEN invoice_type = 2 AND date BETWEEN '{$start}' AND '{$end}' THEN amount ELSE 0 END), 0) AS s_amt_{$m}";
+            $selects[] = "COUNT(CASE WHEN invoice_type = 1 AND date BETWEEN '{$start}' AND '{$end}' THEN 1 END) AS p_cnt_{$m}";
+            $selects[] = "COALESCE(SUM(CASE WHEN invoice_type = 1 AND date BETWEEN '{$start}' AND '{$end}' THEN amount ELSE 0 END), 0) AS p_amt_{$m}";
         }
 
-        foreach ($allFiscalInvoices as $item) {
-            if (! $item->date) {
-                continue;
-            }
-            $itemDate = $item->date instanceof \DateTimeInterface ? $item->date->format('Y-m-d') : (string) $item->date;
-            $jDate = ContextResolver::toJalaliDateString($itemDate);
-            if (! $jDate) {
-                continue;
-            }
+        $stats = (clone $baseQuery)->selectRaw(implode(', ', $selects))->first();
 
-            $parts = explode('/', $jDate);
-            $itemMonth = (int) ($parts[1] ?? 0);
-
-            if (isset($monthlyBreakdown[$itemMonth])) {
-                $itemType = (int) ($item->invoice_type?->value ?? $item->invoice_type);
-                if ($itemType === 2) {
-                    $monthlyBreakdown[$itemMonth]['sales_count']++;
-                    $monthlyBreakdown[$itemMonth]['sales_amount'] += (int) $item->amount;
-                } elseif ($itemType === 1) {
-                    $monthlyBreakdown[$itemMonth]['purchases_count']++;
-                    $monthlyBreakdown[$itemMonth]['purchases_amount'] += (int) $item->amount;
-                }
-            }
+        $monthlyBreakdown = [];
+        for ($m = 1; $m <= 12; $m++) {
+            $monthlyBreakdown[] = [
+                'month_number' => $m,
+                'month_name' => ContextResolver::MONTH_NAMES[$m],
+                'sales_count' => (int) ($stats->{"s_cnt_{$m}"} ?? 0),
+                'sales_amount' => (int) ($stats->{"s_amt_{$m}"} ?? 0),
+                'purchases_count' => (int) ($stats->{"p_cnt_{$m}"} ?? 0),
+                'purchases_amount' => (int) ($stats->{"p_amt_{$m}"} ?? 0),
+            ];
         }
 
         // Format human summary

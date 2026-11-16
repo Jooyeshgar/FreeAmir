@@ -12,7 +12,7 @@ class GetCurrentContextTool extends AccountingTool
 
     protected string $description = 'دریافت بافت تقویمی و مالی جاری سیستم، شامل تاریخ امروز شمسی و میلادی، ماه جاری شمسی، مشخصات سال مالی فعال و فهرست سال‌های مالی موجود.';
 
-    protected array $permissionGroups = [['invoices.index'], ['reports.cost-income'], ['reports.company-overview'], ['customers.index'], ['customers.show'], ['reports.ledger'], ['reports.trial-balance'], ['reports.result']];
+    protected array $permissionGroups = [['invoices.index'], ['invoices.show'], ['reports.cost-income'], ['reports.company-overview'], ['customers.index'], ['customers.show'], ['reports.ledger'], ['reports.trial-balance'], ['reports.result']];
 
     public function schema(JsonSchema $schema): array
     {

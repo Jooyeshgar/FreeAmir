@@ -97,6 +97,13 @@ class McpServerIntegrationTest extends TestCase
         self::assertSame(1, $raw['summary']['total_sales_count']);
         $named = $this->callTool('get_invoices_summary', ['status' => 'approved', 'fiscal_year_id' => $this->year->id]);
         self::assertSame(1, $named['summary']['total_sales_count']);
+        // 2026-10-26 corresponds to Aban (month 8) in 1405
+        $month8 = collect($named['monthly_breakdown'])->firstWhere('month_number', 8);
+        self::assertNotNull($month8);
+        self::assertSame(1, $month8['sales_count']);
+        self::assertSame(1200, $month8['sales_amount']);
+        $month1 = collect($named['monthly_breakdown'])->firstWhere('month_number', 1);
+        self::assertSame(0, $month1['sales_count']);
     }
 
     public function test_notifications_and_removed_transport_routes(): void
