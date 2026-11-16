@@ -200,7 +200,7 @@
                                             class="max-w-full truncate font-mono text-xs font-semibold text-sky-700 hover:underline sm:max-w-64 md:max-w-full lg:max-w-64 dark:text-sky-300"
                                             dir="ltr">{{ $modelContextLink['label'] }}</a>
                                     @else
-                                        <bdi class="max-w-full truncate font-mono text-xs font-semibold text-slate-600 sm:max-w-64 md:max-w-full lg:max-w-64 dark:text-slate-300"
+                                        <bdi class="max-w-full truncate font-mono text-xs font-semibold text-sky-700 sm:max-w-64 md:max-w-full lg:max-w-64 dark:text-sky-300"
                                             dir="ltr">{{ $modelContextLink['label'] }}</bdi>
                                     @endif
                                 @endif
