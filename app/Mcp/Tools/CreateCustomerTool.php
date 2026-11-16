@@ -25,8 +25,8 @@ class CreateCustomerTool extends AccountingTool
         return [
             'fiscal_year_id' => $schema->integer()->min(1)->required(),
             'name' => $schema->string()->min(1)->max(100)->required(),
-            'group_id' => $schema->integer()->min(1)->required(),
-            'type' => $schema->string()->enum(CustomerType::valueNames())->required(),
+            'group_id' => $schema->integer()->min(1)->description('شناسه گروه طرف‌حساب. اختیاری؛ در صورت عدم ارسال از اولین گروه فعال سال مالی استفاده می‌شود.'),
+            'type' => $schema->string()->enum(CustomerType::valueNames())->description('نوع طرف‌حساب. اختیاری؛ پیش‌فرض: individual.'),
             'phone' => $schema->string()->max(15),
             'mobile' => $schema->string()->max(15),
             'email' => $schema->string()->max(64),
@@ -43,8 +43,8 @@ class CreateCustomerTool extends AccountingTool
         return [
             'fiscal_year_id' => ['required', 'integer', 'min:1'],
             'name' => ['required', 'string', 'max:100'],
-            'group_id' => ['required', 'integer', 'min:1'],
-            'type' => ['required', 'string', 'in:'.implode(',', CustomerType::valueNames())],
+            'group_id' => ['sometimes', 'nullable', 'integer', 'min:1'],
+            'type' => ['sometimes', 'nullable', 'string', 'in:'.implode(',', CustomerType::valueNames())],
             'phone' => ['sometimes', 'nullable', 'string', 'max:15'],
             'mobile' => ['sometimes', 'nullable', 'string', 'max:15'],
             'email' => ['sometimes', 'nullable', 'email', 'max:64'],
@@ -58,15 +58,21 @@ class CreateCustomerTool extends AccountingTool
 
     protected function report(array $arguments): Response
     {
-        $group = CustomerGroup::query()->find($arguments['group_id']);
-        if (! $group || (int) $group->fiscal_year_id !== (int) $arguments['fiscal_year_id']) {
+        $yearId = (int) $arguments['fiscal_year_id'];
+        $groupId = $arguments['group_id'] ?? CustomerGroup::where('fiscal_year_id', $yearId)->orderBy('id')->value('id');
+        if (! $groupId) {
+            throw ValidationException::withMessages(['group_id' => __('No customer group found for this fiscal year.')]);
+        }
+
+        $group = CustomerGroup::query()->find($groupId);
+        if (! $group || (int) $group->fiscal_year_id !== $yearId) {
             throw ValidationException::withMessages(['group_id' => __('The selected customer group is invalid.')]);
         }
 
         $request = $this->validateFormRequest(StoreCustomerRequest::class, [
             'name' => $arguments['name'],
-            'group_id' => (int) $arguments['group_id'],
-            'type' => $arguments['type'],
+            'group_id' => (int) $groupId,
+            'type' => $arguments['type'] ?? 'individual',
             'phone' => $arguments['phone'] ?? null,
             'mobile' => $arguments['mobile'] ?? null,
             'email' => $arguments['email'] ?? null,

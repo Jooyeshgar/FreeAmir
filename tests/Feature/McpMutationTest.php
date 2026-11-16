@@ -111,6 +111,25 @@ class McpMutationTest extends TestCase
         self::assertSame($customer->subject_id, $result['subject_id']);
     }
 
+    public function test_creates_customer_with_default_group_and_default_type(): void
+    {
+        $arguments = ['fiscal_year_id' => $this->year->id, 'name' => 'Default Group Customer'];
+        $result = $this->created('create_customer', $arguments);
+        self::assertSame('Default Group Customer', $result['name']);
+        self::assertSame($this->customerGroup->id, $result['group_id']);
+        self::assertSame('individual', $result['type']);
+    }
+
+    public function test_context_includes_customer_groups_and_warehouses(): void
+    {
+        $result = $this->created('get_current_context', ['fiscal_year_id' => $this->year->id]);
+        self::assertNotEmpty($result['customer_groups']);
+        self::assertSame($this->customerGroup->id, $result['customer_groups'][0]['id']);
+        self::assertNotEmpty($result['warehouses']);
+        self::assertSame($this->warehouse->id, $result['warehouses'][0]['id']);
+        self::assertStringContainsString('گروه‌های طرف‌حساب', $result['human_summary']);
+    }
+
     public function test_creates_product_with_automatic_code_price_and_four_subjects(): void
     {
         $result = $this->created('create_product', $this->arguments('create_product'));

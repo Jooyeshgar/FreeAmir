@@ -3721,5 +3721,8 @@
     "The selected customer group is invalid.": "گروه مشتری انتخاب‌شده معتبر نیست.",
     "The selected product group is invalid.": "گروه کالای انتخاب‌شده معتبر نیست.",
     "The selected item is invalid.": "قلم انتخاب‌شده معتبر نیست.",
-    "The selected warehouse is invalid.": "انبار انتخاب‌شده معتبر نیست."
+    "The selected warehouse is invalid.": "انبار انتخاب‌شده معتبر نیست.",
+    "No customer group found for this fiscal year.": "هیچ گروه مشتری در این سال مالی یافت نشد.",
+    "No product group found for this fiscal year.": "هیچ گروه کالایی در این سال مالی یافت نشد.",
+    "No warehouse found for this fiscal year.": "هیچ انباری در این سال مالی یافت نشد."
 }

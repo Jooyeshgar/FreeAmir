@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools;
 
+use App\Enums\InvoiceType;
 use App\Http\Requests\StoreMcpInvoiceRequest;
 use App\Mcp\Support\ContextResolver;
 use App\Models\Customer;
@@ -40,9 +41,9 @@ class CreateInvoiceTool extends AccountingTool
             'fiscal_year_id' => $schema->integer()->min(1)->required(),
             'invoice_type' => $schema->string()->enum(['buy', 'sell'])->required(),
             'customer_id' => $schema->integer()->min(1)->required(),
-            'warehouse_id' => $schema->integer()->min(1)->required(),
-            'number' => $schema->integer()->min(1)->required(),
-            'date' => $schema->string()->description('Gregorian date in YYYY-MM-DD format, independent of UI locale.')->required(),
+            'warehouse_id' => $schema->integer()->min(1)->description('شناسه انبار. اختیاری؛ در صورت عدم ارسال از انبار اصلی سال مالی استفاده می‌شود.'),
+            'number' => $schema->integer()->min(1)->description('شماره فاکتور. اختیاری؛ در صورت عدم ارسال، به صورت خودکار شماره بعدی انتخاب می‌شود.'),
+            'date' => $schema->string()->description('Gregorian date in YYYY-MM-DD format (اختیاری؛ پیش‌فرض: امروز).'),
             'title' => $schema->string()->max(255),
             'description' => $schema->string(),
             'subtraction' => $schema->number()->min(0),
@@ -56,9 +57,9 @@ class CreateInvoiceTool extends AccountingTool
             'fiscal_year_id' => ['required', 'integer', 'min:1'],
             'invoice_type' => ['required', 'string', 'in:buy,sell'],
             'customer_id' => ['required', 'integer', 'min:1'],
-            'warehouse_id' => ['required', 'integer', 'min:1'],
-            'number' => ['required', 'integer', 'min:1'],
-            'date' => ['required', 'date_format:Y-m-d'],
+            'warehouse_id' => ['sometimes', 'nullable', 'integer', 'min:1'],
+            'number' => ['sometimes', 'nullable', 'integer', 'min:1'],
+            'date' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
             'title' => ['sometimes', 'nullable', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
             'subtraction' => ['sometimes', 'numeric', 'min:0'],
@@ -78,13 +79,25 @@ class CreateInvoiceTool extends AccountingTool
     {
         $yearId = (int) $arguments['fiscal_year_id'];
         $customer = Customer::query()->find($arguments['customer_id']);
-        $warehouse = Warehouse::query()->find($arguments['warehouse_id']);
         if (! $customer || (int) $customer->fiscal_year_id !== $yearId) {
             throw ValidationException::withMessages(['customer_id' => __('The selected customer is invalid.')]);
         }
+
+        $warehouseId = $arguments['warehouse_id'] ?? Warehouse::where('fiscal_year_id', $yearId)->orderBy('id')->value('id');
+        if (! $warehouseId) {
+            throw ValidationException::withMessages(['warehouse_id' => __('No warehouse found for this fiscal year.')]);
+        }
+        $warehouse = Warehouse::query()->find($warehouseId);
         if (! $warehouse || (int) $warehouse->fiscal_year_id !== $yearId) {
             throw ValidationException::withMessages(['warehouse_id' => __('The selected warehouse is invalid.')]);
         }
+
+        $invoiceNumber = $arguments['number'] ?? (
+            (Invoice::where('fiscal_year_id', $yearId)
+                ->where('invoice_type', InvoiceType::fromName($arguments['invoice_type']))
+                ->max('number') ?? 0) + 1
+        );
+        $date = $arguments['date'] ?? date('Y-m-d');
 
         $items = collect($arguments['items']);
         $products = Product::query()->where('fiscal_year_id', $yearId)
@@ -112,11 +125,11 @@ class CreateInvoiceTool extends AccountingTool
         $request = $this->validateFormRequest(StoreMcpInvoiceRequest::class, [
             'title' => $arguments['title'] ?? null,
             'description' => $arguments['description'] ?? null,
-            'date' => $arguments['date'],
+            'date' => $date,
             'invoice_type' => $arguments['invoice_type'],
             'customer_id' => $arguments['customer_id'],
-            'warehouse_id' => $arguments['warehouse_id'],
-            'invoice_number' => $arguments['number'],
+            'warehouse_id' => $warehouseId,
+            'invoice_number' => $invoiceNumber,
             'subtractions' => $arguments['subtraction'] ?? 0,
             'transactions' => $transactions,
         ]);

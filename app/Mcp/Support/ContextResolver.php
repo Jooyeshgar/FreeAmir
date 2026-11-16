@@ -4,6 +4,9 @@ namespace App\Mcp\Support;
 
 use App\Mcp\Auth\AuthContext;
 use App\Models\Config;
+use App\Models\CustomerGroup;
+use App\Models\ProductGroup;
+use App\Models\Warehouse;
 use Illuminate\Support\Carbon;
 use InvalidArgumentException;
 
@@ -446,6 +449,12 @@ class ContextResolver
                 'end_date' => sprintf('%04d-%02d-%02d', $fyEnd[0], $fyEnd[1], $fyEnd[2]),
             ],
             'available_fiscal_years' => self::getAvailableFiscalYears(),
+            'customer_groups' => CustomerGroup::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)
+                ->get(['id', 'name'])->map(fn ($g) => ['id' => (int) $g->id, 'name' => (string) $g->name])->values()->all(),
+            'product_groups' => ProductGroup::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)
+                ->get(['id', 'name'])->map(fn ($g) => ['id' => (int) $g->id, 'name' => (string) $g->name])->values()->all(),
+            'warehouses' => Warehouse::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)
+                ->get(['id', 'name', 'code'])->map(fn ($w) => ['id' => (int) $w->id, 'name' => (string) $w->name, 'code' => (string) $w->code])->values()->all(),
         ];
     }
 }

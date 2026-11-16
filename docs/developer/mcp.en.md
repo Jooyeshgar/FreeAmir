@@ -94,11 +94,11 @@ Searches a customer or counterparty by name, phone, mobile, national code, or ID
 
 ### 6. Creation tools
 
-All three tools require an explicit `fiscal_year_id` assigned to the token owner and reject closed years. Referenced groups, customers, warehouses and items must belong to that same year. Grant the corresponding ability when creating the API token; ordinary read tokens do not gain write access.
+All three tools require an explicit `fiscal_year_id` assigned to the token owner and reject closed years. Referenced groups, customers, warehouses and items must belong to that same year. Grant the corresponding ability when creating the API token; ordinary read tokens do not gain write access. `get_current_context` exposes `customer_groups`, `product_groups`, and `warehouses` for discovery.
 
-- `create_customer`: required `name`, `group_id`, `type` (`individual`, `legal_entity`, `civil_partnership`, `foreign_national`). Optional `phone`, `mobile`, `email`, `personal_code`, `postal_code`, `address`, `description`, `subject_code`. The existing customer validation and subject mapping are reused.
-- `create_product`: required `name`, `group_id`, `oversell` (boolean). Optional `code` (generated when omitted), `quantity_warning`, `selling_price`, `vat`, `location`, `description`. Initial stock is zero; record inventory through the normal inventory workflow.
-- `create_invoice`: required `invoice_type` (`sell` or `buy`), `customer_id`, `warehouse_id`, `number`, `date` (Gregorian `YYYY-MM-DD`, independent of UI language), `items` (1–500 lines). Optional `title`, `description`, `subtraction`.
+- `create_customer`: required `fiscal_year_id` and `name`. Optional `group_id` (defaults to the first customer group), `type` (defaults to `individual`), `phone`, `mobile`, `email`, `personal_code`, `postal_code`, `address`, `description`, `subject_code`.
+- `create_product`: required `fiscal_year_id` and `name`. Optional `group_id` (defaults to the first product group), `oversell` (defaults to `false`), `code` (generated when omitted), `quantity_warning`, `selling_price`, `vat`, `location`, `description`. Initial stock is zero.
+- `create_invoice`: required `fiscal_year_id`, `invoice_type` (`sell` or `buy`), `customer_id`, `items` (1–500 lines). Optional `warehouse_id` (defaults to the first warehouse), `number` (defaults to the next consecutive number), `date` (defaults to today's Gregorian date), `title`, `description`, `subtraction`.
 
 Each invoice line requires `item_type` (`product` or `service`), `item_id`, `quantity` and `unit` (unit price). Optional `discount` is the absolute line discount in rials, `vat` is a percentage from 0 to 100, and `description` is free text. The server computes totals with `InvoiceService`; duplicate items and invalid monetary bounds are rejected. The same minimum quantity rule as the web form applies (currently 1).
 

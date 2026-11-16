@@ -38,8 +38,16 @@ class GetCurrentContextTool extends AccountingTool
             return $y['year'].($y['is_active'] ? ' (فعال)' : '');
         }, $context['available_fiscal_years'] ?? []);
 
+        $customerGroupsList = array_map(function ($g) {
+            return $g['name'].' (شناسه '.$g['id'].')';
+        }, $context['customer_groups'] ?? []);
+
+        $warehousesList = array_map(function ($w) {
+            return $w['name'].' (شناسه '.$w['id'].')';
+        }, $context['warehouses'] ?? []);
+
         $humanSummary = sprintf(
-            'امروز %s (%s)، ماه جاری: %s (ماه %d). سال مالی: %s (از %s تا %s). سال‌های مالی تعریف‌شده در سیستم: %s.',
+            'امروز %s (%s)، ماه جاری: %s (ماه %d). سال مالی: %s (از %s تا %s). سال‌های مالی تعریف‌شده در سیستم: %s. گروه‌های طرف‌حساب: %s. انبارها: %s.',
             $context['today_jalali'],
             $context['today_gregorian'],
             $context['current_month_name'],
@@ -47,7 +55,9 @@ class GetCurrentContextTool extends AccountingTool
             $context['active_fiscal_year']['title'],
             $context['active_fiscal_year']['start_date'],
             $context['active_fiscal_year']['end_date'],
-            ! empty($availableList) ? implode('، ', $availableList) : 'نامشخص'
+            ! empty($availableList) ? implode('، ', $availableList) : 'نامشخص',
+            ! empty($customerGroupsList) ? implode('، ', $customerGroupsList) : 'نامشخص',
+            ! empty($warehousesList) ? implode('، ', $warehousesList) : 'نامشخص'
         );
 
         return $this->success(array_merge($context, [
