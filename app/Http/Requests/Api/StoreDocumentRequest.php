@@ -33,6 +33,7 @@ class StoreDocumentRequest extends FormRequest
             'ledger_confirmation' => ['nullable', 'boolean'],
         ];
     }
+
     public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
@@ -47,7 +48,7 @@ class StoreDocumentRequest extends FormRequest
             if (round($sum, 2) != 0) {
                 $validator->errors()->add(
                     'transactions',
-                    'مجموع مبالغ باید صفر باشد (بدهکار منفی، بستانکار مثبت).'
+                    __('The sum of amounts must be zero (debit negative, credit positive).')
                 );
             }
         });

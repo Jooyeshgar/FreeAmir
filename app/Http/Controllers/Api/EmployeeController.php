@@ -22,10 +22,7 @@ class EmployeeController extends Controller
 
     public function store(StoreEmployeeRequest $request): JsonResponse
     {
-        $employee = Employee::create(array_merge(
-            $request->validated(),
-            ['company_id' => getActiveLegacyCompany()]
-        ));
+        $employee = Employee::create($request->validated());
 
         return response()->json(['data' => $employee], 201);
     }

@@ -37,7 +37,6 @@ class AttendanceLogController extends Controller
     {
         $logs = DB::transaction(fn () => collect($request->validated('logs'))
             ->map(fn (array $log) => AttendanceLog::create(array_merge($log, [
-                'company_id' => getActiveLegacyCompany(),
                 'is_manual' => $log['is_manual'] ?? false,
             ]))));
 

@@ -36,7 +36,7 @@ class SetApiCompany
 
         DefaultCompany::activate($year);
 
-        $globals = Config::withoutGlobalScope(FiscalYearScope::class)->whereNull('company_id')->get();
+        $globals = Config::withoutGlobalScope(FiscalYearScope::class)->whereNull('fiscal_year_id')->get();
         foreach ($globals->merge(Config::all()) as $config) {
             if ($config->value !== null) {
                 config(['amir.'.$config->key => $config->value]);

@@ -13,11 +13,10 @@ class CompanyController extends Controller
         $companies = $request->user()
             ->accessibleCompanies()
             ->orderBy('name')
-            ->with('fiscalYear:id,legacy_company_id,company_identity_id')
+            ->with('fiscalYear:id,legacy_company_id')
             ->get(['companies.id', 'name', 'fiscal_year', 'currency', 'closed_at'])
             ->map(fn ($company) => [
                 'id' => $company->id,
-                'company_id' => $company->fiscalYear->company_identity_id,
                 'fiscal_year_id' => $company->fiscalYear->id,
                 'name' => $company->name,
                 'fiscal_year' => $company->fiscal_year,
