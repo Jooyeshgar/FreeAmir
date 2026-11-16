@@ -62,8 +62,9 @@ class FiscalYearAccessTest extends TestCase
         $token = $user->createToken('test', ['api.access', 'companies.index', 'hr.employees.index'])->plainTextToken;
         $headers = ['Authorization' => 'Bearer '.$token];
         $this->getJson(route('api.companies.index'), $headers)->assertOk()->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.company_id', $first->fiscalYear->company_identity_id)
-            ->assertJsonPath('data.0.fiscal_year_id', $first->fiscalYear->id);
+            ->assertJsonPath('data.0.id', $first->id)
+            ->assertJsonPath('data.0.fiscal_year_id', $first->fiscalYear->id)
+            ->assertJsonMissingPath('data.0.company_id');
         $this->getJson(route('api.employees.index', $first), $headers)->assertOk();
         $this->getJson(route('api.employees.index', $second), $headers)->assertForbidden();
 

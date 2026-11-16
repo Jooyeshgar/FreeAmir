@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -95,5 +96,47 @@ class TrialBalanceTest extends TestCase
             ->assertJsonPath('data.subjects.0.code', '011')
             ->assertJsonPath('data.meta.company_id', $this->company->id)
             ->assertJsonPath('data.meta.fiscal_year_id', $this->company->fiscalYear->id);
+    }
+
+    public function test_trial_balance_rejects_start_date_after_end_date(): void
+    {
+        $this->getJson(
+            "/api/companies/{$this->company->id}/reports/trial-balance?start_date=1403/05/10&end_date=1403/05/01",
+            $this->apiHeaders($this->user, ['api.access', 'reports.trial-balance'])
+        )->assertUnprocessable()
+            ->assertJsonValidationErrors('start_date');
+    }
+
+    public function test_trial_balance_rejects_invalid_date_format(): void
+    {
+        $this->getJson(
+            "/api/companies/{$this->company->id}/reports/trial-balance?start_date=not-a-date",
+            $this->apiHeaders($this->user, ['api.access', 'reports.trial-balance'])
+        )->assertUnprocessable()
+            ->assertJsonValidationErrors('start_date');
+    }
+
+    public function test_trial_balance_excludes_subjects_from_other_fiscal_years(): void
+    {
+        $subject = Subject::create([
+            'company_id' => $this->company->id,
+            'code' => '011',
+            'name' => 'بانک ها',
+            'parent_id' => null,
+            'type' => SubjectType::BOTH,
+        ]);
+
+        $otherFiscalYear = Company::factory()->create()->fiscalYear;
+
+        DB::table('subjects')->where('id', $subject->id)->update([
+            'fiscal_year_id' => $otherFiscalYear->id,
+        ]);
+
+        $this->getJson(
+            "/api/companies/{$this->company->id}/reports/trial-balance",
+            $this->apiHeaders($this->user, ['api.access', 'reports.trial-balance'])
+        )->assertOk()
+            ->assertJsonCount(0, 'data.subjects')
+            ->assertJsonPath('data.meta.subject_count', 0);
     }
 }
