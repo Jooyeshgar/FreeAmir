@@ -19,6 +19,7 @@ use App\Models\Warehouse;
 use App\Models\WarehouseProductStock;
 use App\Services\SubjectService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
 use PHPUnit\Framework\Attributes\TestWith;
 use RuntimeException;
@@ -242,6 +243,7 @@ class McpMutationTest extends TestCase
     #[TestWith(['discount', 999])]
     #[TestWith(['vat', 101])]
     #[TestWith(['quantity', 0])]
+    #[TestWith(['quantity', 0.5])]
     #[TestWith(['unit', -1])]
     #[TestWith(['unit', 1e20])]
     #[TestWith(['creator_id', 123])]
@@ -259,6 +261,34 @@ class McpMutationTest extends TestCase
         $arguments['items'][] = $arguments['items'][0];
         $this->callTool('create_invoice', $arguments)->assertOk()->assertJsonPath('result.isError', true);
         self::assertSame(0, Invoice::count());
+    }
+
+    public function test_item_validation_batches_lookups_and_rejects_a_missing_item(): void
+    {
+        $arguments = $this->arguments('create_invoice');
+        $arguments['items'] = array_fill(0, 100, $arguments['items'][0]);
+        $arguments['items'][] = ['item_type' => 'service', 'item_id' => 999999, 'quantity' => 1, 'unit' => 10];
+        DB::enableQueryLog();
+        try {
+            $response = $this->callTool('create_invoice', $arguments)->assertOk()->assertJsonPath('result.isError', true);
+            $queries = collect(DB::getQueryLog())->filter(fn (array $query) => preg_match('/from ["`](products|services)["`]/i', $query['query']));
+            self::assertCount(2, $queries);
+            self::assertStringContainsString('items.100.item_id', $response->json('result.content.0.text'));
+        } finally {
+            DB::disableQueryLog();
+            DB::flushQueryLog();
+        }
+        self::assertSame(0, Invoice::count());
+    }
+
+    public function test_missing_warehouse_error_is_translated_in_persian(): void
+    {
+        Config::updateOrCreate(['key' => 'app_locale', 'fiscal_year_id' => $this->year->id], ['value' => 'fa', 'type' => 1, 'category' => 1]);
+        $arguments = $this->arguments('create_invoice');
+        $arguments['warehouse_id'] = 999999;
+        $response = $this->callTool('create_invoice', $arguments)->assertOk()->assertJsonPath('result.isError', true);
+        $error = json_decode($response->json('result.content.0.text'), true, 512, JSON_THROW_ON_ERROR);
+        self::assertSame('انبار انتخاب‌شده معتبر نیست.', $error['errors']['warehouse_id'][0]);
     }
 
     public function test_product_creation_rolls_back_when_subject_creation_fails(): void

@@ -14,6 +14,8 @@ class StoreMcpInvoiceRequest extends StoreInvoiceRequest
     {
         $rules = parent::rules();
         unset($rules['document_number']);
+        // The MCP tool already checks every item against a fiscal-scoped batch lookup.
+        $rules['transactions.*.item_id'] = ['required', 'integer'];
 
         return $rules;
     }

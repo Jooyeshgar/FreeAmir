@@ -86,12 +86,15 @@ class CreateInvoiceTool extends AccountingTool
             throw ValidationException::withMessages(['warehouse_id' => __('The selected warehouse is invalid.')]);
         }
 
+        $items = collect($arguments['items']);
+        $products = Product::query()->where('fiscal_year_id', $yearId)
+            ->whereIn('id', $items->where('item_type', 'product')->pluck('item_id'))->pluck('id')->flip();
+        $services = Service::query()->where('fiscal_year_id', $yearId)
+            ->whereIn('id', $items->where('item_type', 'service')->pluck('item_id'))->pluck('id')->flip();
         $transactions = [];
         foreach ($arguments['items'] as $index => $item) {
-            $model = $item['item_type'] === 'product'
-                ? Product::query()->find($item['item_id'])
-                : Service::query()->find($item['item_id']);
-            if (! $model || (int) $model->fiscal_year_id !== $yearId) {
+            $availableItems = $item['item_type'] === 'product' ? $products : $services;
+            if (! $availableItems->has($item['item_id'])) {
                 throw ValidationException::withMessages(["items.{$index}.item_id" => __('The selected item is invalid.')]);
             }
             $transactions[] = [

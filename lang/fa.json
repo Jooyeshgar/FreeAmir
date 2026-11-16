@@ -3720,5 +3720,6 @@
     "The given data was invalid.": "اطلاعات واردشده معتبر نیست.",
     "The selected customer group is invalid.": "گروه مشتری انتخاب‌شده معتبر نیست.",
     "The selected product group is invalid.": "گروه کالای انتخاب‌شده معتبر نیست.",
-    "The selected item is invalid.": "قلم انتخاب‌شده معتبر نیست."
+    "The selected item is invalid.": "قلم انتخاب‌شده معتبر نیست.",
+    "The selected warehouse is invalid.": "انبار انتخاب‌شده معتبر نیست."
 }
