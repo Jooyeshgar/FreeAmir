@@ -6,6 +6,7 @@ use App\Models\Activity;
 use App\Models\Company;
 use App\Models\FiscalYear;
 use App\Models\User;
+use App\Support\ActivityValueComparison;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model;
@@ -415,7 +416,7 @@ class ActivityLogService
         foreach (array_keys($attributes) as $key) {
             $oldValue = $this->sanitizeValue($model->getRawOriginal($key));
 
-            if ($this->valuesEquivalent($oldValue, $attributes[$key])) {
+            if (ActivityValueComparison::equivalent($oldValue, $attributes[$key])) {
                 unset($attributes[$key]);
 
                 continue;
@@ -425,15 +426,6 @@ class ActivityLogService
         }
 
         return ['attributes' => $this->sanitizeModelAttributes($attributes), 'old' => $this->sanitizeModelAttributes($old)];
-    }
-
-    private function valuesEquivalent(mixed $old, mixed $new): bool
-    {
-        if ($old === $new) {
-            return true;
-        }
-
-        return is_scalar($old) && is_scalar($new) && (string) $old === (string) $new;
     }
 
     /**
@@ -489,7 +481,7 @@ class ActivityLogService
             $attributes = [];
         } elseif ($existing['event'] !== 'created') {
             foreach (array_keys($attributes) as $attribute) {
-                if (array_key_exists($attribute, $old) && $old[$attribute] === $attributes[$attribute]) {
+                if (array_key_exists($attribute, $old) && ActivityValueComparison::equivalent($old[$attribute], $attributes[$attribute])) {
                     unset($old[$attribute], $attributes[$attribute]);
                 }
             }

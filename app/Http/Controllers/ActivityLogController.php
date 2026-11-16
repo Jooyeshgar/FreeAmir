@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Activity;
 use App\Models\FiscalYear;
 use App\Services\ActivityLogService;
+use App\Support\ActivityValueComparison;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,6 +22,8 @@ class ActivityLogController extends Controller
     private array $numberColumnByModel = [];
 
     private array $showRouteByModel = [];
+
+    private array $modelExists = [];
 
     public function __construct(private readonly ActivityLogService $activityLogService) {}
 
@@ -177,7 +180,8 @@ class ActivityLogController extends Controller
         $aggregatedModels = collect($details->get('models', []));
         $attributes = collect($details->get('attributes', []));
         $old = collect($details->get('old', []));
-        $changeKeys = $attributes->keys()->merge($old->keys())->unique();
+        $changeKeys = $attributes->keys()->merge($old->keys())->unique()
+            ->filter(fn (string $key): bool => ! ActivityValueComparison::equivalent($old->get($key), $attributes->get($key)));
         $fiscalYear = $fiscalYearLookup->get($details->get('fiscal_year_id'));
         $impersonatedUser = $impersonatedUsers->get($details->get('impersonated_user_id'));
         $isRequest = $activity->source === 'request';
@@ -300,7 +304,7 @@ class ActivityLogController extends Controller
             'modelType' => $modelType,
             'url' => $url,
             'changes' => $attributes->keys()->merge($old->keys())->unique()
-                ->filter(fn (string $key): bool => $this->valuesDiffer($old->get($key), $attributes->get($key)))
+                ->filter(fn (string $key): bool => ! ActivityValueComparison::equivalent($old->get($key), $attributes->get($key)))
                 ->map(fn (string $key): array => [
                     'model' => $modelContextLabel,
                     'url' => $url,
@@ -309,19 +313,6 @@ class ActivityLogController extends Controller
                     'new' => $this->formatValue($attributes->get($key)),
                 ]),
         ];
-    }
-
-    private function valuesDiffer(mixed $old, mixed $new): bool
-    {
-        if ($old === $new) {
-            return false;
-        }
-
-        if (is_scalar($old) && is_scalar($new)) {
-            return (string) $old !== (string) $new;
-        }
-
-        return $old !== $new;
     }
 
     private function modelHasNumberColumn(?string $modelType): bool
@@ -348,7 +339,17 @@ class ActivityLogController extends Controller
 
         $routeName = $this->showRouteByModel[$modelType] ??= $this->findModelShowRoute($modelType);
 
-        return $routeName ? route($routeName, $modelId) : null;
+        if (! $routeName) {
+            return null;
+        }
+
+        try {
+            $exists = $this->modelExists[$modelType][$modelId] ??= (new $modelType)->newQuery()->whereKey($modelId)->exists();
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $exists ? route($routeName, $modelId) : null;
     }
 
     private function namedRouteUrl(?string $routeName): ?string

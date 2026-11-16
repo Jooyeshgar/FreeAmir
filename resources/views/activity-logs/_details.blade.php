@@ -48,7 +48,7 @@
                         class="font-mono text-xs font-bold text-sky-700 hover:underline dark:text-sky-300"
                         dir="ltr">{{ $model }}</a>
                 @else
-                    <span class="font-mono text-xs font-bold text-sky-700 dark:text-sky-300"
+                    <span class="font-mono text-xs font-bold text-slate-600 dark:text-slate-300"
                         dir="ltr">{{ $model }}</span>
                 @endif
             </header>
