@@ -453,6 +453,40 @@ class ActivityLogTest extends TestCase
         $this->assertDatabaseCount('activity_log', 0);
     }
 
+    public function test_decimal_format_only_updates_are_not_recorded(): void
+    {
+        $actor = $this->workspaceUser();
+        $transaction = Transaction::factory()->create(['value' => 10]);
+        $transaction->setRawAttributes([...$transaction->getAttributes(), 'value' => '10.00'], sync: true);
+        Activity::query()->delete();
+        $this->actingAs($actor);
+
+        $transaction->update(['value' => 10]);
+        $this->assertDatabaseCount('activity_log', 0);
+
+        $transaction->update(['value' => '10.01']);
+        $activity = Activity::query()->sole();
+        $this->assertSame('10.01', $activity->details['attributes']['value']);
+        $this->assertEquals(10, $activity->details['old']['value']);
+    }
+
+    public function test_grouped_updates_that_return_to_the_original_numeric_value_are_not_recorded_as_changes(): void
+    {
+        $actor = $this->workspaceUser();
+        $transaction = Transaction::factory()->create(['value' => 10]);
+        $transaction->setRawAttributes([...$transaction->getAttributes(), 'value' => '10.00'], sync: true);
+        Activity::query()->delete();
+        Route::put('/test/activity-log/numeric-round-trip', function () use ($transaction) {
+            $transaction->update(['value' => 12]);
+            $transaction->update(['value' => 10]);
+
+            return response()->noContent();
+        })->middleware('web');
+
+        $this->actingAs($actor)->put('/test/activity-log/numeric-round-trip')->assertNoContent();
+        $this->assertSame([], Activity::query()->sole()->details['models']);
+    }
+
     public function test_model_event_with_no_real_changes_is_not_recorded(): void
     {
         $actor = User::factory()->create();
