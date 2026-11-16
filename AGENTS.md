@@ -16,6 +16,7 @@ transaction builders to protect accounting invariants such as balanced documents
 - `app/Http/Controllers/Management/`: User/role/permission management endpoints.
 - `app/Http/Middleware/`: Cross-cutting request middleware (auth, permissions, company context, config).
 - `app/Http/Requests/`: Form request validation classes for incoming HTTP payloads.
+- `app/Mcp/`: Model Context Protocol (MCP) server, tools, and token authorization.
 - `app/Models/`: Eloquent models for accounting entities (documents, invoices, products, customers, etc.).
 - `app/Models/Scopes/`: Global scopes such as fiscal/company scoping rules.
 - `app/Providers/`: Service providers and application bootstrapping hooks.
@@ -36,6 +37,7 @@ transaction builders to protect accounting invariants such as balanced documents
 
 ## Main Packages
 - `laravel/framework` `^12.0`: Core backend framework and application runtime.
+- `laravel/mcp` `^1.2`: Official Model Context Protocol (MCP) server for AI assistants.
 - `laravel/sanctum` `^4.2`: Token-based authentication for API scenarios.
 - `spatie/laravel-permission` `^6.4`: Roles and permissions authorization model.
 - `carlos-meneses/laravel-mpdf` `^2.1`: PDF generation integration for Laravel.

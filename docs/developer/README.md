@@ -25,6 +25,7 @@
 | [testing-guide.md](testing-guide.md) | اجرای تست‌ها و نوشتن تست‌های Feature و Unit |
 | [extensions.md](extensions.md) | قرارداد افزونه‌ها، رجیستری‌ها، اسلات‌ها و context میزبان |
 | [package-frontend.md](package-frontend.md) | اتصال صفحه‌ها، منو و فایل‌های فرانت بسته‌ها |
+| [mcp.md](mcp.md) | راهنمای سرور MCP، روش‌های اتصال، ابزارها و امنیت هوش مصنوعی |
 | [../script/README.md](../../script/README.md) | ابزارها و اسکریپت‌های مهاجرت داده |
 
 ## مستندات دامنه حسابداری برای توسعه
