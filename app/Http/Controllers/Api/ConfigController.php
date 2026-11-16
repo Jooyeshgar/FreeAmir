@@ -12,20 +12,8 @@ use Illuminate\Http\Request;
 
 class ConfigController extends Controller
 {
-    /**
-     * GET /api/companies/{company}/config
-     *
-     * Query (optional):
-     * - category
-     * - key          (یک کلید خاص، مثلاً bank)
-     * - include_global (bool, default true) تنظیمات سراسری با company_id = null
-     * - only_mapped  (bool) فقط کلیدهای ConfigTitle (نگاشت حساب‌ها)
-     * - as_map       (bool) خروجی به صورت key => value برای مصرف ساده‌تر ایجنت
-     * - page, per_page
-     */
     public function index(Request $request, int $company): JsonResponse
     {
-        // بعد از middleware api-company، FiscalYearScope روی سال فعال است
         $companyConfigs = Config::query()->orderBy('key');
 
         if ($request->filled('category')) {
@@ -46,10 +34,9 @@ class ConfigController extends Controller
 
         $items = $companyConfigs->get();
 
-        // اختیاری: merge تنظیمات global
         if ($request->boolean('include_global', true)) {
             $globals = Config::withoutGlobalScope(FiscalYearScope::class)
-                ->whereNull('company_id')
+                ->whereNull('fiscal_year_id')
                 ->when($request->filled('category'), fn ($q) => $q->where('category', $request->input('category')))
                 ->when($request->filled('key'), fn ($q) => $q->where('key', strtolower($request->input('key'))))
                 ->when($request->boolean('only_mapped'), function ($q) {
@@ -63,7 +50,6 @@ class ConfigController extends Controller
                 ->orderBy('key')
                 ->get();
 
-            // company override روی global با همان key
             $companyKeys = $items->pluck('key')->all();
             $globals = $globals->reject(fn (Config $c) => in_array($c->key, $companyKeys, true));
             $items = $items->concat($globals)->sortBy('key')->values();
@@ -71,7 +57,6 @@ class ConfigController extends Controller
             $items = $items->values();
         }
 
-        // resolve subject برای valueهای عددی که id حساب هستند
         $subjectIds = $items
             ->pluck('value')
             ->filter(fn ($v) => is_numeric($v) && (int) $v > 0)
@@ -88,7 +73,7 @@ class ConfigController extends Controller
             fn (ConfigTitle $t) => [strtolower($t->value) => $t->label()]
         );
 
-        $mapped = $items->map(function (Config $config) use ($subjects, $titleMap, $company) {
+        $mapped = $items->map(function (Config $config) use ($subjects, $titleMap) {
             $value = $config->value;
             $subject = null;
 
@@ -102,7 +87,7 @@ class ConfigController extends Controller
                 ];
             }
 
-            $isGlobal = $config->company_id === null;
+            $isGlobal = $config->fiscal_year_id === null;
 
             return [
                 'id' => $config->id,
@@ -113,15 +98,13 @@ class ConfigController extends Controller
                 'label' => $titleMap[$config->key] ?? $config->desc,
                 'type' => $config->type,
                 'category' => $config->category,
-                'company_id' => $config->company_id,
-                'fiscal_year_id' => $config->fiscal_year_id ?? null,
-                'scope' => $isGlobal ? 'global' : 'company',
+                'fiscal_year_id' => $config->fiscal_year_id,
+                'scope' => $isGlobal ? 'global' : 'fiscal_year',
                 'is_account_mapping' => $titleMap->has($config->key),
                 'subject' => $subject,
             ];
         })->values();
 
-        // pagination
         $total = $mapped->count();
         $perPage = min(max((int) $request->input('per_page', 100), 1), 500);
         $page = max((int) $request->input('page', 1), 1);
@@ -149,7 +132,7 @@ class ConfigController extends Controller
                     fn (ConfigTitle $t) => strtolower($t->value),
                     ConfigTitle::cases()
                 ),
-                'note' => 'Company configs are fiscal-year scoped. Global configs have company_id=null. For account mappings, value is usually a subject (account) id.',
+                'note' => __('Company configs are fiscal-year scoped. Global configs have no fiscal year. For account mappings, value is usually a subject (account) id.'),
             ],
             'pagination' => [
                 'current_page' => $page,
@@ -161,7 +144,6 @@ class ConfigController extends Controller
             ],
         ];
 
-        // فرم compact برای ایجنت: { "bank": 12, "cash_book": 5, ... }
         if ($request->boolean('as_map')) {
             $payload['map'] = $mapped->mapWithKeys(
                 fn (array $row) => [$row['key'] => $row['typed_value']]
@@ -177,7 +159,6 @@ class ConfigController extends Controller
             return null;
         }
 
-        // type در FreeAmir اغلب کد داخلی است؛ heuristic امن:
         if (is_numeric($value) && ! str_contains((string) $value, '.')) {
             return (int) $value;
         }

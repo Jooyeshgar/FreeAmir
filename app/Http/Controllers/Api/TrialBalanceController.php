@@ -13,20 +13,6 @@ class TrialBalanceController extends Controller
         private readonly TrialBalanceService $trialBalanceService
     ) {}
 
-    /**
-     * GET /api/companies/{company}/reports/trial-balance
-     *
-     * Query params:
-     * - start_date, end_date (Jalali Y/m/d)
-     * - start_document_number (default 3)
-     * - end_document_number
-     * - parent_id
-     * - include_children (bool)
-     * - subject_name
-     * - only_non_zero (bool) — فقط حساب‌های دارای مانده/گردش غیرصفر
-     * - page (default 1)
-     * - per_page (default 50, max 200)
-     */
     public function __invoke(Request $request, int $company): JsonResponse
     {
         $data = $this->trialBalanceService->getTrialBalanceData($request);
@@ -37,7 +23,6 @@ class TrialBalanceController extends Controller
             $turnoverCredit = (float) ($subject->turnover_credit ?? 0);
             $balance = (float) ($subject->balance ?? 0);
 
-            // در منطق FreeAmir: مقدار منفی = بدهکار، مثبت = بستانکار
             return [
                 'id' => $subject->id,
                 'code' => $subject->code,
@@ -48,7 +33,6 @@ class TrialBalanceController extends Controller
                 'turnover_debit' => $turnoverDebit,
                 'turnover_credit' => $turnoverCredit,
                 'balance' => $balance,
-                // مقادیر مطلق برای مصرف ساده‌تر توسط ایجنت
                 'opening_debit' => $opening < 0 ? abs($opening) : 0.0,
                 'opening_credit' => $opening > 0 ? $opening : 0.0,
                 'remaining_debit' => $balance < 0 ? abs($balance) : 0.0,
@@ -103,7 +87,7 @@ class TrialBalanceController extends Controller
                     'debit_sign' => 'negative',
                     'credit_sign' => 'positive',
                     'balance_formula' => 'opening + turnover_debit + turnover_credit',
-                    'note' => 'Signed fields keep FreeAmir internal sign. Absolute fields (*_debit / *_credit) are always >= 0.',
+                    'note' => __('Signed fields keep FreeAmir internal sign. Absolute fields (*_debit / *_credit) are always >= 0.'),
                 ],
                 'meta' => [
                     'company_id' => $company,
@@ -112,7 +96,7 @@ class TrialBalanceController extends Controller
                     'has_non_zero_balance' => $hasNonZero,
                     'message' => $hasNonZero
                         ? null
-                        : 'No movements in selected period (or all balances are zero).',
+                        : __('No movements in selected period (or all balances are zero).'),
                 ],
                 'pagination' => [
                     'current_page' => $page,

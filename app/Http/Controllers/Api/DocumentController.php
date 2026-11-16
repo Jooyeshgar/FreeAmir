@@ -51,9 +51,8 @@ class DocumentController extends Controller
 
     public function show(int $company, int $documentId): JsonResponse
     {
-        $document = Document::withoutGlobalScopes()
+        $document = Document::query()
             ->with(['transactions.subject', 'documentFiles'])
-            ->where('fiscal_year_id', getActiveFiscalYear())
             ->findOrFail($documentId);
 
         return response()->json(['data' => $this->formatDocument($document, true)]);
@@ -65,10 +64,7 @@ class DocumentController extends Controller
         int $company,
         int $documentId
     ): JsonResponse {
-        $document = Document::withoutGlobalScopes()
-            ->where('fiscal_year_id', getActiveFiscalYear())
-            ->findOrFail($documentId);
-        $this->fiscalYearMutationGuard->ensureOpen();
+        $document = Document::query()->findOrFail($documentId);
         $data = $request->validated();
         $data['document_id'] = $document->id;
         $data['user_id'] = $request->user()->id;
