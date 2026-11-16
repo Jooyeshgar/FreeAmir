@@ -48,7 +48,7 @@ abstract class AccountingTool extends Tool
     final public function handle(Request $request): Response
     {
         if (! $this->shouldRegister()) {
-            return Response::error('دسترسی به این ابزار مجاز نیست.');
+            return Response::error(__('Unauthorized access to this tool.'));
         }
 
         $rules = $this->rules();
@@ -64,7 +64,7 @@ abstract class AccountingTool extends Tool
         } catch (Throwable $exception) {
             report($exception);
 
-            return Response::error('دریافت گزارش با خطا مواجه شد. لطفاً دوباره تلاش کنید یا با پشتیبانی تماس بگیرید.');
+            return Response::error(__('Failed to retrieve report. Please try again or contact support.'));
         }
     }
 

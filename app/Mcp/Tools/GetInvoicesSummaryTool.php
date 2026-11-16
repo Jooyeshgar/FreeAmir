@@ -48,7 +48,7 @@ class GetInvoicesSummaryTool extends AccountingTool
         $statusFilter = isset($arguments['status']) ? (string) $arguments['status'] : null;
         $status = $statusFilter !== null ? InvoiceStatus::tryFromName($statusFilter) : null;
         if ($statusFilter !== null && $status === null) {
-            return $this->error('وضعیت فاکتور نامعتبر است.');
+            return $this->error(__('Invalid invoice status.'));
         }
         $limit = isset($arguments['limit']) ? max(1, min(50, (int) $arguments['limit'])) : 10;
 

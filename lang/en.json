@@ -3713,5 +3713,16 @@
     "Transferring entries can affect financial reports. Selected source entries will be deleted and approval may be revoked. Confirm to continue.": "Transferring entries can affect financial reports. Selected source entries will be deleted and approval may be revoked. Confirm to continue.",
     "Select at least one entry to transfer.": "Select at least one entry to transfer.",
     "This may affect financial reports. Selected source entries will be deleted and approval may be revoked. Continue?": "This may affect financial reports. Selected source entries will be deleted and approval may be revoked. Continue?",
-    "This may affect financial reports. Continue transferring the selected entries?": "This may affect financial reports. Continue transferring the selected entries?"
+    "This may affect financial reports. Continue transferring the selected entries?": "This may affect financial reports. Continue transferring the selected entries?",
+    "Unauthorized access to this tool.": "Unauthorized access to this tool.",
+    "Failed to retrieve report. Please try again or contact support.": "Failed to retrieve report. Please try again or contact support.",
+    "Invalid invoice status.": "Invalid invoice status.",
+    "Access to fiscal year is not permitted.": "Access to fiscal year is not permitted.",
+    "Invalid ID or fiscal year.": "Invalid ID or fiscal year.",
+    "Requested fiscal year is not accessible or not found.": "Requested fiscal year is not accessible or not found.",
+    "Please specify a fiscal year ID to select a fiscal year.": "Please specify a fiscal year ID to select a fiscal year.",
+    "Month number must be between 1 and 12. Given: :month": "Month number must be between 1 and 12. Given: :month",
+    "The relative period is not in the selected fiscal year. Select the authorized fiscal year for that period or specify the month explicitly.": "The relative period is not in the selected fiscal year. Select the authorized fiscal year for that period or specify the month explicitly.",
+    "Jalali month must be between 1 and 12. Given: :month": "Jalali month must be between 1 and 12. Given: :month",
+    "No customer found matching ':query'.": "No customer found matching ':query'."
 }

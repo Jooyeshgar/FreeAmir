@@ -55,7 +55,7 @@ class ContextResolver
     protected static function accessibleFiscalYears(): mixed
     {
         if (! self::$authContext) {
-            throw new InvalidArgumentException('دسترسی به سال مالی مجاز نیست.');
+            throw new InvalidArgumentException(__('Access to fiscal year is not permitted.'));
         }
 
         return self::$authContext->user->fiscalYears();
@@ -88,7 +88,7 @@ class ContextResolver
     {
         $id = filter_var($value, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         if ($id === false) {
-            throw new InvalidArgumentException('شناسه یا سال مالی نامعتبر است.');
+            throw new InvalidArgumentException(__('Invalid ID or fiscal year.'));
         }
 
         return $id;
@@ -115,10 +115,10 @@ class ContextResolver
         }
         $years = $query->orderByDesc('fiscal_years.year')->orderByDesc('fiscal_years.id')->get();
         if ($years->isEmpty()) {
-            throw new InvalidArgumentException('دسترسی به سال مالی درخواستی مجاز نیست یا سال مالی در دسترس نیست.');
+            throw new InvalidArgumentException(__('Requested fiscal year is not accessible or not found.'));
         }
         if (isset($arguments['year']) && ! isset($arguments['fiscal_year_id']) && ! isset($arguments['company_id']) && $years->pluck('company_id')->unique()->count() > 1) {
-            throw new InvalidArgumentException('برای انتخاب سال مالی، شناسه سال مالی را مشخص کنید.');
+            throw new InvalidArgumentException(__('Please specify a fiscal year ID to select a fiscal year.'));
         }
 
         return $years->first();
@@ -175,7 +175,7 @@ class ContextResolver
     public static function getDaysInJalaliMonth(int $jy, int $month): int
     {
         if ($month < 1 || $month > 12) {
-            throw new InvalidArgumentException("شماره ماه باید بین ۱ تا ۱۲ باشد. مقدار داده شده: {$month}");
+            throw new InvalidArgumentException(__('Month number must be between 1 and 12. Given: :month', ['month' => $month]));
         }
 
         if ($month <= 6) {
@@ -279,13 +279,13 @@ class ContextResolver
         if ($explicitMonth === null && in_array($periodArg, ['current_month', 'previous_month'], true)) {
             $targetYear = $todayJalali[0] - ($periodArg === 'previous_month' && $currentMonth === 1 ? 1 : 0);
             if ($fiscalYearNumber !== $targetYear) {
-                throw new InvalidArgumentException('بازه نسبی در سال مالی انتخاب‌شده قرار ندارد. سال مالی مجاز مربوط به آن بازه را انتخاب کنید یا ماه را صریحاً مشخص کنید.');
+                throw new InvalidArgumentException(__('The relative period is not in the selected fiscal year. Select the authorized fiscal year for that period or specify the month explicitly.'));
             }
         }
 
         if ($explicitMonth !== null) {
             if ($explicitMonth < 1 || $explicitMonth > 12) {
-                throw new InvalidArgumentException("شماره ماه شمسی باید عددی بین ۱ تا ۱۲ باشد. مقدار وارد شده: {$explicitMonth}");
+                throw new InvalidArgumentException(__('Jalali month must be between 1 and 12. Given: :month', ['month' => $explicitMonth]));
             }
 
             $range = self::getJalaliMonthGregorianRange($fiscalYearNumber, $explicitMonth);
@@ -371,7 +371,6 @@ class ContextResolver
         $fiscalYearId = self::resolveFiscalYearId($arguments);
         $fiscalYearNumber = self::resolveFiscalYearNumber($fiscalYearId, $arguments);
 
-        $fiscalYearTitle = (string) $fiscalYearNumber;
         $fy = self::resolveFiscalYear($arguments);
         $fiscalYearTitle = (string) ($fy->title ?? $fy->year);
 

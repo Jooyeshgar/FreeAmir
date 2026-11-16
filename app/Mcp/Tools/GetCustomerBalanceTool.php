@@ -60,7 +60,7 @@ class GetCustomerBalanceTool extends AccountingTool
             return $this->success([
                 'fiscal_year_id' => ContextResolver::resolveFiscalYearId($arguments),
                 'found' => false,
-                'message' => "طرف‌حسابی با مشخصات '{$queryStr}' یافت نشد.",
+                'message' => __("No customer found matching ':query'.", ['query' => $queryStr]),
                 'customers' => [],
             ]);
         }
