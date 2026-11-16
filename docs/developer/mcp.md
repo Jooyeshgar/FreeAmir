@@ -41,7 +41,7 @@ php artisan mcp:serve
 2. **بررسی دو لایه (User Permissions & Token Abilities):** ابزارها تنها در صورتی برای توکن نمایش داده شده و اجرا می‌شوند که:
    - کاربر ایجادکننده توکن آن مجوز را داشته باشد.
    - دسترسی مربوطه در زمان ایجاد توکن به آن داده شده باشد (Token Ability).
-3. **فقط‌خواندنی:** تمام ابزارهای حسابداری MCP در وضعیت Read-Only (`readOnlyHint: true`) و فاقد عملیات تخریبی (`destructiveHint: false`) هستند.
+3. **نوع عملیات:** ابزارهای گزارش `readOnlyHint: true` دارند. ابزارهای ایجاد رکورد `readOnlyHint: false` و `destructiveHint: false` دارند و فقط در سال مالی باز و مجاز اجرا می‌شوند.
 4. **ایزوله‌سازی سال مالی:** در فراخوانی هر ابزار، سال مالی و شرکت مربوطه به صورت امن ست شده و در بلاک `finally` به وضعیت اولیه بازگردانده می‌شود.
 
 ### دسترسی‌های لازم برای هر ابزار:
@@ -53,6 +53,9 @@ php artisan mcp:serve
 | `get_financial_summary` | خلاصه وضعیت مالی کل و برترین سرفصل‌های درآمد و هزینه | `reports.trial-balance` یا `reports.ledger` یا (`reports.company-overview` + `documents.show`) |
 | `get_invoices_summary` | خلاصه فروش و خرید، تفکیک ۱۲ ماهه و فاکتورهای اخیر | `invoices.index` یا `invoices.show` (مشاهده نام مشتریان نیاز به `customers.index` دارد) |
 | `get_customer_balance` | استعلام مانده حساب، بدهکار/بستانکار و مشخصات طرف‌حساب | `customers.show` |
+| `create_customer` | ایجاد مشتری/طرف‌حساب و سرفصل حسابداری آن | `customers.store` |
+| `create_product` | تعریف کالا، قیمت، گروه و سرفصل‌های حسابداری | `products.store` |
+| `create_invoice` | ایجاد فاکتور خرید یا فروش تأییدنشده همراه اقلام | `invoices.store` |
 
 ---
 
@@ -90,6 +93,36 @@ php artisan mcp:serve
   - `fiscal_year_id`: شناسه سال مالی.
 
 ---
+
+### ۶. ابزارهای ایجاد رکورد
+
+هر سه ابزار به `fiscal_year_id` صریح نیاز دارند. سال مالی باید باز و در دسترس مالک توکن باشد؛ گروه، مشتری، انبار و اقلام ارجاع‌شده نیز باید متعلق به همان سال باشند. دسترسی ثبت باید هم برای کاربر و هم در توانایی‌های توکن فعال باشد. `get_current_context` با هر یک از سه مجوز ثبت نیز در دسترس است.
+
+- `create_customer`: ورودی‌های الزامی `name`، `group_id` و `type` هستند. نوع طرف‌حساب یکی از `individual`، `legal_entity`، `civil_partnership` یا `foreign_national` است. ورودی‌های اختیاری: `phone`، `mobile`، `email`، `personal_code`، `postal_code`، `address`، `description` و `subject_code`. اعتبارسنجی و ساخت سرفصل از مسیر فعلی برنامه انجام می‌شود.
+- `create_product`: ورودی‌های الزامی `name`، `group_id` و `oversell` (بولی) هستند. ورودی‌های اختیاری: `code` (در صورت نبود تولید می‌شود)، `quantity_warning`، `selling_price`، `vat`، `location` و `description`. موجودی اولیه صفر است؛ موجودی از مسیر عادی عملیات انبار ثبت می‌شود.
+- `create_invoice`: ورودی‌های الزامی `invoice_type` (فقط `sell` یا `buy`)، `customer_id`، `warehouse_id`، `number`، `date` (تاریخ میلادی `YYYY-MM-DD` مستقل از زبان رابط) و `items` (۱ تا ۵۰۰ ردیف) هستند. `title`، `description` و `subtraction` اختیاری‌اند.
+
+هر ردیف فاکتور شامل `item_type` (`product` یا `service`)، `item_id`، `quantity` و `unit` (قیمت واحد) است. `discount` مبلغ تخفیف کل ردیف به ریال، `vat` درصد مالیات بین صفر و صد و `description` شرح اختیاری است. سرویس فعلی جمع مبالغ را محاسبه می‌کند؛ اقلام تکراری، تخفیف نامعتبر و مبالغ خارج از حدود رد می‌شوند. حداقل تعداد مانند فرم وب فعلی ۱ است.
+
+نمونه ورودی `create_invoice` (شناسه‌ها باید در همان سال مالی وجود داشته باشند):
+
+```json
+{
+  "fiscal_year_id": 1,
+  "invoice_type": "sell",
+  "customer_id": 10,
+  "warehouse_id": 2,
+  "number": 101,
+  "date": "2026-11-16",
+  "items": [
+    {"item_type": "product", "item_id": 20, "quantity": 2, "unit": 100000, "vat": 10}
+  ]
+}
+```
+
+پاسخ موفق شناسه، سال مالی و اطلاعات رکورد را برمی‌گرداند. پاسخ فاکتور شامل وضعیت واقعی (`pre_invoice` برای فروش و `pending` برای خرید)، مبلغ محاسبه‌شده و اقلام است. این ابزارها فاکتور را تأیید، تسویه، ابطال یا به سامانه مودیان ارسال نمی‌کنند. ایجاد draft سند حسابداری یا تغییر موجودی ندارد. ورودی ناشناخته، از جمله `approve` و `status`، رد می‌شود. خطای اعتبارسنجی با `isError: true` و پیام فیلدها برمی‌گردد؛ جزئیات خطاهای داخلی افشا نمی‌شود.
+
+این ابزارها تضمین جلوگیری از ثبت تکراری در retry ندارند. پس از timeout نامشخص، ابتدا نتیجه ثبت را بررسی کنید. قواعد یکتایی فعلی برنامه جایگزین تضمین اجرای یک‌باره نیستند.
 
 ## ۴. نمونه پیکربندی کلاینت‌ها (Configuration Examples)
 

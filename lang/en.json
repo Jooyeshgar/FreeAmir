@@ -3724,5 +3724,10 @@
     "Month number must be between 1 and 12. Given: :month": "Month number must be between 1 and 12. Given: :month",
     "The relative period is not in the selected fiscal year. Select the authorized fiscal year for that period or specify the month explicitly.": "The relative period is not in the selected fiscal year. Select the authorized fiscal year for that period or specify the month explicitly.",
     "Jalali month must be between 1 and 12. Given: :month": "Jalali month must be between 1 and 12. Given: :month",
-    "No customer found matching ':query'.": "No customer found matching ':query'."
+    "No customer found matching ':query'.": "No customer found matching ':query'.",
+    "Failed to create record. Please try again or contact support.": "Failed to create record. Please try again or contact support.",
+    "The given data was invalid.": "The given data was invalid.",
+    "The selected customer group is invalid.": "The selected customer group is invalid.",
+    "The selected product group is invalid.": "The selected product group is invalid.",
+    "The selected item is invalid.": "The selected item is invalid."
 }

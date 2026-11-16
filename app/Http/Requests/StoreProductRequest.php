@@ -72,7 +72,10 @@ class StoreProductRequest extends FormRequest
         $validatedData = $this->validated();
 
         if (empty($validatedData['code'])) {
-            $maxCode = Product::where('fiscal_year_id', getActiveFiscalYear())->whereRaw('code REGEXP "^[0-9]+$"')
+            $numericCodeCondition = (new Product)->getConnection()->getDriverName() === 'sqlite'
+                ? "code <> '' AND code NOT GLOB '*[^0-9]*'"
+                : 'code REGEXP "^[0-9]+$"';
+            $maxCode = Product::where('fiscal_year_id', getActiveFiscalYear())->whereRaw($numericCodeCondition)
                 ->selectRaw('MAX(CAST(code AS UNSIGNED)) AS max_code')->value('max_code');
 
             $validatedData['code'] = ($maxCode ?: 0) + 1;

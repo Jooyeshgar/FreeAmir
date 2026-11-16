@@ -3,6 +3,7 @@
 namespace App\Mcp\Support;
 
 use App\Mcp\Auth\AuthContext;
+use App\Models\Config;
 use Illuminate\Support\Carbon;
 use InvalidArgumentException;
 
@@ -38,11 +39,21 @@ class ContextResolver
     public static function withAuthContext(?AuthContext $context, callable $callback): mixed
     {
         $previous = self::$authContext;
+        $guard = auth()->guard();
+        $previousUser = $guard->hasUser() ? $guard->user() : null;
         self::$authContext = $context;
+        if ($context) {
+            $guard->setUser($context->user);
+        }
         try {
             return $callback();
         } finally {
             self::$authContext = $previous;
+            if ($previousUser) {
+                $guard->setUser($previousUser);
+            } else {
+                $guard->forgetUser();
+            }
         }
     }
 
@@ -66,6 +77,10 @@ class ContextResolver
         $previousFiscalYear = config('active-fiscal-year-id');
         $previousCompany = config('active-company-id');
         $previousFiscalYearNumber = config('active-company-fiscal-year');
+        $previousAmirConfig = config('amir');
+        $previousActivityLogEnabled = config('activitylog.enabled');
+        $previousAppConfig = config('app');
+        $previousLocale = app()->getLocale();
         try {
             $fiscalYear = self::resolveFiscalYear($arguments);
             config([
@@ -73,6 +88,14 @@ class ContextResolver
                 'active-company-id' => (int) $fiscalYear->company_id,
                 'active-company-fiscal-year' => (int) $fiscalYear->year,
             ]);
+            $settings = Config::withoutGlobalScopes()->whereNull('fiscal_year_id')->get()
+                ->merge(Config::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYear->id)->get());
+            config(['amir' => []]);
+            foreach ($settings as $setting) {
+                if ($setting->value !== null) {
+                    self::applySetting($setting->key, $setting->value);
+                }
+            }
 
             return $callback();
         } finally {
@@ -80,7 +103,35 @@ class ContextResolver
                 'active-fiscal-year-id' => $previousFiscalYear,
                 'active-company-id' => $previousCompany,
                 'active-company-fiscal-year' => $previousFiscalYearNumber,
+                'amir' => $previousAmirConfig,
+                'activitylog.enabled' => $previousActivityLogEnabled,
+                'app' => $previousAppConfig,
             ]);
+            app()->setLocale($previousLocale);
+        }
+    }
+
+    private static function applySetting(string $key, mixed $value): void
+    {
+        config(['amir.'.$key => $value]);
+
+        if ($key === 'app_activity_logger_enabled') {
+            config(['activitylog.enabled' => str($value)->toBoolean()]);
+        }
+
+        if (str_starts_with($key, 'app_')) {
+            $value = in_array($key, ['app_debug', 'app_registration', 'app_email_verification'], true)
+                ? str($value)->toBoolean()
+                : $value;
+            config([str_replace('app_', 'app.', $key) => $value]);
+
+            if ($key === 'app_locale' && in_array($value, ['fa', 'en'], true)) {
+                app()->setLocale($value);
+            }
+        }
+
+        if (! config('app.registration')) {
+            config(['app.email_verification' => false]);
         }
     }
 

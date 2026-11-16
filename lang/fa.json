@@ -3715,5 +3715,10 @@
     "Month number must be between 1 and 12. Given: :month": "شماره ماه باید بین ۱ تا ۱۲ باشد. مقدار داده شده: :month",
     "The relative period is not in the selected fiscal year. Select the authorized fiscal year for that period or specify the month explicitly.": "بازه نسبی در سال مالی انتخاب‌شده قرار ندارد. سال مالی مجاز مربوط به آن بازه را انتخاب کنید یا ماه را صریحاً مشخص کنید.",
     "Jalali month must be between 1 and 12. Given: :month": "شماره ماه شمسی باید عددی بین ۱ تا ۱۲ باشد. مقدار وارد شده: :month",
-    "No customer found matching ':query'.": "طرف‌حسابی با مشخصات ':query' یافت نشد."
+    "No customer found matching ':query'.": "طرف‌حسابی با مشخصات ':query' یافت نشد.",
+    "Failed to create record. Please try again or contact support.": "ایجاد رکورد با خطا مواجه شد. لطفاً دوباره تلاش کنید یا با پشتیبانی تماس بگیرید.",
+    "The given data was invalid.": "اطلاعات واردشده معتبر نیست.",
+    "The selected customer group is invalid.": "گروه مشتری انتخاب‌شده معتبر نیست.",
+    "The selected product group is invalid.": "گروه کالای انتخاب‌شده معتبر نیست.",
+    "The selected item is invalid.": "قلم انتخاب‌شده معتبر نیست."
 }

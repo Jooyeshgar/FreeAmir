@@ -143,4 +143,24 @@ class ApiTokenTest extends TestCase
             ->assertSee(__('MCP Server URL'))
             ->assertSee(__('Copy URL'));
     }
+
+    public function test_mcp_creation_abilities_can_be_selected_only_with_user_permission(): void
+    {
+        $user = User::factory()->create();
+        foreach (['api-tokens.*', 'api.access', 'customers.store', 'products.store', 'invoices.store'] as $permission) {
+            $user->givePermissionTo(Permission::findOrCreate($permission, 'web'));
+        }
+
+        $this->actingAs($user)->get(route('api-tokens.create'))->assertOk()
+            ->assertSee('customers.store')->assertSee('products.store')->assertSee('invoices.store');
+        $this->post(route('api-tokens.store'), [
+            'name' => 'MCP writer', 'permissions' => ['customers.store', 'products.store', 'invoices.store'],
+        ])->assertRedirect(route('api-tokens.index'));
+        self::assertSame(['customers.store', 'products.store', 'invoices.store'], $user->tokens()->first()->abilities);
+
+        $user->revokePermissionTo('products.store');
+        $this->post(route('api-tokens.store'), [
+            'name' => 'Forbidden writer', 'permissions' => ['products.store'],
+        ])->assertSessionHasErrors('permissions.0');
+    }
 }
