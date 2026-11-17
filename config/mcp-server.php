@@ -8,8 +8,10 @@ return [
             Start with get_current_context to identify the available fiscal years and calendar context.
             Ask the user to clarify an ambiguous company or fiscal year. Pass fiscal_year_id explicitly
             to each report; a context lookup does not change subsequent calls. Preserve the returned
-            fiscal year and date range when explaining results. Months are Jalali; monetary amounts
-            are Iranian rials, not tomans. Clearly label any requested currency conversion.
+            fiscal year and date range when explaining results. Month numbers and fiscal year numbering
+            are Jalali. Date fields use Gregorian YYYY-MM-DD unless explicitly named jalali.
+            Monetary amounts use the selected fiscal year's company currency, returned as currency.
+            Clearly label any requested currency conversion.
             Distinguish successful zero results, no matches, denied access, and tool failures.
             Never invent figures or interpret a failed tool call as a zero balance. Recent invoice
             lists are limited samples, not complete ledgers. Invoice totals are not accounting profit;
@@ -21,8 +23,9 @@ return [
             creation actions. Products start with zero stock. create_invoice creates unapproved
             sales/purchase drafts only; it never approves, posts, pays, or submits an invoice.
             Invoice dates are Gregorian YYYY-MM-DD regardless of UI locale; VAT is a percentage,
-            discounts and prices are rials. Use existing entity IDs, never guess IDs or select an
-            ambiguous customer, group, warehouse, or product. Describe the actual returned status.
+            discounts and prices use the selected fiscal year's company currency. Use existing entity IDs,
+            never guess IDs or select an ambiguous customer, group, warehouse, or product.
+            Describe the actual returned status.
             Creation tools are not idempotent. Never automatically retry a creation after an uncertain
             network failure: the record may already exist. Reconcile the outcome before retrying.
             Do not use terminal commands, files, or direct database access to bypass these tools'

@@ -14,7 +14,7 @@ class CreateCustomerTool extends AccountingTool
 {
     protected string $name = 'create_customer';
 
-    protected string $description = 'ایجاد مشتری یا طرف‌حساب جدید در سال مالی انتخاب‌شده.';
+    protected string $description = 'Create a customer or account party in the selected authorized open fiscal year.';
 
     protected array $permissionGroups = [['customers.store']];
 
@@ -25,8 +25,8 @@ class CreateCustomerTool extends AccountingTool
         return [
             'fiscal_year_id' => $schema->integer()->min(1)->required(),
             'name' => $schema->string()->min(1)->max(100)->required(),
-            'group_id' => $schema->integer()->min(1)->description('شناسه گروه طرف‌حساب. اختیاری؛ در صورت عدم ارسال از اولین گروه فعال سال مالی استفاده می‌شود.'),
-            'type' => $schema->string()->enum(CustomerType::valueNames())->description('نوع طرف‌حساب. اختیاری؛ پیش‌فرض: individual.'),
+            'group_id' => $schema->integer()->min(1)->description('Optional customer group ID. Defaults to the first customer group in the selected fiscal year.'),
+            'type' => $schema->string()->enum(CustomerType::valueNames())->description('Optional customer type. Defaults to individual.'),
             'phone' => $schema->string()->max(15),
             'mobile' => $schema->string()->max(15),
             'email' => $schema->string()->max(64),

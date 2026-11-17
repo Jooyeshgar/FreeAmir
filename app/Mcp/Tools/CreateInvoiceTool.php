@@ -19,7 +19,7 @@ class CreateInvoiceTool extends AccountingTool
 {
     protected string $name = 'create_invoice';
 
-    protected string $description = 'ایجاد پیش‌فاکتور خرید یا فروش با اقلام و قیمت‌ها؛ فاکتور تأیید نمی‌شود.';
+    protected string $description = 'Create an unapproved purchase or sales draft in the selected authorized open fiscal year. Prices and discounts use its company currency.';
 
     protected array $permissionGroups = [['invoices.store']];
 
@@ -31,9 +31,9 @@ class CreateInvoiceTool extends AccountingTool
             'item_type' => $schema->string()->enum(['product', 'service'])->required(),
             'item_id' => $schema->integer()->min(1)->required(),
             'quantity' => $schema->number()->min(1)->required(),
-            'unit' => $schema->number()->min(0)->required(),
-            'discount' => $schema->number()->min(0),
-            'vat' => $schema->number()->min(0)->max(100),
+            'unit' => $schema->number()->min(0)->description('Unit price in the selected fiscal year company currency.')->required(),
+            'discount' => $schema->number()->min(0)->description('Total line discount in the selected fiscal year company currency, not a percentage.'),
+            'vat' => $schema->number()->min(0)->max(100)->description('VAT percentage from 0 to 100.'),
             'description' => $schema->string()->max(500),
         ])->withoutAdditionalProperties();
 
@@ -41,12 +41,12 @@ class CreateInvoiceTool extends AccountingTool
             'fiscal_year_id' => $schema->integer()->min(1)->required(),
             'invoice_type' => $schema->string()->enum(['buy', 'sell'])->required(),
             'customer_id' => $schema->integer()->min(1)->required(),
-            'warehouse_id' => $schema->integer()->min(1)->description('شناسه انبار. اختیاری؛ در صورت عدم ارسال از انبار اصلی سال مالی استفاده می‌شود.'),
-            'number' => $schema->integer()->min(1)->description('شماره فاکتور. اختیاری؛ در صورت عدم ارسال، به صورت خودکار شماره بعدی انتخاب می‌شود.'),
-            'date' => $schema->string()->description('Gregorian date in YYYY-MM-DD format (اختیاری؛ پیش‌فرض: امروز).'),
+            'warehouse_id' => $schema->integer()->min(1)->description('Optional warehouse ID. Defaults to the first warehouse in the selected fiscal year.'),
+            'number' => $schema->integer()->min(1)->description('Optional invoice number. Defaults to the next number for this invoice type in the selected fiscal year.'),
+            'date' => $schema->string()->description('Optional Gregorian date in YYYY-MM-DD format, regardless of locale. Defaults to today.'),
             'title' => $schema->string()->max(255),
             'description' => $schema->string(),
-            'subtraction' => $schema->number()->min(0),
+            'subtraction' => $schema->number()->min(0)->description('Invoice deduction in the selected fiscal year company currency.'),
             'items' => $schema->array()->min(1)->max(500)->items($item)->required(),
         ];
     }
@@ -155,6 +155,7 @@ class CreateInvoiceTool extends AccountingTool
             'customer_id' => $invoice->customer_id,
             'warehouse_id' => $invoice->warehouse_id,
             'amount' => (float) $invoice->amount,
+            'currency' => ContextResolver::resolveFiscalYearCurrency($arguments),
             'vat' => (float) $invoice->vat,
             'item_count' => $invoice->items->count(),
             'approved' => false,

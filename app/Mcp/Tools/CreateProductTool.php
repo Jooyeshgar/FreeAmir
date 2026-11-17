@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools;
 
 use App\Http\Requests\StoreProductRequest;
+use App\Mcp\Support\ContextResolver;
 use App\Models\ProductGroup;
 use App\Services\ProductService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -13,7 +14,7 @@ class CreateProductTool extends AccountingTool
 {
     protected string $name = 'create_product';
 
-    protected string $description = 'ایجاد کالای جدید با قیمت ریالی و گروه کالایی؛ موجودی اولیه صفر است.';
+    protected string $description = 'Create a product in the selected authorized open fiscal year. Prices use its company currency; initial stock is zero.';
 
     protected array $permissionGroups = [['products.store']];
 
@@ -24,12 +25,12 @@ class CreateProductTool extends AccountingTool
         return [
             'fiscal_year_id' => $schema->integer()->min(1)->required(),
             'name' => $schema->string()->min(1)->max(20)->required(),
-            'group_id' => $schema->integer()->min(1)->description('شناسه گروه کالا. اختیاری؛ در صورت عدم ارسال از اولین گروه کالای فعال سال مالی استفاده می‌شود.'),
+            'group_id' => $schema->integer()->min(1)->description('Optional product group ID. Defaults to the first product group in the selected fiscal year.'),
             'code' => $schema->string()->max(50),
             'quantity_warning' => $schema->number()->min(0),
-            'selling_price' => $schema->number()->min(0),
-            'vat' => $schema->number()->min(0)->max(100),
-            'oversell' => $schema->boolean()->description('امکان فروش بیش از موجودی (پیش‌فرض: false).'),
+            'selling_price' => $schema->number()->min(0)->description('Selling price in the selected fiscal year company currency.'),
+            'vat' => $schema->number()->min(0)->max(100)->description('VAT percentage from 0 to 100.'),
+            'oversell' => $schema->boolean()->description('Allow sales beyond available stock. Defaults to false.'),
             'location' => $schema->string()->max(50),
             'description' => $schema->string()->max(150),
         ];
@@ -87,6 +88,7 @@ class CreateProductTool extends AccountingTool
             'group_id' => $product->group,
             'quantity' => (float) $product->quantity,
             'selling_price' => (float) $product->selling_price,
+            'currency' => ContextResolver::resolveFiscalYearCurrency($arguments),
             'message' => __('Product created successfully.'),
         ]);
     }

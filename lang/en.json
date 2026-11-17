@@ -3732,5 +3732,21 @@
     "The given data was invalid.": "The given data was invalid.",
     "The selected customer group is invalid.": "The selected customer group is invalid.",
     "The selected product group is invalid.": "The selected product group is invalid.",
-    "The selected item is invalid.": "The selected item is invalid."
+    "The selected item is invalid.": "The selected item is invalid.",
+    "Today is :jalali_date (:gregorian_date). Current month: :month (month :month_number). Fiscal year: :fiscal_year (from :start to :end), currency: :currency. Available fiscal years: :available_years.": "Today is :jalali_date (:gregorian_date). Current month: :month (month :month_number). Fiscal year: :fiscal_year (from :start to :end), currency: :currency. Available fiscal years: :available_years.",
+    ":name (ID :id)": ":name (ID :id)",
+    "Customer groups: :customer_groups. Warehouses: :warehouses.": "Customer groups: :customer_groups. Warehouses: :warehouses.",
+    "Profitable": "Profitable",
+    "Loss-making": "Loss-making",
+    "net profit": "net profit",
+    "net loss": "net loss",
+    "Settled (zero)": "Settled (zero)",
+    "Month :month": "Month :month",
+    "For :month (:start to :end), :sales_count sales invoices totaling :sales_amount :currency and :purchase_count purchase invoices totaling :purchase_amount :currency were recorded.": "For :month (:start to :end), :sales_count sales invoices totaling :sales_amount :currency and :purchase_count purchase invoices totaling :purchase_amount :currency were recorded.",
+    "Fiscal year :year summary: :sales_count sales invoices totaling :sales_amount :currency and :purchase_count purchase invoices totaling :purchase_amount :currency were recorded.": "Fiscal year :year summary: :sales_count sales invoices totaling :sales_amount :currency and :purchase_count purchase invoices totaling :purchase_amount :currency were recorded.",
+    "For :month (:start to :end): income was :income :currency, expenses were :cost :currency, and :result was :profit :currency (profit margin: :margin%).": "For :month (:start to :end): income was :income :currency, expenses were :cost :currency, and :result was :profit :currency (profit margin: :margin%).",
+    "Fiscal year :year: total income was :income :currency, total expenses were :cost :currency, and :result was :profit :currency (profit margin: :margin%).": "Fiscal year :year: total income was :income :currency, total expenses were :cost :currency, and :result was :profit :currency (profit margin: :margin%).",
+    "Financial summary: total income :income :currency, total expenses :cost :currency, net profit :profit :currency, with a :margin% margin.": "Financial summary: total income :income :currency, total expenses :cost :currency, net profit :profit :currency, with a :margin% margin.",
+    "Account party :name (ID :id) has a balance of :balance.": "Account party :name (ID :id) has a balance of :balance.",
+    "Found :count matching customers. The first result is :name with a balance of :balance.": "Found :count matching customers. The first result is :name with a balance of :balance."
 }

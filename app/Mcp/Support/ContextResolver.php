@@ -7,32 +7,26 @@ use App\Models\Config;
 use App\Models\CustomerGroup;
 use App\Models\ProductGroup;
 use App\Models\Warehouse;
-use Illuminate\Support\Carbon;
 use InvalidArgumentException;
 
 class ContextResolver
 {
     public const MONTH_NAMES = [
-        1 => 'فروردین',
-        2 => 'اردیبهشت',
-        3 => 'خرداد',
-        4 => 'تیر',
-        5 => 'مرداد',
-        6 => 'شهریور',
-        7 => 'مهر',
-        8 => 'آبان',
-        9 => 'آذر',
-        10 => 'دی',
-        11 => 'بهمن',
-        12 => 'اسفند',
+        1 => 'Farvardin',
+        2 => 'Ordibehesht',
+        3 => 'Khordad',
+        4 => 'Tir',
+        5 => 'Mordad',
+        6 => 'Shahrivar',
+        7 => 'Mehr',
+        8 => 'Aban',
+        9 => 'Azar',
+        10 => 'Dey',
+        11 => 'Bahman',
+        12 => 'Esfand',
     ];
 
     protected static ?AuthContext $authContext = null;
-
-    private static function today(): Carbon
-    {
-        return Carbon::now(config('app.timezone', 'UTC'));
-    }
 
     public static function authContext(): ?AuthContext
     {
@@ -58,11 +52,6 @@ class ContextResolver
                 $guard->forgetUser();
             }
         }
-    }
-
-    public static function can(string $permission): bool
-    {
-        return self::$authContext?->can($permission) ?? false;
     }
 
     /** Only the authenticated token owner's assigned fiscal years are eligible. */
@@ -178,7 +167,7 @@ class ContextResolver
         return $years->first();
     }
 
-    public static function resolveFiscalYearId(array $arguments = []): ?int
+    public static function resolveFiscalYearId(array $arguments = []): int
     {
         return (int) self::resolveFiscalYear($arguments)->id;
     }
@@ -192,27 +181,23 @@ class ContextResolver
         return (int) self::resolveFiscalYear($arguments)->year;
     }
 
+    public static function resolveFiscalYearCurrency(array $arguments = []): string
+    {
+        return (string) __(self::resolveFiscalYear($arguments)->company?->currency ?: 'Rial');
+    }
+
     public static function getAvailableFiscalYears(): array
     {
         $activeId = self::resolveFiscalYearId();
 
-        return self::accessibleFiscalYears()->orderByDesc('fiscal_years.year')->get()->map(fn ($fy) => [
+        return self::accessibleFiscalYears()->with('company')->orderByDesc('fiscal_years.year')->get()->map(fn ($fy) => [
             'id' => (int) $fy->id,
             'company_id' => (int) $fy->company_id,
+            'currency' => (string) __($fy->company?->currency ?: 'Rial'),
             'year' => (int) $fy->year,
             'title' => (string) ($fy->title ?? $fy->year),
             'is_active' => (int) $fy->id === $activeId,
         ])->values()->all();
-    }
-
-    public static function getAvailableYearsString(): string
-    {
-        return '['.implode(', ', array_map(fn ($fy) => $fy['year'].' (شناسه '.$fy['id'].')', self::getAvailableFiscalYears())).']';
-    }
-
-    public static function resolveCompanyId(array $arguments = []): ?int
-    {
-        return (int) self::resolveFiscalYear($arguments)->company_id;
     }
 
     /**
@@ -244,26 +229,6 @@ class ContextResolver
     }
 
     /**
-     * Convert Jalali date to Gregorian date array: [year, month, day].
-     *
-     * @return array{0: int, 1: int, 2: int}
-     */
-    public static function jalaliToGregorian(int $jy, int $jm, int $jd): array
-    {
-        return jalali_to_gregorian($jy, $jm, $jd);
-    }
-
-    /**
-     * Convert Gregorian date to Jalali date array: [year, month, day].
-     *
-     * @return array{0: int, 1: int, 2: int}
-     */
-    public static function gregorianToJalali(int $gy, int $gm, int $gd): array
-    {
-        return gregorian_to_jalali($gy, $gm, $gd);
-    }
-
-    /**
      * Convert Gregorian date string (YYYY-MM-DD or datetime) to Jalali date string (YYYY/MM/DD).
      */
     public static function toJalaliDateString(?string $gregorianDate): ?string
@@ -278,7 +243,7 @@ class ContextResolver
             return null;
         }
 
-        $j = self::gregorianToJalali((int) $date[0], (int) $date[1], (int) $date[2]);
+        $j = gregorian_to_jalali((int) $date[0], (int) $date[1], (int) $date[2]);
 
         return sprintf('%04d/%02d/%02d', $j[0], $j[1], $j[2]);
     }
@@ -291,8 +256,8 @@ class ContextResolver
     public static function getJalaliMonthGregorianRange(int $jy, int $month): array
     {
         $days = self::getDaysInJalaliMonth($jy, $month);
-        $startG = self::jalaliToGregorian($jy, $month, 1);
-        $endG = self::jalaliToGregorian($jy, $month, $days);
+        $startG = jalali_to_gregorian($jy, $month, 1);
+        $endG = jalali_to_gregorian($jy, $month, $days);
 
         return [
             'start' => sprintf('%04d-%02d-%02d', $startG[0], $startG[1], $startG[2]),
@@ -323,8 +288,8 @@ class ContextResolver
     {
         $fiscalYearId = self::resolveFiscalYearId($arguments);
         $fiscalYearNumber = self::resolveFiscalYearNumber($fiscalYearId, $arguments);
-        $today = self::today();
-        $todayJalali = self::gregorianToJalali($today->year, $today->month, $today->day);
+        $today = now();
+        $todayJalali = gregorian_to_jalali($today->year, $today->month, $today->day);
         $currentMonth = $todayJalali[1];
 
         $explicitMonth = isset($arguments['month']) ? (int) $arguments['month'] : null;
@@ -348,7 +313,7 @@ class ContextResolver
                 'mode' => 'month',
                 'period' => 'specific_month',
                 'month' => $explicitMonth,
-                'month_name' => self::MONTH_NAMES[$explicitMonth] ?? "ماه {$explicitMonth}",
+                'month_name' => __(self::MONTH_NAMES[$explicitMonth]),
                 'start_date' => $range['start'],
                 'end_date' => $range['end'],
                 'days_in_month' => $range['days'],
@@ -365,7 +330,7 @@ class ContextResolver
                 'mode' => 'month',
                 'period' => 'current_month',
                 'month' => $currentMonth,
-                'month_name' => self::MONTH_NAMES[$currentMonth] ?? "ماه {$currentMonth}",
+                'month_name' => __(self::MONTH_NAMES[$currentMonth]),
                 'start_date' => $range['start'],
                 'end_date' => $range['end'],
                 'days_in_month' => $range['days'],
@@ -383,7 +348,7 @@ class ContextResolver
                 'mode' => 'month',
                 'period' => 'previous_month',
                 'month' => $prevMonth,
-                'month_name' => self::MONTH_NAMES[$prevMonth] ?? "ماه {$prevMonth}",
+                'month_name' => __(self::MONTH_NAMES[$prevMonth]),
                 'start_date' => $range['start'],
                 'end_date' => $range['end'],
                 'days_in_month' => $range['days'],
@@ -394,9 +359,9 @@ class ContextResolver
         }
 
         // Default: Full Fiscal Year
-        $startG = self::jalaliToGregorian($fiscalYearNumber, 1, 1);
+        $startG = jalali_to_gregorian($fiscalYearNumber, 1, 1);
         $lastDayEsfand = self::getDaysInJalaliMonth($fiscalYearNumber, 12);
-        $endG = self::jalaliToGregorian($fiscalYearNumber, 12, $lastDayEsfand);
+        $endG = jalali_to_gregorian($fiscalYearNumber, 12, $lastDayEsfand);
 
         return [
             'mode' => 'fiscal_year',
@@ -420,27 +385,30 @@ class ContextResolver
      */
     public static function getCurrentContext(array $arguments = []): array
     {
-        $today = self::today();
-        $todayJalali = self::gregorianToJalali($today->year, $today->month, $today->day);
+        $today = now();
+        $todayJalali = gregorian_to_jalali($today->year, $today->month, $today->day);
         $fiscalYearId = self::resolveFiscalYearId($arguments);
         $fiscalYearNumber = self::resolveFiscalYearNumber($fiscalYearId, $arguments);
 
         $fy = self::resolveFiscalYear($arguments);
         $fiscalYearTitle = (string) ($fy->title ?? $fy->year);
+        $currency = self::resolveFiscalYearCurrency($arguments);
 
-        $fyStart = self::jalaliToGregorian($fiscalYearNumber, 1, 1);
+        $fyStart = jalali_to_gregorian($fiscalYearNumber, 1, 1);
         $fyEndDays = self::getDaysInJalaliMonth($fiscalYearNumber, 12);
-        $fyEnd = self::jalaliToGregorian($fiscalYearNumber, 12, $fyEndDays);
+        $fyEnd = jalali_to_gregorian($fiscalYearNumber, 12, $fyEndDays);
 
         return [
             'today_jalali' => sprintf('%04d/%02d/%02d', $todayJalali[0], $todayJalali[1], $todayJalali[2]),
+            'currency' => $currency,
             'today_gregorian' => $today->toDateString(),
             'current_jalali_year' => $todayJalali[0],
             'current_month_number' => $todayJalali[1],
-            'current_month_name' => self::MONTH_NAMES[$todayJalali[1]] ?? "ماه {$todayJalali[1]}",
+            'current_month_name' => __(self::MONTH_NAMES[$todayJalali[1]]),
             'current_jalali_day' => $todayJalali[2],
             'active_fiscal_year' => [
                 'id' => $fiscalYearId,
+                'currency' => $currency,
                 'year' => $fiscalYearNumber,
                 'title' => $fiscalYearTitle,
                 'is_current_calendar_year' => ($todayJalali[0] === $fiscalYearNumber),

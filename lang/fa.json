@@ -3724,5 +3724,21 @@
     "The selected warehouse is invalid.": "انبار انتخاب‌شده معتبر نیست.",
     "No customer group found for this fiscal year.": "هیچ گروه مشتری در این سال مالی یافت نشد.",
     "No product group found for this fiscal year.": "هیچ گروه کالایی در این سال مالی یافت نشد.",
-    "No warehouse found for this fiscal year.": "هیچ انباری در این سال مالی یافت نشد."
+    "No warehouse found for this fiscal year.": "هیچ انباری در این سال مالی یافت نشد.",
+    "Today is :jalali_date (:gregorian_date). Current month: :month (month :month_number). Fiscal year: :fiscal_year (from :start to :end), currency: :currency. Available fiscal years: :available_years.": "امروز :jalali_date (:gregorian_date) است. ماه جاری: :month (ماه :month_number). سال مالی: :fiscal_year (از :start تا :end)، واحد پول: :currency. سال‌های مالی در دسترس: :available_years.",
+    ":name (ID :id)": ":name (شناسه :id)",
+    "Customer groups: :customer_groups. Warehouses: :warehouses.": "گروه‌های طرف‌حساب: :customer_groups. انبارها: :warehouses.",
+    "Profitable": "سودده",
+    "Loss-making": "زیان‌ده",
+    "net profit": "سود خالص",
+    "net loss": "زیان خالص",
+    "Settled (zero)": "تسویه (صفر)",
+    "Month :month": "ماه :month",
+    "For :month (:start to :end), :sales_count sales invoices totaling :sales_amount :currency and :purchase_count purchase invoices totaling :purchase_amount :currency were recorded.": "در :month (از :start تا :end)، :sales_count فاکتور فروش به مبلغ :sales_amount :currency و :purchase_count فاکتور خرید به مبلغ :purchase_amount :currency ثبت شده است.",
+    "Fiscal year :year summary: :sales_count sales invoices totaling :sales_amount :currency and :purchase_count purchase invoices totaling :purchase_amount :currency were recorded.": "خلاصه سال مالی :year: تعداد :sales_count فاکتور فروش به مبلغ :sales_amount :currency و تعداد :purchase_count فاکتور خرید به مبلغ :purchase_amount :currency ثبت شده است.",
+    "For :month (:start to :end): income was :income :currency, expenses were :cost :currency, and :result was :profit :currency (profit margin: :margin%).": "در :month (از :start تا :end)، درآمد :income :currency، هزینه :cost :currency و :result :profit :currency بوده است (حاشیه سود: :margin٪).",
+    "Fiscal year :year: total income was :income :currency, total expenses were :cost :currency, and :result was :profit :currency (profit margin: :margin%).": "در سال مالی :year، کل درآمد :income :currency، کل هزینه :cost :currency و :result :profit :currency بوده است (حاشیه سود: :margin٪).",
+    "Financial summary: total income :income :currency, total expenses :cost :currency, net profit :profit :currency, with a :margin% margin.": "خلاصه مالی: کل درآمد :income :currency، کل هزینه :cost :currency، سود خالص :profit :currency و حاشیه سود :margin٪.",
+    "Account party :name (ID :id) has a balance of :balance.": "طرف‌حساب :name (شناسه :id) مانده :balance دارد.",
+    "Found :count matching customers. The first result is :name with a balance of :balance.": ":count مشتری مطابق جستجو یافت شد. نخستین نتیجه :name با مانده :balance است."
 }
