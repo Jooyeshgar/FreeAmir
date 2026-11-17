@@ -139,7 +139,7 @@
                                     <p class="mt-1 max-w-56 truncate text-xs text-slate-500">{{ $fiscalYear->company->address ? localizeNumber($fiscalYear->company->address) : __('No address') }}</p>
                                 </td>
                                 <td class="whitespace-nowrap font-medium">{{ localizeNumber($fiscalYear->year) }}</td>
-                                <td class="whitespace-nowrap">{{ __($fiscalYear->company->currency) }}</td>
+                                <td class="whitespace-nowrap">{{ $fiscalYear->company->currency ?? '—' }}</td>
                                 <td class="min-w-40">
                                     <p class="font-medium text-slate-800 dark:text-slate-100">{{ $fiscalYear->company->national_code ?: '—' }}</p>
                                     <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
