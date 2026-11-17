@@ -124,8 +124,12 @@ class McpMutationTest extends TestCase
     #[TestWith(['fa'])]
     public function test_context_includes_customer_groups_and_warehouses(string $locale): void
     {
+        $this->year->company->update(['currency' => 'Rial']);
         Config::updateOrCreate(['key' => 'app_locale', 'fiscal_year_id' => $this->year->id], ['value' => $locale, 'type' => 1, 'category' => 1]);
         $result = $this->created('get_current_context', ['fiscal_year_id' => $this->year->id]);
+        self::assertSame('Rial', $result['currency']);
+        self::assertSame('Rial', $result['active_fiscal_year']['currency']);
+        self::assertSame('Rial', $result['available_fiscal_years'][0]['currency']);
         self::assertNotEmpty($result['customer_groups']);
         self::assertSame($this->customerGroup->id, $result['customer_groups'][0]['id']);
         self::assertNotEmpty($result['warehouses']);
@@ -137,14 +141,13 @@ class McpMutationTest extends TestCase
 
     #[TestWith(['create_product', 'USD', 'en'])]
     #[TestWith(['create_invoice', 'USD', 'en'])]
-    #[TestWith(['create_product', null, 'en'])]
-    #[TestWith(['create_invoice', null, 'en'])]
-    #[TestWith(['create_product', null, 'fa'])]
-    #[TestWith(['create_invoice', null, 'fa'])]
-    public function test_creation_uses_selected_company_currency_and_translated_messages(string $tool, ?string $currency, string $locale): void
+    #[TestWith(['create_product', 'Rial', 'en'])]
+    #[TestWith(['create_invoice', 'Rial', 'en'])]
+    #[TestWith(['create_product', 'Rial', 'fa'])]
+    #[TestWith(['create_invoice', 'Rial', 'fa'])]
+    public function test_creation_uses_selected_company_currency_and_translated_messages(string $tool, string $currency, string $locale): void
     {
-        $expectedCurrency = $currency ?? 'Rial';
-        $this->year->company->update(['currency' => $expectedCurrency]);
+        $this->year->company->update(['currency' => $currency]);
         $other = FiscalYear::factory()->create();
         $other->company->update(['currency' => 'EUR']);
         $this->user->fiscalYears()->attach($other);
@@ -155,7 +158,7 @@ class McpMutationTest extends TestCase
         $result = $this->created($tool, $this->arguments($tool));
 
         self::assertSame($this->year->id, $result['fiscal_year_id']);
-        self::assertSame($locale === 'fa' && $expectedCurrency === 'Rial' ? 'ریال' : $expectedCurrency, $result['currency']);
+        self::assertSame($currency, $result['currency']);
         self::assertSame(__($tool === 'create_product' ? 'Product created successfully.' : 'Invoice created successfully.', [], $locale), $result['message']);
         self::assertEquals($tool === 'create_product' ? 125.5 : 273.11, $result[$tool === 'create_product' ? 'selling_price' : 'amount']);
     }

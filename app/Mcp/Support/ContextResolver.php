@@ -183,7 +183,7 @@ class ContextResolver
 
     public static function resolveFiscalYearCurrency(array $arguments = []): string
     {
-        return (string) __(self::resolveFiscalYear($arguments)->company?->currency ?: 'Rial');
+        return (string) (self::resolveFiscalYear($arguments)->company?->currency ?: 'Rial');
     }
 
     public static function getAvailableFiscalYears(): array
@@ -193,7 +193,7 @@ class ContextResolver
         return self::accessibleFiscalYears()->with('company')->orderByDesc('fiscal_years.year')->get()->map(fn ($fy) => [
             'id' => (int) $fy->id,
             'company_id' => (int) $fy->company_id,
-            'currency' => (string) __($fy->company?->currency ?: 'Rial'),
+            'currency' => (string) ($fy->company?->currency ?: 'Rial'),
             'year' => (int) $fy->year,
             'title' => (string) ($fy->title ?? $fy->year),
             'is_active' => (int) $fy->id === $activeId,
