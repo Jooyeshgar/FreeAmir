@@ -3711,11 +3711,13 @@
     "This may affect financial reports. Selected source entries will be deleted and approval may be revoked. Continue?": "This may affect financial reports. Selected source entries will be deleted and approval may be revoked. Continue?",
     "This may affect financial reports. Continue transferring the selected entries?": "This may affect financial reports. Continue transferring the selected entries?",
     "Unit weight (kg)": "Unit weight (kg)",
+    "Based on purchase amount": "Based on purchase amount",
+    "Based on weight": "Based on weight",
     "Allocation method": "Allocation method",
     "Weight": "Weight",
     "Ancillary cost before VAT": "Ancillary cost before VAT",
     "Products with zero weight are excluded from allocation:": "Products with zero weight are excluded from allocation:",
-    "For this product, weight is not defined, so it will be excluded from allocation.": "For this product, weight is not defined, so it will be excluded from allocation.",
+    "For this product, weight is not defined, so it will be excluded from allocation.": "For this product, weight is not defined, so it will be excluded from allocation. Click the icon to set it.",
     "No positive allocation basis is available. Enter amounts manually or update product weights.": "No positive allocation basis is available. Enter amounts manually or update product weights.",
     "Line :line: invalid product weight.": "Line :line: invalid product weight."
 }

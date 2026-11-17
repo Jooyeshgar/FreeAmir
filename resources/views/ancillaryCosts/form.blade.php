@@ -62,8 +62,8 @@
                     <select name="allocation_method" x-model="allocationMethod" @change="changeAllocationMethod()"
                         class="h-10 min-h-10 border border-slate-400 w-full rounded-md text-gray-500 px-2">
                         <option value="manual">{{ __('Manual') }}</option>
-                        <option value="value">{{ __('Value') }}</option>
-                        <option value="weight">{{ __('Weight') }}</option>
+                        <option value="value">{{ __('Based on purchase amount') }}</option>
+                        <option value="weight">{{ __('Based on weight') }}</option>
                     </select>
                 </div>
             </div>
@@ -121,7 +121,7 @@
                                             x-bind:class="availableProducts.length === 1 || product.id !== availableProducts[
                                                 availableProducts.length - 1].id ? 'tooltip-left' : 'tooltip-top'"
                                             x-bind:data-tip="allocationWarning(product)">
-                                            <button type="button"
+                                            <a x-bind:href="productEditUrl(product.id)" target="_blank" rel="noopener"
                                                 class="inline-flex items-center justify-center p-1 text-warning"
                                                 x-bind:aria-label="allocationWarning(product)">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5"
@@ -131,7 +131,7 @@
                                                         d="M10.3 3.9 2.1 18a2 2 0 0 0 1.7 3h16.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
                                                     <path stroke-linecap="round" d="M12 9v4m0 4h.01" />
                                                 </svg>
-                                            </button>
+                                            </a>
                                         </span>
                                         <x-input name=""
                                             x-bind:name="'ancillaryCosts[' + index + '][product_id]'"
@@ -231,6 +231,10 @@
 
                 get zeroWeightProducts() {
                     return this.availableProducts.filter(product => Number(product.weight) <= 0);
+                },
+
+                productEditUrl(productId) {
+                    return @json(route('products.edit', '__ID__')).replace('__ID__', productId);
                 },
 
                 allocationWarning(product) {
