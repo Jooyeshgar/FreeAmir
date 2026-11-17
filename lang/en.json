@@ -3724,5 +3724,19 @@
     "Month number must be between 1 and 12. Given: :month": "Month number must be between 1 and 12. Given: :month",
     "The relative period is not in the selected fiscal year. Select the authorized fiscal year for that period or specify the month explicitly.": "The relative period is not in the selected fiscal year. Select the authorized fiscal year for that period or specify the month explicitly.",
     "Jalali month must be between 1 and 12. Given: :month": "Jalali month must be between 1 and 12. Given: :month",
-    "No customer found matching ':query'.": "No customer found matching ':query'."
+    "No customer found matching ':query'.": "No customer found matching ':query'.",
+    "Profitable": "Profitable",
+    "Loss-making": "Loss-making",
+    "net profit": "net profit",
+    "net loss": "net loss",
+    "Settled (zero)": "Settled (zero)",
+    "Month :month": "Month :month",
+    "For :month (:start to :end), :sales_count sales invoices totaling :sales_amount :currency and :purchase_count purchase invoices totaling :purchase_amount :currency were recorded.": "For :month (:start to :end), :sales_count sales invoices totaling :sales_amount :currency and :purchase_count purchase invoices totaling :purchase_amount :currency were recorded.",
+    "Fiscal year :year summary: :sales_count sales invoices totaling :sales_amount :currency and :purchase_count purchase invoices totaling :purchase_amount :currency were recorded.": "Fiscal year :year summary: :sales_count sales invoices totaling :sales_amount :currency and :purchase_count purchase invoices totaling :purchase_amount :currency were recorded.",
+    "For :month (:start to :end): income was :income :currency, expenses were :cost :currency, and :result was :profit :currency (profit margin: :margin%).": "For :month (:start to :end): income was :income :currency, expenses were :cost :currency, and :result was :profit :currency (profit margin: :margin%).",
+    "Fiscal year :year: total income was :income :currency, total expenses were :cost :currency, and :result was :profit :currency (profit margin: :margin%).": "Fiscal year :year: total income was :income :currency, total expenses were :cost :currency, and :result was :profit :currency (profit margin: :margin%).",
+    "Financial summary: total income :income :currency, total expenses :cost :currency, net profit :profit :currency, with a :margin% margin.": "Financial summary: total income :income :currency, total expenses :cost :currency, net profit :profit :currency, with a :margin% margin.",
+    "Account party :name (ID :id) has a balance of :balance.": "Account party :name (ID :id) has a balance of :balance.",
+    "Found :count matching customers. The first result is :name with a balance of :balance.": "Found :count matching customers. The first result is :name with a balance of :balance.",
+    "Today is :jalali_date (:gregorian_date). Current month: :month (month :month_number). Fiscal year: :fiscal_year (from :start to :end), currency: :currency. Available fiscal years: :available_years.": "Today is :jalali_date (:gregorian_date). Current month: :month (month :month_number). Fiscal year: :fiscal_year (from :start to :end), currency: :currency. Available fiscal years: :available_years."
 }

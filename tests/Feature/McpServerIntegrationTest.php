@@ -86,6 +86,79 @@ class McpServerIntegrationTest extends TestCase
         self::assertSame(0, $profit['net_profit']);
     }
 
+    public function test_mcp_reports_use_company_currency_and_stable_status_codes(): void
+    {
+        $this->year->company->update(['currency' => 'USD']);
+        app()->setLocale('en');
+        config(['amir.currency' => 'EUR']);
+        $this->travelTo(now()->setDate(2026, 10, 26)->setTime(12, 0));
+
+        $customer = Customer::create([
+            'name' => 'Currency customer',
+            'credit' => 1250,
+            'fiscal_year_id' => $this->year->id,
+        ]);
+
+        config(['active-fiscal-year-id' => $this->year->id]);
+        Invoice::create([
+            'number' => 9301,
+            'date' => '2026-10-26',
+            'invoice_type' => InvoiceType::SELL,
+            'status' => InvoiceStatus::APPROVED,
+            'customer_id' => $customer->id,
+            'creator_id' => $this->user->id,
+            'fiscal_year_id' => $this->year->id,
+            'subtraction' => 0,
+            'vat' => 0,
+            'amount' => 1250,
+        ]);
+        config(['active-fiscal-year-id' => null]);
+
+        $context = $this->callTool('get_current_context', ['fiscal_year_id' => $this->year->id]);
+        self::assertSame('USD', $context['currency']);
+        self::assertSame('USD', $context['active_fiscal_year']['currency']);
+        self::assertSame('USD', $context['available_fiscal_years'][0]['currency']);
+        self::assertSame('Aban', $context['current_month_name']);
+
+        $balance = $this->callTool('get_customer_balance', [
+            'query' => $customer->name,
+            'fiscal_year_id' => $this->year->id,
+        ]);
+        self::assertSame('USD', $balance['currency']);
+        self::assertSame('settled', $balance['customers'][0]['balance_status_code']);
+        self::assertSame('Settled (zero)', $balance['customers'][0]['balance_status']);
+        self::assertSame('0 USD (Settled (zero))', $balance['customers'][0]['formatted_balance']);
+        self::assertSame('1,250 USD', $balance['customers'][0]['formatted_credit_limit']);
+
+        $invoices = $this->callTool('get_invoices_summary', ['fiscal_year_id' => $this->year->id]);
+        self::assertSame('USD', $invoices['currency']);
+        self::assertSame('sell', $invoices['recent_invoices'][0]['type_code']);
+        self::assertSame('1,250 USD', $invoices['recent_invoices'][0]['formatted_amount']);
+        self::assertSame('Aban', $invoices['recent_invoices'][0]['jalali_month_name']);
+        self::assertSame('1,250 USD', $invoices['summary']['formatted_sales_amount']);
+
+        $summary = $this->callTool('get_financial_summary', ['fiscal_year_id' => $this->year->id]);
+        self::assertSame('USD', $summary['currency']);
+        self::assertStringContainsString('0 USD', $summary['human_summary']);
+
+        $profit = $this->callTool('get_profit_loss', ['fiscal_year_id' => $this->year->id]);
+        self::assertSame('USD', $profit['currency']);
+        self::assertSame('profitable', $profit['status_code']);
+        self::assertSame('Profitable', $profit['status']);
+
+        app()->setLocale('fa');
+        $translatedBalance = $this->callTool('get_customer_balance', [
+            'query' => $customer->name,
+            'fiscal_year_id' => $this->year->id,
+        ]);
+        self::assertSame('تسویه (صفر)', $translatedBalance['customers'][0]['balance_status']);
+        self::assertSame($balance['customers'][0]['balance_status_code'], $translatedBalance['customers'][0]['balance_status_code']);
+
+        $translatedProfit = $this->callTool('get_profit_loss', ['fiscal_year_id' => $this->year->id]);
+        self::assertSame('سودده', $translatedProfit['status']);
+        self::assertSame($profit['status_code'], $translatedProfit['status_code']);
+    }
+
     public function test_approved_status_filter_returns_approved_invoice(): void
     {
         config(['active-fiscal-year-id' => $this->year->id]);

@@ -11,17 +11,17 @@ class GetProfitLossTool extends AccountingTool
 {
     protected string $name = 'get_profit_loss';
 
-    protected string $description = 'محاسبه سود و زیان (درآمدها، هزینه‌ها، سود خالص و حاشیه سود) برای سال مالی یا ماه مشخص شمسی همراه با بافت تقویمی و تفکیک ماه‌ها.';
+    protected string $description = 'Calculate income, expenses, net profit or loss, and profit margin for an authorized fiscal year or Jalali month. Includes a 12-month breakdown. Monetary values use the selected company currency.';
 
     protected array $permissionGroups = [['reports.cost-income'], ['reports.result'], ['reports.company-overview', 'documents.show']];
 
     public function schema(JsonSchema $schema): array
     {
         return [
-            'month' => $schema->integer()->min(1)->max(12)->description('شماره ماه شمسی بین ۱ تا ۱۲ (مثلاً ۱ برای فروردین، ۸ برای آبان).'),
-            'period' => $schema->string()->description('بازه زمانی گزارش: current_month (ماه جاری)، previous_month (ماه قبل) یا fiscal_year (کل سال مالی).')->enum(['current_month', 'previous_month', 'fiscal_year']),
-            'year' => $schema->integer()->description('سال شمسی ۴ رقمی مورد نظر (مانند 1404 یا 1405). اختیاری؛ در صورت عدم ارسال از سال مالی فعال فعلی استفاده می‌شود.'),
-            'fiscal_year_id' => $schema->integer()->description('شناسه سال مالی (اختیاری؛ در صورت عدم ارسال از سال مالی فعال فعلی استفاده می‌شود).'),
+            'month' => $schema->integer()->min(1)->max(12)->description('Optional Jalali month number from 1 to 12.'),
+            'period' => $schema->string()->description('Reporting period: current_month, previous_month, or fiscal_year.')->enum(['current_month', 'previous_month', 'fiscal_year']),
+            'year' => $schema->integer()->description('Optional four-digit Jalali year. Uses the active fiscal year when omitted.'),
+            'fiscal_year_id' => $schema->integer()->description('Optional authorized fiscal year ID. Uses the active fiscal year when omitted.'),
         ];
     }
 
@@ -43,12 +43,13 @@ class GetProfitLossTool extends AccountingTool
         $periodInfo = ContextResolver::resolvePeriod($arguments);
         $contextBlock = ContextResolver::getCurrentContext($arguments);
         $targetMonth = $periodInfo['month'];
+        $currency = $contextBlock['active_fiscal_year']['currency'];
 
         $monthlyRaw = $service->monthlyIncomeAndCostByMonth();
 
         $monthsList = [];
         for ($m = 1; $m <= 12; $m++) {
-            $mName = ContextResolver::MONTH_NAMES[$m];
+            $mName = __(ContextResolver::MONTH_NAMES[$m]);
             $mIncome = (int) ($monthlyRaw['income'][$m] ?? 0);
             $mCost = (int) (-1 * ($monthlyRaw['cost'][$m] ?? 0));
             $mProfit = $mIncome - $mCost;
@@ -58,7 +59,8 @@ class GetProfitLossTool extends AccountingTool
                 'income' => $mIncome,
                 'cost' => $mCost,
                 'profit' => $mProfit,
-                'status' => $mProfit >= 0 ? 'سودده' : 'زیان‌ده',
+                'status' => $mProfit >= 0 ? __('Profitable') : __('Loss-making'),
+                'status_code' => $mProfit >= 0 ? 'profitable' : 'loss_making',
             ];
         }
 
@@ -69,17 +71,11 @@ class GetProfitLossTool extends AccountingTool
             $margin = $income > 0 ? (int) round(($profit / $income) * 100) : 0;
             $monthName = $periodInfo['month_name'];
 
-            $humanSummary = sprintf(
-                'در %s (از %s تا %s): مجموع درآمد %s ریال، مجموع هزینه‌ها %s ریال و %s %s ریال (حاشیه سود %d٪) بوده است.',
-                $monthName,
-                $periodInfo['start_date'],
-                $periodInfo['end_date'],
-                number_format($income),
-                number_format($cost),
-                $profit >= 0 ? 'سود خالص' : 'زیان خالص',
-                number_format(abs($profit)),
-                $margin
-            );
+            $humanSummary = __('For :month (:start to :end): income was :income :currency, expenses were :cost :currency, and :result was :profit :currency (profit margin: :margin%).',
+                ['month' => $monthName, 'start' => $periodInfo['start_date'], 'end' => $periodInfo['end_date'],
+                    'income' => number_format($income), 'cost' => number_format($cost),
+                    'result' => $profit >= 0 ? __('net profit') : __('net loss'),
+                    'profit' => number_format(abs($profit)), 'currency' => $currency, 'margin' => $margin]);
 
             return $this->success([
                 'context' => $contextBlock,
@@ -93,10 +89,12 @@ class GetProfitLossTool extends AccountingTool
                     'is_leap_year' => $periodInfo['is_leap_year'],
                 ],
                 'total_income' => $income,
+                'currency' => $currency,
                 'total_cost' => $cost,
                 'net_profit' => $profit,
                 'profit_margin_percent' => $margin,
-                'status' => $profit >= 0 ? 'سودده' : 'زیان‌ده',
+                'status' => $profit >= 0 ? __('Profitable') : __('Loss-making'),
+                'status_code' => $profit >= 0 ? 'profitable' : 'loss_making',
                 'monthly_breakdown' => array_values($monthsList),
                 'human_summary' => $humanSummary,
             ]);
@@ -108,15 +106,10 @@ class GetProfitLossTool extends AccountingTool
         $profit = (int) ($summary['profit'] ?? 0);
         $margin = (int) ($summary['margin'] ?? 0);
 
-        $humanSummary = sprintf(
-            'وضعیت کل سال مالی %s: کل درآمد %s ریال، کل هزینه‌ها %s ریال، %s %s ریال (مارجین %d٪).',
-            $contextBlock['active_fiscal_year']['title'],
-            number_format($totalIncome),
-            number_format($totalCost),
-            $profit >= 0 ? 'سود خالص' : 'زیان خالص',
-            number_format(abs($profit)),
-            $margin
-        );
+        $humanSummary = __('Fiscal year :year: total income was :income :currency, total expenses were :cost :currency, and :result was :profit :currency (profit margin: :margin%).',
+            ['year' => $contextBlock['active_fiscal_year']['title'], 'income' => number_format($totalIncome),
+                'cost' => number_format($totalCost), 'result' => $profit >= 0 ? __('net profit') : __('net loss'),
+                'profit' => number_format(abs($profit)), 'currency' => $currency, 'margin' => $margin]);
 
         return $this->success([
             'context' => $contextBlock,
@@ -132,8 +125,10 @@ class GetProfitLossTool extends AccountingTool
             'total_income' => $totalIncome,
             'total_cost' => $totalCost,
             'net_profit' => $profit,
+            'currency' => $currency,
             'profit_margin_percent' => $margin,
-            'status' => $profit >= 0 ? 'سودده' : 'زیان‌ده',
+            'status' => $profit >= 0 ? __('Profitable') : __('Loss-making'),
+            'status_code' => $profit >= 0 ? 'profitable' : 'loss_making',
             'monthly_breakdown' => array_values($monthsList),
             'human_summary' => $humanSummary,
         ]);

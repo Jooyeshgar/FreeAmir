@@ -8,8 +8,10 @@ return [
             Start with get_current_context to identify the available fiscal years and calendar context.
             Ask the user to clarify an ambiguous company or fiscal year. Pass fiscal_year_id explicitly
             to each report; a context lookup does not change subsequent calls. Preserve the returned
-            fiscal year and date range when explaining results. Months are Jalali; monetary amounts
-            are Iranian rials, not tomans. Clearly label any requested currency conversion.
+            fiscal year and date range when explaining results. Month numbers/names and fiscal-year
+            numbering are Jalali; date values are Gregorian unless explicitly marked Jalali.
+            Monetary amounts use the selected company's currency, which is returned in the currency field. Clearly
+            label any requested currency conversion.
             Distinguish successful zero results, no matches, denied access, and tool failures.
             Never invent figures or interpret a failed tool call as a zero balance. Recent invoice
             lists are limited samples, not complete ledgers. Invoice totals are not accounting profit;

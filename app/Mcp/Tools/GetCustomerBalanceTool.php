@@ -12,16 +12,16 @@ class GetCustomerBalanceTool extends AccountingTool
 {
     protected string $name = 'get_customer_balance';
 
-    protected string $description = 'استعلام مانده حساب، وضعیت بدهکار/بستانکار، مشخصات تماس و خلاصه وضعیت یک مشتری یا طرف‌حساب.';
+    protected string $description = 'Search for a customer or account party and return contact details, ledger balance, debtor/creditor status, and credit limit. Monetary values use the selected fiscal year company currency.';
 
     protected array $permissionGroups = [['customers.show']];
 
     public function schema(JsonSchema $schema): array
     {
         return [
-            'fiscal_year_id' => $schema->integer()->min(1)->description('شناسه سال مالی مجاز برای مانده طرف‌حساب.'),
-            'query' => $schema->string()->description('نام، شماره همراه، تلفن، کد ملی یا شناسه طرف‌حساب جهت جستجو.')->required(),
-            'limit' => $schema->integer()->min(1)->max(20)->description('تعداد نتایج در صورت وجود چندین مشتری مشابه (پیش‌فرض ۵).'),
+            'fiscal_year_id' => $schema->integer()->min(1)->description('Authorized fiscal year ID to use for the account balance.'),
+            'query' => $schema->string()->description('Customer name, mobile or phone number, national ID, or customer ID to search for.')->required(),
+            'limit' => $schema->integer()->min(1)->max(20)->description('Maximum number of matching customers to return (default: 5).'),
         ];
     }
 
@@ -39,6 +39,7 @@ class GetCustomerBalanceTool extends AccountingTool
         $queryStr = trim($arguments['query']);
 
         $limit = isset($arguments['limit']) ? max(1, min(20, (int) $arguments['limit'])) : 5;
+        $currency = ContextResolver::resolveFiscalYearCurrency($arguments);
 
         /** @var Builder $query */
         $query = Customer::query();
@@ -59,6 +60,7 @@ class GetCustomerBalanceTool extends AccountingTool
         if ($customers->isEmpty()) {
             return $this->success([
                 'fiscal_year_id' => ContextResolver::resolveFiscalYearId($arguments),
+                'currency' => $currency,
                 'found' => false,
                 'message' => __("No customer found matching ':query'.", ['query' => $queryStr]),
                 'customers' => [],
@@ -68,10 +70,10 @@ class GetCustomerBalanceTool extends AccountingTool
         $results = [];
         foreach ($customers as $c) {
             $balance = (int) SubjectService::sumSubject($c->subject);
-            $status = match (true) {
-                $balance < 0 => 'بدهکار',
-                $balance > 0 => 'بستانکار',
-                default => 'تسویه (صفر)',
+            [$status, $statusCode] = match (true) {
+                $balance < 0 => [__('Debtor'), 'debtor'],
+                $balance > 0 => [__('Creditor'), 'creditor'],
+                default => [__('Settled (zero)'), 'settled'],
             };
 
             $results[] = [
@@ -79,30 +81,26 @@ class GetCustomerBalanceTool extends AccountingTool
                 'name' => $c->name,
                 'phone' => $c->phone ?: $c->mobile,
                 'balance' => $balance,
-                'formatted_balance' => number_format(abs($balance)).' ریال ('.$status.')',
+                'formatted_balance' => number_format(abs($balance)).' '.$currency.' ('.$status.')',
                 'balance_status' => $status,
+                'balance_status_code' => $statusCode,
                 'credit_limit' => (int) ($c->credit ?? 0),
-                'formatted_credit_limit' => number_format((int) ($c->credit ?? 0)).' ریال',
+                'formatted_credit_limit' => number_format((int) ($c->credit ?? 0)).' '.$currency,
             ];
         }
 
         $first = $results[0];
         $humanSummary = count($results) === 1
-        ? sprintf(
-            'طرف‌حساب %s (شناسه %d): مانده حساب %s می‌باشد.',
-            $first['name'],
-            $first['id'],
-            $first['formatted_balance']
+        ? __('Account party :name (ID :id) has a balance of :balance.',
+            ['name' => $first['name'], 'id' => $first['id'], 'balance' => $first['formatted_balance']]
         )
-        : sprintf(
-            '%d مشتری مطابق با جستجوی شما یافت شد. نخستین نتیجه: %s با مانده %s.',
-            count($results),
-            $first['name'],
-            $first['formatted_balance']
+        : __('Found :count matching customers. The first result is :name with a balance of :balance.',
+            ['count' => count($results), 'name' => $first['name'], 'balance' => $first['formatted_balance']]
         );
 
         return $this->success([
             'fiscal_year_id' => ContextResolver::resolveFiscalYearId($arguments),
+            'currency' => $currency,
             'found' => true,
             'count' => count($results),
             'customers' => $results,
