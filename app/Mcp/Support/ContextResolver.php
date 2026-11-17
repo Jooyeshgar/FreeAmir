@@ -190,26 +190,6 @@ class ContextResolver
     }
 
     /**
-     * Convert Jalali date to Gregorian date array: [year, month, day].
-     *
-     * @return array{0: int, 1: int, 2: int}
-     */
-    public static function jalaliToGregorian(int $jy, int $jm, int $jd): array
-    {
-        return jalali_to_gregorian($jy, $jm, $jd);
-    }
-
-    /**
-     * Convert Gregorian date to Jalali date array: [year, month, day].
-     *
-     * @return array{0: int, 1: int, 2: int}
-     */
-    public static function gregorianToJalali(int $gy, int $gm, int $gd): array
-    {
-        return gregorian_to_jalali($gy, $gm, $gd);
-    }
-
-    /**
      * Convert Gregorian date string (YYYY-MM-DD or datetime) to Jalali date string (YYYY/MM/DD).
      */
     public static function toJalaliDateString(?string $gregorianDate): ?string
@@ -224,7 +204,7 @@ class ContextResolver
             return null;
         }
 
-        $j = self::gregorianToJalali((int) $date[0], (int) $date[1], (int) $date[2]);
+        $j = gregorian_to_jalali((int) $date[0], (int) $date[1], (int) $date[2]);
 
         return sprintf('%04d/%02d/%02d', $j[0], $j[1], $j[2]);
     }
@@ -237,8 +217,8 @@ class ContextResolver
     public static function getJalaliMonthGregorianRange(int $jy, int $month): array
     {
         $days = self::getDaysInJalaliMonth($jy, $month);
-        $startG = self::jalaliToGregorian($jy, $month, 1);
-        $endG = self::jalaliToGregorian($jy, $month, $days);
+        $startG = jalali_to_gregorian($jy, $month, 1);
+        $endG = jalali_to_gregorian($jy, $month, $days);
 
         return [
             'start' => sprintf('%04d-%02d-%02d', $startG[0], $startG[1], $startG[2]),
@@ -270,7 +250,7 @@ class ContextResolver
         $fiscalYearId = self::resolveFiscalYearId($arguments);
         $fiscalYearNumber = self::resolveFiscalYearNumber($fiscalYearId, $arguments);
         $today = self::today();
-        $todayJalali = self::gregorianToJalali($today->year, $today->month, $today->day);
+        $todayJalali = gregorian_to_jalali($today->year, $today->month, $today->day);
         $currentMonth = $todayJalali[1];
 
         $explicitMonth = isset($arguments['month']) ? (int) $arguments['month'] : null;
@@ -340,9 +320,9 @@ class ContextResolver
         }
 
         // Default: Full Fiscal Year
-        $startG = self::jalaliToGregorian($fiscalYearNumber, 1, 1);
+        $startG = jalali_to_gregorian($fiscalYearNumber, 1, 1);
         $lastDayEsfand = self::getDaysInJalaliMonth($fiscalYearNumber, 12);
-        $endG = self::jalaliToGregorian($fiscalYearNumber, 12, $lastDayEsfand);
+        $endG = jalali_to_gregorian($fiscalYearNumber, 12, $lastDayEsfand);
 
         return [
             'mode' => 'fiscal_year',
@@ -367,16 +347,16 @@ class ContextResolver
     public static function getCurrentContext(array $arguments = []): array
     {
         $today = self::today();
-        $todayJalali = self::gregorianToJalali($today->year, $today->month, $today->day);
+        $todayJalali = gregorian_to_jalali($today->year, $today->month, $today->day);
         $fiscalYearId = self::resolveFiscalYearId($arguments);
         $fiscalYearNumber = self::resolveFiscalYearNumber($fiscalYearId, $arguments);
 
         $fy = self::resolveFiscalYear($arguments);
         $fiscalYearTitle = (string) ($fy->title ?? $fy->year);
 
-        $fyStart = self::jalaliToGregorian($fiscalYearNumber, 1, 1);
+        $fyStart = jalali_to_gregorian($fiscalYearNumber, 1, 1);
         $fyEndDays = self::getDaysInJalaliMonth($fiscalYearNumber, 12);
-        $fyEnd = self::jalaliToGregorian($fiscalYearNumber, 12, $fyEndDays);
+        $fyEnd = jalali_to_gregorian($fiscalYearNumber, 12, $fyEndDays);
 
         return [
             'today_jalali' => sprintf('%04d/%02d/%02d', $todayJalali[0], $todayJalali[1], $todayJalali[2]),
