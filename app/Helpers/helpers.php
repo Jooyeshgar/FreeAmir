@@ -101,6 +101,26 @@ function formatDocumentNumber(float $number)
     return $documentNumber;
 }
 
+/**
+ * Return the number of days in a Jalali month.
+ */
+function getDaysInJalaliMonth(int $jy, int $month): int
+{
+    if ($month < 1 || $month > 12) {
+        throw new InvalidArgumentException(__('Month number must be between 1 and 12. Given: :month', ['month' => $month]));
+    }
+
+    if ($month <= 6) {
+        return 31;
+    }
+
+    if ($month <= 11) {
+        return 30;
+    }
+
+    return jcheckdate(12, 30, $jy) ? 30 : 29;
+}
+
 function formatDate(Carbon|string|null $date, $format = 'Y/m/d')
 {
     if (is_null($date)) {

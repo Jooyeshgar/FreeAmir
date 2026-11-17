@@ -159,6 +159,22 @@ class McpServerIntegrationTest extends TestCase
         self::assertSame($profit['status_code'], $translatedProfit['status_code']);
     }
 
+    #[TestWith(['en'])]
+    #[TestWith(['fa'])]
+    public function test_currency_name_is_not_translated(string $locale): void
+    {
+        $this->year->company->update(['currency' => 'Rial']);
+        app()->setLocale($locale);
+
+        $context = $this->callTool('get_current_context', ['fiscal_year_id' => $this->year->id]);
+        self::assertSame('Rial', $context['currency']);
+        self::assertSame('Rial', $context['active_fiscal_year']['currency']);
+        self::assertSame('Rial', $context['available_fiscal_years'][0]['currency']);
+
+        $summary = $this->callTool('get_financial_summary', ['fiscal_year_id' => $this->year->id]);
+        self::assertSame('Rial', $summary['currency']);
+    }
+
     public function test_approved_status_filter_returns_approved_invoice(): void
     {
         config(['active-fiscal-year-id' => $this->year->id]);

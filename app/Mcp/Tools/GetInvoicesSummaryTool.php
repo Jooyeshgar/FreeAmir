@@ -103,7 +103,7 @@ class GetInvoicesSummaryTool extends AccountingTool
             $statusLabel = $inv->status instanceof InvoiceStatus ? $inv->status->label() : __('Unknown');
 
             $rawDate = $inv->date ? $inv->date->format('Y-m-d') : null;
-            $jalaliDate = ContextResolver::toJalaliDateString($rawDate);
+            $jalaliDate = $rawDate !== null ? (gregorian_to_jalali_date($rawDate, '/', '-') ?: null) : null;
             $jalaliMonthName = null;
 
             if ($jalaliDate !== null) {

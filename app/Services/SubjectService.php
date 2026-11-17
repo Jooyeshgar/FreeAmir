@@ -96,26 +96,13 @@ class SubjectService
 
         $year = (int) (config('active-company-fiscal-year') ?? toEnglish(jdate('Y')));
 
-        $months = [
-            1 => [1, 31],
-            2 => [1, 31],
-            3 => [1, 31],
-            4 => [1, 31],
-            5 => [1, 31],
-            6 => [1, 31],
-            7 => [1, 30],
-            8 => [1, 30],
-            9 => [1, 30],
-            10 => [1, 30],
-            11 => [1, 30],
-            12 => [1, jcheckdate(12, 30, $year) ? 30 : 29],
-        ];
-
         $subjectIds = self::subjectAndDescendantIds($subject);
         $transactionQuery = Transaction::query()->whereIn('subject_id', $subjectIds);
         $monthlySum = [];
 
-        foreach ($months as $month => [$startDay, $endDay]) {
+        foreach (range(1, 12) as $month) {
+            $startDay = 1;
+            $endDay = getDaysInJalaliMonth($year, $month);
             $startDate = jalali_to_gregorian($year, $month, $startDay, '-');
             $endDate = jalali_to_gregorian($year, $month, $endDay, '-');
 

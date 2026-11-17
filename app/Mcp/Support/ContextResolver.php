@@ -129,7 +129,7 @@ class ContextResolver
 
     public static function resolveFiscalYearCurrency(array $arguments = []): string
     {
-        return (string) __(self::resolveFiscalYear($arguments)->company?->currency ?: 'Rial');
+        return (string) (self::resolveFiscalYear($arguments)->company?->currency ?: 'Rial');
     }
 
     public static function getAvailableFiscalYears(): array
@@ -139,59 +139,11 @@ class ContextResolver
         return self::accessibleFiscalYears()->with('company')->orderByDesc('fiscal_years.year')->get()->map(fn ($fy) => [
             'id' => (int) $fy->id,
             'company_id' => (int) $fy->company_id,
-            'currency' => (string) __($fy->company?->currency ?: 'Rial'),
+            'currency' => (string) ($fy->company?->currency ?: 'Rial'),
             'year' => (int) $fy->year,
             'title' => (string) ($fy->title ?? $fy->year),
             'is_active' => (int) $fy->id === $activeId,
         ])->values()->all();
-    }
-
-    /**
-     * Check if a Jalali year is a leap year (کبیسه).
-     */
-    public static function isLeapJalaliYear(int $jy): bool
-    {
-        return jcheckdate(12, 30, $jy);
-    }
-
-    /**
-     * Get number of days in a given Jalali month (1-12).
-     */
-    public static function getDaysInJalaliMonth(int $jy, int $month): int
-    {
-        if ($month < 1 || $month > 12) {
-            throw new InvalidArgumentException(__('Month number must be between 1 and 12. Given: :month', ['month' => $month]));
-        }
-
-        if ($month <= 6) {
-            return 31;
-        }
-
-        if ($month <= 11) {
-            return 30;
-        }
-
-        return self::isLeapJalaliYear($jy) ? 30 : 29;
-    }
-
-    /**
-     * Convert Gregorian date string (YYYY-MM-DD or datetime) to Jalali date string (YYYY/MM/DD).
-     */
-    public static function toJalaliDateString(?string $gregorianDate): ?string
-    {
-        if ($gregorianDate === null || trim($gregorianDate) === '') {
-            return null;
-        }
-
-        $parts = explode(' ', trim($gregorianDate))[0];
-        $date = explode('-', $parts);
-        if (count($date) !== 3) {
-            return null;
-        }
-
-        $j = gregorian_to_jalali((int) $date[0], (int) $date[1], (int) $date[2]);
-
-        return sprintf('%04d/%02d/%02d', $j[0], $j[1], $j[2]);
     }
 
     /**
@@ -201,7 +153,7 @@ class ContextResolver
      */
     public static function getJalaliMonthGregorianRange(int $jy, int $month): array
     {
-        $days = self::getDaysInJalaliMonth($jy, $month);
+        $days = getDaysInJalaliMonth($jy, $month);
         $startG = jalali_to_gregorian($jy, $month, 1);
         $endG = jalali_to_gregorian($jy, $month, $days);
 
@@ -209,7 +161,7 @@ class ContextResolver
             'start' => sprintf('%04d-%02d-%02d', $startG[0], $startG[1], $startG[2]),
             'end' => sprintf('%04d-%02d-%02d', $endG[0], $endG[1], $endG[2]),
             'days' => $days,
-            'is_leap' => self::isLeapJalaliYear($jy),
+            'is_leap' => jcheckdate(12, 30, $jy),
         ];
     }
 
@@ -306,7 +258,7 @@ class ContextResolver
 
         // Default: Full Fiscal Year
         $startG = jalali_to_gregorian($fiscalYearNumber, 1, 1);
-        $lastDayEsfand = self::getDaysInJalaliMonth($fiscalYearNumber, 12);
+        $lastDayEsfand = getDaysInJalaliMonth($fiscalYearNumber, 12);
         $endG = jalali_to_gregorian($fiscalYearNumber, 12, $lastDayEsfand);
 
         return [
@@ -319,7 +271,7 @@ class ContextResolver
             'days_in_month' => null,
             'fiscal_year_id' => $fiscalYearId,
             'fiscal_year_number' => $fiscalYearNumber,
-            'is_leap_year' => self::isLeapJalaliYear($fiscalYearNumber),
+            'is_leap_year' => jcheckdate(12, 30, $fiscalYearNumber),
         ];
     }
 
@@ -338,10 +290,10 @@ class ContextResolver
 
         $fy = self::resolveFiscalYear($arguments);
         $fiscalYearTitle = (string) ($fy->title ?? $fy->year);
-        $currency = (string) __($fy->company?->currency ?: 'Rial');
+        $currency = self::resolveFiscalYearCurrency($arguments);
 
         $fyStart = jalali_to_gregorian($fiscalYearNumber, 1, 1);
-        $fyEndDays = self::getDaysInJalaliMonth($fiscalYearNumber, 12);
+        $fyEndDays = getDaysInJalaliMonth($fiscalYearNumber, 12);
         $fyEnd = jalali_to_gregorian($fiscalYearNumber, 12, $fyEndDays);
 
         return [
@@ -358,7 +310,7 @@ class ContextResolver
                 'title' => $fiscalYearTitle,
                 'currency' => $currency,
                 'is_current_calendar_year' => ($todayJalali[0] === $fiscalYearNumber),
-                'is_leap_year' => self::isLeapJalaliYear($fiscalYearNumber),
+                'is_leap_year' => jcheckdate(12, 30, $fiscalYearNumber),
                 'start_date' => sprintf('%04d-%02d-%02d', $fyStart[0], $fyStart[1], $fyStart[2]),
                 'end_date' => sprintf('%04d-%02d-%02d', $fyEnd[0], $fyEnd[1], $fyEnd[2]),
             ],
