@@ -3728,5 +3728,17 @@
     "Account party :name (ID :id) has a balance of :balance.": "طرف‌حساب :name (شناسه :id) مانده :balance دارد.",
     "Found :count matching customers. The first result is :name with a balance of :balance.": ":count مشتری مطابق جستجو یافت شد. نخستین نتیجه :name با مانده :balance است.",
     "Active": "فعال",
-    "Today is :jalali_date (:gregorian_date). Current month: :month (month :month_number). Fiscal year: :fiscal_year (from :start to :end), currency: :currency. Available fiscal years: :available_years.": "امروز :jalali_date (:gregorian_date) است. ماه جاری: :month (ماه :month_number). سال مالی: :fiscal_year (از :start تا :end)، واحد پول: :currency. سال‌های مالی در دسترس: :available_years."
+    "Today is :jalali_date (:gregorian_date). Current month: :month (month :month_number). Fiscal year: :fiscal_year (from :start to :end), currency: :currency. Available fiscal years: :available_years.": "امروز :jalali_date (:gregorian_date) است. ماه جاری: :month (ماه :month_number). سال مالی: :fiscal_year (از :start تا :end)، واحد پول: :currency. سال‌های مالی در دسترس: :available_years.",
+    "Unit weight (kg)": "وزن واحد کالا (کیلوگرم)",
+    "Based on purchase amount": "بر اساس مبلغ خرید",
+    "Based on weight": "بر اساس وزن",
+    "Allocation method": "روش تخصیص",
+    "Weight": "وزن",
+    "Ancillary cost before VAT": "کل بدون مالیات بر ارزش افزوده",
+    "Products with zero weight are excluded from allocation:": "کالاهای با وزن صفر از تخصیص حذف می‌شوند:",
+    "For this product, weight is not defined, so it will be excluded from allocation.": "برای این کالا وزن تعریف نشده است و از تخصیص حذف می‌شود. برای تعریف وزن، روی نماد کلیک کنید.",
+    "No positive allocation basis is available. Enter amounts manually or update product weights.": "مبنای مثبتی برای تخصیص وجود ندارد. مبالغ را دستی وارد کنید یا وزن کالاها را اصلاح کنید.",
+    "Line :line: invalid product weight.": "ردیف :line: وزن کالا نامعتبر است.",
+    "Automatic allocation must include each invoice product exactly once.": "در تخصیص خودکار، هر کالای فاکتور باید دقیقاً یک بار درج شود.",
+    "The product share does not match the selected allocation method and amount.": "سهم کالا با روش تخصیص و مبلغ انتخاب‌شده مطابقت ندارد."
 }

@@ -582,7 +582,7 @@
                                                     );
                                                 @endphp
 
-                                                <div class="flex flex-wrap gap-2 items-center">
+                                                <div class="flex flex-wrap gap-2 items-center whitespace-nowrap">
                                                     @can('ancillary-costs.approve')
                                                         @if (($ancillaryChangeStatusValidation['allowed'] ?? false) && !$fiscalYearClosed)
                                                             <form method="POST"
@@ -639,7 +639,7 @@
                                                                 {{ __('Edit') }}
                                                             </a>
                                                         @else
-                                                            <span class="tooltip" data-tip="{{ $editTooltip }}">
+                                                            <span class="tooltip tooltip-right" data-tip="{{ $editTooltip }}">
                                                                 <button
                                                                     class="btn btn-xs btn-info btn-disabled cursor-not-allowed" disabled title="{{ $editTooltip }}">
                                                                     {{ __('Edit') }}
@@ -660,7 +660,7 @@
                                                                 </button>
                                                             </form>
                                                         @else
-                                                            <span class="tooltip" data-tip="{{ $deleteTooltip }}">
+                                                            <span class="tooltip tooltip-right" data-tip="{{ $deleteTooltip }}">
                                                                 <button
                                                                     class="btn btn-xs btn-error btn-disabled cursor-not-allowed" disabled title="{{ $deleteTooltip }}">
                                                                     {{ __('Delete') }}
@@ -777,12 +777,12 @@
                                                 @endcan
                                             @else
                                                 <span
-                                                    class="badge badge-ghost">{{ __('No accounting document') }}</span>
+                                                    class="badge badge-sm badge-ghost whitespace-nowrap">{{ __('No accounting document') }}</span>
                                             @endif
                                         </td>
                                         <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">{{ $payment->description ?? '—' }}</td>
                                         <td class="px-2 py-2 md:px-3 lg:px-4 lg:py-3">
-                                            <div class="flex flex-wrap gap-2 items-center">
+                                            <div class="flex flex-wrap gap-2 items-center whitespace-nowrap">
                                                 @if ($payment->document && !$payment->cheque_id)
                                                     @can('invoices.payments.destroy-document')
                                                         <form class="m-0" method="POST"

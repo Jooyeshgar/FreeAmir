@@ -3737,5 +3737,17 @@
     "Financial summary: total income :income :currency, total expenses :cost :currency, net profit :profit :currency, with a :margin% margin.": "Financial summary: total income :income :currency, total expenses :cost :currency, net profit :profit :currency, with a :margin% margin.",
     "Account party :name (ID :id) has a balance of :balance.": "Account party :name (ID :id) has a balance of :balance.",
     "Found :count matching customers. The first result is :name with a balance of :balance.": "Found :count matching customers. The first result is :name with a balance of :balance.",
-    "Today is :jalali_date (:gregorian_date). Current month: :month (month :month_number). Fiscal year: :fiscal_year (from :start to :end), currency: :currency. Available fiscal years: :available_years.": "Today is :jalali_date (:gregorian_date). Current month: :month (month :month_number). Fiscal year: :fiscal_year (from :start to :end), currency: :currency. Available fiscal years: :available_years."
+    "Today is :jalali_date (:gregorian_date). Current month: :month (month :month_number). Fiscal year: :fiscal_year (from :start to :end), currency: :currency. Available fiscal years: :available_years.": "Today is :jalali_date (:gregorian_date). Current month: :month (month :month_number). Fiscal year: :fiscal_year (from :start to :end), currency: :currency. Available fiscal years: :available_years.",
+    "Unit weight (kg)": "Unit weight (kg)",
+    "Based on purchase amount": "Based on purchase amount",
+    "Based on weight": "Based on weight",
+    "Allocation method": "Allocation method",
+    "Weight": "Weight",
+    "Ancillary cost before VAT": "Ancillary cost before VAT",
+    "Products with zero weight are excluded from allocation:": "Products with zero weight are excluded from allocation:",
+    "For this product, weight is not defined, so it will be excluded from allocation.": "For this product, weight is not defined, so it will be excluded from allocation. Click the icon to set it.",
+    "No positive allocation basis is available. Enter amounts manually or update product weights.": "No positive allocation basis is available. Enter amounts manually or update product weights.",
+    "Line :line: invalid product weight.": "Line :line: invalid product weight.",
+    "Automatic allocation must include each invoice product exactly once.": "Automatic allocation must include each invoice product exactly once.",
+    "The product share does not match the selected allocation method and amount.": "The product share does not match the selected allocation method and amount."
 }

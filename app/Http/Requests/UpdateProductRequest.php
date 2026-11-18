@@ -46,6 +46,7 @@ class UpdateProductRequest extends FormRequest
             'discount_formula' => 'nullable|max:100|string|regex:/^[\w\d\s\-\:\.]*$/u',
             'description' => 'nullable|max:150|string|regex:/^[\w\d\s]*$/u',
             'vat' => 'nullable|numeric|min:0|max:100',
+            'weight' => 'required|numeric|min:0|max:999999999999999.999|decimal:0,3',
             'sstid' => 'nullable|string',
             'websites' => 'nullable|array',
             'websites.*.link' => 'required|url',
@@ -60,6 +61,7 @@ class UpdateProductRequest extends FormRequest
     {
         $this->merge([
             'oversell' => $this->boolean('oversell') ? 1 : 0,
+            'weight' => toEnglish($this->input('weight') ?: 0),
         ]);
     }
 
