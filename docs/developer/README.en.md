@@ -23,6 +23,7 @@ This index is for developers and contributors. If you plan to change Laravel cod
 | [testing-guide.md](testing-guide.en.md) | Running tests and writing Feature and Unit tests |
 | [extensions.md](extensions.en.md) | Extension contracts, registries, slots, and host context |
 | [package-frontend.md](package-frontend.en.md) | Package pages, navigation, and frontend integration |
+| [mcp.en.md](mcp.en.md) | MCP server guide, transports, tools, and AI security |
 | [../script/README.md](../../script/README.md) | Data migration and utility scripts |
 
 ## Accounting Domain Documentation for Development

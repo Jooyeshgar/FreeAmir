@@ -19,6 +19,7 @@
         "kasraghoreyshi/persian-faker": "^1.04",
         "lab404/laravel-impersonate": "^1.7",
         "laravel/framework": "^12.0",
+        "laravel/mcp": "^1.2",
         "laravel/sanctum": "^4.2",
         "laravel/tinker": "^2.10",
         "nativephp/desktop": "^2.2",
