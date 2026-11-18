@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools;
 
 use App\Mcp\Support\ContextResolver;
+use App\Models\FiscalYear;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Response;
 
@@ -10,7 +11,7 @@ class GetCurrentContextTool extends AccountingTool
 {
     protected string $name = 'get_current_context';
 
-    protected string $description = 'Return the current Jalali and Gregorian calendar context, active authorized fiscal year, company currency, and available fiscal years.';
+    protected string $description = 'Return the current Jalali and Gregorian calendar context, active authorized fiscal year, company currency, and available fiscal years. If fiscal-year selection is ambiguous, return an error with the available fiscal years for the user to choose from.';
 
     protected array $permissionGroups = [['invoices.index'], ['invoices.show'], ['reports.cost-income'], ['reports.company-overview'], ['customers.index'], ['customers.show'], ['reports.ledger'], ['reports.trial-balance'], ['reports.result']];
 
@@ -30,9 +31,9 @@ class GetCurrentContextTool extends AccountingTool
         ];
     }
 
-    protected function report(array $arguments): Response
+    protected function report(array $arguments, FiscalYear $fiscalYear): Response
     {
-        $context = ContextResolver::getCurrentContext($arguments);
+        $context = ContextResolver::getCurrentContext($fiscalYear);
 
         $availableList = array_map(function ($y) {
             return $y['year'].($y['is_active'] ? ' ('.__('Active').')' : '');
@@ -53,5 +54,13 @@ class GetCurrentContextTool extends AccountingTool
         return $this->success(array_merge($context, [
             'human_summary' => $humanSummary,
         ]));
+    }
+
+    protected function error(string $message): Response
+    {
+        return Response::error(json_encode([
+            'message' => $message,
+            'available_fiscal_years' => ContextResolver::getAvailableFiscalYears(),
+        ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
     }
 }

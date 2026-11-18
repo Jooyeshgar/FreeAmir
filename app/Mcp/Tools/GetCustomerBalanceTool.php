@@ -2,8 +2,8 @@
 
 namespace App\Mcp\Tools;
 
-use App\Mcp\Support\ContextResolver;
 use App\Models\Customer;
+use App\Models\FiscalYear;
 use App\Services\SubjectService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Response;
@@ -34,14 +34,13 @@ class GetCustomerBalanceTool extends AccountingTool
         ];
     }
 
-    protected function report(array $arguments): Response
+    protected function report(array $arguments, FiscalYear $fiscalYear): Response
     {
         $queryStr = trim($arguments['query']);
 
         $limit = isset($arguments['limit']) ? max(1, min(20, (int) $arguments['limit'])) : 5;
-        $currency = ContextResolver::resolveFiscalYearCurrency($arguments);
+        $currency = (string) ($fiscalYear->company?->currency ?: 'Rial');
 
-        /** @var Builder $query */
         $query = Customer::query();
 
         if (is_numeric($queryStr)) {
@@ -59,7 +58,7 @@ class GetCustomerBalanceTool extends AccountingTool
 
         if ($customers->isEmpty()) {
             return $this->success([
-                'fiscal_year_id' => ContextResolver::resolveFiscalYearId($arguments),
+                'fiscal_year_id' => (int) $fiscalYear->id,
                 'currency' => $currency,
                 'found' => false,
                 'message' => __("No customer found matching ':query'.", ['query' => $queryStr]),
@@ -99,7 +98,7 @@ class GetCustomerBalanceTool extends AccountingTool
         );
 
         return $this->success([
-            'fiscal_year_id' => ContextResolver::resolveFiscalYearId($arguments),
+            'fiscal_year_id' => (int) $fiscalYear->id,
             'currency' => $currency,
             'found' => true,
             'count' => count($results),

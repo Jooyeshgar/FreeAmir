@@ -15,6 +15,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Services\CostIncomeService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Mockery;
 use PHPUnit\Framework\Attributes\TestWith;
 use RuntimeException;
@@ -222,6 +223,20 @@ class McpServerIntegrationTest extends TestCase
         self::assertSame(1200, $month8['sales_amount']);
         $month1 = collect($named['monthly_breakdown'])->firstWhere('month_number', 1);
         self::assertSame(0, $month1['sales_count']);
+    }
+
+    public function test_invoice_summary_does_not_repeat_fiscal_year_selection_queries(): void
+    {
+        $selectionQueries = [];
+        DB::listen(function ($query) use (&$selectionQueries) {
+            if (str_starts_with(strtolower($query->sql), 'select') && str_contains($query->sql, 'fiscal_year_user')) {
+                $selectionQueries[] = $query->sql;
+            }
+        });
+
+        $this->callTool('get_invoices_summary', ['fiscal_year_id' => $this->year->id]);
+        // One authorized selection and one available-years list; no repeated lookups for dates or currency.
+        self::assertCount(2, $selectionQueries);
     }
 
     public function test_notifications_and_removed_transport_routes(): void
@@ -437,6 +452,48 @@ class McpServerIntegrationTest extends TestCase
             'params' => ['name' => 'get_current_context', 'arguments' => ['year' => 1405]],
         ])->assertOk()->assertJsonPath('result.isError', true);
         self::assertSame($second->id, $this->callTool('get_current_context', ['fiscal_year_id' => $second->id])['active_fiscal_year']['id']);
+    }
+
+    public function test_multiple_companies_without_selection_return_an_error_and_discovery_choices(): void
+    {
+        $other = FiscalYear::factory()->create(['year' => 1406]);
+        $this->user->fiscalYears()->syncWithoutDetaching([$other->id]);
+        // A host application's preferred year must not silently choose a company for MCP.
+        config(['active-fiscal-year-id' => $this->year->id]);
+        $response = $this->withToken($this->token)->postJson('/api/mcp', [
+            'jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/call',
+            'params' => ['name' => 'get_current_context', 'arguments' => []],
+        ])->assertOk()->assertJsonPath('result.isError', true);
+        $error = json_decode($response->json('result.content.0.text'), true);
+        self::assertSame(__('Please specify a fiscal year ID to select a fiscal year.'), $error['message']);
+        self::assertEqualsCanonicalizing([$this->year->id, $other->id], array_column($error['available_fiscal_years'], 'id'));
+        self::assertSame([], array_filter($error['available_fiscal_years'], fn ($year) => $year['is_active']));
+        self::assertArrayNotHasKey('active_fiscal_year', $error);
+
+        foreach (['get_invoices_summary' => [], 'get_financial_summary' => [], 'get_profit_loss' => [], 'get_customer_balance' => ['query' => 'Customer']] as $name => $arguments) {
+            $this->withToken($this->token)->postJson('/api/mcp', [
+                'jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/call',
+                'params' => ['name' => $name, 'arguments' => $arguments],
+            ])->assertOk()->assertJsonPath('result.isError', true)
+                ->assertJsonPath('result.content.0.text', __('Please specify a fiscal year ID to select a fiscal year.'));
+        }
+        self::assertSame($this->year->id, config('active-fiscal-year-id'));
+        self::assertNull(ContextResolver::authContext());
+
+        $chosen = $this->callTool('get_current_context', ['fiscal_year_id' => $other->id]);
+        self::assertSame($other->id, $chosen['active_fiscal_year']['id']);
+        self::assertSame([$other->id], array_column(array_values(array_filter($chosen['available_fiscal_years'], fn ($year) => $year['is_active'])), 'id'));
+        self::assertSame($other->id, $this->callTool('get_current_context', ['year' => 1406])['active_fiscal_year']['id']);
+    }
+
+    public function test_single_company_defaults_to_the_latest_assigned_year_and_honors_its_active_year(): void
+    {
+        $latest = FiscalYear::factory()->create(['company_id' => $this->year->company_id, 'year' => 1406]);
+        $this->user->fiscalYears()->syncWithoutDetaching([$latest->id]);
+        self::assertSame($latest->id, $this->callTool('get_current_context')['active_fiscal_year']['id']);
+
+        config(['active-fiscal-year-id' => $this->year->id]);
+        self::assertSame($this->year->id, $this->callTool('get_current_context')['active_fiscal_year']['id']);
     }
 
     public function test_http_rejects_expired_and_revoked_tokens(): void

@@ -7,8 +7,10 @@ return [
             Use this server's authorized read-only tools for accounting data held in FreeAmir.
             Start with get_current_context to identify the available fiscal years and calendar context.
             Ask the user to clarify an ambiguous company or fiscal year. Pass fiscal_year_id explicitly
-            to each report; a context lookup does not change subsequent calls. Preserve the returned
-            fiscal year and date range when explaining results. Month numbers/names and fiscal-year
+            to each report; a context lookup does not change subsequent calls.
+            If fiscal-year selection fails, get_current_context includes available_fiscal_years in
+            its error response. Ask the user to choose a company/fiscal year from that list and retry.
+            Preserve the returned fiscal year and date range when explaining results. Month numbers/names and fiscal-year
             numbering are Jalali; date values are Gregorian unless explicitly marked Jalali.
             Monetary amounts use the selected company's currency, which is returned in the currency field. Clearly
             label any requested currency conversion.

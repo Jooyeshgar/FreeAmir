@@ -5,6 +5,7 @@ namespace App\Mcp\Tools;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Mcp\Support\ContextResolver;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Response;
@@ -43,7 +44,7 @@ class GetInvoicesSummaryTool extends AccountingTool
         ];
     }
 
-    protected function report(array $arguments): Response
+    protected function report(array $arguments, FiscalYear $fiscalYear): Response
     {
         $filterType = $arguments['type'] ?? 'all';
         $statusFilter = isset($arguments['status']) ? (string) $arguments['status'] : null;
@@ -52,11 +53,10 @@ class GetInvoicesSummaryTool extends AccountingTool
             return $this->error(__('Invalid invoice status.'));
         }
         $limit = isset($arguments['limit']) ? max(1, min(50, (int) $arguments['limit'])) : 10;
-        $periodInfo = ContextResolver::resolvePeriod($arguments);
-        $contextBlock = ContextResolver::getCurrentContext($arguments);
+        $periodInfo = ContextResolver::resolvePeriod($arguments, $fiscalYear);
+        $contextBlock = ContextResolver::getCurrentContext($fiscalYear);
         $currency = $contextBlock['active_fiscal_year']['currency'];
 
-        /** @var Builder $baseQuery */
         $baseQuery = Invoice::query();
 
         if ($statusFilter !== null && $statusFilter !== '') {

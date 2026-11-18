@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools;
 
 use App\Mcp\Support\ContextResolver;
+use App\Models\FiscalYear;
 use Illuminate\Support\Facades\Validator;
 use InvalidArgumentException;
 use Laravel\Mcp\Request;
@@ -58,9 +59,9 @@ abstract class AccountingTool extends Tool
         ])->validate()['arguments'];
 
         try {
-            return ContextResolver::withContext($validated, fn () => $this->report($validated));
+            return ContextResolver::withContext($validated, fn (FiscalYear $fiscalYear) => $this->report($validated, $fiscalYear));
         } catch (InvalidArgumentException $exception) {
-            return Response::error($exception->getMessage());
+            return $this->error($exception->getMessage());
         } catch (Throwable $exception) {
             report($exception);
 
@@ -80,5 +81,5 @@ abstract class AccountingTool extends Tool
 
     abstract protected function rules(): array;
 
-    abstract protected function report(array $arguments): Response;
+    abstract protected function report(array $arguments, FiscalYear $fiscalYear): Response;
 }
