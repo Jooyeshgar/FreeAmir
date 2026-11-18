@@ -36,6 +36,7 @@ class McpServerIntegrationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config(['cache.default' => 'array']);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         $this->user = User::factory()->create();
         $this->year = FiscalYear::factory()->create(['year' => 1405]);
@@ -63,6 +64,34 @@ class McpServerIntegrationTest extends TestCase
         $this->postJson('/api/mcp', ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/list'])->assertUnauthorized();
         $this->user->revokePermissionTo('api.access');
         $this->withToken($this->token)->postJson('/api/mcp', ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/list'])->assertForbidden();
+    }
+
+    public function test_http_requests_are_rate_limited_per_user(): void
+    {
+        $this->freezeTime();
+        $message = ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'ping'];
+
+        for ($i = 0; $i < 60; $i++) {
+            $this->withToken($this->token)->postJson('/api/mcp', $message)->assertOk();
+        }
+
+        $this->withToken($this->token)->postJson('/api/mcp', $message)
+            ->assertStatus(429)
+            ->assertHeader('Retry-After', '60');
+
+        $secondToken = $this->user->createToken('Second client', ['invoices.index'])->plainTextToken;
+        app('auth')->forgetGuards();
+        $this->withToken($secondToken)->postJson('/api/mcp', $message)->assertStatus(429);
+
+        $otherUser = User::factory()->create();
+        $otherUser->givePermissionTo('api.access');
+        $otherToken = $otherUser->createToken('Other user', ['invoices.index'])->plainTextToken;
+        app('auth')->forgetGuards();
+        $this->withToken($otherToken)->postJson('/api/mcp', $message)->assertOk();
+
+        $this->travel(61)->seconds();
+        app('auth')->forgetGuards();
+        $this->withToken($this->token)->postJson('/api/mcp', $message)->assertOk();
     }
 
     public function test_real_http_isolates_context_and_restores_host_configuration(): void
