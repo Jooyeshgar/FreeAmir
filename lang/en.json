@@ -3719,5 +3719,7 @@
     "Products with zero weight are excluded from allocation:": "Products with zero weight are excluded from allocation:",
     "For this product, weight is not defined, so it will be excluded from allocation.": "For this product, weight is not defined, so it will be excluded from allocation. Click the icon to set it.",
     "No positive allocation basis is available. Enter amounts manually or update product weights.": "No positive allocation basis is available. Enter amounts manually or update product weights.",
-    "Line :line: invalid product weight.": "Line :line: invalid product weight."
+    "Line :line: invalid product weight.": "Line :line: invalid product weight.",
+    "Automatic allocation must include each invoice product exactly once.": "Automatic allocation must include each invoice product exactly once.",
+    "The product share does not match the selected allocation method and amount.": "The product share does not match the selected allocation method and amount."
 }

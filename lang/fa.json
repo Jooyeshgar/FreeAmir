@@ -3710,5 +3710,7 @@
     "Products with zero weight are excluded from allocation:": "کالاهای با وزن صفر از تخصیص حذف می‌شوند:",
     "For this product, weight is not defined, so it will be excluded from allocation.": "برای این کالا وزن تعریف نشده است و از تخصیص حذف می‌شود. برای تعریف وزن، روی نماد کلیک کنید.",
     "No positive allocation basis is available. Enter amounts manually or update product weights.": "مبنای مثبتی برای تخصیص وجود ندارد. مبالغ را دستی وارد کنید یا وزن کالاها را اصلاح کنید.",
-    "Line :line: invalid product weight.": "ردیف :line: وزن کالا نامعتبر است."
+    "Line :line: invalid product weight.": "ردیف :line: وزن کالا نامعتبر است.",
+    "Automatic allocation must include each invoice product exactly once.": "در تخصیص خودکار، هر کالای فاکتور باید دقیقاً یک بار درج شود.",
+    "The product share does not match the selected allocation method and amount.": "سهم کالا با روش تخصیص و مبلغ انتخاب‌شده مطابقت ندارد."
 }

@@ -54,7 +54,7 @@
                     x-model="vat" @input="vat = $store.utils.convertToEnglish($event.target.value)"
                     x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(vat))"
                     input_value="{{ old('vat') ?? $ancillaryCost->vat }}" label_text_class="text-gray-500"
-                    label_class="w-full" input_class="border-gray-300"></x-text-input>
+                    label_class="w-full" input_class="border-gray-300" />
             </div>
             <div class="flex w-full min-w-0 lg:col-span-2">
                 <div class="flex-wrap w-full">
@@ -68,11 +68,11 @@
                 </div>
             </div>
             <div x-show="allocationMethod !== 'manual'" x-cloak class="flex w-full min-w-0 lg:col-span-2">
-                <x-text-input title="{{ __('Ancillary cost before VAT') }}" label_text_class="text-gray-500"
+                <x-text-input title="{{ __('Ancillary cost before VAT') }}" label_text_class="text-gray-500 w-full"
                     input_name="allocation_amount" x-model="allocationAmount"
                     @input="allocationAmount = $store.utils.convertToEnglish($event.target.value); allocate()"
                     x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(allocationAmount))"
-                    placeholder="{{ localizeNumber('0') }}" />
+                    label_class="w-full" input_class="border-gray-300" placeholder="{{ localizeNumber('0') }}" />
             </div>
         </div>
     </x-card>
