@@ -3,9 +3,10 @@
 namespace App\Mcp\Tools;
 
 use App\Enums\InvoiceType;
-use App\Http\Requests\StoreMcpInvoiceRequest;
+use App\Http\Requests\StoreInvoiceRequest;
 use App\Mcp\Support\ContextResolver;
 use App\Models\Customer;
+use App\Models\Document;
 use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Product;
@@ -111,27 +112,28 @@ class CreateInvoiceTool extends AccountingTool
             if (! $availableItems->has($item['item_id'])) {
                 throw ValidationException::withMessages(["items.{$index}.item_id" => __('The selected item is invalid.')]);
             }
+            // The web form normalizer expects decimal strings rather than exponent notation.
             $transactions[] = [
-                'item_id' => (int) $item['item_id'],
-                'item_type' => $item['item_type'],
-                'quantity' => (float) $item['quantity'],
-                'unit' => (float) $item['unit'],
-                'discount' => (float) ($item['discount'] ?? 0),
-                'vat' => (float) ($item['vat'] ?? 0),
+                'item_id' => $item['item_type'].'-'.$item['item_id'],
+                'quantity' => sprintf('%.18F', $item['quantity']),
+                'unit' => sprintf('%.18F', $item['unit']),
+                'discount' => sprintf('%.18F', $item['discount'] ?? 0),
+                'vat' => sprintf('%.18F', $item['vat'] ?? 0),
                 'desc' => $item['description'] ?? null,
-                'total' => (float) $item['quantity'] * (float) $item['unit'],
+                'total' => sprintf('%.18F', (float) $item['quantity'] * (float) $item['unit']),
             ];
         }
 
-        $request = $this->validateFormRequest(StoreMcpInvoiceRequest::class, [
+        $request = $this->validateFormRequest(StoreInvoiceRequest::class, [
             'title' => $arguments['title'] ?? null,
             'description' => $arguments['description'] ?? null,
-            'date' => $date,
+            'date' => convertToJalali($date, true),
             'invoice_type' => $arguments['invoice_type'],
             'customer_id' => $arguments['customer_id'],
             'warehouse_id' => $warehouseId,
             'invoice_number' => $invoiceNumber,
-            'subtractions' => $arguments['subtraction'] ?? 0,
+            'document_number' => floor(Document::max('number') ?? 0) + 1,
+            'subtraction' => sprintf('%.18F', $arguments['subtraction'] ?? 0),
             'transactions' => $transactions,
         ]);
         $validated = $request->validated();

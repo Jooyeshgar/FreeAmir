@@ -13,6 +13,7 @@ use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\ProductGroup;
+use App\Models\Service;
 use App\Models\Subject;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -182,6 +183,7 @@ class McpMutationTest extends TestCase
     public function test_creates_only_draft_invoices_without_posting_or_inventory_changes(string $type, string $locale): void
     {
         app()->setLocale($locale);
+        Config::updateOrCreate(['key' => 'app_locale', 'fiscal_year_id' => $this->year->id], ['value' => $locale, 'type' => 1, 'category' => 1]);
         $documents = Document::count();
         $arguments = $this->arguments('create_invoice');
         $arguments['invoice_type'] = $type;
@@ -198,6 +200,26 @@ class McpMutationTest extends TestCase
         self::assertSame($documents, Document::count());
         self::assertEquals(0, $this->product->fresh()->quantity);
         self::assertSame(0, WarehouseProductStock::count());
+    }
+
+    #[TestWith(['en'])]
+    #[TestWith(['fa'])]
+    public function test_shared_invoice_request_preserves_product_and_service_items(string $locale): void
+    {
+        Config::updateOrCreate(['key' => 'app_locale', 'fiscal_year_id' => $this->year->id], ['value' => $locale, 'type' => 1, 'category' => 1]);
+        $service = Service::factory()->withGroup()->withSubject()->create();
+        $arguments = $this->arguments('create_invoice');
+        $arguments['items'][] = ['item_type' => 'service', 'item_id' => $service->id, 'quantity' => 1, 'unit' => 50];
+
+        $result = $this->created('create_invoice', $arguments);
+
+        self::assertSame('2026-11-16', $result['date']);
+        self::assertEquals(323.11, $result['amount']);
+        self::assertSame(2, $result['item_count']);
+        $items = collect($result['items'])->keyBy('item_type');
+        self::assertSame($this->product->id, $items['product']['item_id']);
+        self::assertSame($service->id, $items['service']['item_id']);
+        self::assertEquals(2, Invoice::findOrFail($result['id'])->subtraction);
     }
 
     public function test_write_tools_and_context_require_both_user_and_token_permissions(): void
