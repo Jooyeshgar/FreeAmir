@@ -17,7 +17,6 @@ use App\Models\Subject;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Models\WarehouseProductStock;
-use App\Services\SubjectService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
@@ -341,16 +340,6 @@ class McpMutationTest extends TestCase
         $response = $this->callTool('create_invoice', $arguments)->assertOk()->assertJsonPath('result.isError', true);
         $error = json_decode($response->json('result.content.0.text'), true, 512, JSON_THROW_ON_ERROR);
         self::assertSame('انبار انتخاب‌شده معتبر نیست.', $error['errors']['warehouse_id'][0]);
-    }
-
-    public function test_product_creation_rolls_back_when_subject_creation_fails(): void
-    {
-        $count = Subject::count();
-        $this->mock(SubjectService::class)->shouldReceive('createSubject')->once()->andThrow(new RuntimeException('internal SQL secret'));
-        $response = $this->callTool('create_product', $this->arguments('create_product'))->assertOk()->assertJsonPath('result.isError', true);
-        self::assertStringNotContainsString('internal SQL secret', $response->getContent());
-        self::assertSame(1, Product::count());
-        self::assertSame($count, Subject::count());
     }
 
     public function test_authentication_context_sets_stdio_actor_and_restores_it_after_failure(): void

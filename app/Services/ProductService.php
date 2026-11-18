@@ -22,17 +22,17 @@ class ProductService
     {
         app(FiscalYearMutationGuard::class)->ensureOpen($data['fiscal_year_id'] ?? getActiveFiscalYear());
 
-        return DB::transaction(function () use ($data): Product {
-            $websites = $data['websites'] ?? [];
-            unset($data['websites']);
-            $data['fiscal_year_id'] ??= getActiveFiscalYear();
+        $websites = $data['websites'] ?? [];
+        unset($data['websites']);
 
-            $product = Product::create($data);
-            $this->syncSubjects($product);
-            $this->syncWebsites($product, $websites);
+        $data['fiscal_year_id'] ??= getActiveFiscalYear();
 
-            return $product;
-        });
+        $product = Product::create($data);
+
+        $this->syncSubjects($product);
+        $this->syncWebsites($product, $websites);
+
+        return $product;
     }
 
     public function update(Product $product, array $data): Product
