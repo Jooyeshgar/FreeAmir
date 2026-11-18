@@ -12,21 +12,19 @@ FreeAmir supports the official **Model Context Protocol (MCP)** via the `laravel
 FreeAmir's MCP server can be accessed through two transports:
 
 ### A) Standard I/O (Stdio Transport)
-For local desktop clients (such as Claude Desktop or Cursor) running directly on the host or local machine:
+For local desktop clients (such as Claude Desktop or Cursor), set `FREEAMIR_MCP_TOKEN` in the environment or the application’s `.env` file, then run:
 
-```bash
-php artisan mcp:serve --token=YOUR_API_TOKEN
-```
-
-You can also specify the token in the `FREEAMIR_MCP_TOKEN` environment variable in `.env` to omit the `--token` flag:
 ```bash
 php artisan mcp:serve
 ```
 
-### B) Web Transport (HTTP/SSE)
+The client example below passes `FREEAMIR_MCP_TOKEN` through its `env` configuration, keeping the token out of process arguments.
+
+### B) Web Transport (HTTP)
 For remote clients connecting across the network or inside Docker:
 - **Endpoint Route:** `POST /api/mcp`
 - **Authentication:** `Authorization: Bearer YOUR_API_TOKEN` header
+- **Rate limit:** 60 requests per minute per user, shared across their tokens. Excess requests return HTTP `429` with a `Retry-After` header.
 - **Endpoint Discovery:** The full URL is displayed and easily copied with one click in the admin UI under `Settings > API Tokens`.
 
 ---
@@ -40,7 +38,7 @@ MCP server security is built upon Laravel Sanctum personal access tokens and Spa
    - The token owner holds the underlying permission.
    - The token was granted the matching ability at creation time.
 3. **Operation Hints:** Reports use `readOnlyHint: true`. Creation tools use `readOnlyHint: false`, `destructiveHint: false` and require explicit access to an open fiscal year.
-4. **Fiscal-Year Scoping:** Tool calls temporarily activate the requested fiscal year and company context, safely restoring the previous state in a `finally` block.
+4. **Fiscal-Year Scoping:** Tool calls temporarily activate the requested fiscal year and company context, safely restoring the previous state in a `finally` block. If accessible fiscal years span multiple companies, reports require an explicit `fiscal_year_id` or a `year` that identifies a single company. For a single company, omission uses its active authorized fiscal year or the latest assigned year. On a fiscal-year selection error, `get_current_context` returns `isError: true` and JSON text containing `message` and `available_fiscal_years`; no report or active fiscal year is selected. Use the returned company and fiscal-year IDs to ask the user which one they intended.
 
 ### Required Permissions per Tool:
 
@@ -69,10 +67,11 @@ Calculates revenue, expenses, net profit, and margin from approved accounting tr
   - `period`: Time range (`current_month`, `previous_month`, `fiscal_year`).
   - `month`: Jalali month number (1 to 12).
   - `fiscal_year_id`: Target fiscal year ID.
+  - `year`: Optional four-digit Jalali year.
 
 ### 3. `get_financial_summary`
 Returns high-level business figures (total income, expenses, profit margin) and top income and cost accounts.
-- **Arguments:** `limit` (top accounts limit, default 5), `fiscal_year_id`.
+- **Arguments:** `limit` (top accounts limit, default 5), `year`, `fiscal_year_id`.
 
 ### 4. `get_invoices_summary`
 Aggregates sales and purchase invoices, delivers a 12-month breakdown, and lists recent invoices.
@@ -80,8 +79,10 @@ Aggregates sales and purchase invoices, delivers a 12-month breakdown, and lists
   - `type`: Filter by invoice type (`all`, `sell`, `buy`).
   - `period`: Time range (`current_month`, `previous_month`, `fiscal_year`).
   - `month`: Jalali month number (1 to 12).
-  - `status`: Invoice status filter (e.g. `approved`, `pending`).
+  - `status`: Invoice status filter (e.g. `approved`, `pending`). Defaults to `approved`, `partially_paid`, and `paid`. The response identifies the applied statuses in `filter_applied.status_codes`.
   - `limit`: Number of recent invoices returned (default 10).
+  - `year`: Optional four-digit Jalali year.
+  - `fiscal_year_id`: Optional authorized fiscal year ID.
 
 ### 5. `get_customer_balance`
 Searches a customer or counterparty by name, phone, mobile, national code, or ID, returning their ledger balance and debtor/creditor status.
@@ -134,9 +135,11 @@ Edit your client configuration file (`claude_desktop_config.json` or `.cursor/mc
       "command": "php",
       "args": [
         "/path/to/FreeAmir/artisan",
-        "mcp:serve",
-        "--token=1|abcdef1234567890..."
-      ]
+        "mcp:serve"
+      ],
+      "env": {
+        "FREEAMIR_MCP_TOKEN": "1|abcdef1234567890..."
+      }
     }
   }
 }

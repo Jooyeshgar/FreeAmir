@@ -5,6 +5,7 @@ namespace App\Mcp\Tools;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Mcp\Support\ContextResolver;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Response;
@@ -13,7 +14,7 @@ class GetInvoicesSummaryTool extends AccountingTool
 {
     protected string $name = 'get_invoices_summary';
 
-    protected string $description = 'Summarize sales and purchase invoices for an authorized fiscal year, with totals, a 12-month Jalali breakdown, and a limited list of recent invoices. Amounts use the selected company currency.';
+    protected string $description = 'Summarize approved or settled sales and purchase invoices by default for an authorized fiscal year, with totals, a 12-month Jalali breakdown, and a limited list of recent invoices. Amounts use the selected company currency.';
 
     protected array $permissionGroups = [['invoices.index'], ['invoices.show']];
 
@@ -23,7 +24,7 @@ class GetInvoicesSummaryTool extends AccountingTool
             'type' => $schema->string()->description('Invoice type filter: all, sell, or buy.')->enum(['all', 'sell', 'buy']),
             'month' => $schema->integer()->min(1)->max(12)->description('Jalali month number from 1 to 12.'),
             'period' => $schema->string()->description('Reporting period: current_month, previous_month, or fiscal_year.')->enum(['current_month', 'previous_month', 'fiscal_year']),
-            'status' => $schema->string()->description('Optional invoice status filter, such as pending, pre_invoice, approved, rejected, or paid; numeric status values are also accepted.'),
+            'status' => $schema->string()->description('Optional invoice status filter, such as pending, pre_invoice, approved, rejected, or paid; numeric status values are also accepted. Defaults to approved, partially_paid, and paid invoices.'),
             'limit' => $schema->integer()->min(1)->max(50)->description('Maximum number of recent invoices to return (default: 10).'),
             'year' => $schema->integer()->description('Optional four-digit Jalali year. Uses the active fiscal year when omitted.'),
             'fiscal_year_id' => $schema->integer()->description('Optional authorized fiscal year ID.'),
@@ -43,7 +44,7 @@ class GetInvoicesSummaryTool extends AccountingTool
         ];
     }
 
-    protected function report(array $arguments): Response
+    protected function report(array $arguments, FiscalYear $fiscalYear): Response
     {
         $filterType = $arguments['type'] ?? 'all';
         $statusFilter = isset($arguments['status']) ? (string) $arguments['status'] : null;
@@ -52,16 +53,12 @@ class GetInvoicesSummaryTool extends AccountingTool
             return $this->error(__('Invalid invoice status.'));
         }
         $limit = isset($arguments['limit']) ? max(1, min(50, (int) $arguments['limit'])) : 10;
-        $periodInfo = ContextResolver::resolvePeriod($arguments);
-        $contextBlock = ContextResolver::getCurrentContext($arguments);
+        $periodInfo = ContextResolver::resolvePeriod($arguments, $fiscalYear);
+        $contextBlock = ContextResolver::getCurrentContext($fiscalYear);
         $currency = $contextBlock['active_fiscal_year']['currency'];
 
-        /** @var Builder $baseQuery */
-        $baseQuery = Invoice::query();
-
-        if ($statusFilter !== null && $statusFilter !== '') {
-            $baseQuery->where('status', $status->value);
-        }
+        $statuses = $status !== null ? [$status] : InvoiceStatus::approvedOrSettled();
+        $baseQuery = Invoice::query()->whereIn('status', $statuses);
 
         // If period is scoped to a specific Jalali month
         $scopedQuery = clone $baseQuery;
@@ -103,7 +100,7 @@ class GetInvoicesSummaryTool extends AccountingTool
             $statusLabel = $inv->status instanceof InvoiceStatus ? $inv->status->label() : __('Unknown');
 
             $rawDate = $inv->date ? $inv->date->format('Y-m-d') : null;
-            $jalaliDate = ContextResolver::toJalaliDateString($rawDate);
+            $jalaliDate = $rawDate !== null ? (gregorian_to_jalali_date($rawDate, '/', '-') ?: null) : null;
             $jalaliMonthName = null;
 
             if ($jalaliDate !== null) {
@@ -201,7 +198,8 @@ class GetInvoicesSummaryTool extends AccountingTool
             ],
             'filter_applied' => [
                 'type' => $filterType,
-                'status' => $statusFilter,
+                'status' => $statusFilter ?? 'approved_or_settled',
+                'status_codes' => array_map(fn (InvoiceStatus $status) => $status->valueName(), $statuses),
             ],
             'monthly_breakdown' => array_values($monthlyBreakdown),
             'recent_invoices' => $invoicesList,

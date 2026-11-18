@@ -5,6 +5,7 @@ namespace App\Mcp\Tools;
 use App\Enums\CustomerType;
 use App\Http\Requests\StoreCustomerRequest;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Services\CustomerService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Validation\ValidationException;
@@ -56,7 +57,7 @@ class CreateCustomerTool extends AccountingTool
         ];
     }
 
-    protected function report(array $arguments): Response
+    protected function report(array $arguments, FiscalYear $fiscalYear): Response
     {
         $yearId = (int) $arguments['fiscal_year_id'];
         $groupId = $arguments['group_id'] ?? CustomerGroup::where('fiscal_year_id', $yearId)->orderBy('id')->value('id');

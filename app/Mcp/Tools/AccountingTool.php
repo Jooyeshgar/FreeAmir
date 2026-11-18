@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools;
 
 use App\Mcp\Support\ContextResolver;
+use App\Models\FiscalYear;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
@@ -62,14 +63,14 @@ abstract class AccountingTool extends Tool
                 ...collect($rules)->mapWithKeys(fn ($rule, $key) => ['arguments.'.$key => $rule])->all(),
             ])->validate()['arguments'];
 
-            return ContextResolver::withContext($validated, fn () => $this->report($validated));
+            return ContextResolver::withContext($validated, fn (FiscalYear $fiscalYear) => $this->report($validated, $fiscalYear));
         } catch (ValidationException $exception) {
             return $this->error(json_encode([
                 'message' => __('The given data was invalid.'),
                 'errors' => $exception->errors(),
             ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
         } catch (InvalidArgumentException $exception) {
-            return Response::error($exception->getMessage());
+            return $this->error($exception->getMessage());
         } catch (Throwable $exception) {
             report($exception);
 
@@ -102,5 +103,5 @@ abstract class AccountingTool extends Tool
 
     abstract protected function rules(): array;
 
-    abstract protected function report(array $arguments): Response;
+    abstract protected function report(array $arguments, FiscalYear $fiscalYear): Response;
 }

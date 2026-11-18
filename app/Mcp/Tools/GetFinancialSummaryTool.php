@@ -2,7 +2,7 @@
 
 namespace App\Mcp\Tools;
 
-use App\Mcp\Support\ContextResolver;
+use App\Models\FiscalYear;
 use App\Services\CostIncomeService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Response;
@@ -33,13 +33,13 @@ class GetFinancialSummaryTool extends AccountingTool
         ];
     }
 
-    protected function report(array $arguments): Response
+    protected function report(array $arguments, FiscalYear $fiscalYear): Response
     {
         /** @var CostIncomeService $service */
         $service = app(CostIncomeService::class);
         $limit = isset($arguments['limit']) ? max(1, min(20, (int) $arguments['limit'])) : 5;
-        $activeFiscalYearId = ContextResolver::resolveFiscalYearId($arguments);
-        $currency = ContextResolver::resolveFiscalYearCurrency($arguments);
+        $activeFiscalYearId = (int) $fiscalYear->id;
+        $currency = (string) ($fiscalYear->company?->currency ?: 'Rial');
 
         $summary = $service->summary();
 

@@ -16,6 +16,7 @@ use App\Models\WorkShift;
 use App\Models\WorkSite;
 use App\Services\AttendanceLogImportService;
 use App\Services\AttendanceService;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Spatie\Permission\Models\Permission;
@@ -421,9 +422,7 @@ class AttendanceLogTest extends TestCase
         file_put_contents($tmpPath, $tsv);
         $uploadedFile = new UploadedFile($tmpPath, 'attendance.tsv', 'text/plain', null, true);
 
-        /** @var AttendanceLogImportService $service */
-        $service = app(AttendanceLogImportService::class);
-        $result = $service->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->fiscalYearId);
+        $result = app(AttendanceLogImportService::class)->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->fiscalYearId);
 
         $this->assertEquals(1, $result['imported']);
 
@@ -972,9 +971,7 @@ class AttendanceLogTest extends TestCase
         file_put_contents($tmpPath, $tsv);
         $uploadedFile = new UploadedFile($tmpPath, 'attendance.tsv', 'text/plain', null, true);
 
-        /** @var AttendanceLogImportService $service */
-        $service = app(AttendanceLogImportService::class);
-        $result = $service->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->fiscalYearId, null, null, 'ignore');
+        $result = app(AttendanceLogImportService::class)->import($uploadedFile, AttendanceImportType::DeviceTsv, $this->fiscalYearId, null, null, 'ignore');
 
         $this->assertEquals(1, $result['imported']);
         $this->assertEquals(0, $result['skipped']);
@@ -1689,5 +1686,311 @@ class AttendanceLogTest extends TestCase
         $this->assertEquals(64, $log->auto_overtime + $log->overtime);
         $this->assertEquals(0, $log->delay);
         $this->assertEquals(0, $log->early_leave);
+    }
+
+    public function test_import_uses_file_order_for_multiple_punches_and_monthly_calculation_reads_stored_log(): void
+    {
+        $workShift = WorkShift::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'start_time' => '08:00:00',
+            'end_time' => '16:00:00',
+            'float' => 60,
+            'max_auto_overtime' => 120,
+            'thursday_status' => ThursdayStatus::FULL_DAY,
+        ]);
+        $this->employee->update(['device_id' => 'DEVICE-MULTI', 'work_shift_id' => $workShift->id]);
+        $date = '2026-02-07';
+        $content = implode("\n", [
+            "DEVICE-MULTI\t{$date} 08:00:00\t0\t0\t0\t0",
+            "DEVICE-MULTI\t{$date} 16:00:00\t0\t1\t0\t0",
+            "DEVICE-MULTI\t{$date} 12:00:00\t0\t0\t0\t0",
+            "DEVICE-MULTI\t{$date} 13:00:00\t0\t1\t0\t0",
+        ]);
+
+        $result = app(AttendanceLogImportService::class)->import(
+            UploadedFile::fake()->createWithContent('attendance.tsv', $content),
+            AttendanceImportType::DeviceTsv,
+            $this->fiscalYearId,
+        );
+
+        $this->assertSame(1, $result['imported']);
+        $log = AttendanceLog::where('employee_id', $this->employee->id)->where('log_date', $date)->firstOrFail();
+        $this->assertSame('12:00:00', $log->entry_time);
+        $this->assertSame('13:00:00', $log->exit_time);
+
+        $monthly = app(AttendanceService::class)->calculateAndStore($this->employee->id, Carbon::parse($date), 28, 1404, 11);
+        $this->assertSame(1, $monthly->present_days);
+        $this->assertSame(23, $monthly->absent_days);
+        $this->assertSame($monthly->id, $log->fresh()->monthly_attendance_id);
+    }
+
+    public function test_tsv_to_monthly_with_on_time_without_deducting_break_for_both_shifts(): void
+    {
+        foreach (['07:30:00', '08:00:00'] as $start) {
+            $this->assertImportedMonthlyScenario($start, 0, 480, [], [480, 0, 0, 0]);
+        }
+    }
+
+    public function test_tsv_to_monthly_with_early_arrival_for_both_shifts(): void
+    {
+        foreach (['07:30:00', '08:00:00'] as $start) {
+            $this->assertImportedMonthlyScenario($start, -30, 480, [], [510, 0, 0, 30]);
+        }
+    }
+
+    public function test_tsv_to_monthly_with_within_float_for_both_shifts(): void
+    {
+        foreach (['07:30:00', '08:00:00'] as $start) {
+            $this->assertImportedMonthlyScenario($start, 30, 510, [], [480, 0, 0, 0]);
+        }
+    }
+
+    public function test_tsv_to_monthly_with_at_float_boundary_for_both_shifts(): void
+    {
+        foreach (['07:30:00', '08:00:00'] as $start) {
+            $this->assertImportedMonthlyScenario($start, 60, 540, [], [480, 0, 0, 0]);
+        }
+    }
+
+    public function test_tsv_to_monthly_with_after_float_for_both_shifts(): void
+    {
+        foreach (['07:30:00', '08:00:00'] as $start) {
+            $this->assertImportedMonthlyScenario($start, 90, 540, [], [450, 30, 0, 0]);
+        }
+    }
+
+    public function test_tsv_to_monthly_with_early_departure_for_both_shifts(): void
+    {
+        foreach (['07:30:00', '08:00:00'] as $start) {
+            $this->assertImportedMonthlyScenario($start, 30, 480, [], [450, 0, 30, 0]);
+        }
+    }
+
+    public function test_tsv_to_monthly_with_late_departure_for_both_shifts(): void
+    {
+        foreach (['07:30:00', '08:00:00'] as $start) {
+            $this->assertImportedMonthlyScenario($start, 30, 555, [], [525, 0, 0, 45]);
+        }
+    }
+
+    public function test_tsv_to_monthly_with_automatic_overtime_cap_for_both_shifts(): void
+    {
+        foreach (['07:30:00', '08:00:00'] as $start) {
+            $this->assertImportedMonthlyScenario($start, -60, 660, [], [720, 0, 0, 120]);
+        }
+    }
+
+    public function test_tsv_to_monthly_with_paid_leave_inside_attendance_for_both_shifts(): void
+    {
+        foreach (['07:30:00', '08:00:00'] as $start) {
+            $this->assertImportedMonthlyScenario($start, 0, 480, [['paid', 180, 240]], [420, 0, 0, 0]);
+        }
+    }
+
+    public function test_tsv_to_monthly_with_unpaid_leave_inside_attendance_for_both_shifts(): void
+    {
+        foreach (['07:30:00', '08:00:00'] as $start) {
+            $this->assertImportedMonthlyScenario($start, 0, 480, [['unpaid', 180, 240]], [420, 0, 0, 0]);
+        }
+    }
+
+    public function test_tsv_to_monthly_with_paid_leave_before_entry_for_both_shifts(): void
+    {
+        foreach (['07:30:00', '08:00:00'] as $start) {
+            $this->assertImportedMonthlyScenario($start, 120, 480, [['paid', 0, 120]], [360, 0, 0, 0]);
+        }
+    }
+
+    public function test_tsv_to_monthly_with_unpaid_leave_before_entry_for_both_shifts(): void
+    {
+        foreach (['07:30:00', '08:00:00'] as $start) {
+            $this->assertImportedMonthlyScenario($start, 120, 480, [['unpaid', 0, 120]], [360, 0, 0, 0]);
+        }
+    }
+
+    public function test_tsv_to_monthly_with_paid_leave_after_exit_through_float_for_both_shifts(): void
+    {
+        foreach (['07:30:00', '08:00:00'] as $start) {
+            $this->assertImportedMonthlyScenario($start, 60, 480, [['paid', 480, 540]], [420, 0, 0, 0]);
+        }
+    }
+
+    public function test_tsv_to_monthly_with_unpaid_leave_after_exit_through_float_for_both_shifts(): void
+    {
+        foreach (['07:30:00', '08:00:00'] as $start) {
+            $this->assertImportedMonthlyScenario($start, 60, 480, [['unpaid', 480, 540]], [420, 0, 0, 0]);
+        }
+    }
+
+    public function test_tsv_to_monthly_with_separate_paid_and_unpaid_leave_for_both_shifts(): void
+    {
+        foreach (['07:30:00', '08:00:00'] as $start) {
+            $this->assertImportedMonthlyScenario($start, 0, 480, [['paid', 180, 240], ['unpaid', 300, 330]], [390, 0, 0, 0]);
+        }
+    }
+
+    private function assertImportedMonthlyScenario(string $start, int $entry, int $exit, array $leaves, array $expected): void
+    {
+        $shift = WorkShift::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'start_time' => $start,
+            'end_time' => Carbon::parse($start)->addMinutes(480)->format('H:i:s'),
+            'float' => 60, 'break' => 60, 'max_auto_overtime' => 120,
+            'thursday_status' => ThursdayStatus::FULL_DAY,
+        ]);
+        $employee = Employee::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'work_shift_id' => $shift->id,
+            'device_id' => 'MONTHLY-'.$shift->id,
+        ]);
+        $date = '2026-02-07';
+        $clock = fn (int $offset) => Carbon::parse($date.' '.$start)->addMinutes($offset);
+        $paid = $unpaid = 0;
+
+        foreach ($leaves as [$kind, $from, $to]) {
+            $type = $kind === 'paid' ? PersonnelRequestType::LEAVE_HOURLY : PersonnelRequestType::LEAVE_WITHOUT_PAY_HOURLY;
+            app(AttendanceService::class)->validateHourlyLeaveWithinShift($employee, $type, $date, $clock($from)->format('H:i'), $clock($to)->format('H:i'));
+            PersonnelRequest::factory()->approved()->create([
+                'fiscal_year_id' => $this->fiscalYearId, 'employee_id' => $employee->id,
+                'request_type' => $type, 'start_date' => $clock($from), 'end_date' => $clock($to),
+            ]);
+            if ($kind === 'paid') {
+                $paid += $to - $from;
+            } else {
+                $unpaid += $to - $from;
+            }
+        }
+
+        PersonnelRequest::factory()->pending()->create([
+            'fiscal_year_id' => $this->fiscalYearId, 'employee_id' => $employee->id,
+            'request_type' => PersonnelRequestType::LEAVE_HOURLY,
+            'start_date' => $clock(250), 'end_date' => $clock(280),
+        ]);
+
+        $monthly = app(AttendanceService::class)->calculateAndStore($employee->id, Carbon::parse($date), 28, 1404, 11);
+        $this->assertSame(0, $monthly->present_days);
+        $this->assertSame(24, $monthly->absent_days);
+        // Last rows of each type determine the interval under the existing importer contract.
+        $rows = [[$entry + 30, 0], [$exit - 30, 1], [$exit, 1], [$entry, 0]];
+        $content = implode("\n", array_map(fn ($row) => implode("\t", [
+            $employee->device_id, $clock($row[0])->format('Y-m-d H:i:s'), 0, $row[1], 0, 0,
+        ]), $rows));
+
+        $result = app(AttendanceLogImportService::class)->import(
+            UploadedFile::fake()->createWithContent('attendance.tsv', $content),
+            AttendanceImportType::DeviceTsv, $this->fiscalYearId,
+        );
+
+        $this->assertSame(['imported' => 1, 'skipped' => 0, 'unknown_devices' => []], $result);
+        $log = AttendanceLog::where('employee_id', $employee->id)->sole();
+        $this->assertSame($clock($entry)->format('H:i:s'), $log->entry_time);
+        $this->assertSame($clock($exit)->format('H:i:s'), $log->exit_time);
+        [$worked, $delay, $earlyLeave, $autoOvertime] = $expected;
+
+        foreach (['worked' => $worked, 'delay' => $delay, 'early_leave' => $earlyLeave,
+            'auto_overtime' => $autoOvertime, 'overtime' => 0, 'paid_leave' => $paid, 'unpaid_leave' => $unpaid] as $field => $value) {
+            $this->assertSame($value, $log->$field, $field);
+        }
+
+        $this->assertFalse($log->is_manual);
+        $this->assertSame(0, $monthly->fresh()->present_days);
+        $this->assertNull($log->monthly_attendance_id);
+        $monthly = app(AttendanceService::class)->calculateAndStore($employee->id, Carbon::parse($date), 28, 1404, 11)->fresh();
+
+        foreach (['present_days' => 1, 'absent_days' => 23, 'work_days' => 28,
+            'paid_leave' => $paid, 'unpaid_leave' => $unpaid, 'unpaid_leave_days' => 0,
+            'overtime' => 0, 'auto_overtime' => $autoOvertime, 'undertime' => $delay + $earlyLeave] as $field => $value) {
+            $this->assertSame($value, $monthly->$field, $field);
+        }
+
+        $this->assertSame($monthly->id, $log->fresh()->monthly_attendance_id);
+        $this->assertEquals($worked, $monthly->logs()->sum('worked'));
+        $this->assertEquals($delay, $monthly->logs()->sum('delay'));
+        $this->assertEquals($earlyLeave, $monthly->logs()->sum('early_leave'));
+    }
+
+    public function test_multi_punch_import_ignore_keeps_complete_record(): void
+    {
+        $this->assertMultiPunchDuplicateMode('ignore', '09:00:00', '15:00:00', '09:00:00', '15:00:00', 0);
+    }
+
+    public function test_multi_punch_import_ignore_fills_missing_entry(): void
+    {
+        $this->assertMultiPunchDuplicateMode('ignore', null, '15:00:00', '12:00:00', '15:00:00', 1);
+    }
+
+    public function test_multi_punch_import_ignore_fills_missing_exit(): void
+    {
+        $this->assertMultiPunchDuplicateMode('ignore', '09:00:00', null, '09:00:00', '13:00:00', 1);
+    }
+
+    public function test_multi_punch_import_replace_uses_last_rows(): void
+    {
+        $this->assertMultiPunchDuplicateMode('replace', '09:00:00', '15:00:00', '12:00:00', '13:00:00', 1);
+    }
+
+    private function assertMultiPunchDuplicateMode(string $mode, ?string $entry, ?string $exit, string $expectedEntry, string $expectedExit, int $imported): void
+    {
+        $this->employee->update(['device_id' => 'DEVICE-MULTI']);
+        $log = $this->makeAttendanceLog([
+            'log_date' => '2026-02-07', 'entry_time' => $entry, 'exit_time' => $exit, 'is_manual' => true,
+        ]);
+        $content = "DEVICE-MULTI\t2026-02-07 08:00:00\t0\t0\n"
+            ."DEVICE-MULTI\t2026-02-07 16:00:00\t0\t1\n"
+            ."DEVICE-MULTI\t2026-02-07 12:00:00\t0\t0\n"
+            ."DEVICE-MULTI\t2026-02-07 13:00:00\t0\t1";
+        $result = app(AttendanceLogImportService::class)->import(
+            UploadedFile::fake()->createWithContent('attendance.tsv', $content),
+            AttendanceImportType::DeviceTsv, $this->fiscalYearId, duplicateMode: $mode,
+        );
+        $this->assertSame($imported, $result['imported']);
+        $this->assertSame(1 - $imported, $result['skipped']);
+        $log->refresh();
+        $this->assertSame($expectedEntry, $log->entry_time);
+        $this->assertSame($expectedExit, $log->exit_time);
+        $this->assertTrue($log->is_manual);
+        $this->assertSame(1, AttendanceLog::count());
+    }
+
+    public function test_changed_shift_and_approved_request_require_daily_then_monthly_recalculation(): void
+    {
+        $shift = WorkShift::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'start_time' => '08:00', 'end_time' => '16:00', 'float' => 60,
+            'max_auto_overtime' => 120, 'thursday_status' => ThursdayStatus::FULL_DAY,
+        ]);
+        $this->employee->update(['work_shift_id' => $shift->id, 'device_id' => 'DEVICE-MULTI']);
+        $request = PersonnelRequest::factory()->pending()->create([
+            'fiscal_year_id' => $this->fiscalYearId, 'employee_id' => $this->employee->id,
+            'request_type' => PersonnelRequestType::LEAVE_HOURLY,
+            'start_date' => '2026-02-07 11:00:00', 'end_date' => '2026-02-07 12:00:00',
+        ]);
+        app(AttendanceLogImportService::class)->import(
+            UploadedFile::fake()->createWithContent('attendance.tsv',
+                "DEVICE-MULTI\t2026-02-07 08:00:00\t0\t0\nDEVICE-MULTI\t2026-02-07 18:00:00\t0\t1"),
+            AttendanceImportType::DeviceTsv, $this->fiscalYearId,
+        );
+
+        $monthly = app(AttendanceService::class)->calculateAndStore($this->employee->id, Carbon::parse('2026-02-07'), 28, 1404, 11);
+        $this->assertSame(120, $monthly->auto_overtime);
+        $this->assertSame(0, $monthly->paid_leave);
+        $shift->update(['max_auto_overtime' => 30]);
+        $request->update(['status' => PersonnelRequestStatus::APPROVED]);
+        $monthly = app(AttendanceService::class)->calculateAndStore($this->employee->id, Carbon::parse('2026-02-07'), 28, 1404, 11);
+        $this->assertSame(120, $monthly->auto_overtime);
+        $this->assertSame(0, $monthly->paid_leave);
+
+        foreach ($monthly->logs as $log) {
+            app(AttendanceService::class)->recalculateLog($log);
+        }
+
+        $this->assertSame(120, $monthly->fresh()->auto_overtime);
+        $log = $monthly->logs()->sole();
+        $this->assertSame(540, $log->worked);
+        $this->assertSame(30, $log->auto_overtime);
+        $this->assertSame(60, $log->paid_leave);
+        $monthly = app(AttendanceService::class)->calculateAndStore($this->employee->id, Carbon::parse('2026-02-07'), 28, 1404, 11);
+        $this->assertSame(30, $monthly->auto_overtime);
+        $this->assertSame(60, $monthly->paid_leave);
     }
 }

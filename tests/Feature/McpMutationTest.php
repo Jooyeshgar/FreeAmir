@@ -377,7 +377,7 @@ class McpMutationTest extends TestCase
         $process = new Process([PHP_BINARY, base_path('tests/Fixtures/mcp-stdio.php'), 'writer'], base_path());
         $process->setInput(
             $call(1, 'create_customer', ['fiscal_year_id' => 1, 'name' => 'Stdio Customer', 'group_id' => 1, 'type' => 'individual'])
-            .$call(2, 'create_product', ['fiscal_year_id' => 1, 'name' => 'Stdio Product', 'group_id' => 1, 'oversell' => false])
+            .$call(2, 'create_product', ['fiscal_year_id' => 1, 'name' => 'Stdio Product', 'group_id' => 1, 'code' => 'STDIO-1', 'oversell' => false])
             .$call(3, 'create_invoice', [
                 'fiscal_year_id' => 1, 'invoice_type' => 'sell', 'customer_id' => 1, 'warehouse_id' => 1,
                 'number' => 1, 'date' => '2026-11-16', 'items' => [

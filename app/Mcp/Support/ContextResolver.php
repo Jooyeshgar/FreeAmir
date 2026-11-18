@@ -5,6 +5,7 @@ namespace App\Mcp\Support;
 use App\Mcp\Auth\AuthContext;
 use App\Models\Config;
 use App\Models\CustomerGroup;
+use App\Models\FiscalYear;
 use App\Models\ProductGroup;
 use App\Models\Warehouse;
 use InvalidArgumentException;
@@ -89,7 +90,7 @@ class ContextResolver
                 }
             }
 
-            return $callback();
+            return $callback($fiscalYear);
         } finally {
             config([
                 'active-fiscal-year-id' => $previousFiscalYear,
@@ -137,59 +138,38 @@ class ContextResolver
         return $id;
     }
 
-    protected static function resolveFiscalYear(array $arguments = []): mixed
+    protected static function resolveFiscalYear(array $arguments = []): FiscalYear
     {
         $query = self::accessibleFiscalYears();
         $explicit = false;
-        foreach (['fiscal_year_id' => 'fiscal_years.id', 'year' => 'fiscal_years.year', 'company_id' => 'fiscal_years.company_id'] as $key => $column) {
+        foreach (['fiscal_year_id' => 'fiscal_years.id', 'year' => 'fiscal_years.year'] as $key => $column) {
             if (array_key_exists($key, $arguments)) {
                 $query->where($column, self::positiveInteger($arguments[$key]));
                 $explicit = true;
-            }
-        }
-        if (! $explicit) {
-            $preferred = config('active-fiscal-year-id');
-            if ($preferred !== null) {
-                $preferredYear = (clone $query)->where('fiscal_years.id', self::positiveInteger($preferred))->first();
-                if ($preferredYear !== null) {
-                    return $preferredYear;
-                }
             }
         }
         $years = $query->orderByDesc('fiscal_years.year')->orderByDesc('fiscal_years.id')->get();
         if ($years->isEmpty()) {
             throw new InvalidArgumentException(__('Requested fiscal year is not accessible or not found.'));
         }
-        if (isset($arguments['year']) && ! isset($arguments['fiscal_year_id']) && ! isset($arguments['company_id']) && $years->pluck('company_id')->unique()->count() > 1) {
+        if (! isset($arguments['fiscal_year_id']) && $years->pluck('company_id')->unique()->count() > 1) {
             throw new InvalidArgumentException(__('Please specify a fiscal year ID to select a fiscal year.'));
+        }
+        if (! $explicit) {
+            $preferred = config('active-fiscal-year-id');
+            if ($preferred !== null) {
+                $preferredYear = $years->firstWhere('id', self::positiveInteger($preferred));
+                if ($preferredYear !== null) {
+                    return $preferredYear;
+                }
+            }
         }
 
         return $years->first();
     }
 
-    public static function resolveFiscalYearId(array $arguments = []): int
+    public static function getAvailableFiscalYears(?int $activeId = null): array
     {
-        return (int) self::resolveFiscalYear($arguments)->id;
-    }
-
-    public static function resolveFiscalYearNumber(?int $fiscalYearId = null, array $arguments = []): int
-    {
-        if ($fiscalYearId !== null) {
-            $arguments['fiscal_year_id'] = $fiscalYearId;
-        }
-
-        return (int) self::resolveFiscalYear($arguments)->year;
-    }
-
-    public static function resolveFiscalYearCurrency(array $arguments = []): string
-    {
-        return (string) (self::resolveFiscalYear($arguments)->company?->currency ?: 'Rial');
-    }
-
-    public static function getAvailableFiscalYears(): array
-    {
-        $activeId = self::resolveFiscalYearId();
-
         return self::accessibleFiscalYears()->with('company')->orderByDesc('fiscal_years.year')->get()->map(fn ($fy) => [
             'id' => (int) $fy->id,
             'company_id' => (int) $fy->company_id,
@@ -201,61 +181,13 @@ class ContextResolver
     }
 
     /**
-     * Check if a Jalali year is a leap year (کبیسه).
-     */
-    public static function isLeapJalaliYear(int $jy): bool
-    {
-        return jcheckdate(12, 30, $jy);
-    }
-
-    /**
-     * Get number of days in a given Jalali month (1-12).
-     */
-    public static function getDaysInJalaliMonth(int $jy, int $month): int
-    {
-        if ($month < 1 || $month > 12) {
-            throw new InvalidArgumentException(__('Month number must be between 1 and 12. Given: :month', ['month' => $month]));
-        }
-
-        if ($month <= 6) {
-            return 31;
-        }
-
-        if ($month <= 11) {
-            return 30;
-        }
-
-        return self::isLeapJalaliYear($jy) ? 30 : 29;
-    }
-
-    /**
-     * Convert Gregorian date string (YYYY-MM-DD or datetime) to Jalali date string (YYYY/MM/DD).
-     */
-    public static function toJalaliDateString(?string $gregorianDate): ?string
-    {
-        if ($gregorianDate === null || trim($gregorianDate) === '') {
-            return null;
-        }
-
-        $parts = explode(' ', trim($gregorianDate))[0];
-        $date = explode('-', $parts);
-        if (count($date) !== 3) {
-            return null;
-        }
-
-        $j = gregorian_to_jalali((int) $date[0], (int) $date[1], (int) $date[2]);
-
-        return sprintf('%04d/%02d/%02d', $j[0], $j[1], $j[2]);
-    }
-
-    /**
      * Get Jalali month inclusive Gregorian date boundaries (start YYYY-MM-DD, end YYYY-MM-DD).
      *
      * @return array{start: string, end: string, days: int, is_leap: bool}
      */
     public static function getJalaliMonthGregorianRange(int $jy, int $month): array
     {
-        $days = self::getDaysInJalaliMonth($jy, $month);
+        $days = getDaysInJalaliMonth($jy, $month);
         $startG = jalali_to_gregorian($jy, $month, 1);
         $endG = jalali_to_gregorian($jy, $month, $days);
 
@@ -263,7 +195,7 @@ class ContextResolver
             'start' => sprintf('%04d-%02d-%02d', $startG[0], $startG[1], $startG[2]),
             'end' => sprintf('%04d-%02d-%02d', $endG[0], $endG[1], $endG[2]),
             'days' => $days,
-            'is_leap' => self::isLeapJalaliYear($jy),
+            'is_leap' => jcheckdate(12, 30, $jy),
         ];
     }
 
@@ -284,10 +216,10 @@ class ContextResolver
      *     is_leap_year: bool
      * }
      */
-    public static function resolvePeriod(array $arguments = []): array
+    public static function resolvePeriod(array $arguments, FiscalYear $fiscalYear): array
     {
-        $fiscalYearId = self::resolveFiscalYearId($arguments);
-        $fiscalYearNumber = self::resolveFiscalYearNumber($fiscalYearId, $arguments);
+        $fiscalYearId = (int) $fiscalYear->id;
+        $fiscalYearNumber = (int) $fiscalYear->year;
         $today = now();
         $todayJalali = gregorian_to_jalali($today->year, $today->month, $today->day);
         $currentMonth = $todayJalali[1];
@@ -360,7 +292,7 @@ class ContextResolver
 
         // Default: Full Fiscal Year
         $startG = jalali_to_gregorian($fiscalYearNumber, 1, 1);
-        $lastDayEsfand = self::getDaysInJalaliMonth($fiscalYearNumber, 12);
+        $lastDayEsfand = getDaysInJalaliMonth($fiscalYearNumber, 12);
         $endG = jalali_to_gregorian($fiscalYearNumber, 12, $lastDayEsfand);
 
         return [
@@ -373,29 +305,26 @@ class ContextResolver
             'days_in_month' => null,
             'fiscal_year_id' => $fiscalYearId,
             'fiscal_year_number' => $fiscalYearNumber,
-            'is_leap_year' => self::isLeapJalaliYear($fiscalYearNumber),
+            'is_leap_year' => jcheckdate(12, 30, $fiscalYearNumber),
         ];
     }
 
     /**
      * Get rich context block including today's date, current Jalali month, and active fiscal year.
      *
-     * @param  array<string, mixed>  $arguments
      * @return array<string, mixed>
      */
-    public static function getCurrentContext(array $arguments = []): array
+    public static function getCurrentContext(FiscalYear $fiscalYear): array
     {
         $today = now();
         $todayJalali = gregorian_to_jalali($today->year, $today->month, $today->day);
-        $fiscalYearId = self::resolveFiscalYearId($arguments);
-        $fiscalYearNumber = self::resolveFiscalYearNumber($fiscalYearId, $arguments);
-
-        $fy = self::resolveFiscalYear($arguments);
-        $fiscalYearTitle = (string) ($fy->title ?? $fy->year);
-        $currency = self::resolveFiscalYearCurrency($arguments);
+        $fiscalYearId = (int) $fiscalYear->id;
+        $fiscalYearNumber = (int) $fiscalYear->year;
+        $fiscalYearTitle = (string) ($fiscalYear->title ?? $fiscalYear->year);
+        $currency = (string) ($fiscalYear->company?->currency ?: 'Rial');
 
         $fyStart = jalali_to_gregorian($fiscalYearNumber, 1, 1);
-        $fyEndDays = self::getDaysInJalaliMonth($fiscalYearNumber, 12);
+        $fyEndDays = getDaysInJalaliMonth($fiscalYearNumber, 12);
         $fyEnd = jalali_to_gregorian($fiscalYearNumber, 12, $fyEndDays);
 
         return [
@@ -412,11 +341,11 @@ class ContextResolver
                 'year' => $fiscalYearNumber,
                 'title' => $fiscalYearTitle,
                 'is_current_calendar_year' => ($todayJalali[0] === $fiscalYearNumber),
-                'is_leap_year' => self::isLeapJalaliYear($fiscalYearNumber),
+                'is_leap_year' => jcheckdate(12, 30, $fiscalYearNumber),
                 'start_date' => sprintf('%04d-%02d-%02d', $fyStart[0], $fyStart[1], $fyStart[2]),
                 'end_date' => sprintf('%04d-%02d-%02d', $fyEnd[0], $fyEnd[1], $fyEnd[2]),
             ],
-            'available_fiscal_years' => self::getAvailableFiscalYears(),
+            'available_fiscal_years' => self::getAvailableFiscalYears($fiscalYearId),
             'customer_groups' => CustomerGroup::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)
                 ->get(['id', 'name'])->map(fn ($g) => ['id' => (int) $g->id, 'name' => (string) $g->name])->values()->all(),
             'product_groups' => ProductGroup::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)

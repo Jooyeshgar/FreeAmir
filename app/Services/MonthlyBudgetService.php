@@ -977,12 +977,7 @@ class MonthlyBudgetService
     private function monthDateRange(int $month, ?int $dayLimit = null): array
     {
         $fiscalYear = $this->activeFiscalYear ??= (int) FiscalYear::query()->findOrFail(getActiveFiscalYear())->year;
-        $lastDay = match (true) {
-            $month <= 6 => 31,
-            $month <= 11 => 30,
-            jcheckdate(12, 30, $fiscalYear) => 30,
-            default => 29,
-        };
+        $lastDay = getDaysInJalaliMonth($fiscalYear, $month);
         $lastDay = min($lastDay, $dayLimit ?? $this->actualDayLimits[$month] ?? $lastDay);
 
         return [

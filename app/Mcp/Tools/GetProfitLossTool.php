@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools;
 
 use App\Mcp\Support\ContextResolver;
+use App\Models\FiscalYear;
 use App\Services\CostIncomeService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Response;
@@ -35,13 +36,13 @@ class GetProfitLossTool extends AccountingTool
         ];
     }
 
-    protected function report(array $arguments): Response
+    protected function report(array $arguments, FiscalYear $fiscalYear): Response
     {
         /** @var CostIncomeService $service */
         $service = app(CostIncomeService::class);
 
-        $periodInfo = ContextResolver::resolvePeriod($arguments);
-        $contextBlock = ContextResolver::getCurrentContext($arguments);
+        $periodInfo = ContextResolver::resolvePeriod($arguments, $fiscalYear);
+        $contextBlock = ContextResolver::getCurrentContext($fiscalYear);
         $targetMonth = $periodInfo['month'];
         $currency = $contextBlock['active_fiscal_year']['currency'];
 

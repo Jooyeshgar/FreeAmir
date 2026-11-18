@@ -3,7 +3,7 @@
 namespace App\Mcp\Tools;
 
 use App\Http\Requests\StoreProductRequest;
-use App\Mcp\Support\ContextResolver;
+use App\Models\FiscalYear;
 use App\Models\ProductGroup;
 use App\Services\ProductService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -52,7 +52,7 @@ class CreateProductTool extends AccountingTool
         ];
     }
 
-    protected function report(array $arguments): Response
+    protected function report(array $arguments, FiscalYear $fiscalYear): Response
     {
         $yearId = (int) $arguments['fiscal_year_id'];
         $groupId = $arguments['group_id'] ?? ProductGroup::where('fiscal_year_id', $yearId)->orderBy('id')->value('id');
@@ -88,7 +88,7 @@ class CreateProductTool extends AccountingTool
             'group_id' => $product->group,
             'quantity' => (float) $product->quantity,
             'selling_price' => (float) $product->selling_price,
-            'currency' => ContextResolver::resolveFiscalYearCurrency($arguments),
+            'currency' => (string) ($fiscalYear->company?->currency ?: 'Rial'),
             'message' => __('Product created successfully.'),
         ]);
     }

@@ -6,6 +6,7 @@ use App\Enums\InvoiceType;
 use App\Http\Requests\StoreMcpInvoiceRequest;
 use App\Mcp\Support\ContextResolver;
 use App\Models\Customer;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\Service;
@@ -75,7 +76,7 @@ class CreateInvoiceTool extends AccountingTool
         ];
     }
 
-    protected function report(array $arguments): Response
+    protected function report(array $arguments, FiscalYear $fiscalYear): Response
     {
         $yearId = (int) $arguments['fiscal_year_id'];
         $customer = Customer::query()->find($arguments['customer_id']);
@@ -155,7 +156,7 @@ class CreateInvoiceTool extends AccountingTool
             'customer_id' => $invoice->customer_id,
             'warehouse_id' => $invoice->warehouse_id,
             'amount' => (float) $invoice->amount,
-            'currency' => ContextResolver::resolveFiscalYearCurrency($arguments),
+            'currency' => (string) ($fiscalYear->company?->currency ?: 'Rial'),
             'vat' => (float) $invoice->vat,
             'item_count' => $invoice->items->count(),
             'approved' => false,
