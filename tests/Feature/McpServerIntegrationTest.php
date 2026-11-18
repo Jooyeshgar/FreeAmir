@@ -225,6 +225,43 @@ class McpServerIntegrationTest extends TestCase
         self::assertSame(0, $month1['sales_count']);
     }
 
+    public function test_invoice_summary_defaults_to_approved_or_settled_statuses(): void
+    {
+        config(['active-fiscal-year-id' => $this->year->id]);
+        $customer = Customer::create(['name' => 'Status customer', 'fiscal_year_id' => $this->year->id]);
+        foreach ([InvoiceType::SELL, InvoiceType::BUY] as $type) {
+            foreach (InvoiceStatus::cases() as $status) {
+                Invoice::create([
+                    'number' => $type->value * 100 + $status->value, 'date' => '2026-10-26',
+                    'invoice_type' => $type, 'status' => $status, 'customer_id' => $customer->id,
+                    'creator_id' => $this->user->id, 'fiscal_year_id' => $this->year->id,
+                    'subtraction' => 0, 'vat' => 0, 'amount' => 1000,
+                ]);
+            }
+        }
+        config(['active-fiscal-year-id' => null]);
+
+        $data = $this->callTool('get_invoices_summary', ['fiscal_year_id' => $this->year->id]);
+        self::assertSame(3, $data['summary']['total_sales_count']);
+        self::assertSame(3000, $data['summary']['total_sales_amount']);
+        self::assertSame(3, $data['summary']['total_purchases_count']);
+        self::assertSame(3000, $data['summary']['total_purchases_amount']);
+        self::assertSame('approved_or_settled', $data['filter_applied']['status']);
+        self::assertSame(['approved', 'partially_paid', 'paid'], $data['filter_applied']['status_codes']);
+        self::assertSame([3, 8, 9], collect($data['recent_invoices'])->pluck('status_code')->unique()->sort()->values()->all());
+        $month = collect($data['monthly_breakdown'])->firstWhere('month_number', 8);
+        self::assertSame(3000, $month['sales_amount']);
+        self::assertSame(3000, $month['purchases_amount']);
+
+        $rejected = $this->callTool('get_invoices_summary', ['status' => 'rejected', 'fiscal_year_id' => $this->year->id]);
+        self::assertSame(1, $rejected['summary']['total_sales_count']);
+        self::assertSame(1000, $rejected['summary']['total_sales_amount']);
+        self::assertSame(1, $rejected['summary']['total_purchases_count']);
+        self::assertSame(['rejected'], $rejected['filter_applied']['status_codes']);
+        self::assertSame([6], collect($rejected['recent_invoices'])->pluck('status_code')->unique()->values()->all());
+        self::assertSame(1000, collect($rejected['monthly_breakdown'])->firstWhere('month_number', 8)['sales_amount']);
+    }
+
     public function test_invoice_summary_does_not_repeat_fiscal_year_selection_queries(): void
     {
         $selectionQueries = [];
