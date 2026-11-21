@@ -418,4 +418,91 @@ class WarehouseTest extends TestCase
         $this->assertArrayNotHasKey('warehouse_product_stocks', $export);
         $this->assertArrayNotHasKey('warehouse_transfers', $export);
     }
+
+    public function test_transfer_form_preselects_product_and_warehouse_from_query_parameters(): void
+    {
+        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'warehouses.show']));
+
+        $source = $this->makeWarehouse(['name' => 'Preselected Source']);
+        $product = Product::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'name' => 'Preselected Product',
+        ]);
+        Product::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'name' => 'Unrelated Product',
+        ]);
+
+        WarehouseProductStock::create([
+            'warehouse_id' => $source->id,
+            'product_id' => $product->id,
+            'quantity' => 5,
+            'average_cost' => 100,
+        ]);
+
+        $this->get(route('warehouses.show', $source))
+            ->assertOk()
+            ->assertSee("from_warehouse_id={$source->id}&amp;product_id={$product->id}", false)
+            ->assertDontSee('&amp;amp;product_id=', false);
+
+        $this->get(route('warehouses.transfer', [
+            'from_warehouse_id' => $source->id,
+            'product_id' => $product->id,
+        ]))
+            ->assertOk()
+            ->assertViewHas('products', fn ($products) => $products->count() === 1 && $products->first()->id === $product->id)
+            ->assertSee("selectedProduct: 'product-{$product->id}'", false)
+            ->assertSee("productId: '{$product->id}'", false)
+            ->assertSee('x-init="selectedValue = selectedProduct"', false)
+            ->assertDontSee('@js(', false)
+            ->assertSee('Preselected Product')
+            ->assertDontSee('Unrelated Product')
+            ->assertSee('disabled: true', false);
+    }
+
+    public function test_transfer_falls_back_to_product_average_cost_when_source_stock_average_cost_is_zero(): void
+    {
+        $source = $this->makeWarehouse();
+        $destination = $this->makeWarehouse();
+        $product = Product::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'average_cost' => 150,
+        ]);
+
+        WarehouseProductStock::create([
+            'warehouse_id' => $source->id,
+            'product_id' => $product->id,
+            'quantity' => 10,
+            'average_cost' => 0,
+        ]);
+
+        $this->post(route('warehouses.transfer.store'), [
+            'product_id' => $product->id,
+            'from_warehouse_id' => $source->id,
+            'to_warehouse_id' => $destination->id,
+            'quantity' => 4,
+        ])->assertRedirect(route('warehouses.show', $destination));
+
+        $this->assertDatabaseHas('warehouse_transfers', [
+            'product_id' => $product->id,
+            'from_warehouse_id' => $source->id,
+            'to_warehouse_id' => $destination->id,
+            'quantity' => 4,
+            'unit_cost' => 150,
+        ]);
+
+        $this->assertDatabaseHas('warehouse_product_stocks', [
+            'warehouse_id' => $source->id,
+            'product_id' => $product->id,
+            'quantity' => 6,
+            'average_cost' => 150,
+        ]);
+
+        $this->assertDatabaseHas('warehouse_product_stocks', [
+            'warehouse_id' => $destination->id,
+            'product_id' => $product->id,
+            'quantity' => 4,
+            'average_cost' => 150,
+        ]);
+    }
 }
