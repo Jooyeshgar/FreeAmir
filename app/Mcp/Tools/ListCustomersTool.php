@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Tools;
 
+use App\Enums\CustomerType;
 use App\Models\Customer;
 use App\Models\FiscalYear;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -101,11 +102,14 @@ class ListCustomersTool extends AccountingTool
 
     public static function formatSummary(Customer $customer, string $currency): array
     {
+        $rawType = $customer->getRawOriginal('type');
+        $customerType = is_numeric($rawType) ? CustomerType::tryFrom((int) $rawType) : null;
+
         return [
             'id' => (int) $customer->id,
             'name' => (string) $customer->name,
-            'type' => $customer->type?->valueName(),
-            'type_label' => $customer->type?->label(),
+            'type' => $customerType?->valueName(),
+            'type_label' => $customerType?->label(),
             'group_id' => $customer->group_id !== null ? (int) $customer->group_id : null,
             'group_name' => $customer->group?->name,
             'phone' => $customer->phone ?: null,

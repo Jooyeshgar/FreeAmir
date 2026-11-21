@@ -5,7 +5,6 @@ namespace App\Mcp\Server;
 use App\Mcp\Auth\TokenAuthenticator;
 use App\Mcp\Support\ContextResolver;
 use App\Mcp\Tools\GetCurrentContextTool;
-use App\Mcp\Tools\GetCustomerBalanceTool;
 use App\Mcp\Tools\GetCustomerTool;
 use App\Mcp\Tools\GetFinancialSummaryTool;
 use App\Mcp\Tools\GetInvoicesSummaryTool;
@@ -33,7 +32,6 @@ class AccountingServer extends Server
         GetInvoicesSummaryTool::class,
         ListInvoicesTool::class,
         GetInvoiceTool::class,
-        GetCustomerBalanceTool::class,
         ListCustomersTool::class,
         GetCustomerTool::class,
         ListProductsTool::class,
