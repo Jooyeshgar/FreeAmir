@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Activity;
 use App\Models\FiscalYear;
 use App\Services\ActivityLogService;
-use App\Support\ActivityValueComparison;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -181,7 +180,7 @@ class ActivityLogController extends Controller
         $attributes = collect($details->get('attributes', []));
         $old = collect($details->get('old', []));
         $changeKeys = $attributes->keys()->merge($old->keys())->unique()
-            ->filter(fn (string $key): bool => ! ActivityValueComparison::equivalent($old->get($key), $attributes->get($key)));
+            ->filter(fn (string $key): bool => ! $this->activityLogService->valuesAreEquivalent($old->get($key), $attributes->get($key)));
         $fiscalYear = $fiscalYearLookup->get($details->get('fiscal_year_id'));
         $impersonatedUser = $impersonatedUsers->get($details->get('impersonated_user_id'));
         $isRequest = $activity->source === 'request';
@@ -304,7 +303,7 @@ class ActivityLogController extends Controller
             'modelType' => $modelType,
             'url' => $url,
             'changes' => $attributes->keys()->merge($old->keys())->unique()
-                ->filter(fn (string $key): bool => ! ActivityValueComparison::equivalent($old->get($key), $attributes->get($key)))
+                ->filter(fn (string $key): bool => ! $this->activityLogService->valuesAreEquivalent($old->get($key), $attributes->get($key)))
                 ->map(fn (string $key): array => [
                     'model' => $modelContextLabel,
                     'url' => $url,
