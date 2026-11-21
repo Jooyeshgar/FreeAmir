@@ -26,6 +26,7 @@ class ProductService
         unset($data['websites']);
 
         $data['fiscal_year_id'] ??= getActiveFiscalYear();
+        $data['average_cost'] ??= 0;
 
         $product = Product::create($data);
 
