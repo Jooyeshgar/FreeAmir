@@ -44,11 +44,13 @@ MCP server security is built upon Laravel Sanctum personal access tokens and Spa
 
 | Tool Name | Description | Required Permissions / Abilities |
 |---|---|---|
-| `get_current_context` | Calendar context, active fiscal year, and accessible fiscal years | Any report, invoice, or customer permission |
+| `get_current_context` | Calendar context, active fiscal year, and accessible fiscal years | Any report, invoice, customer, or product permission |
 | `get_profit_loss` | P&L calculation, income, cost, and profit margin | `reports.cost-income`, `reports.result`, or (`reports.company-overview` + `documents.show`) |
 | `get_financial_summary` | Overall financial totals and top income/expense subjects | `reports.trial-balance`, `reports.ledger`, or (`reports.company-overview` + `documents.show`) |
 | `get_invoices_summary` | Sales and purchase invoices, 12-month breakdown, and recent invoices | `invoices.index` or `invoices.show` (`customers.index` needed to expose customer names) |
 | `get_customer_balance` | Customer balance, debtor/creditor status, and contact details | `customers.show` |
+| `list_products` | Search and paginate products by name, code, ID, or group | `products.index` or `products.show` |
+| `get_product` | Full details and warehouse stock for one product by ID or code | `products.show` or `products.index` |
 
 ---
 
@@ -87,6 +89,22 @@ Searches a customer or counterparty by name, phone, mobile, national code, or ID
   - `query`: Search string (required).
   - `limit`: Result count limit (default 5).
   - `fiscal_year_id`: Target fiscal year ID.
+
+### 6. `list_products`
+Searches and paginates products in the selected fiscal year.
+- **Arguments:**
+  - `query`: Optional search text matching product name, product code, or exact numeric ID.
+  - `group_id`: Optional product group ID filter.
+  - `page`: Page number (default 1).
+  - `limit`: Results per page (default 15, max 50).
+  - `year`, `fiscal_year_id`: Optional fiscal-year selectors.
+
+### 7. `get_product`
+Retrieves full details and per-warehouse stock for one product in the selected fiscal year.
+- **Arguments:**
+  - `product_id`: Product ID (required unless `code` is provided).
+  - `code`: Exact product code (required unless `product_id` is provided).
+  - `year`, `fiscal_year_id`: Optional fiscal-year selectors.
 
 ---
 

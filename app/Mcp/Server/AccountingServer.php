@@ -8,7 +8,9 @@ use App\Mcp\Tools\GetCurrentContextTool;
 use App\Mcp\Tools\GetCustomerBalanceTool;
 use App\Mcp\Tools\GetFinancialSummaryTool;
 use App\Mcp\Tools\GetInvoicesSummaryTool;
+use App\Mcp\Tools\GetProductTool;
 use App\Mcp\Tools\GetProfitLossTool;
+use App\Mcp\Tools\ListProductsTool;
 use Illuminate\Auth\AuthenticationException;
 use Laravel\Mcp\Server;
 
@@ -26,6 +28,8 @@ class AccountingServer extends Server
         GetFinancialSummaryTool::class,
         GetInvoicesSummaryTool::class,
         GetCustomerBalanceTool::class,
+        ListProductsTool::class,
+        GetProductTool::class,
     ];
 
     private ?string $token = null;

@@ -13,7 +13,7 @@ class GetCurrentContextTool extends AccountingTool
 
     protected string $description = 'Return the current Jalali and Gregorian calendar context, active authorized fiscal year, company currency, and available fiscal years. If fiscal-year selection is ambiguous, return an error with the available fiscal years for the user to choose from.';
 
-    protected array $permissionGroups = [['invoices.index'], ['invoices.show'], ['reports.cost-income'], ['reports.company-overview'], ['customers.index'], ['customers.show'], ['reports.ledger'], ['reports.trial-balance'], ['reports.result']];
+    protected array $permissionGroups = [['invoices.index'], ['invoices.show'], ['reports.cost-income'], ['reports.company-overview'], ['customers.index'], ['customers.show'], ['products.index'], ['products.show'], ['reports.ledger'], ['reports.trial-balance'], ['reports.result']];
 
     public function schema(JsonSchema $schema): array
     {
