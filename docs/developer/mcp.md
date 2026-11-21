@@ -50,7 +50,11 @@ php artisan mcp:serve
 | `get_profit_loss` | سود و زیان، درآمدها، هزینه‌ها و حاشیه سود | `reports.cost-income` یا `reports.result` یا (`reports.company-overview` + `documents.show`) |
 | `get_financial_summary` | خلاصه وضعیت مالی کل و برترین سرفصل‌های درآمد و هزینه | `reports.trial-balance` یا `reports.ledger` یا (`reports.company-overview` + `documents.show`) |
 | `get_invoices_summary` | خلاصه فروش و خرید، تفکیک ۱۲ ماهه و فاکتورهای اخیر | `invoices.index` یا `invoices.show` (مشاهده نام مشتریان نیاز به `customers.index` دارد) |
+| `list_invoices` | جستجو و فهرست صفحه‌بندی‌شده فاکتورها بر اساس شماره، عنوان، نوع، وضعیت، مشتری یا تاریخ | `invoices.index` یا `invoices.show` (مشاهده نام مشتریان نیاز به `customers.index` دارد) |
+| `get_invoice` | جزئیات کامل و اقلام یک فاکتور با شناسه یا شماره فاکتور | `invoices.show` یا `invoices.index` (مشاهده نام مشتریان نیاز به `customers.index` دارد) |
 | `get_customer_balance` | استعلام مانده حساب، بدهکار/بستانکار و مشخصات طرف‌حساب | `customers.show` |
+| `list_customers` | جستجو و فهرست صفحه‌بندی‌شده مشتریان بر اساس نام، تلفن، موبایل، کد ملی، شناسه یا گروه | `customers.index` یا `customers.show` |
+| `get_customer` | جزئیات کامل پروفایل و مانده حساب یک مشتری با شناسه | `customers.show` یا `customers.index` |
 | `list_products` | جستجو و فهرست صفحه‌بندی‌شده کالاها بر اساس نام، کد، شناسه یا گروه | `products.index` یا `products.show` |
 | `get_product` | جزئیات کامل و موجودی انبارهای یک کالا با شناسه یا کد کالا | `products.show` یا `products.index` |
 
@@ -106,6 +110,38 @@ php artisan mcp:serve
 - **ورودی‌ها:**
   - `product_id`: شناسه کالا (در صورت نبود `code` اجباری است).
   - `code`: کد دقیق کالا (در صورت نبود `product_id` اجباری است).
+  - `year`، `fiscal_year_id`: انتخابگرهای سال مالی (اختیاری).
+
+### ۸. `list_invoices`
+جستجو و فهرست صفحه‌بندی‌شده فاکتورها در سال مالی انتخاب‌شده.
+- **ورودی‌ها:**
+  - `query`: عبارت جستجو برای تطبیق با شماره فاکتور، عنوان یا شناسه عددی (اختیاری).
+  - `type`: فیلتر نوع فاکتور (`buy`، `sell`، `return_buy`، `return_sell`، `void`، `beginning_inventory`).
+  - `status`: فیلتر وضعیت فاکتور.
+  - `customer_id`: فیلتر شناسه مشتری (اختیاری).
+  - `date_from`، `date_to`: بازه تاریخ میلادی (`YYYY-MM-DD`).
+  - `page`، `limit`: صفحه‌بندی (پیش‌فرض ۱۵، حداکثر ۵۰).
+  - `year`، `fiscal_year_id`: انتخابگرهای سال مالی (اختیاری).
+
+### ۹. `get_invoice`
+دریافت جزئیات کامل یک فاکتور شامل اقلام (`items`)، انبار و مرجع سند حسابداری.
+- **ورودی‌ها:**
+  - `invoice_id`: شناسه فاکتور (در صورت نبود `number` اجباری است).
+  - `number`: شماره دقیق فاکتور (در صورت نبود `invoice_id` اجباری است).
+  - `year`، `fiscal_year_id`: انتخابگرهای سال مالی (اختیاری).
+
+### ۱۰. `list_customers`
+جستجو و فهرست صفحه‌بندی‌شده مشتریان در سال مالی انتخاب‌شده.
+- **ورودی‌ها:**
+  - `query`: عبارت جستجو برای نام، تلفن، موبایل، کد ملی/اقتصادی یا شناسه عددی (اختیاری).
+  - `group_id`: فیلتر شناسه گروه مشتری (اختیاری).
+  - `page`، `limit`: صفحه‌بندی (پیش‌فرض ۱۵، حداکثر ۵۰).
+  - `year`، `fiscal_year_id`: انتخابگرهای سال مالی (اختیاری).
+
+### ۱۱. `get_customer`
+دریافت جزئیات کامل پروفایل و مانده حساب یک مشتری با شناسه در سال مالی انتخاب‌شده.
+- **ورودی‌ها:**
+  - `customer_id`: شناسه مشتری (اجباری).
   - `year`، `fiscal_year_id`: انتخابگرهای سال مالی (اختیاری).
 
 ---

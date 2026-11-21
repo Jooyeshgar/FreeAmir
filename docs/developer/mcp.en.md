@@ -48,7 +48,11 @@ MCP server security is built upon Laravel Sanctum personal access tokens and Spa
 | `get_profit_loss` | P&L calculation, income, cost, and profit margin | `reports.cost-income`, `reports.result`, or (`reports.company-overview` + `documents.show`) |
 | `get_financial_summary` | Overall financial totals and top income/expense subjects | `reports.trial-balance`, `reports.ledger`, or (`reports.company-overview` + `documents.show`) |
 | `get_invoices_summary` | Sales and purchase invoices, 12-month breakdown, and recent invoices | `invoices.index` or `invoices.show` (`customers.index` needed to expose customer names) |
+| `list_invoices` | Search and paginate invoices by number, title, type, status, customer, or date | `invoices.index` or `invoices.show` (`customers.index` needed to expose customer names) |
+| `get_invoice` | Full details and line items for one invoice by ID or number | `invoices.show` or `invoices.index` (`customers.index` needed to expose customer names) |
 | `get_customer_balance` | Customer balance, debtor/creditor status, and contact details | `customers.show` |
+| `list_customers` | Search and paginate customers by name, phone, mobile, code, ID, or group | `customers.index` or `customers.show` |
+| `get_customer` | Full profile details and ledger balance for one customer by ID | `customers.show` or `customers.index` |
 | `list_products` | Search and paginate products by name, code, ID, or group | `products.index` or `products.show` |
 | `get_product` | Full details and warehouse stock for one product by ID or code | `products.show` or `products.index` |
 
@@ -104,6 +108,38 @@ Retrieves full details and per-warehouse stock for one product in the selected f
 - **Arguments:**
   - `product_id`: Product ID (required unless `code` is provided).
   - `code`: Exact product code (required unless `product_id` is provided).
+  - `year`, `fiscal_year_id`: Optional fiscal-year selectors.
+
+### 8. `list_invoices`
+Searches and paginates invoices in the selected fiscal year.
+- **Arguments:**
+  - `query`: Optional search text matching invoice number, title, or exact numeric ID.
+  - `type`: Optional invoice type (`buy`, `sell`, `return_buy`, `return_sell`, `void`, `beginning_inventory`).
+  - `status`: Optional invoice status filter.
+  - `customer_id`: Optional customer ID filter.
+  - `date_from`, `date_to`: Optional Gregorian date range (`YYYY-MM-DD`).
+  - `page`, `limit`: Pagination controls (default 15, max 50).
+  - `year`, `fiscal_year_id`: Optional fiscal-year selectors.
+
+### 9. `get_invoice`
+Retrieves full details for one invoice, including line items, warehouse, and accounting document reference.
+- **Arguments:**
+  - `invoice_id`: Invoice ID (required unless `number` is provided).
+  - `number`: Exact invoice number (required unless `invoice_id` is provided).
+  - `year`, `fiscal_year_id`: Optional fiscal-year selectors.
+
+### 10. `list_customers`
+Searches and paginates customers in the selected fiscal year.
+- **Arguments:**
+  - `query`: Optional search text matching name, phone, mobile, personal/economic code, or exact numeric ID.
+  - `group_id`: Optional customer group ID filter.
+  - `page`, `limit`: Pagination controls (default 15, max 50).
+  - `year`, `fiscal_year_id`: Optional fiscal-year selectors.
+
+### 11. `get_customer`
+Retrieves full profile details and ledger balance for one customer by ID.
+- **Arguments:**
+  - `customer_id`: Customer ID (required).
   - `year`, `fiscal_year_id`: Optional fiscal-year selectors.
 
 ---
