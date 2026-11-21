@@ -6,7 +6,6 @@ use App\Models\Activity;
 use App\Models\Company;
 use App\Models\FiscalYear;
 use App\Models\User;
-use App\Support\ActivityValueComparison;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model;
@@ -416,7 +415,7 @@ class ActivityLogService
         foreach (array_keys($attributes) as $key) {
             $oldValue = $this->sanitizeValue($model->getRawOriginal($key));
 
-            if (ActivityValueComparison::equivalent($oldValue, $attributes[$key])) {
+            if ($this->valuesAreEquivalent($oldValue, $attributes[$key])) {
                 unset($attributes[$key]);
 
                 continue;
@@ -481,7 +480,7 @@ class ActivityLogService
             $attributes = [];
         } elseif ($existing['event'] !== 'created') {
             foreach (array_keys($attributes) as $attribute) {
-                if (array_key_exists($attribute, $old) && ActivityValueComparison::equivalent($old[$attribute], $attributes[$attribute])) {
+                if (array_key_exists($attribute, $old) && $this->valuesAreEquivalent($old[$attribute], $attributes[$attribute])) {
                     unset($old[$attribute], $attributes[$attribute]);
                 }
             }
@@ -589,5 +588,36 @@ class ActivityLogService
         }
 
         return Str::limit(json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: (string) $value, 500, '…');
+    }
+
+    public function valuesAreEquivalent(mixed $old, mixed $new): bool
+    {
+        if ($old === $new) {
+            return true;
+        }
+
+        if (is_numeric($old) && is_numeric($new)) {
+            return $this->normalizeNumber($old) === $this->normalizeNumber($new);
+        }
+
+        return is_scalar($old) && is_scalar($new) && (string) $old === (string) $new;
+    }
+
+    private function normalizeNumber(int|float|string $value): string
+    {
+        if (! preg_match('/^([+-]?)(\d*)(?:\.(\d*))?(?:[eE]([+-]?\d+))?$/D', trim((string) $value), $parts)) {
+            return (string) $value;
+        }
+
+        $fraction = $parts[3] ?? '';
+        $digits = ltrim($parts[2].$fraction, '0');
+        if ($digits === '') {
+            return '0';
+        }
+
+        $significant = rtrim($digits, '0');
+        $exponent = (int) ($parts[4] ?? 0) - strlen($fraction) + strlen($digits) - strlen($significant);
+
+        return ($parts[1] === '-' ? '-' : '').$significant.'e'.$exponent;
     }
 }
