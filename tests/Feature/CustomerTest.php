@@ -2,12 +2,18 @@
 
 namespace Tests\Feature;
 
+use App\Enums\InvoiceType;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\FiscalYear;
+use App\Models\Invoice;
+use App\Models\Product;
 use App\Models\Subject;
 use App\Models\User;
+use App\View\Components\SelectBox;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Js;
+use Illuminate\Support\Str;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -69,6 +75,81 @@ class CustomerTest extends TestCase
         $this->assertCustomerSelectorSearch('ancillary-costs.search-customer');
     }
 
+    public function test_initial_customer_options_include_localized_subject_codes_when_enabled(): void
+    {
+        $this->customer->subject->code = '001234567';
+        $options = [['headerGroup' => 'customer', 'options' => [$this->customer]]];
+
+        foreach (['fa' => '۰۰۱/۲۳۴/۵۶۷', 'en' => '001/234/567'] as $locale => $code) {
+            app()->setLocale($locale);
+            $select = new SelectBox(options: $options, searchSubjectCode: true);
+            $group = $select->finalLocalOptions[0]['options'];
+
+            $this->assertSame($code, $group->{$this->customerGroup->id}[0]['subjectCode']);
+        }
+
+        $select = new SelectBox(options: $options);
+        $group = $select->finalLocalOptions[0]['options'];
+        $this->assertArrayNotHasKey('subjectCode', $group->{$this->customerGroup->id}[0]);
+
+        $this->customer->setRelation('subject', null);
+        $select = new SelectBox(options: $options, searchSubjectCode: true);
+        $group = $select->finalLocalOptions[0]['options'];
+        $this->assertSame('', $group->{$this->customerGroup->id}[0]['subjectCode']);
+    }
+
+    public function test_invoice_and_ancillary_cost_forms_render_grouped_customer_codes(): void
+    {
+        $this->withoutVite();
+        $this->actingAs($this->user)->withSession(['locale' => 'en']);
+        $this->user->givePermissionTo([
+            Permission::firstOrCreate(['name' => 'invoices.create']),
+            Permission::firstOrCreate(['name' => 'invoices.ancillary-costs.create']),
+        ]);
+        config([
+            'active-fiscal-year-id' => $this->fiscalYearId,
+            'amir.inventory' => $this->customerGroup->subject_id,
+            'amir.cust_subject' => $this->customerGroup->subject_id,
+        ]);
+        $this->customer->subject->update(['code' => '001234567']);
+
+        $invoice = Invoice::create([
+            'number' => 1,
+            'date' => now(),
+            'invoice_type' => InvoiceType::BUY,
+            'fiscal_year_id' => $this->fiscalYearId,
+            'amount' => 100,
+            'vat' => 0,
+            'subtraction' => 0,
+        ]);
+        $product = Product::factory()->withGroup()->create();
+        $invoice->items()->create([
+            'itemable_type' => Product::class,
+            'itemable_id' => $product->id,
+            'quantity' => 1,
+            'unit_price' => 100,
+            'discount' => 0,
+            'vat' => 0,
+            'amount' => 100,
+        ]);
+
+        $encodedCode = Str::between(Js::from(['subjectCode' => '001/234/567'])->toHtml(), '{', '}');
+
+        foreach ([
+            route('invoices.create', ['invoice_type' => 'sell']),
+            route('invoices.create', ['invoice_type' => 'buy']),
+            route('invoices.create', ['invoice_type' => 'buy', 'service_buy' => 1]),
+            route('invoices.create', ['invoice_type' => 'return_sell']),
+            route('invoices.create', ['invoice_type' => 'return_buy']),
+            route('invoices.ancillary-costs.create', $invoice),
+        ] as $url) {
+            $this->get($url)
+                ->assertOk()
+                ->assertSee('searchSubjectCode: true', false)
+                ->assertSee($encodedCode, false);
+        }
+    }
+
     private function assertCustomerSelectorSearch(string $routeName): void
     {
         $this->user->givePermissionTo(Permission::firstOrCreate(['name' => $routeName]));
@@ -96,6 +177,7 @@ class CustomerTest extends TestCase
                 ->assertJsonPath($resultPath.'.0.id', $this->customer->id)
                 ->assertJsonPath($resultPath.'.0.type', 'customer')
                 ->assertJsonPath($resultPath.'.0.groupName', 'Wholesale Partners')
+                ->assertJsonPath($resultPath.'.0.subjectCode', formatCode($code))
                 ->assertJsonMissing(['id' => $otherCustomer->id]);
         }
 

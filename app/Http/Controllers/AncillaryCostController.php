@@ -55,7 +55,7 @@ class AncillaryCostController extends Controller
             abort(403, __('Ancillary Costs cannot be added to service buy invoices.'));
         }
 
-        $customers = Customer::with('group')->orderBy('name', 'asc')->limit(20)->get();
+        $customers = Customer::with('group', 'subject')->orderBy('name', 'asc')->limit(20)->get();
         $ancillaryCost = new AncillaryCost;
         if ($invoice) {
             $ancillaryCost->invoice_id = $invoice->id;
@@ -115,7 +115,7 @@ class AncillaryCostController extends Controller
         })->toArray();
 
         $customerIdsForSelect = Customer::orderBy('name', 'asc')->limit(20)->pluck('id');
-        $customers = Customer::with('group')->whereIn('id', $customerIdsForSelect->push($ancillaryCost->customer_id)->unique())
+        $customers = Customer::with('group', 'subject')->whereIn('id', $customerIdsForSelect->push($ancillaryCost->customer_id)->unique())
             ->orderBy('name', 'asc')->get();
 
         // Calculate VAT percentage: (vat_amount / subtotal_before_vat) * 100

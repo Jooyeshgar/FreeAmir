@@ -112,6 +112,7 @@ class SelectBox extends Component
                 'groupName' => $group->name,
                 'text' => $optObj->name ?? ($optObj->text ?? ''),
                 'type' => $headerGroupOptions,
+                ...($this->searchSubjectCode ? ['subjectCode' => formatCode($optObj->subject?->code ?? null)] : []),
             ];
         }
 

@@ -222,17 +222,17 @@ class InvoiceController extends Controller
                 $services = Service::with('subject', 'serviceGroup')->whereIn('id', $serviceIds)->get();
 
                 $customerIds = $returnInvoices->pluck('customer.id')->unique();
-                $customers = Customer::with('group')->whereIn('id', $customerIds)->get();
+                $customers = Customer::with('group', 'subject')->whereIn('id', $customerIds)->get();
             }
 
             // Last-years returns have no linked invoice in the active fiscal year, so their customer and items must be selected manually.
             $products = $products->merge(Product::with('inventorySubject', 'productGroup')->orderBy('name')->limit(20)->get())->unique('id')->values();
             $services = $services->merge(Service::with('subject', 'serviceGroup')->orderBy('name')->limit(20)->get())->unique('id')->values();
-            $customers = $customers->merge(Customer::with('group')->orderBy('name')->limit(20)->get())->unique('id')->values();
+            $customers = $customers->merge(Customer::with('group', 'subject')->orderBy('name')->limit(20)->get())->unique('id')->values();
         } else {
             $products = Product::with('inventorySubject', 'productGroup')->orderBy('name')->limit(20)->get();
             $services = Service::with('subject', 'serviceGroup')->orderBy('name')->limit(20)->get();
-            $customers = Customer::with('group')->orderBy('name')->limit(20)->get();
+            $customers = Customer::with('group', 'subject')->orderBy('name')->limit(20)->get();
         }
 
         $returnInvoices = $returnInvoices->map(function ($invoice) { // Format invoices for select box
@@ -465,7 +465,7 @@ class InvoiceController extends Controller
         $services = Service::with(['subject', 'serviceGroup'])->whereIn('id', $serviceIdsForSelect->merge($selectedServiceIds)->unique())
             ->orderBy('name')->get();
 
-        $customers = Customer::with('group')->whereIn('id', $customerIdsForSelect->push($invoice->customer_id)->unique())
+        $customers = Customer::with('group', 'subject')->whereIn('id', $customerIdsForSelect->push($invoice->customer_id)->unique())
             ->orderBy('name')->get();
         $warehouses = Warehouse::get();
 

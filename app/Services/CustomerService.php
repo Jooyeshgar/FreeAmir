@@ -13,8 +13,8 @@ class CustomerService
 
     public function searchSelectOptions(string $query, int $limit): array
     {
-        $customers = Customer::with('group')->limit($limit);
-        $fields = ['id', 'name', 'group_id'];
+        $customers = Customer::with('group', 'subject')->limit($limit);
+        $fields = ['id', 'name', 'group_id', 'subject_id'];
         $fromName = (clone $customers)->where('name', 'like', "%{$query}%")->get($fields);
         $fromGroup = (clone $customers)->whereHas('group', fn ($group) => $group->where('name', 'like', "%{$query}%"))->get($fields);
         $matches = $fromName->merge($fromGroup);
@@ -37,6 +37,7 @@ class CustomerService
                 'groupId' => $groupId,
                 'groupName' => $customer->group?->name ?? 'General',
                 'text' => $customer->name,
+                'subjectCode' => formatCode($customer->subject?->code),
                 'type' => 'customer',
             ];
         }

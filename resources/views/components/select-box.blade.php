@@ -6,7 +6,7 @@
         selectableGroups: @js($selectableGroups),
         disabled: @js($disabled),
         searchSubjectCode: @js($searchSubjectCode)
-    })" @click.outside="close()">
+    })" @click.outside="close()" @if ($searchSubjectCode) x-modelable="selectedValue" @endif>
     {{-- Trigger Button --}}
     <button type="button" @click="toggle()" :disabled="disabled" :class="{ 'opacity-60 cursor-not-allowed': disabled }"
         class="input rounded-md border-slate-400 h-10 min-h-10 w-full text-left flex items-center justify-between px-4 bg-base-100 focus:outline-none focus:border-primary">
@@ -14,6 +14,10 @@
         <span x-text="selectedLabel ? selectedLabel : placeholder"
             :class="{ 'text-base-content': selectedLabel, 'text-gray-400': !selectedLabel }"
             class="block truncate"></span>
+        @if ($searchSubjectCode)
+            <bdi dir="ltr" x-show="selectedSubjectCode" x-text="selectedSubjectCode"
+                class="ms-auto me-2 shrink-0 text-xs opacity-70"></bdi>
+        @endif
 
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition-transform duration-200"
             :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -27,7 +31,12 @@
 
         {{-- Search Input --}}
         <div class="p-2 bg-base-100 border-b border-base-200 sticky top-0 z-10">
-            <input x-ref="searchInput" x-model="search" @input.debounce.300ms="handleSearch()"
+            <input x-ref="searchInput"
+                @if ($searchSubjectCode)
+                    :value="search" @input="updateSubjectSearch($event.target)"
+                @else
+                    x-model="search" @input.debounce.300ms="handleSearch()"
+                @endif
                 @keydown="onKeydown($event)" type="text" class="input input-sm w-full"
                 placeholder="{{ __('Search') }}">
         </div>
@@ -74,8 +83,12 @@
                                             .id,
                                         'bg-base-200': focusedOptionId === opt.id
                                     }"
-                                    class="px-6 py-2 cursor-pointer hover:bg-base-200 rounded-btn transition-colors text-sm">
+                                    class="px-6 py-2 cursor-pointer hover:bg-base-200 rounded-btn transition-colors text-sm @if ($searchSubjectCode) flex items-center justify-between gap-2 @endif">
                                     <span x-html="opt.highlighted ? opt.highlighted : opt.text"></span>
+                                    @if ($searchSubjectCode)
+                                        <bdi dir="ltr" x-show="opt.subjectCode" x-text="opt.subjectCode"
+                                            class="shrink-0 text-xs opacity-70"></bdi>
+                                    @endif
                                 </li>
                             </template>
                         </div>
@@ -107,6 +120,7 @@
                 filteredOptions: options,
                 selectedValue: '',
                 selectedLabel: '',
+                selectedSubjectCode: '',
                 focusedOptionId: null,
                 isLoading: false,
                 emptyText: 'نتیجه‌ای یافت نشد',
@@ -141,6 +155,7 @@
                             }
                         } else {
                             this.selectedLabel = '';
+                            this.selectedSubjectCode = '';
                         }
                     });
                 },
@@ -205,6 +220,7 @@
                             const found = block.options[gid].find(o => o.id == id && o.type == type);
                             if (found) {
                                 this.selectedLabel = found.text;
+                                this.selectedSubjectCode = found.subjectCode || '';
                                 return;
                             }
                         }
@@ -224,14 +240,26 @@
                     this.focusedOptionId = null;
                 },
 
-                handleSearch() {
-                    const q = this.search.trim().toLowerCase();
-                    const code = searchSubjectCode && /^[0-9۰-۹/]+$/.test(q) ?
-                        this.$store.utils.convertToEnglish(q).replaceAll('/', '') : '';
+                updateSubjectSearch(input) {
+                    const value = input.value;
+                    const query = value.trim();
+                    const code = /^[0-9۰-۹/]+$/.test(query) ?
+                        this.$store.utils.convertToEnglish(query).replaceAll('/', '') : '';
 
                     if (code) {
-                        this.search = this.$store.utils.localizeNumber(this.$store.utils.formatCode(code));
+                        const formatted = this.$store.utils.localizeNumber(this.$store.utils.formatCode(code));
+                        if (formatted !== value) {
+                            const digitsBeforeCaret = value.slice(0, input.selectionStart).replace(/[^0-9۰-۹]/g, '').length;
+                            const caret = digitsBeforeCaret + Math.floor(Math.max(0, digitsBeforeCaret - 1) / 3);
+                            input.value = formatted;
+                            input.setSelectionRange(caret, caret);
+                        }
                     }
+                    this.search = input.value;
+                    this.handleSearch(code || query.toLowerCase(), Boolean(code));
+                },
+
+                handleSearch(q = this.search.trim().toLowerCase(), isSubjectCode = false) {
                     const search = this.search;
 
                     clearTimeout(this.searchTimeout);
@@ -244,7 +272,7 @@
                             return;
                         }
 
-                        if (code && this.url) {
+                        if (isSubjectCode && this.url) {
                             this.searchRemote(q, true);
                             return;
                         }
@@ -381,6 +409,7 @@
                     const compositeId = `${opt.type}-${opt.id}`;
                     this.selectedValue = compositeId;
                     this.selectedLabel = opt.text;
+                    this.selectedSubjectCode = opt.subjectCode || '';
                     this.open = false;
                     this.search = '';
                     this.filteredOptions = this.initialOptions;
