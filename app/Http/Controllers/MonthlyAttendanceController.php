@@ -221,8 +221,7 @@ class MonthlyAttendanceController extends Controller
         app(FiscalYearMutationGuard::class)->ensureOpen($monthlyAttendance);
 
         DB::transaction(function () use ($monthlyAttendance) {
-            $earnedPaidLeave = $monthlyAttendance->earned_paid_leave
-                ?? (int) ($monthlyAttendance->employee->workShift?->paid_leave ?? 0);
+            $earnedPaidLeave = (int) ($monthlyAttendance->employee->workShift?->paid_leave ?? 0);
 
             $monthlyAttendance->employee->leave_remain += $monthlyAttendance->paid_leave - $earnedPaidLeave;
             $monthlyAttendance->employee->save();
@@ -251,7 +250,6 @@ class MonthlyAttendanceController extends Controller
 
         $monthlyAttendance = DB::transaction(function () use ($monthlyAttendance, $employeeId, $startDate, $validated, $jalaliYear, $jalaliMonth) {
             $oldMonthlyAttendance = $monthlyAttendance;
-            $earnedPaidLeave = $oldMonthlyAttendance->earned_paid_leave;
             $monthlyAttendance->delete();
 
             $recalculated = $this->attendanceService->calculateAndStore(
@@ -261,11 +259,6 @@ class MonthlyAttendanceController extends Controller
                 jalaliYear: $jalaliYear,
                 jalaliMonth: $jalaliMonth,
             );
-
-            if ($earnedPaidLeave !== null) {
-                $recalculated->earned_paid_leave = $earnedPaidLeave;
-                $recalculated->save();
-            }
 
             if ($oldMonthlyAttendance->paid_leave !== $recalculated->paid_leave) {
                 $diffMonthPaidLeave = $recalculated->paid_leave - $oldMonthlyAttendance->paid_leave;
@@ -284,8 +277,6 @@ class MonthlyAttendanceController extends Controller
     {
         if ($existing === null) {
             $earnedPaidLeave = (int) ($monthlyAttendance->employee->workShift?->paid_leave ?? 0);
-            $monthlyAttendance->earned_paid_leave = $earnedPaidLeave;
-            $monthlyAttendance->save();
 
             $monthlyAttendance->employee->leave_remain = $monthlyAttendance->employee->leave_remain + $earnedPaidLeave - $monthlyAttendance->paid_leave;
             $monthlyAttendance->employee->save();
