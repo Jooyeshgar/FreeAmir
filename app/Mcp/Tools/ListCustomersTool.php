@@ -75,7 +75,7 @@ class ListCustomersTool extends AccountingTool
         $paginator = $query->paginate($limit, ['*'], 'page', $page);
 
         $customers = collect($paginator->items())
-            ->map(fn (Customer $customer): array => self::formatSummary($customer, $currency))
+            ->map(fn (Customer $customer): array => self::formatSummary($customer))
             ->all();
 
         $humanSummary = $paginator->total() === 0
@@ -100,7 +100,7 @@ class ListCustomersTool extends AccountingTool
         ]);
     }
 
-    public static function formatSummary(Customer $customer, string $currency): array
+    public static function formatSummary(Customer $customer): array
     {
         $rawType = $customer->getRawOriginal('type');
         $customerType = is_numeric($rawType) ? CustomerType::tryFrom((int) $rawType) : null;
@@ -117,7 +117,6 @@ class ListCustomersTool extends AccountingTool
             'personal_code' => $customer->personal_code ?: null,
             'ecnmcs_code' => $customer->ecnmcs_code ?: null,
             'credit_limit' => (int) ($customer->credit ?? 0),
-            'currency' => $currency,
         ];
     }
 }

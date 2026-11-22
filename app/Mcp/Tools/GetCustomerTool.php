@@ -60,7 +60,7 @@ class GetCustomerTool extends AccountingTool
         return $this->success([
             'fiscal_year_id' => (int) $fiscalYear->id,
             'currency' => $currency,
-            'customer' => array_merge(ListCustomersTool::formatSummary($customer, $currency), [
+            'customer' => array_merge(ListCustomersTool::formatSummary($customer), [
                 'fax' => $customer->fax ?: null,
                 'address' => $customer->address ?: null,
                 'postal_code' => $customer->postal_code ?: null,

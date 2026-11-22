@@ -67,7 +67,7 @@ class GetProductTool extends AccountingTool
         return $this->success([
             'fiscal_year_id' => (int) $fiscalYear->id,
             'currency' => $currency,
-            'product' => array_merge(ListProductsTool::formatSummary($product, $currency), [
+            'product' => array_merge(ListProductsTool::formatSummary($product), [
                 'sstid' => $product->sstid,
                 'average_cost' => (float) ($product->average_cost ?? 0),
                 'weight' => $product->weight !== null ? (float) $product->weight : null,

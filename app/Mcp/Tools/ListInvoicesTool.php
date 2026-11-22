@@ -165,7 +165,6 @@ class ListInvoicesTool extends AccountingTool
             'formatted_amount' => number_format($amount).' '.$currency,
             'vat' => (int) ($invoice->vat ?? 0),
             'subtraction' => (int) ($invoice->subtraction ?? 0),
-            'currency' => $currency,
         ];
     }
 }

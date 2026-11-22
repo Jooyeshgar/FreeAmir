@@ -71,7 +71,7 @@ class ListProductsTool extends AccountingTool
         $paginator = $query->paginate($limit, ['*'], 'page', $page);
 
         $products = collect($paginator->items())
-            ->map(fn (Product $product): array => self::formatSummary($product, $currency))
+            ->map(fn (Product $product): array => self::formatSummary($product))
             ->all();
 
         $humanSummary = $paginator->total() === 0
@@ -96,7 +96,7 @@ class ListProductsTool extends AccountingTool
         ]);
     }
 
-    public static function formatSummary(Product $product, string $currency): array
+    public static function formatSummary(Product $product): array
     {
         return [
             'id' => (int) $product->id,
@@ -111,7 +111,6 @@ class ListProductsTool extends AccountingTool
             'oversell' => (bool) $product->oversell,
             'location' => $product->location,
             'description' => $product->description,
-            'currency' => $currency,
         ];
     }
 }
