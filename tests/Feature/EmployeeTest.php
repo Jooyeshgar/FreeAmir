@@ -590,4 +590,27 @@ class EmployeeTest extends TestCase
             'leave_remain' => -240,
         ]);
     }
+
+    public function test_store_accepts_persian_digits_and_rejects_non_integer_leave_remain(): void
+    {
+        $validPayload = $this->validPayload([
+            'code' => 'EMP-STORE-FA',
+            'leave_remain' => '-۲۴۰',
+        ]);
+
+        $this->post(route('hr.employees.store'), $validPayload)
+            ->assertRedirect(route('hr.employees.index'));
+
+        $this->assertDatabaseHas('employees', [
+            'code' => 'EMP-STORE-FA',
+            'leave_remain' => -240,
+        ]);
+
+        $invalidPayload = $this->validPayload([
+            'code' => 'EMP-STORE-BAD',
+            'leave_remain' => 'invalid',
+        ]);
+
+        $this->post(route('hr.employees.store'), $invalidPayload)->assertSessionHasErrors(['leave_remain']);
+    }
 }

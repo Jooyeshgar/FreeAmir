@@ -72,7 +72,7 @@ class StoreEmployeeRequest extends FormRequest
             'contract_framework_id' => ['nullable', 'integer', 'exists:work_site_contracts,id'],
 
             'is_active' => ['boolean'],
-            'leave_remain' => ['nullable', 'numeric', 'min:0', 'max:15000'],
+            'leave_remain' => ['nullable', 'integer', 'min:-15000', 'max:15000'],
             'device_id' => ['nullable', 'string', 'max:20'],
         ];
     }
@@ -81,7 +81,7 @@ class StoreEmployeeRequest extends FormRequest
     {
         $this->merge([
             'is_active' => $this->has('is_active'),
-            'leave_remain' => $this->filled('leave_remain') ? convertToInt($this->input('leave_remain')) : 0,
+            'leave_remain' => $this->filled('leave_remain') ? toEnglish(trim((string) $this->input('leave_remain'))) : 0,
         ]);
     }
 

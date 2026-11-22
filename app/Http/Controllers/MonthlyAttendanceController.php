@@ -63,6 +63,8 @@ class MonthlyAttendanceController extends Controller
 
         DB::transaction(function () use ($validated, $startDate, $jalaliYear, $jalaliMonth) {
             $employeeId = (int) $validated['employee_id'];
+            Employee::whereKey($employeeId)->lockForUpdate()->first();
+
             $existing = MonthlyAttendance::where('employee_id', $employeeId)
                 ->where('year', $jalaliYear)
                 ->where('month', $jalaliMonth)
@@ -104,6 +106,8 @@ class MonthlyAttendanceController extends Controller
         DB::transaction(function () use ($validated, $startDate, $jalaliYear, $jalaliMonth) {
             foreach ($validated['employee_ids'] as $employeeId) {
                 $employeeId = (int) $employeeId;
+                Employee::whereKey($employeeId)->lockForUpdate()->first();
+
                 $existing = MonthlyAttendance::where('employee_id', $employeeId)
                     ->where('year', $jalaliYear)
                     ->where('month', $jalaliMonth)
