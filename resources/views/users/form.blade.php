@@ -9,14 +9,16 @@
     <x-input title="{{ __('Password') }}" type="password" name="password" />
     <x-input title="{{ __('Confirm Password') }}" type="password" name="password_confirmation" />
     @php
-        $employeeOptions = ($employees ?? collect())->mapWithKeys(fn($e) => [$e->id => $e->first_name . ' ' . $e->last_name])->toArray();
+        $employeeOptions = ['' => __('Choose Employee')] + ($employees ?? collect())
+            ->mapWithKeys(fn ($employee) => [$employee->id => $employee->first_name . ' ' . $employee->last_name])
+            ->all();
         $hasEmployees = isset($employees) && $employees->isNotEmpty();
     @endphp
 
     @if ($user)
         <div>
             <x-select name="employee_id" id="employee_id" title="{{ __('Employee') }}" :options="$employeeOptions"
-                :selected="old('employee_id') ?? $user?->employee?->id" :disabled="$user?->employee || !$hasEmployees" />
+                :selected="old('employee_id') ?? $user->employee?->id ?? ''" :disabled="$user->employee || !$hasEmployees" />
 
             <div class="text-warning mt-1">
                 {{ $user?->employee ? __('The user is already linked to an employee.') : (!$hasEmployees ? __('There are no unlinked employees available. Please create a new employee first.') : '') }}
