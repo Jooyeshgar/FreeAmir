@@ -569,4 +569,25 @@ class EmployeeTest extends TestCase
             'leave_remain' => -240,
         ]);
     }
+
+    public function test_update_accepts_persian_digits_for_leave_remain(): void
+    {
+        $employee = $this->makeEmployee([
+            'code' => 'EMP-LEAVE-FA',
+            'leave_remain' => 0,
+        ]);
+
+        $payload = $this->validPayload([
+            'code' => 'EMP-LEAVE-FA',
+            'leave_remain' => '-۲۴۰',
+        ]);
+
+        $this->put(route('hr.employees.update', $employee), $payload)
+            ->assertRedirect(route('hr.employees.index'));
+
+        $this->assertDatabaseHas('employees', [
+            'id' => $employee->id,
+            'leave_remain' => -240,
+        ]);
+    }
 }

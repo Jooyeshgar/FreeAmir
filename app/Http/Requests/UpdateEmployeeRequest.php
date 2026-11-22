@@ -83,7 +83,11 @@ class UpdateEmployeeRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        if ($this->isNotFilled('leave_remain')) {
+        if ($this->filled('leave_remain')) {
+            $this->merge([
+                'leave_remain' => toEnglish(trim((string) $this->input('leave_remain'))),
+            ]);
+        } else {
             $employee = $this->route('employee');
             $this->merge([
                 'leave_remain' => $employee instanceof Employee ? (int) $employee->leave_remain : 0,

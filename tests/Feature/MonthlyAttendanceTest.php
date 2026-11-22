@@ -922,6 +922,53 @@ class MonthlyAttendanceTest extends TestCase
         $this->assertSame(0, $this->employee->fresh()->leave_remain);
     }
 
+    public function test_destroy_reverts_original_earned_paid_leave_even_after_work_shift_changes(): void
+    {
+        $this->employee->workShift->update([
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'paid_leave' => 1200,
+        ]);
+        $this->employee->update([
+            'leave_remain' => 0,
+        ]);
+
+        AttendanceLog::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2025-10-25',
+            'paid_leave' => 300,
+        ]);
+
+        $this->post(route('attendance.monthly-attendances.store'), [
+            'employee_id' => $this->employee->id,
+            'start_date' => '1404/08/01',
+            'duration' => 30,
+        ])->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        $attendance = MonthlyAttendance::where('employee_id', $this->employee->id)->firstOrFail();
+        $this->assertSame(1200, $attendance->earned_paid_leave);
+        $this->assertSame(900, $this->employee->fresh()->leave_remain);
+
+        // Changing the work shift's paid_leave later must not corrupt destroy() reversal
+        $this->employee->workShift->update(['paid_leave' => 1500]);
+
+        // Recalculating must also preserve the originally earned paid leave
+        $this->post(route('attendance.monthly-attendances.recalculate', $attendance), [
+            'start_date' => '1404/08/01',
+            'duration' => 30,
+        ])->assertRedirect();
+
+        $recalculated = MonthlyAttendance::where('employee_id', $this->employee->id)->firstOrFail();
+        $this->assertSame(1200, $recalculated->earned_paid_leave);
+        $this->assertSame(900, $this->employee->fresh()->leave_remain);
+
+        $this->delete(route('attendance.monthly-attendances.destroy', $recalculated))
+            ->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        $this->assertSame(0, $this->employee->fresh()->leave_remain);
+    }
+
     public function test_duplicate_store_does_not_double_accrue_paid_leave(): void
     {
         $this->employee->workShift->update([
@@ -1073,6 +1120,15 @@ class MonthlyAttendanceTest extends TestCase
             $this->get(route('employee-portal.employee.show'))
                 ->assertOk()
                 ->assertSee(formatMinutesAsTime(1500).' '.__('Remaining Paid Leave'));
+
+            // Negative remaining paid leave renders signed duration instead of clamping to 0
+            $fiscalYear->update(['closed_at' => null, 'year' => 1404]);
+            $this->employee->update(['is_active' => true, 'leave_remain' => -1500]);
+            $this->user->unsetRelation('employee');
+
+            $this->get(route('employee-portal.employee.show'))
+                ->assertOk()
+                ->assertSee(formatMinutesAsTime(-300, true).' '.__('Remaining Paid Leave'));
         } finally {
             Carbon::setTestNow();
         }
