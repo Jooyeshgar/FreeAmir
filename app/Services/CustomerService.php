@@ -15,12 +15,20 @@ class CustomerService
     {
         $customers = Customer::with('group', 'subject')->limit($limit);
         $fields = ['id', 'name', 'group_id', 'subject_id'];
-        $fromName = (clone $customers)->where('name', 'like', "%{$query}%")->get($fields);
-        $fromGroup = (clone $customers)->whereHas('group', fn ($group) => $group->where('name', 'like', "%{$query}%"))->get($fields);
+        $code = str_replace('/', '', toEnglish($query));
+        $isCode = ctype_digit($code);
+        $nameQueries = $isCode ? array_unique([$query, $code, convertToFarsi($code)]) : [$query];
+        $matchesName = function ($builder) use ($nameQueries) {
+            foreach ($nameQueries as $nameQuery) {
+                $builder->orWhere('name', 'like', "%{$nameQuery}%");
+            }
+        };
+
+        $fromName = (clone $customers)->where($matchesName)->get($fields);
+        $fromGroup = (clone $customers)->whereHas('group', fn ($group) => $group->where($matchesName))->get($fields);
         $matches = $fromName->merge($fromGroup);
 
-        $code = str_replace('/', '', toEnglish($query));
-        if (ctype_digit($code)) {
+        if ($isCode) {
             $fromCode = $customers->whereHas('subject', fn ($subject) => $subject->where('code', 'like', "%{$code}%"))->get($fields);
             $matches = $fromCode->merge($matches);
         }

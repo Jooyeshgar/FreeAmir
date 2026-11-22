@@ -123,6 +123,7 @@
                 selectedSubjectCode: '',
                 focusedOptionId: null,
                 isLoading: false,
+                searchVersion: 0,
                 emptyText: 'نتیجه‌ای یافت نشد',
                 placeholder,
                 selectableGroups,
@@ -256,16 +257,19 @@
                         }
                     }
                     this.search = input.value;
-                    this.handleSearch(code || query.toLowerCase(), Boolean(code));
+                    this.handleSearch(query.toLowerCase(), Boolean(code));
                 },
 
                 handleSearch(q = this.search.trim().toLowerCase(), isSubjectCode = false) {
-                    const search = this.search;
-
                     clearTimeout(this.searchTimeout);
-                    this.searchTimeout = setTimeout(() => {
-                        if (searchSubjectCode && this.search !== search) return;
+                    if (searchSubjectCode) {
+                        this.searchVersion++;
+                        this.focusedOptionId = null;
+                        this.filteredOptions = q ? [] : this.initialOptions;
+                        this.isLoading = Boolean(q);
+                    }
 
+                    this.searchTimeout = setTimeout(() => {
                         if (q === "") {
                             this.filteredOptions = this.initialOptions;
                             this.isLoading = false;
@@ -342,12 +346,12 @@
 
                 searchRemote(q, isSubjectCode = false) {
                     this.isLoading = true;
-                    const search = this.search;
+                    const searchVersion = this.searchVersion;
 
                     fetch(`${this.url}?q=${encodeURIComponent(q)}`)
                         .then(r => r.json())
                         .then(data => {
-                            if (searchSubjectCode && this.search !== search) return;
+                            if (searchVersion !== this.searchVersion) return;
 
                             if (isSubjectCode) {
                                 this.filteredOptions = Array.isArray(data) ? data : [];
@@ -392,7 +396,7 @@
                             this.isLoading = false;
                         })
                         .catch(() => {
-                            if (searchSubjectCode && this.search !== search) return;
+                            if (searchVersion !== this.searchVersion) return;
 
                             this.filteredOptions = [];
                             this.isLoading = false;
@@ -424,6 +428,12 @@
 
                 onKeydown(e) {
                     if (!this.open) return;
+
+                    if (searchSubjectCode && this.isEmpty) {
+                        if (e.key === 'Enter') e.preventDefault();
+                        if (e.key === 'Escape') this.close();
+                        return;
+                    }
 
                     const all = [];
                     this.filteredOptions.forEach(b => {

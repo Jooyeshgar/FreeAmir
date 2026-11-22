@@ -155,9 +155,10 @@ class CustomerTest extends TestCase
         $this->user->givePermissionTo(Permission::firstOrCreate(['name' => $routeName]));
         $this->actingAs($this->user);
 
-        $this->customer->update(['name' => 'Harbor Trading']);
-        $this->customerGroup->update(['name' => 'Wholesale Partners']);
-        $code = '123456789';
+        $this->customer->update(['name' => 'Harbor Trading ۱۲۳۴۵']);
+        $groupName = 'Wholesale Partners ۵۶۷۸۹';
+        $this->customerGroup->update(['name' => $groupName]);
+        $code = '904246789';
         $this->customer->subject->update(['code' => $code]);
 
         $otherFiscalYear = FiscalYear::factory()->create();
@@ -168,7 +169,7 @@ class CustomerTest extends TestCase
         ]);
         Subject::withoutGlobalScopes()->whereKey($otherCustomer->subject_id)->update(['code' => $code]);
 
-        foreach ([$code, '123/456/789', '۳۴۵/۶', 'Harbor', 'Wholesale', '789'] as $query) {
+        foreach ([$code, '904/246/789', '۲۴۶/۷', 'Harbor', 'Wholesale', '۱۲۳۴', '۵۶۷۸', '۱۲۳/۴5', '۵۶۷/۸۹', '789'] as $query) {
             $resultPath = '0.options.'.$this->customerGroup->id;
 
             $this->getJson(route($routeName, ['q' => $query]))
@@ -176,7 +177,7 @@ class CustomerTest extends TestCase
                 ->assertJsonCount(1, $resultPath)
                 ->assertJsonPath($resultPath.'.0.id', $this->customer->id)
                 ->assertJsonPath($resultPath.'.0.type', 'customer')
-                ->assertJsonPath($resultPath.'.0.groupName', 'Wholesale Partners')
+                ->assertJsonPath($resultPath.'.0.groupName', $groupName)
                 ->assertJsonPath($resultPath.'.0.subjectCode', formatCode($code))
                 ->assertJsonMissing(['id' => $otherCustomer->id]);
         }
