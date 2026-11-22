@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools;
 
 use App\Enums\InvoiceType;
+use App\Extensions\InvoiceExtensionRegistry;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Mcp\Support\ContextResolver;
 use App\Models\Customer;
@@ -14,6 +15,7 @@ use App\Models\Service;
 use App\Models\Warehouse;
 use App\Services\InvoiceService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Http\Request as HttpRequest;
 use Illuminate\Validation\ValidationException;
 use Laravel\Mcp\Response;
 
@@ -39,7 +41,7 @@ class CreateInvoiceTool extends AccountingTool
             'description' => $schema->string()->max(500),
         ])->withoutAdditionalProperties();
 
-        return [
+        $properties = [
             'fiscal_year_id' => $schema->integer()->min(1)->required(),
             'invoice_type' => $schema->string()->enum(['buy', 'sell'])->required(),
             'customer_id' => $schema->integer()->min(1)->required(),
@@ -51,11 +53,25 @@ class CreateInvoiceTool extends AccountingTool
             'subtraction' => $schema->number()->min(0)->description('Invoice deduction in the selected fiscal year company currency.'),
             'items' => $schema->array()->min(1)->max(500)->items($item)->required(),
         ];
+
+        $registry = app(InvoiceExtensionRegistry::class);
+        $extensions = $registry->extensions();
+        if ($extensions !== []) {
+            $extensionProperties = [];
+            foreach (array_keys($extensions) as $key) {
+                $extensionProperties[$key] = $schema->object()->description($registry->mcpDescription($key));
+            }
+            $properties['extensions'] = $schema->object($extensionProperties)
+                ->withoutAdditionalProperties()
+                ->description('Optional registered invoice extension payloads.');
+        }
+
+        return $properties;
     }
 
     protected function rules(): array
     {
-        return [
+        $rules = [
             'fiscal_year_id' => ['required', 'integer', 'min:1'],
             'invoice_type' => ['required', 'string', 'in:buy,sell'],
             'customer_id' => ['required', 'integer', 'min:1'],
@@ -75,6 +91,13 @@ class CreateInvoiceTool extends AccountingTool
             'items.*.vat' => ['sometimes', 'numeric', 'min:0', 'max:100'],
             'items.*.description' => ['sometimes', 'nullable', 'string', 'max:500'],
         ];
+
+        if (app(InvoiceExtensionRegistry::class)->extensions() !== []) {
+            $rules['extensions'] = ['sometimes', 'array'];
+            $rules['extensions.*'] = ['array'];
+        }
+
+        return $rules;
     }
 
     protected function report(array $arguments, FiscalYear $fiscalYear): Response
@@ -138,11 +161,24 @@ class CreateInvoiceTool extends AccountingTool
         ]);
         $validated = $request->validated();
 
+        $extensionPayloads = [];
+        if (isset($arguments['extensions']) && $arguments['extensions'] !== []) {
+            $extensionRequest = HttpRequest::create('/', 'POST', ['extensions' => $arguments['extensions']]);
+            $extensionPayloads = app(InvoiceExtensionRegistry::class)->validateRequest($extensionRequest);
+        }
+
+        $extensionPersister = $extensionPayloads === []
+            ? null
+            : static function (Invoice $invoice) use ($extensionPayloads): void {
+                app(InvoiceExtensionRegistry::class)->persist($invoice, $extensionPayloads);
+            };
+
         $result = InvoiceService::createInvoice(
             ContextResolver::authContext()->user,
             InvoiceService::extractInvoiceData($validated),
             InvoiceService::mapTransactionsToItems($validated['transactions']),
             false,
+            $extensionPersister,
         );
 
         /** @var Invoice $invoice */

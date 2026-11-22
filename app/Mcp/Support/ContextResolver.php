@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Support;
 
+use App\Extensions\InvoiceExtensionRegistry;
 use App\Mcp\Auth\AuthContext;
 use App\Models\Config;
 use App\Models\CustomerGroup;
@@ -327,7 +328,7 @@ class ContextResolver
         $fyEndDays = getDaysInJalaliMonth($fiscalYearNumber, 12);
         $fyEnd = jalali_to_gregorian($fiscalYearNumber, 12, $fyEndDays);
 
-        return [
+        $context = [
             'today_jalali' => sprintf('%04d/%02d/%02d', $todayJalali[0], $todayJalali[1], $todayJalali[2]),
             'today_gregorian' => $today->toDateString(),
             'current_jalali_year' => $todayJalali[0],
@@ -353,5 +354,12 @@ class ContextResolver
             'warehouses' => Warehouse::withoutGlobalScopes()->where('fiscal_year_id', $fiscalYearId)
                 ->get(['id', 'name', 'code'])->map(fn ($w) => ['id' => (int) $w->id, 'name' => (string) $w->name, 'code' => (string) $w->code])->values()->all(),
         ];
+
+        $extensionOptions = app(InvoiceExtensionRegistry::class)->mcpContextOptions($fiscalYearId);
+        if ($extensionOptions !== []) {
+            $context['invoice_extensions'] = $extensionOptions;
+        }
+
+        return $context;
     }
 }

@@ -51,7 +51,8 @@ MCP server security is built upon Laravel Sanctum personal access tokens and Spa
 | `get_customer_balance` | Customer balance, debtor/creditor status, and contact details | `customers.show` |
 | `create_customer` | Customer/counterparty and its accounting subject | `customers.store` |
 | `create_product` | Product, pricing, category and accounting subjects | `products.store` |
-| `create_invoice` | Unapproved sales/purchase invoice with line items | `invoices.store` |
+| `create_invoice` | Unapproved sales/purchase invoice with line items (and optional registered extensions) | `invoices.store` |
+| `approve_invoice` | Explicitly approve a draft/unapproved invoice (posts accounting document and stock) | `invoices.approve` |
 
 ---
 
@@ -99,7 +100,8 @@ All three tools require an explicit `fiscal_year_id` assigned to the token owner
 
 - `create_customer`: required `fiscal_year_id` and `name`. Optional `group_id` (defaults to the first customer group), `type` (defaults to `individual`), `phone`, `mobile`, `email`, `personal_code`, `postal_code`, `address`, `description`, `subject_code`.
 - `create_product`: required `fiscal_year_id` and `name`. Optional `group_id` (defaults to the first product group), `oversell` (defaults to `false`), `code` (generated when omitted), `quantity_warning`, `selling_price`, `vat`, `location`, `description`. Prices use the selected fiscal year company currency. Initial stock is zero.
-- `create_invoice`: required `fiscal_year_id`, `invoice_type` (`sell` or `buy`), `customer_id`, `items` (1–500 lines). Optional `warehouse_id` (defaults to the first warehouse), `number` (defaults to the next consecutive number), `date` (defaults to today's Gregorian date), `title`, `description`, `subtraction`.
+- `create_invoice`: required `fiscal_year_id`, `invoice_type` (`sell` or `buy`), `customer_id`, `items` (1–500 lines). Optional `warehouse_id` (defaults to the first warehouse), `number` (defaults to the next consecutive number), `date` (defaults to today's Gregorian date), `title`, `description`, `subtraction`. When invoice extensions (such as invoice categories) are registered via `InvoiceExtensionRegistry`, `create_invoice` also exposes an optional `extensions` object and `get_current_context` exposes `invoice_extensions`.
+- `approve_invoice`: required `fiscal_year_id`, `invoice_id` (optional `confirm`). Approves an existing unapproved/draft invoice, posting its accounting document and updating stock/COGS. Only call when explicitly instructed by the user.
 
 Each invoice line requires `item_type` (`product` or `service`), `item_id`, `quantity` and `unit` (unit price). Optional `discount` is the absolute line discount in the selected fiscal year company currency, `vat` is a percentage from 0 to 100, and `description` is free text. The server computes totals with `InvoiceService`; duplicate items and invalid monetary bounds are rejected. The same minimum quantity rule as the web form applies (currently 1).
 
