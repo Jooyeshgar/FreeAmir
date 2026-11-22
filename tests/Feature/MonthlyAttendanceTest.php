@@ -1501,7 +1501,7 @@ class MonthlyAttendanceTest extends TestCase
             'month' => 8,
         ]);
 
-        $migration = require database_path('migrations/2026_11_22_000002_remove_prepaid_leave_for_uncalculated_aban_1405.php');
+        $migration = require database_path('migrations/2026_11_22_000002_remove_prepaid_leave_for_uncalculated.php');
         $migration->up();
 
         // Aban 1405 not calculated yet: prepaid quota removed so the upcoming accrual does not double count it
