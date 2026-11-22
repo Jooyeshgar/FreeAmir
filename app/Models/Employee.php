@@ -10,7 +10,6 @@ use App\Enums\EmployeeInsuranceType;
 use App\Enums\EmployeeMaritalStatus;
 use App\Enums\EmployeeNationality;
 use App\Models\Scopes\FiscalYearScope;
-use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -138,31 +137,5 @@ class Employee extends Model
     public function approvedPersonnelRequests(): HasMany
     {
         return $this->hasMany(PersonnelRequest::class, 'approved_by');
-    }
-
-    public function remainingPaidLeaveIncludingCurrentMonth(?Carbon $asOf = null): int
-    {
-        $date = ($asOf ?? now())->copy()->startOfDay();
-        $balance = $this->leave_remain;
-
-        if (! $this->is_active) {
-            return $balance;
-        }
-
-        [$jalaliYear, $jalaliMonth] = gregorian_to_jalali($date->year, $date->month, $date->day);
-        [$monthStartYear, $monthStartMonth, $monthStartDay] = jalali_to_gregorian($jalaliYear, $jalaliMonth, 1);
-        $currentMonthStart = Carbon::create($monthStartYear, $monthStartMonth, $monthStartDay)->startOfDay();
-
-        if ($this->contract_end_date !== null && $this->contract_end_date->copy()->startOfDay()->lt($currentMonthStart)) {
-            return $balance;
-        }
-
-        $currentMonthCalculated = $this->monthlyAttendances()->where('year', $jalaliYear)->where('month', $jalaliMonth)->exists();
-
-        if ($currentMonthCalculated) {
-            return $balance;
-        }
-
-        return $balance + (int) ($this->workShift?->paid_leave ?? 0);
     }
 }

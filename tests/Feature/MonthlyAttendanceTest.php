@@ -910,38 +910,60 @@ class MonthlyAttendanceTest extends TestCase
     {
         $this->employee->workShift->update(['paid_leave' => 1200]);
         $this->employee->update([
+            'user_id' => $this->user->id,
             'is_active' => true,
             'contract_end_date' => null,
             'leave_remain' => 600,
         ]);
 
-        // 2025-11-06 is 1404/08/15 (mid-Aban)
-        $midAban = Carbon::create(2025, 11, 6);
+        $this->user->givePermissionTo(
+            Permission::firstOrCreate(['name' => 'employee-portal.*'])
+        );
 
-        // Before Aban's monthly attendance is created: 600 + 1200 = 1800
-        $this->assertSame(1800, $this->employee->remainingPaidLeaveIncludingCurrentMonth($midAban));
+        try {
+            // 2025-11-06 is 1404/08/15 (mid-Aban)
+            Carbon::setTestNow(Carbon::create(2025, 11, 6, 12, 0, 0));
 
-        // Once Aban's monthly attendance exists: do not double-count Aban's 1200
-        $this->makeMonthlyAttendance([
-            'year' => 1404,
-            'month' => 8,
-            'start_date' => '2025-10-23',
-            'duration' => 30,
-        ]);
-        $this->employee->update(['leave_remain' => 1500]);
+            // Before Aban's monthly attendance is created: 600 + 1200 = 1800
+            $this->get(route('employee-portal.employee.show'))
+                ->assertOk()
+                ->assertSee(formatMinutesAsTime(1800).' '.__('Remaining Paid Leave'));
 
-        $this->assertSame(1500, $this->employee->fresh()->remainingPaidLeaveIncludingCurrentMonth($midAban));
+            // Once Aban's monthly attendance exists: do not double-count Aban's 1200
+            $this->makeMonthlyAttendance([
+                'year' => 1404,
+                'month' => 8,
+                'start_date' => '2025-10-23',
+                'duration' => 30,
+            ]);
+            $this->employee->update(['leave_remain' => 1500]);
 
-        // Next month (1404/09/01 = 2025-11-22): Azar is not calculated yet => 1500 + 1200 = 2700
-        $startOfAzar = Carbon::create(2025, 11, 22);
-        $this->assertSame(2700, $this->employee->fresh()->remainingPaidLeaveIncludingCurrentMonth($startOfAzar));
+            $this->get(route('employee-portal.employee.show'))
+                ->assertOk()
+                ->assertSee(formatMinutesAsTime(1500).' '.__('Remaining Paid Leave'));
 
-        // If employee's contract ended at end of Aban (2025-11-21): Azar is not included
-        $this->employee->update(['contract_end_date' => '2025-11-21']);
-        $this->assertSame(1500, $this->employee->fresh()->remainingPaidLeaveIncludingCurrentMonth($startOfAzar));
+            // Next month (1404/09/01 = 2025-11-22): Azar is not calculated yet => 1500 + 1200 = 2700
+            Carbon::setTestNow(Carbon::create(2025, 11, 22, 12, 0, 0));
 
-        // If employee is inactive: current month is not included
-        $this->employee->update(['contract_end_date' => null, 'is_active' => false]);
-        $this->assertSame(1500, $this->employee->fresh()->remainingPaidLeaveIncludingCurrentMonth($startOfAzar));
+            $this->get(route('employee-portal.employee.show'))
+                ->assertOk()
+                ->assertSee(formatMinutesAsTime(2700).' '.__('Remaining Paid Leave'));
+
+            // If employee's contract ended at end of Aban (2025-11-21): Azar is not included
+            $this->employee->update(['contract_end_date' => '2025-11-21']);
+
+            $this->get(route('employee-portal.employee.show'))
+                ->assertOk()
+                ->assertSee(formatMinutesAsTime(1500).' '.__('Remaining Paid Leave'));
+
+            // If employee is inactive: current month is not included
+            $this->employee->update(['contract_end_date' => null, 'is_active' => false]);
+
+            $this->get(route('employee-portal.employee.show'))
+                ->assertOk()
+                ->assertSee(formatMinutesAsTime(1500).' '.__('Remaining Paid Leave'));
+        } finally {
+            Carbon::setTestNow();
+        }
     }
 }
