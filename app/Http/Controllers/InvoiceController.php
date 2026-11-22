@@ -11,7 +11,6 @@ use App\Models\Bank;
 use App\Models\BankAccount;
 use App\Models\Chequebook;
 use App\Models\Customer;
-use App\Models\CustomerGroup;
 use App\Models\Document;
 use App\Models\Invoice;
 use App\Models\Product;
@@ -22,6 +21,7 @@ use App\Models\Subject;
 use App\Models\Warehouse;
 use App\Services\AncillaryCostService;
 use App\Services\ChequeService;
+use App\Services\CustomerService;
 use App\Services\FiscalYearMutationGuard;
 use App\Services\FiscalYearTransferService;
 use App\Services\GroupActionService;
@@ -691,37 +691,13 @@ class InvoiceController extends Controller
         return response()->json($items);
     }
 
-    public function searchCustomer(Request $request)
+    public function searchCustomer(Request $request, CustomerService $customerService)
     {
         $validated = $request->validate([
             'q' => 'required|string|max:100',
         ]);
 
-        $q = $validated['q'];
-        $results = [];
-
-        $returnableFields = ['id', 'name', 'group_id'];
-
-        $groupMatches = CustomerGroup::where('name', 'like', "%{$q}%")->pluck('id');
-
-        $searchedInCustomersGroups = collect();
-        if ($groupMatches->isNotEmpty()) {
-            $searchedInCustomersGroups = Customer::with('group')->whereIn('group_id', $groupMatches)->limit(50)->get($returnableFields);
-        }
-
-        $searchedInCustomers = Customer::with('group')->where('name', 'like', "%{$q}%")->limit(50)->get($returnableFields);
-
-        $customers = $searchedInCustomers->merge($searchedInCustomersGroups)->unique('id');
-
-        if ($customers->isNotEmpty()) {
-            $results[] = [
-                'id' => 'group_customers',
-                'headerGroup' => 'customer',
-                'options' => $this->groupItems($customers, 'group'),
-            ];
-        }
-
-        return response()->json($results);
+        return response()->json($customerService->searchSelectOptions($validated['q'], 50));
     }
 
     public function searchProductService(Request $request)

@@ -6,10 +6,10 @@ use App\Enums\InvoiceType;
 use App\Http\Requests\StoreAncillaryCostRequest;
 use App\Models\AncillaryCost;
 use App\Models\Customer;
-use App\Models\CustomerGroup;
 use App\Models\Invoice;
 use App\Models\Product;
 use App\Services\AncillaryCostService;
+use App\Services\CustomerService;
 use Exception;
 use Illuminate\Http\Request;
 
@@ -261,47 +261,13 @@ class AncillaryCostController extends Controller
         }
     }
 
-    public function searchCustomer(Request $request)
+    public function searchCustomer(Request $request, CustomerService $customerService)
     {
         $validated = $request->validate([
             'q' => 'required|string|max:100',
         ]);
 
-        $q = $validated['q'];
-        $results = [];
-
-        $returnableFields = ['id', 'name', 'group_id'];
-
-        $groupMatches = CustomerGroup::where('name', 'like', "%{$q}%")->pluck('id');
-
-        $searchedInCustomersGroups = collect();
-        if ($groupMatches->isNotEmpty()) {
-            $searchedInCustomersGroups = Customer::with('group')->whereIn('group_id', $groupMatches)->limit(30)->get($returnableFields);
-        }
-
-        $searchedInCustomers = Customer::with('group')->where('name', 'like', "%{$q}%")->limit(30)->get($returnableFields);
-
-        $customers = $searchedInCustomers->merge($searchedInCustomersGroups)->unique('id');
-
-        $options = (object) [
-            0 => $customers->map(fn ($customer) => [
-                'id' => $customer->id,
-                'groupId' => 0,
-                'groupName' => 'General',
-                'text' => $customer->name,
-                'type' => 'customer',
-            ])->all(),
-        ];
-
-        if ($customers->isNotEmpty()) {
-            $results[] = [
-                'id' => 'group_customers',
-                'headerGroup' => 'customer',
-                'options' => $options,
-            ];
-        }
-
-        return response()->json($results);
+        return response()->json($customerService->searchSelectOptions($validated['q'], 30));
     }
 
     public function searchInvoice(Request $request)

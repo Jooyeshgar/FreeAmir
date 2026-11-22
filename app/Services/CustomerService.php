@@ -11,6 +11,43 @@ class CustomerService
 {
     public function __construct(private readonly SubjectService $subjectService) {}
 
+    public function searchSelectOptions(string $query, int $limit): array
+    {
+        $customers = Customer::with('group')->limit($limit);
+        $fields = ['id', 'name', 'group_id'];
+        $fromName = (clone $customers)->where('name', 'like', "%{$query}%")->get($fields);
+        $fromGroup = (clone $customers)->whereHas('group', fn ($group) => $group->where('name', 'like', "%{$query}%"))->get($fields);
+        $matches = $fromName->merge($fromGroup);
+
+        $code = str_replace('/', '', toEnglish($query));
+        if (ctype_digit($code)) {
+            $fromCode = $customers->whereHas('subject', fn ($subject) => $subject->where('code', 'like', "%{$code}%"))->get($fields);
+            $matches = $fromCode->merge($matches);
+        }
+
+        if ($matches->isEmpty()) {
+            return [];
+        }
+
+        $options = [];
+        foreach ($matches as $customer) {
+            $groupId = $customer->group?->id ?? 0;
+            $options[$groupId][] = [
+                'id' => $customer->id,
+                'groupId' => $groupId,
+                'groupName' => $customer->group?->name ?? 'General',
+                'text' => $customer->name,
+                'type' => 'customer',
+            ];
+        }
+
+        return [[
+            'id' => 'group_customers',
+            'headerGroup' => 'customer',
+            'options' => (object) $options,
+        ]];
+    }
+
     public function create(array $data): Customer
     {
         app(FiscalYearMutationGuard::class)->ensureOpen($data['fiscal_year_id'] ?? getActiveFiscalYear());

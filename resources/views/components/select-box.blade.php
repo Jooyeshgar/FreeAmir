@@ -4,7 +4,8 @@
         options: @js($finalLocalOptions),
         placeholder: '{{ $placeholder }}',
         selectableGroups: @js($selectableGroups),
-        disabled: @js($disabled)
+        disabled: @js($disabled),
+        searchSubjectCode: @js($searchSubjectCode)
     })" @click.outside="close()">
     {{-- Trigger Button --}}
     <button type="button" @click="toggle()" :disabled="disabled" :class="{ 'opacity-60 cursor-not-allowed': disabled }"
@@ -96,7 +97,8 @@
             options,
             placeholder,
             selectableGroups,
-            disabled
+            disabled,
+            searchSubjectCode
         }) {
             return {
                 open: false,
@@ -224,12 +226,26 @@
 
                 handleSearch() {
                     const q = this.search.trim().toLowerCase();
+                    const code = searchSubjectCode && /^[0-9۰-۹/]+$/.test(q) ?
+                        this.$store.utils.convertToEnglish(q).replaceAll('/', '') : '';
+
+                    if (code) {
+                        this.search = this.$store.utils.localizeNumber(this.$store.utils.formatCode(code));
+                    }
+                    const search = this.search;
 
                     clearTimeout(this.searchTimeout);
                     this.searchTimeout = setTimeout(() => {
+                        if (searchSubjectCode && this.search !== search) return;
+
                         if (q === "") {
                             this.filteredOptions = this.initialOptions;
                             this.isLoading = false;
+                            return;
+                        }
+
+                        if (code && this.url) {
+                            this.searchRemote(q, true);
                             return;
                         }
 
@@ -296,12 +312,21 @@
                     };
                 },
 
-                searchRemote(q) {
+                searchRemote(q, isSubjectCode = false) {
                     this.isLoading = true;
+                    const search = this.search;
 
                     fetch(`${this.url}?q=${encodeURIComponent(q)}`)
                         .then(r => r.json())
                         .then(data => {
+                            if (searchSubjectCode && this.search !== search) return;
+
+                            if (isSubjectCode) {
+                                this.filteredOptions = Array.isArray(data) ? data : [];
+                                this.isLoading = false;
+                                return;
+                            }
+
                             const query = q.toLowerCase();
 
                             data.forEach(block => {
@@ -339,6 +364,8 @@
                             this.isLoading = false;
                         })
                         .catch(() => {
+                            if (searchSubjectCode && this.search !== search) return;
+
                             this.filteredOptions = [];
                             this.isLoading = false;
                         });

@@ -8,6 +8,7 @@ use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -57,6 +58,50 @@ class CustomerTest extends TestCase
         $response->assertStatus(200);
         $response->assertViewIs('customers.index');
         $response->assertViewHas('customers');
+    }
+
+    #[DataProvider('customerSearchRoutes')]
+    public function test_customer_selectors_search_by_subject_code_name_and_group(string $routeName): void
+    {
+        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => $routeName]));
+        $this->actingAs($this->user);
+
+        $this->customer->update(['name' => 'Harbor Trading']);
+        $this->customerGroup->update(['name' => 'Wholesale Partners']);
+        $code = '123456789';
+        $this->customer->subject->update(['code' => $code]);
+
+        $otherFiscalYear = FiscalYear::factory()->create();
+        $otherGroup = CustomerGroup::factory()->withSubject()->create(['fiscal_year_id' => $otherFiscalYear->id]);
+        $otherCustomer = Customer::factory()->withGroup($otherGroup)->withSubject()->create([
+            'name' => 'Other Fiscal Year',
+            'fiscal_year_id' => $otherFiscalYear->id,
+        ]);
+        Subject::withoutGlobalScopes()->whereKey($otherCustomer->subject_id)->update(['code' => $code]);
+
+        foreach ([$code, '123/456/789', '۳۴۵/۶', 'Harbor', 'Wholesale', '789'] as $query) {
+            $resultPath = '0.options.'.$this->customerGroup->id;
+
+            $this->getJson(route($routeName, ['q' => $query]))
+                ->assertOk()
+                ->assertJsonCount(1, $resultPath)
+                ->assertJsonPath($resultPath.'.0.id', $this->customer->id)
+                ->assertJsonPath($resultPath.'.0.type', 'customer')
+                ->assertJsonPath($resultPath.'.0.groupName', 'Wholesale Partners')
+                ->assertJsonMissing(['id' => $otherCustomer->id]);
+        }
+
+        $this->getJson(route($routeName, ['q' => '/']))->assertOk()->assertExactJson([]);
+        $this->getJson(route($routeName, ['q' => '00000']))->assertOk()->assertExactJson([]);
+        $this->getJson(route($routeName))->assertUnprocessable()->assertJsonValidationErrors('q');
+    }
+
+    public static function customerSearchRoutes(): array
+    {
+        return [
+            'invoice' => ['invoices.search-customer'],
+            'ancillary cost' => ['ancillary-costs.search-customer'],
+        ];
     }
 
     public function test_it_displays_customer_create_page()

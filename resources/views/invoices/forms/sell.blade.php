@@ -29,7 +29,7 @@
                     </a>
                 </span>
 
-                <x-select-box url="{{ route('invoices.search-customer') }}" :options="[['headerGroup' => 'customer', 'options' => $customers]]" x-model="selectedValue"
+                <x-select-box url="{{ route('invoices.search-customer') }}" :search-subject-code="true" :options="[['headerGroup' => 'customer', 'options' => $customers]]" x-model="selectedValue"
                     x-init="if (!selectedValue && customer_id) {
                         selectedValue = 'customer-' + customer_id;
                     }" placeholder="{{ __('Select Customer') }}" hint='{!! $hint !!}'

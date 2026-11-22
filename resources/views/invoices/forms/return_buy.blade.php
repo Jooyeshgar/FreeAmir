@@ -7,11 +7,13 @@
             );
             $includeLastYearsInvoices = old(
                 'include_last_years_invoices',
-                $invoice->exists && ! $invoice->returned_invoice_id,
+                $invoice->exists && !$invoice->returned_invoice_id,
             );
             $initialSelectedValue = $includeLastYearsInvoices
                 ? 'invoice-lastYearsInvoices'
-                : ($initialReturnedInvoiceId ? "invoice-$initialReturnedInvoiceId" : null);
+                : ($initialReturnedInvoiceId
+                    ? "invoice-$initialReturnedInvoiceId"
+                    : null);
             $disableReturnedInvoiceSelect = $invoice->exists || ($lockReturnedInvoiceSelection ?? false);
             $returnedInvoiceOptions = [
                 [
@@ -38,8 +40,7 @@
             }">
                 <span class="text-gray-500">{{ __('Returned Invoice') }}</span>
                 <x-select-box url="{{ route('invoices.search', ['invoice_type' => 'return_buy']) }}" :options="[['headerGroup' => 'invoice', 'options' => $returnedInvoiceOptions]]"
-                    id="returned-invoice-select"
-                    x-model="selectedValue" x-init="if (includeLastYearsInvoices) {
+                    id="returned-invoice-select" x-model="selectedValue" x-init="if (includeLastYearsInvoices) {
                         selectedValue = 'invoice-lastYearsInvoices';
                     } else if (!selectedValue && returnedInvoiceId) {
                         selectedValue = 'invoice-' + returnedInvoiceId;
@@ -52,7 +53,8 @@
                             window.__returnInvoiceCustomerId = customerId;
                             window.dispatchEvent(new CustomEvent('return-invoice-customer-selected', { detail: { customerId } }));
                         }
-                    }" placeholder="{{ __('Select Invoice') }}"
+                    }"
+                    placeholder="{{ __('Select Invoice') }}"
                     @selected="
                         includeLastYearsInvoices = $event.detail.id === 'lastYearsInvoices';
                         returnedInvoiceId = includeLastYearsInvoices ? null : $event.detail.id;
@@ -71,7 +73,7 @@
                         }
                     "
                     :disabled="$disableReturnedInvoiceSelect" />
-                <x-input name="include_last_years_invoices" :value="$includeLastYearsInvoices ? 1 : 0" 
+                <x-input name="include_last_years_invoices" :value="$includeLastYearsInvoices ? 1 : 0"
                     x-bind:value="includeLastYearsInvoices ? 1 : 0" hidden />
                 <x-input name="returned_invoice_id" x-bind:value="returnedInvoiceId" hidden />
             </div>
@@ -107,7 +109,8 @@
                         this.customerSelectRender = true;
                     });
                 }
-            }" x-on:include-last-years-invoices-changed.window="lastYearsInvoices = $event.detail.enabled"
+            }"
+                x-on:include-last-years-invoices-changed.window="lastYearsInvoices = $event.detail.enabled"
                 @return-invoice-customer-selected.window="
                 if ($event.detail && 'customerId' in $event.detail) {
                     customer_id = $event.detail.customerId || '';
@@ -118,12 +121,13 @@
                 <span class="flex flex-wrap text-gray-500 w-full">{{ __('Supplier') }}</span>
 
                 <template x-if="customerSelectRender">
-                    <x-select-box :header-label="__('Supplier')" url="{{ route('invoices.search-customer') }}" :options="[['headerGroup' => 'customer', 'options' => $customers]]"
-                        x-model="selectedValue" x-init="if (!selectedValue && customer_id) {
+                    <x-select-box :header-label="__('Supplier')" url="{{ route('invoices.search-customer') }}" :search-subject-code="true"
+                        :options="[['headerGroup' => 'customer', 'options' => $customers]]" x-model="selectedValue" x-init="if (!selectedValue && customer_id) {
                             selectedValue = 'customer-' + customer_id;
                         }
-                        disabled = !lastYearsInvoices;" placeholder="{{ __('Select Supplier') }}"
-                        @selected="customer_id = $event.detail.id;" :disabled="!$includeLastYearsInvoices"
+                        disabled = !lastYearsInvoices;"
+                        placeholder="{{ __('Select Supplier') }}" @selected="customer_id = $event.detail.id;"
+                        :disabled="!$includeLastYearsInvoices"
                         x-on:include-last-years-invoices-changed.window="disabled = !$event.detail.enabled" />
                 </template>
 
@@ -143,22 +147,22 @@
                 label_text_class="text-gray-500 text-nowrap"></x-text-input>
         @endif
 
-        <x-text-input x-data="{ invoice_number: '{{ formatDocumentNumber($invoice?->number ?? $previousInvoiceNumber + 1) }}' }"
-            title="{{ __('Current Invoice Number') }}" x-model.number="invoice_number" x-bind:name="'invoice_number'"
+        <x-text-input x-data="{ invoice_number: '{{ formatDocumentNumber($invoice?->number ?? $previousInvoiceNumber + 1) }}' }" title="{{ __('Current Invoice Number') }}"
+            x-model.number="invoice_number" x-bind:name="'invoice_number'"
             placeholder="{{ __('Current Invoice Number') }}" label_text_class="text-gray-500 text-nowrap"
             x-on:input="invoice_number = $store.utils.convertToEnglish($event.target.value);"
             x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(invoice_number));">
         </x-text-input>
- 
-        <x-text-input x-data="{ document_number: '{{ formatDocumentNumber($invoice->document?->number ?? $previousDocumentNumber + 1) }}' }"
-            title="{{ __('current document number') }}" x-model.number="document_number" x-bind:name="'document_number'"
+
+        <x-text-input x-data="{ document_number: '{{ formatDocumentNumber($invoice->document?->number ?? $previousDocumentNumber + 1) }}' }" title="{{ __('current document number') }}"
+            x-model.number="document_number" x-bind:name="'document_number'"
             placeholder="{{ __('current document number') }}" label_text_class="text-gray-500 text-nowrap"
             x-on:input="document_number = $store.utils.convertToEnglish($event.target.value);"
             x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(document_number));">
         </x-text-input>
 
-        <x-text-input data-jdp title="{{ __('date') }}" input_name="date" placeholder="{{ __('date') }}" readonly
-            input_value="{{ old('date') ?? convertToJalali($invoice->date ?? now(), true) }}"
+        <x-text-input data-jdp title="{{ __('date') }}" input_name="date" placeholder="{{ __('date') }}"
+            readonly input_value="{{ old('date') ?? convertToJalali($invoice->date ?? now(), true) }}"
             label_text_class="text-gray-500 text-nowrap" input_class="datePicker"></x-text-input>
     </div>
 </x-card>
@@ -167,139 +171,150 @@
     <div class="invoice-transactions-scroll max-w-full">
         <div class="w-max min-w-full">
             <div class="flex w-max min-w-full gap-2 items-center px-4">
-        <div class="text-sm flex-1 max-w-8 text-center text-gray-500 pt-3">*</div>
-        <div class="text-sm flex-1 min-w-24 max-w-64 text-center text-gray-500 pt-3">
-            <div
-                class="text-sm flex-1 min-w-24 max-w-64 text-center text-gray-500 pt-3 flex items-center justify-center gap-2">
-                <div class="flex items-center gap-3 ml-1">
-                    @if (!$isReturnServiceBuy)
-                        {{ __('Product') }}
-                    @else
-                        {{ __('Services') }}
-                    @endif
-                </div>
-            </div>
-        </div>
-        <div class="text-sm flex-1 min-w-80 text-center text-gray-500 pt-3">{{ __('description') }}</div>
-        <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">{{ __('Quantity') }}</div>
-        <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">{{ __('OFF') }}</div>
-        <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">{{ $invoice->exists ? __('VAT') : __('VAT') . ' (%)' }}</div>
-        <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">{{ __('Unit') }}</div>
-        <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">{{ __('Total') }}</div>
-    </div>
-    <div class="min-h-96">
-        <div id="transactions" x-data="{ activeTab: {{ $total }} }">
-            <template x-for="(transaction, index) in transactions" :key="transaction.id">
-                <div :class="{ 'active z-[110]': activeTab === index }" class="transaction flex w-max min-w-full gap-2 items-center px-4 pb-3"
-                    @click="activeTab = index">
-                    <div class="relative flex-1 text-center max-w-8 pt-2 pb-2 transaction-count-container">
-                        <span class="transaction-count block"
-                            x-text="$store.utils.localizeNumber(String(index + 1))"></span>
-                        <button @click.stop="transactions.splice(index, 1)" type="button"
-                            class="absolute left-0 top-0 removeButton">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                stroke-width="1.5" stroke="currentColor"
-                                class="px-2 size-8 rounded-md h-10 flex justify-center items-center text-center bg-red-500 hover:bg-red-700 dark:bg-red-500/80 dark:hover:bg-red-500 text-white font-bold removeTransaction">
-                                <path stroke-linecap="round" stroke-linejoin="round"
-                                    d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                            </svg>
-                        </button>
-                    </div>
-
-                    <div class="flex-1 min-w-24 max-w-64">
-                        <label class="sr-only">{{ __('Product/Service') }}</label>
-
-                        @php
-                            $options = [
-                                [
-                                    'headerGroup' => 'product',
-                                    'options' => $isReturnServiceBuy ? [] : $products,
-                                ],
-                                [
-                                    'headerGroup' => 'service',
-                                    'options' => $isReturnServiceBuy ? $services : [],
-                                ],
-                            ];
-                        @endphp
-
-                        <x-select-box url="{{ route('invoices.search-product-service') }}" :options="$options"
-                            x-model="selectedValue" x-init="selectedValue = initItemSelection(transaction); disabled = !lastYearsInvoices"
-                            placeholder="{{ $isReturnServiceBuy ? __('Select Service') : __('Select Product') }}"
-                            :disabled="!$includeLastYearsInvoices" @selected="selectItem(transaction, $event.detail.type, $event.detail.id)"
-                            x-on:include-last-years-invoices-changed.window="disabled = !$event.detail.enabled"
-                            />
-
-                        <x-input name="" x-bind:name="'transactions[' + index + '][product_id]'" x-bind:value="transaction.product_id || ''" hidden />
-                        <x-input name="" x-bind:name="'transactions[' + index + '][service_id]'" x-bind:value="transaction.service_id || ''" hidden />
-                        <x-input name="" x-bind:name="'transactions[' + index + '][item_id]'" x-bind:value="transaction.item_id || ''" hidden />
-                    </div>
-                    <div class="flex-1 w-[200px]">
-                        <x-text-input x-bind:value="transaction.desc" placeholder="{{ __('description') }}"
-                            x-bind:name="'transactions[' + index + '][desc]'" label_text_class="text-gray-500"
-                            label_class="w-full" input_class="border-white"
-                            x-bind:disabled="!transaction.product_id && !transaction.service_id">
-                        </x-text-input>
-                    </div>
-                    <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input placeholder="{{ localizeNumber('0') }}" x-model.number="transaction.quantity"
-                            x-bind:name="'transactions[' + index + '][quantity]'"
-                            x-bind:disabled="(!transaction.product_id && !transaction.service_id)"
-                            x-bind:readonly="{{ $isReturnServiceBuy ? 'true' : 'false' }}"
-                            x-bind:class="{{ $isReturnServiceBuy ? '\'bg-base-200 opacity-60 cursor-not-allowed\'' : '\'\''}}"
-                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
-                            x-on:input="transaction.quantity = $store.utils.cleanupNumber($event.target.value).split('.')[0]"
-                            x-effect="$el.value = $store.utils.localizeNumber(($store.utils.cleanupNumber(transaction.quantity).split('.')[0]) || '')">
-                        </x-text-input>
-                    </div>
-                    <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input placeholder="{{ localizeNumber('0') }}" x-model.number="transaction.off"
-                            x-bind:name="'transactions[' + index + '][off]'"
-                            x-bind:disabled="!transaction.product_id && !transaction.service_id"
-                            x-bind:readonly="!lastYearsInvoices" x-bind:class="lastYearsInvoices ? '' : 'bg-base-200 opacity-60 cursor-not-allowed'"
-                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
-                            x-on:input="transaction.off = $store.utils.convertToEnglish($event.target.value)"
-                            x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(transaction.off))">
-                        </x-text-input>
-                    </div>
-                    <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input placeholder="{{ localizeNumber('0') }}" x-model.number="transaction.vat"
-                            x-bind:name="'transactions[' + index + '][vat]'"
-                            x-bind:disabled="!transaction.product_id && !transaction.service_id"
-                            x-bind:readonly="!lastYearsInvoices" x-bind:class="lastYearsInvoices ? '' : 'bg-base-200 opacity-60 cursor-not-allowed'"
-                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
-                            x-on:input="transaction.vat = $store.utils.convertToEnglish($event.target.value)"
-                            x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(transaction.vat))">
-                        </x-text-input>
-                    </div>
-                    <div class="flex-1 min-w-24 max-w-32">
-                        <x-text-input placeholder="{{ localizeNumber('0') }}" x-model.number="transaction.unit"
-                            x-bind:name="'transactions[' + index + '][unit]'"
-                            x-bind:disabled="!transaction.product_id && !transaction.service_id"
-                            x-bind:readonly="!lastYearsInvoices" x-bind:class="lastYearsInvoices ? '' : 'bg-base-200 opacity-60 cursor-not-allowed'"
-                            label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
-                            x-on:input="transaction.unit = $store.utils.convertToEnglish($event.target.value)"
-                            x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(transaction.unit))">
-                        </x-text-input>
-                    </div>
-                    <div class="flex-1 min-w-32 max-w-32">
-                        <x-text-input x-bind:value="calcTotal(transaction)"
-                            x-bind:name="'transactions[' + index + '][total]'"
-                            placeholder="{{ localizeNumber('0') }}" label_text_class="text-gray-500"
-                            label_class="w-full" input_class="border-white" readonly>
-                        </x-text-input>
+                <div class="text-sm flex-1 max-w-8 text-center text-gray-500 pt-3">*</div>
+                <div class="text-sm flex-1 min-w-24 max-w-64 text-center text-gray-500 pt-3">
+                    <div
+                        class="text-sm flex-1 min-w-24 max-w-64 text-center text-gray-500 pt-3 flex items-center justify-center gap-2">
+                        <div class="flex items-center gap-3 ml-1">
+                            @if (!$isReturnServiceBuy)
+                                {{ __('Product') }}
+                            @else
+                                {{ __('Services') }}
+                            @endif
+                        </div>
                     </div>
                 </div>
-            </template>
-        </div>
-
-        <button class="flex justify-content gap-4 align-center w-max min-w-full px-4" id="addTransaction"
-            x-show="lastYearsInvoices" @click="addTransaction" type="button">
-            <div
-                class="bg-gray-200 max-h-10 min-h-10 hover:bg-gray-300 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600 border-none btn w-full rounded-md btn-active">
-                <span class="text-2xl">+</span>
-                {{ __('Add Transaction') }}
+                <div class="text-sm flex-1 min-w-80 text-center text-gray-500 pt-3">{{ __('description') }}</div>
+                <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">{{ __('Quantity') }}</div>
+                <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">{{ __('OFF') }}</div>
+                <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">
+                    {{ $invoice->exists ? __('VAT') : __('VAT') . ' (%)' }}</div>
+                <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">{{ __('Unit') }}</div>
+                <div class="text-sm flex-1 min-w-32 max-w-32 text-center text-gray-500 pt-3">{{ __('Total') }}</div>
             </div>
-        </button>
+            <div class="min-h-96">
+                <div id="transactions" x-data="{ activeTab: {{ $total }} }">
+                    <template x-for="(transaction, index) in transactions" :key="transaction.id">
+                        <div :class="{ 'active z-[110]': activeTab === index }"
+                            class="transaction flex w-max min-w-full gap-2 items-center px-4 pb-3"
+                            @click="activeTab = index">
+                            <div class="relative flex-1 text-center max-w-8 pt-2 pb-2 transaction-count-container">
+                                <span class="transaction-count block"
+                                    x-text="$store.utils.localizeNumber(String(index + 1))"></span>
+                                <button @click.stop="transactions.splice(index, 1)" type="button"
+                                    class="absolute left-0 top-0 removeButton">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                        stroke-width="1.5" stroke="currentColor"
+                                        class="px-2 size-8 rounded-md h-10 flex justify-center items-center text-center bg-red-500 hover:bg-red-700 dark:bg-red-500/80 dark:hover:bg-red-500 text-white font-bold removeTransaction">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                            d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <div class="flex-1 min-w-24 max-w-64">
+                                <label class="sr-only">{{ __('Product/Service') }}</label>
+
+                                @php
+                                    $options = [
+                                        [
+                                            'headerGroup' => 'product',
+                                            'options' => $isReturnServiceBuy ? [] : $products,
+                                        ],
+                                        [
+                                            'headerGroup' => 'service',
+                                            'options' => $isReturnServiceBuy ? $services : [],
+                                        ],
+                                    ];
+                                @endphp
+
+                                <x-select-box url="{{ route('invoices.search-product-service') }}" :options="$options"
+                                    x-model="selectedValue" x-init="selectedValue = initItemSelection(transaction);
+                                    disabled = !lastYearsInvoices"
+                                    placeholder="{{ $isReturnServiceBuy ? __('Select Service') : __('Select Product') }}"
+                                    :disabled="!$includeLastYearsInvoices"
+                                    @selected="selectItem(transaction, $event.detail.type, $event.detail.id)"
+                                    x-on:include-last-years-invoices-changed.window="disabled = !$event.detail.enabled" />
+
+                                <x-input name="" x-bind:name="'transactions[' + index + '][product_id]'"
+                                    x-bind:value="transaction.product_id || ''" hidden />
+                                <x-input name="" x-bind:name="'transactions[' + index + '][service_id]'"
+                                    x-bind:value="transaction.service_id || ''" hidden />
+                                <x-input name="" x-bind:name="'transactions[' + index + '][item_id]'"
+                                    x-bind:value="transaction.item_id || ''" hidden />
+                            </div>
+                            <div class="flex-1 w-[200px]">
+                                <x-text-input x-bind:value="transaction.desc" placeholder="{{ __('description') }}"
+                                    x-bind:name="'transactions[' + index + '][desc]'" label_text_class="text-gray-500"
+                                    label_class="w-full" input_class="border-white"
+                                    x-bind:disabled="!transaction.product_id && !transaction.service_id">
+                                </x-text-input>
+                            </div>
+                            <div class="flex-1 min-w-24 max-w-32">
+                                <x-text-input placeholder="{{ localizeNumber('0') }}"
+                                    x-model.number="transaction.quantity"
+                                    x-bind:name="'transactions[' + index + '][quantity]'"
+                                    x-bind:disabled="(!transaction.product_id && !transaction.service_id)"
+                                    x-bind:readonly="{{ $isReturnServiceBuy ? 'true' : 'false' }}"
+                                    x-bind:class="{{ $isReturnServiceBuy ? '\'bg-base-200 opacity-60 cursor-not-allowed\'' : '\'\'' }}"
+                                    label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
+                                    x-on:input="transaction.quantity = $store.utils.cleanupNumber($event.target.value).split('.')[0]"
+                                    x-effect="$el.value = $store.utils.localizeNumber(($store.utils.cleanupNumber(transaction.quantity).split('.')[0]) || '')">
+                                </x-text-input>
+                            </div>
+                            <div class="flex-1 min-w-24 max-w-32">
+                                <x-text-input placeholder="{{ localizeNumber('0') }}"
+                                    x-model.number="transaction.off" x-bind:name="'transactions[' + index + '][off]'"
+                                    x-bind:disabled="!transaction.product_id && !transaction.service_id"
+                                    x-bind:readonly="!lastYearsInvoices"
+                                    x-bind:class="lastYearsInvoices ? '' : 'bg-base-200 opacity-60 cursor-not-allowed'"
+                                    label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
+                                    x-on:input="transaction.off = $store.utils.convertToEnglish($event.target.value)"
+                                    x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(transaction.off))">
+                                </x-text-input>
+                            </div>
+                            <div class="flex-1 min-w-24 max-w-32">
+                                <x-text-input placeholder="{{ localizeNumber('0') }}"
+                                    x-model.number="transaction.vat" x-bind:name="'transactions[' + index + '][vat]'"
+                                    x-bind:disabled="!transaction.product_id && !transaction.service_id"
+                                    x-bind:readonly="!lastYearsInvoices"
+                                    x-bind:class="lastYearsInvoices ? '' : 'bg-base-200 opacity-60 cursor-not-allowed'"
+                                    label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
+                                    x-on:input="transaction.vat = $store.utils.convertToEnglish($event.target.value)"
+                                    x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(transaction.vat))">
+                                </x-text-input>
+                            </div>
+                            <div class="flex-1 min-w-24 max-w-32">
+                                <x-text-input placeholder="{{ localizeNumber('0') }}"
+                                    x-model.number="transaction.unit"
+                                    x-bind:name="'transactions[' + index + '][unit]'"
+                                    x-bind:disabled="!transaction.product_id && !transaction.service_id"
+                                    x-bind:readonly="!lastYearsInvoices"
+                                    x-bind:class="lastYearsInvoices ? '' : 'bg-base-200 opacity-60 cursor-not-allowed'"
+                                    label_text_class="text-gray-500" label_class="w-full" input_class="border-white"
+                                    x-on:input="transaction.unit = $store.utils.convertToEnglish($event.target.value)"
+                                    x-effect="$el.value = $store.utils.localizeNumber($store.utils.formatNumber(transaction.unit))">
+                                </x-text-input>
+                            </div>
+                            <div class="flex-1 min-w-32 max-w-32">
+                                <x-text-input x-bind:value="calcTotal(transaction)"
+                                    x-bind:name="'transactions[' + index + '][total]'"
+                                    placeholder="{{ localizeNumber('0') }}" label_text_class="text-gray-500"
+                                    label_class="w-full" input_class="border-white" readonly>
+                                </x-text-input>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <button class="flex justify-content gap-4 align-center w-max min-w-full px-4" id="addTransaction"
+                    x-show="lastYearsInvoices" @click="addTransaction" type="button">
+                    <div
+                        class="bg-gray-200 max-h-10 min-h-10 hover:bg-gray-300 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600 border-none btn w-full rounded-md btn-active">
+                        <span class="text-2xl">+</span>
+                        {{ __('Add Transaction') }}
+                    </div>
+                </button>
             </div>
         </div>
     </div>
@@ -348,7 +363,8 @@
 <div class="mt-4 flex gap-2 justify-start sm:justify-end">
     <a href="{{ route('invoices.index', ['invoice_type' => 'return_buy']) }}" type="submit"
         class="btn btn-sm lg:btn-md btn-default rounded-md dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-600">{{ __('cancel') }}</a>
-    <button id="submitForm" type="submit" class="btn btn-sm lg:btn-md text-white btn-primary rounded-md">{{ __('save') }}
+    <button id="submitForm" type="submit"
+        class="btn btn-sm lg:btn-md text-white btn-primary rounded-md">{{ __('save') }}
     </button>
 
     @can('invoices.approve')

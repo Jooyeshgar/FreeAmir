@@ -116,7 +116,7 @@
                 <span class="flex flex-wrap text-gray-500 w-full">{{ __('Customer') }}</span>
 
                 <template x-if="customerSelectRender">
-                    <x-select-box url="{{ route('invoices.search-customer') }}" :options="[['headerGroup' => 'customer', 'options' => $customers]]"
+                    <x-select-box url="{{ route('invoices.search-customer') }}" :search-subject-code="true" :options="[['headerGroup' => 'customer', 'options' => $customers]]"
                         x-model="selectedValue" x-init="if (!selectedValue && customer_id) {
                             selectedValue = 'customer-' + customer_id;
                         }
