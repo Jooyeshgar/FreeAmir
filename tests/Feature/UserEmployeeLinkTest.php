@@ -9,6 +9,7 @@ use App\Models\WorkShift;
 use App\Models\WorkSite;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class UserEmployeeLinkTest extends TestCase
@@ -68,6 +69,55 @@ class UserEmployeeLinkTest extends TestCase
         $response->assertSee(route('hr.employees.show', $employee));
     }
 
+    public function test_edit_defaults_to_an_empty_employee_option_and_can_save_without_linking(): void
+    {
+        $employee = Employee::factory()->create([
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'work_site_id' => $this->workSite->id,
+            'work_shift_id' => $this->workShift->id,
+            'user_id' => null,
+        ]);
+        $role = Role::create(['name' => 'Accountant']);
+        $this->user->assignRole($role);
+
+        $response = $this->get(route('users.edit', $this->user))->assertOk();
+        $options = $this->employeeOptions($response->getContent());
+
+        $this->assertSame('', $options->item(0)->getAttribute('value'));
+        $this->assertSame(__('Choose Employee'), trim($options->item(0)->textContent));
+        $this->assertTrue($options->item(0)->hasAttribute('selected'));
+        $this->assertSame((string) $employee->id, $options->item(1)->getAttribute('value'));
+        $this->assertFalse($options->item(1)->hasAttribute('selected'));
+
+        $this->put(route('users.update', $this->user), [
+            'name' => $this->user->name,
+            'email' => $this->user->email,
+            'employee_id' => $options->item(0)->getAttribute('value'),
+            'role' => [$role->name],
+            'fiscal_year' => [$this->fiscalYear->id],
+        ])->assertSessionHasNoErrors()->assertRedirect(route('users.index'));
+
+        $this->assertNull($employee->refresh()->user_id);
+    }
+
+    public function test_edit_keeps_the_linked_employee_selected(): void
+    {
+        $employee = Employee::factory()->create([
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'work_site_id' => $this->workSite->id,
+            'work_shift_id' => $this->workShift->id,
+            'user_id' => $this->user->id,
+        ]);
+
+        $response = $this->get(route('users.edit', $this->user))->assertOk();
+        $options = $this->employeeOptions($response->getContent());
+
+        $this->assertSame('', $options->item(0)->getAttribute('value'));
+        $this->assertFalse($options->item(0)->hasAttribute('selected'));
+        $this->assertSame((string) $employee->id, $options->item(1)->getAttribute('value'));
+        $this->assertTrue($options->item(1)->hasAttribute('selected'));
+    }
+
     public function test_create_employee_from_user(): void
     {
         $response = $this->post(route('users.create-employee', $this->user));
@@ -98,5 +148,13 @@ class UserEmployeeLinkTest extends TestCase
             ->assertJsonValidationErrors('fiscal_year');
 
         $this->assertDatabaseMissing('employees', ['user_id' => $this->user->id]);
+    }
+
+    private function employeeOptions(string $html): \DOMNodeList
+    {
+        $document = new \DOMDocument;
+        $document->loadHTML('<?xml encoding="UTF-8">'.$html, LIBXML_NOERROR | LIBXML_NOWARNING | LIBXML_NONET);
+
+        return (new \DOMXPath($document))->query('//select[@id="employee_id"]/option');
     }
 }
