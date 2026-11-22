@@ -922,8 +922,84 @@ class MonthlyAttendanceTest extends TestCase
         $this->assertSame(0, $this->employee->fresh()->leave_remain);
     }
 
+    public function test_duplicate_store_does_not_double_accrue_paid_leave(): void
+    {
+        $this->employee->workShift->update([
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'paid_leave' => 1200,
+        ]);
+        $this->employee->update([
+            'is_active' => true,
+            'leave_remain' => 0,
+        ]);
+
+        $log = AttendanceLog::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2025-10-25',
+            'paid_leave' => 300,
+        ]);
+
+        $this->post(route('attendance.monthly-attendances.store'), [
+            'employee_id' => $this->employee->id,
+            'start_date' => '1404/08/01',
+            'duration' => 30,
+        ])->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        $this->assertSame(900, $this->employee->fresh()->leave_remain);
+
+        // Re-submitting the same month after paid_leave increased by 100 must only adjust by -100, not re-accrue 1200
+        $log->update(['paid_leave' => 400]);
+
+        $this->post(route('attendance.monthly-attendances.store'), [
+            'employee_id' => $this->employee->id,
+            'start_date' => '1404/08/01',
+            'duration' => 30,
+        ])->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        $this->assertSame(800, $this->employee->fresh()->leave_remain);
+    }
+
+    public function test_duplicate_bulk_store_does_not_double_accrue_paid_leave(): void
+    {
+        $this->employee->workShift->update([
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'paid_leave' => 1200,
+        ]);
+        $this->employee->update([
+            'is_active' => true,
+            'leave_remain' => 0,
+        ]);
+
+        AttendanceLog::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2025-10-25',
+            'paid_leave' => 300,
+        ]);
+
+        $payload = [
+            'employee_ids' => [$this->employee->id],
+            'start_date' => '1404/08/01',
+            'duration' => 30,
+        ];
+
+        $this->post(route('attendance.monthly-attendances.bulk-store'), $payload)->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        $this->assertSame(900, $this->employee->fresh()->leave_remain);
+
+        $this->post(route('attendance.monthly-attendances.bulk-store'), $payload)->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        $this->assertSame(900, $this->employee->fresh()->leave_remain);
+    }
+
     public function test_remaining_paid_leave_including_current_month_for_employee_portal(): void
     {
+        $fiscalYear = FiscalYear::findOrFail($this->fiscalYearId);
+        $fiscalYear->update(['year' => 1404]);
+
         $this->employee->workShift->update(['paid_leave' => 1200]);
         $this->employee->update([
             'user_id' => $this->user->id,
@@ -977,6 +1053,22 @@ class MonthlyAttendanceTest extends TestCase
             // If employee is inactive: current month is not included
             $this->employee->update(['contract_end_date' => null, 'is_active' => false]);
             $this->user->unsetRelation('employee');
+
+            $this->get(route('employee-portal.employee.show'))
+                ->assertOk()
+                ->assertSee(formatMinutesAsTime(1500).' '.__('Remaining Paid Leave'));
+
+            // If viewing a closed fiscal year: current month is not included
+            $this->employee->update(['is_active' => true]);
+            $this->user->unsetRelation('employee');
+            $fiscalYear->update(['closed_at' => now()]);
+
+            $this->get(route('employee-portal.employee.show'))
+                ->assertOk()
+                ->assertSee(formatMinutesAsTime(1500).' '.__('Remaining Paid Leave'));
+
+            // If viewing a past (non-current) open fiscal year: current month is not included
+            $fiscalYear->update(['closed_at' => null, 'year' => 1403]);
 
             $this->get(route('employee-portal.employee.show'))
                 ->assertOk()

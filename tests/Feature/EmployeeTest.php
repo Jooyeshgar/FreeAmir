@@ -530,4 +530,43 @@ class EmployeeTest extends TestCase
 
         $response->assertSessionHasErrors(['contract_end_date']);
     }
+
+    public function test_store_defaults_leave_remain_to_zero_when_omitted(): void
+    {
+        $this->workShift->update(['paid_leave' => 1200]);
+
+        $payload = $this->validPayload(['code' => 'EMP-LEAVE-0']);
+        unset($payload['leave_remain']);
+
+        $this->post(route('hr.employees.store'), $payload)
+            ->assertRedirect(route('hr.employees.index'));
+
+        $this->assertDatabaseHas('employees', [
+            'code' => 'EMP-LEAVE-0',
+            'leave_remain' => 0,
+        ]);
+    }
+
+    public function test_update_preserves_existing_leave_remain_including_negative_balance_when_omitted(): void
+    {
+        $employee = $this->makeEmployee([
+            'code' => 'EMP-LEAVE-NEG',
+            'leave_remain' => -240,
+        ]);
+
+        $payload = $this->validPayload([
+            'code' => 'EMP-LEAVE-NEG',
+            'first_name' => 'Updated',
+        ]);
+        unset($payload['leave_remain']);
+
+        $this->put(route('hr.employees.update', $employee), $payload)
+            ->assertRedirect(route('hr.employees.index'));
+
+        $this->assertDatabaseHas('employees', [
+            'id' => $employee->id,
+            'first_name' => 'Updated',
+            'leave_remain' => -240,
+        ]);
+    }
 }

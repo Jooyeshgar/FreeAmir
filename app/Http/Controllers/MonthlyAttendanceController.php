@@ -61,13 +61,17 @@ class MonthlyAttendanceController extends Controller
 
         $startDate = Carbon::createFromFormat('Y/m/d', jalali_to_gregorian_date($validated['start_date']));
 
-        $monthlyAttendance = $this->attendanceService->calculateAndStore((int) $validated['employee_id'], $startDate, (int) $validated['duration'], $jalaliYear, $jalaliMonth);
+        DB::transaction(function () use ($validated, $startDate, $jalaliYear, $jalaliMonth) {
+            $employeeId = (int) $validated['employee_id'];
+            $existing = MonthlyAttendance::where('employee_id', $employeeId)
+                ->where('year', $jalaliYear)
+                ->where('month', $jalaliMonth)
+                ->first();
 
-        $earnedPaidLeave = (int) ($monthlyAttendance->employee->workShift?->paid_leave ?? 0);
+            $monthlyAttendance = $this->attendanceService->calculateAndStore($employeeId, $startDate, (int) $validated['duration'], $jalaliYear, $jalaliMonth);
 
-        $monthlyAttendance->employee->leave_remain = $monthlyAttendance->employee->leave_remain + $earnedPaidLeave - $monthlyAttendance->paid_leave;
-
-        $monthlyAttendance->employee->save();
+            $this->applyMonthlyAttendanceLeaveBalance($monthlyAttendance, $existing);
+        });
 
         return redirect()->route('attendance.monthly-attendances.index')
             ->with('success', __('Monthly attendance calculated successfully.'));
@@ -99,17 +103,21 @@ class MonthlyAttendanceController extends Controller
 
         DB::transaction(function () use ($validated, $startDate, $jalaliYear, $jalaliMonth) {
             foreach ($validated['employee_ids'] as $employeeId) {
+                $employeeId = (int) $employeeId;
+                $existing = MonthlyAttendance::where('employee_id', $employeeId)
+                    ->where('year', $jalaliYear)
+                    ->where('month', $jalaliMonth)
+                    ->first();
+
                 $monthlyAttendance = $this->attendanceService->calculateAndStore(
-                    (int) $employeeId,
+                    $employeeId,
                     $startDate->copy(),
                     (int) $validated['duration'],
                     $jalaliYear,
                     $jalaliMonth,
                 );
 
-                $earnedPaidLeave = (int) ($monthlyAttendance->employee->workShift?->paid_leave ?? 0);
-                $monthlyAttendance->employee->leave_remain = $monthlyAttendance->employee->leave_remain + $earnedPaidLeave - $monthlyAttendance->paid_leave;
-                $monthlyAttendance->employee->save();
+                $this->applyMonthlyAttendanceLeaveBalance($monthlyAttendance, $existing);
             }
         });
 
@@ -208,11 +216,14 @@ class MonthlyAttendanceController extends Controller
     {
         app(FiscalYearMutationGuard::class)->ensureOpen($monthlyAttendance);
 
-        $earnedPaidLeave = (int) ($monthlyAttendance->employee->workShift?->paid_leave ?? 0);
-        $monthlyAttendance->employee->leave_remain += $monthlyAttendance->paid_leave - $earnedPaidLeave;
-        $monthlyAttendance->employee->save();
+        DB::transaction(function () use ($monthlyAttendance) {
+            $earnedPaidLeave = (int) ($monthlyAttendance->employee->workShift?->paid_leave ?? 0);
 
-        $monthlyAttendance->delete();
+            $monthlyAttendance->employee->leave_remain += $monthlyAttendance->paid_leave - $earnedPaidLeave;
+            $monthlyAttendance->employee->save();
+
+            $monthlyAttendance->delete();
+        });
 
         return redirect()->route('attendance.monthly-attendances.index')
             ->with('success', __('Monthly attendance deleted successfully.'));
@@ -233,24 +244,46 @@ class MonthlyAttendanceController extends Controller
         $jalaliYear = $monthlyAttendance->year;
         $jalaliMonth = $monthlyAttendance->month;
 
-        $oldMonthlyAttendance = $monthlyAttendance;
-        $monthlyAttendance->delete();
+        $monthlyAttendance = DB::transaction(function () use ($monthlyAttendance, $employeeId, $startDate, $validated, $jalaliYear, $jalaliMonth) {
+            $oldMonthlyAttendance = $monthlyAttendance;
+            $monthlyAttendance->delete();
 
-        $monthlyAttendance = $this->attendanceService->calculateAndStore(
-            employeeId: $employeeId,
-            startDate: $startDate,
-            durationDays: (int) $validated['duration'],
-            jalaliYear: $jalaliYear,
-            jalaliMonth: $jalaliMonth,
-        );
+            $recalculated = $this->attendanceService->calculateAndStore(
+                employeeId: $employeeId,
+                startDate: $startDate,
+                durationDays: (int) $validated['duration'],
+                jalaliYear: $jalaliYear,
+                jalaliMonth: $jalaliMonth,
+            );
 
-        if ($oldMonthlyAttendance->paid_leave !== $monthlyAttendance->paid_leave) {
-            $diffMonthPaidLeave = $monthlyAttendance->paid_leave - $oldMonthlyAttendance->paid_leave;
-            $monthlyAttendance->employee->leave_remain -= $diffMonthPaidLeave;
-            $monthlyAttendance->employee->save();
-        }
+            if ($oldMonthlyAttendance->paid_leave !== $recalculated->paid_leave) {
+                $diffMonthPaidLeave = $recalculated->paid_leave - $oldMonthlyAttendance->paid_leave;
+                $recalculated->employee->leave_remain -= $diffMonthPaidLeave;
+                $recalculated->employee->save();
+            }
+
+            return $recalculated;
+        });
 
         return redirect()->route('attendance.monthly-attendances.show', $monthlyAttendance)
             ->with('success', __('Monthly attendance recalculated successfully.'));
+    }
+
+    private function applyMonthlyAttendanceLeaveBalance(MonthlyAttendance $monthlyAttendance, ?MonthlyAttendance $existing): void
+    {
+        if ($existing === null) {
+            $earnedPaidLeave = (int) ($monthlyAttendance->employee->workShift?->paid_leave ?? 0);
+            $monthlyAttendance->employee->leave_remain = $monthlyAttendance->employee->leave_remain + $earnedPaidLeave - $monthlyAttendance->paid_leave;
+            $monthlyAttendance->employee->save();
+
+            return;
+        }
+
+        $diffMonthPaidLeave = $monthlyAttendance->paid_leave - $existing->paid_leave;
+
+        if ($diffMonthPaidLeave !== 0) {
+            $monthlyAttendance->employee->leave_remain -= $diffMonthPaidLeave;
+            $monthlyAttendance->employee->save();
+        }
     }
 }
