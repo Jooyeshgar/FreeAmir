@@ -697,7 +697,7 @@ class InvoiceController extends Controller
             'q' => 'required|string|max:100',
         ]);
 
-        return response()->json($customerService->searchSelectOptions($validated['q'], 50));
+        return response()->json($customerService->searchSelectOptions($validated['q'], 30));
     }
 
     public function searchProductService(Request $request)

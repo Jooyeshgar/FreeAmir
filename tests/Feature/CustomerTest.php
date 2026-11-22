@@ -8,7 +8,6 @@ use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -60,8 +59,17 @@ class CustomerTest extends TestCase
         $response->assertViewHas('customers');
     }
 
-    #[DataProvider('customerSearchRoutes')]
-    public function test_customer_selectors_search_by_subject_code_name_and_group(string $routeName): void
+    public function test_invoice_customer_selector_searches_by_subject_code_name_and_group(): void
+    {
+        $this->assertCustomerSelectorSearch('invoices.search-customer');
+    }
+
+    public function test_ancillary_cost_customer_selector_searches_by_subject_code_name_and_group(): void
+    {
+        $this->assertCustomerSelectorSearch('ancillary-costs.search-customer');
+    }
+
+    private function assertCustomerSelectorSearch(string $routeName): void
     {
         $this->user->givePermissionTo(Permission::firstOrCreate(['name' => $routeName]));
         $this->actingAs($this->user);
@@ -94,14 +102,6 @@ class CustomerTest extends TestCase
         $this->getJson(route($routeName, ['q' => '/']))->assertOk()->assertExactJson([]);
         $this->getJson(route($routeName, ['q' => '00000']))->assertOk()->assertExactJson([]);
         $this->getJson(route($routeName))->assertUnprocessable()->assertJsonValidationErrors('q');
-    }
-
-    public static function customerSearchRoutes(): array
-    {
-        return [
-            'invoice' => ['invoices.search-customer'],
-            'ancillary cost' => ['ancillary-costs.search-customer'],
-        ];
     }
 
     public function test_it_displays_customer_create_page()
