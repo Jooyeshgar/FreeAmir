@@ -9,20 +9,26 @@
     })" @click.outside="close()" @if ($searchSubjectCode) x-modelable="selectedValue" @endif>
     {{-- Trigger Button --}}
     <button type="button" @click="toggle()" :disabled="disabled" :class="{ 'opacity-60 cursor-not-allowed': disabled }"
+        @if ($searchSubjectCode) dir="rtl" @endif
         class="input rounded-md border-slate-400 h-10 min-h-10 w-full text-left flex items-center justify-between px-4 bg-base-100 focus:outline-none focus:border-primary">
 
         <span x-text="selectedLabel ? selectedLabel : placeholder"
             :class="{ 'text-base-content': selectedLabel, 'text-gray-400': !selectedLabel }"
+            @if ($searchSubjectCode) dir="auto" @endif
             class="block truncate"></span>
         @if ($searchSubjectCode)
-            <bdi dir="ltr" x-show="selectedSubjectCode" x-text="selectedSubjectCode"
-                class="ms-auto me-2 shrink-0 text-xs opacity-70"></bdi>
+            <span class="flex shrink-0 items-center gap-2">
+                <bdi dir="ltr" x-show="selectedSubjectCode" x-text="selectedSubjectCode"
+                    class="text-xs opacity-70"></bdi>
         @endif
 
         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition-transform duration-200"
             :class="{ 'rotate-180': open }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-5 5-5-5" />
         </svg>
+        @if ($searchSubjectCode)
+            </span>
+        @endif
     </button>
 
     {{-- Dropdown Menu --}}
@@ -83,8 +89,10 @@
                                             .id,
                                         'bg-base-200': focusedOptionId === opt.id
                                     }"
+                                    @if ($searchSubjectCode) dir="rtl" @endif
                                     class="px-6 py-2 cursor-pointer hover:bg-base-200 rounded-btn transition-colors text-sm @if ($searchSubjectCode) flex items-center justify-between gap-2 @endif">
-                                    <span x-html="opt.highlighted ? opt.highlighted : opt.text"></span>
+                                    <span x-html="opt.highlighted ? opt.highlighted : opt.text"
+                                        @if ($searchSubjectCode) dir="auto" @endif></span>
                                     @if ($searchSubjectCode)
                                         <bdi dir="ltr" x-show="opt.subjectCode" x-text="opt.subjectCode"
                                             class="shrink-0 text-xs opacity-70"></bdi>
