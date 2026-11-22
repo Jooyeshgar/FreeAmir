@@ -96,7 +96,7 @@ class McpInvoiceAndCustomerReadToolsTest extends TestCase
             'fiscal_year_id' => $this->year->id,
             'customer_id' => $customerA->id,
             'creator_id' => $this->user->id,
-            'number' => 'INV-1001',
+            'number' => 1001,
             'title' => 'Server Rack',
             'invoice_type' => InvoiceType::SELL,
             'status' => InvoiceStatus::APPROVED,
@@ -109,7 +109,7 @@ class McpInvoiceAndCustomerReadToolsTest extends TestCase
             'fiscal_year_id' => $this->year->id,
             'customer_id' => $customerB->id,
             'creator_id' => $this->user->id,
-            'number' => 'INV-1002',
+            'number' => 1002,
             'title' => 'Cables',
             'invoice_type' => InvoiceType::BUY,
             'status' => InvoiceStatus::PENDING,
@@ -126,7 +126,7 @@ class McpInvoiceAndCustomerReadToolsTest extends TestCase
             'fiscal_year_id' => $otherYear->id,
             'customer_id' => $customerA->id,
             'creator_id' => $this->user->id,
-            'number' => 'INV-9999',
+            'number' => 9999,
             'invoice_type' => InvoiceType::SELL,
             'status' => InvoiceStatus::APPROVED,
             'date' => '2025-04-10',
@@ -151,7 +151,7 @@ class McpInvoiceAndCustomerReadToolsTest extends TestCase
         $this->assertSame('Toman', $data['currency']);
         $this->assertSame(1, $data['pagination']['total']);
         $this->assertSame($inv1->id, $data['invoices'][0]['id']);
-        $this->assertSame('INV-1001', $data['invoices'][0]['number']);
+        $this->assertEquals(1001, $data['invoices'][0]['number']);
         $this->assertSame('Alpha Co', $data['invoices'][0]['customer_name']);
         $this->assertSame('sell', $data['invoices'][0]['type']);
         $this->assertSame('approved', $data['invoices'][0]['status']);
@@ -180,12 +180,13 @@ class McpInvoiceAndCustomerReadToolsTest extends TestCase
             'creator_id' => $this->user->id,
             'warehouse_id' => $warehouse->id,
             'document_id' => $document->id,
-            'number' => 'S-500',
+            'number' => 500,
             'invoice_type' => InvoiceType::SELL,
             'status' => InvoiceStatus::PAID,
             'date' => '2026-04-12',
             'amount' => 2200000,
             'vat' => 200000,
+            'subtraction' => 0,
             'description' => 'Delivered on time',
         ]);
 
@@ -208,7 +209,7 @@ class McpInvoiceAndCustomerReadToolsTest extends TestCase
             'fiscal_year_id' => $otherYear->id,
             'customer_id' => $customer->id,
             'creator_id' => $this->user->id,
-            'number' => 'S-999',
+            'number' => 999,
             'invoice_type' => InvoiceType::SELL,
             'status' => InvoiceStatus::APPROVED,
             'date' => '2025-04-12',
@@ -224,7 +225,7 @@ class McpInvoiceAndCustomerReadToolsTest extends TestCase
             'invoice_id' => $invoice->id,
         ]);
 
-        $this->assertSame('S-500', $byId['invoice']['number']);
+        $this->assertEquals(500, $byId['invoice']['number']);
         $this->assertSame('Main Warehouse', $byId['invoice']['warehouse_name']);
         $this->assertSame(42, $byId['invoice']['document_number']);
         $this->assertCount(1, $byId['invoice']['items']);
@@ -235,7 +236,7 @@ class McpInvoiceAndCustomerReadToolsTest extends TestCase
 
         $byNumber = $this->callTool('get_invoice', [
             'fiscal_year_id' => $this->year->id,
-            'number' => 'S-500',
+            'number' => '500',
         ]);
         $this->assertSame($invoice->id, $byNumber['invoice']['id']);
 
