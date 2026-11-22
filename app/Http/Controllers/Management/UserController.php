@@ -140,9 +140,14 @@ class UserController extends Controller
 
         $roles = $this->assignableRoles();
         $fiscalYears = $this->assignableFiscalYears();
-        $employees = $user->employee ? collect([$user->employee]) : Employee::all();
+        $linkedEmployee = null;
+        $employees = collect();
+        if (config('active-fiscal-year-id') !== null) {
+            $linkedEmployee = $user->employee;
+            $employees = $linkedEmployee ? collect([$linkedEmployee]) : Employee::whereNull('user_id')->get();
+        }
 
-        return view('users.edit', compact('user', 'roles', 'fiscalYears', 'employees'));
+        return view('users.edit', compact('user', 'roles', 'fiscalYears', 'employees', 'linkedEmployee'));
     }
 
     /**
@@ -158,7 +163,7 @@ class UserController extends Controller
             'email' => 'required|string|email|max:255|unique:users,email,'.$user->id,
             'password' => 'nullable|string|min:8|confirmed',
             'password_confirmation' => 'nullable|string|min:8',
-            'employee_id' => 'nullable|exists:employees,id',
+            'employee_id' => 'nullable|integer',
             'role' => 'required|array|min:1',
             'role.*' => 'required|string|exists:roles,name',
             'fiscal_year' => 'required|array|min:1',
@@ -167,19 +172,10 @@ class UserController extends Controller
 
         $this->validateAssignments($request);
 
-        $employee = null;
-        if ($request->filled('employee_id')) {
-            if ($user->employee()->exists() && $user->employee->id !== (int) $request->employee_id) {
-                throw ValidationException::withMessages([__('The user is already linked to an employee.')]);
+        DB::transaction(function () use ($request, $user) {
+            if ($request->filled('employee_id')) {
+                $this->linkEmployee($user, (int) $request->employee_id);
             }
-
-            $employee = Employee::whereKey($request->employee_id)->whereNull('user_id')->first();
-            if (! $employee) {
-                throw ValidationException::withMessages([__('The selected employee is already assigned to another user.')]);
-            }
-        }
-
-        DB::transaction(function () use ($request, $user, $employee) {
             $user->name = $request->input('name');
             $user->email = $request->input('email');
             $role = $this->rolesWithInheritance(array_values($request->role));
@@ -191,15 +187,39 @@ class UserController extends Controller
 
             $user->save();
 
-            if ($employee) {
-                $employee->update(['user_id' => $user->id]);
-            }
-
             $user->syncRoles($role);
             $user->fiscalYears()->sync($fiscalYear);
         });
 
         return redirect()->route('users.index')->with('success', __('User updated successfully!'));
+    }
+
+    private function linkEmployee(User $user, int $employeeId): void
+    {
+        if (config('active-fiscal-year-id') === null) {
+            throw ValidationException::withMessages(['employee_id' => __('The selected employee is unavailable.')]);
+        }
+
+        User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+        $currentEmployee = $user->employee()->first();
+        if ($currentEmployee?->id === $employeeId) {
+            return;
+        }
+
+        if ($currentEmployee) {
+            throw ValidationException::withMessages(['employee_id' => __('The user is already linked to an employee.')]);
+        }
+
+        $employee = Employee::whereKey($employeeId)->lockForUpdate()->first();
+        if (! $employee) {
+            throw ValidationException::withMessages(['employee_id' => __('The selected employee is unavailable.')]);
+        }
+
+        if ($employee->user_id !== null) {
+            throw ValidationException::withMessages(['employee_id' => __('The selected employee is already assigned to another user.')]);
+        }
+
+        $employee->update(['user_id' => $user->id]);
     }
 
     /**
