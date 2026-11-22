@@ -10,7 +10,6 @@ use App\Enums\EmployeeInsuranceType;
 use App\Enums\EmployeeMaritalStatus;
 use App\Enums\EmployeeNationality;
 use App\Models\Employee;
-use App\Models\WorkShift;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -84,10 +83,10 @@ class UpdateEmployeeRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        if ($this->has('work_shift_id') && $this->isNotFilled('leave_remain')) {
-            $workShift = WorkShift::find($this->input('work_shift_id'));
+        if ($this->isNotFilled('leave_remain')) {
+            $employee = $this->route('employee');
             $this->merge([
-                'leave_remain' => convertToInt($this->input('leave_remain', $workShift->paid_leave ?? 1200)),
+                'leave_remain' => $employee instanceof Employee ? (int) $employee->leave_remain : 0,
             ]);
         }
 

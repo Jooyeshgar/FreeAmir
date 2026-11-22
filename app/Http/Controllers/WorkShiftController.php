@@ -95,14 +95,6 @@ class WorkShiftController extends Controller
         $validated = $this->normalizeAutoOvertimeSettings($validated, $request);
         $validated['thursday_status'] = ThursdayStatus::fromName($validated['thursday_status']);
 
-        if (isset($validated['paid_leave']) && $validated['paid_leave'] != $workShift->paid_leave) {
-            $leaveDiff = $validated['paid_leave'] - $workShift->paid_leave;
-            foreach ($workShift->employees as $employee) {
-                $employee->leave_remain += $leaveDiff;
-                $employee->save();
-            }
-        }
-
         $workShift->update(array_merge($validated, [
             'is_active' => $request->boolean('is_active'),
         ]));

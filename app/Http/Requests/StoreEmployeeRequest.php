@@ -9,7 +9,6 @@ use App\Enums\EmployeeGender;
 use App\Enums\EmployeeInsuranceType;
 use App\Enums\EmployeeMaritalStatus;
 use App\Enums\EmployeeNationality;
-use App\Models\WorkShift;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -80,10 +79,9 @@ class StoreEmployeeRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $workShift = WorkShift::find($this->input('work_shift_id'));
         $this->merge([
             'is_active' => $this->has('is_active'),
-            'leave_remain' => convertToInt($this->input('leave_remain', $workShift->paid_leave ?? 1200)),
+            'leave_remain' => $this->filled('leave_remain') ? convertToInt($this->input('leave_remain')) : 0,
         ]);
     }
 

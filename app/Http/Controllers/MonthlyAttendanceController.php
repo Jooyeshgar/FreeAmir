@@ -63,9 +63,9 @@ class MonthlyAttendanceController extends Controller
 
         $monthlyAttendance = $this->attendanceService->calculateAndStore((int) $validated['employee_id'], $startDate, (int) $validated['duration'], $jalaliYear, $jalaliMonth);
 
-        $totalPaidLeave = $monthlyAttendance->employee->workShift->paid_leave + $monthlyAttendance->employee->leave_remain;
+        $earnedPaidLeave = (int) ($monthlyAttendance->employee->workShift?->paid_leave ?? 0);
 
-        $monthlyAttendance->employee->leave_remain = $totalPaidLeave - $monthlyAttendance->paid_leave;
+        $monthlyAttendance->employee->leave_remain = $monthlyAttendance->employee->leave_remain + $earnedPaidLeave - $monthlyAttendance->paid_leave;
 
         $monthlyAttendance->employee->save();
 
@@ -107,8 +107,8 @@ class MonthlyAttendanceController extends Controller
                     $jalaliMonth,
                 );
 
-                $totalPaidLeave = $monthlyAttendance->employee->workShift->paid_leave + $monthlyAttendance->employee->leave_remain;
-                $monthlyAttendance->employee->leave_remain = $totalPaidLeave - $monthlyAttendance->paid_leave;
+                $earnedPaidLeave = (int) ($monthlyAttendance->employee->workShift?->paid_leave ?? 0);
+                $monthlyAttendance->employee->leave_remain = $monthlyAttendance->employee->leave_remain + $earnedPaidLeave - $monthlyAttendance->paid_leave;
                 $monthlyAttendance->employee->save();
             }
         });
@@ -208,7 +208,8 @@ class MonthlyAttendanceController extends Controller
     {
         app(FiscalYearMutationGuard::class)->ensureOpen($monthlyAttendance);
 
-        $monthlyAttendance->employee->leave_remain += $monthlyAttendance->paid_leave - $monthlyAttendance->employee->workShift->paid_leave;
+        $earnedPaidLeave = (int) ($monthlyAttendance->employee->workShift?->paid_leave ?? 0);
+        $monthlyAttendance->employee->leave_remain += $monthlyAttendance->paid_leave - $earnedPaidLeave;
         $monthlyAttendance->employee->save();
 
         $monthlyAttendance->delete();
