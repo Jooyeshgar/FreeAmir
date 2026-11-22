@@ -49,7 +49,7 @@
                             </div>
                         @endif
                         <span class="badge badge-lg badge-emerald gap-2">
-                            {{ formatMinutesAsTime($remainingPaidLeave, true) }} {{ __('Remaining Paid Leave') }}
+                            {{ formatMinutesAsTime($remainingPaidLeave) }} {{ __('Remaining Paid Leave') }}
                         </span>
                         @if ($employee->device_id)
                             <span class="badge badge-lg badge-neutral gap-2">

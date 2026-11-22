@@ -547,15 +547,15 @@ class EmployeeTest extends TestCase
         ]);
     }
 
-    public function test_update_preserves_existing_leave_remain_including_negative_balance_when_omitted(): void
+    public function test_update_preserves_existing_leave_remain_when_omitted(): void
     {
         $employee = $this->makeEmployee([
-            'code' => 'EMP-LEAVE-NEG',
-            'leave_remain' => -240,
+            'code' => 'EMP-LEAVE-KEEP',
+            'leave_remain' => 450,
         ]);
 
         $payload = $this->validPayload([
-            'code' => 'EMP-LEAVE-NEG',
+            'code' => 'EMP-LEAVE-KEEP',
             'first_name' => 'Updated',
         ]);
         unset($payload['leave_remain']);
@@ -566,11 +566,11 @@ class EmployeeTest extends TestCase
         $this->assertDatabaseHas('employees', [
             'id' => $employee->id,
             'first_name' => 'Updated',
-            'leave_remain' => -240,
+            'leave_remain' => 450,
         ]);
     }
 
-    public function test_update_accepts_persian_digits_for_leave_remain(): void
+    public function test_update_accepts_persian_digits_and_rejects_negative_leave_remain(): void
     {
         $employee = $this->makeEmployee([
             'code' => 'EMP-LEAVE-FA',
@@ -579,7 +579,7 @@ class EmployeeTest extends TestCase
 
         $payload = $this->validPayload([
             'code' => 'EMP-LEAVE-FA',
-            'leave_remain' => '-۲۴۰',
+            'leave_remain' => '۲۴۰',
         ]);
 
         $this->put(route('hr.employees.update', $employee), $payload)
@@ -587,15 +587,23 @@ class EmployeeTest extends TestCase
 
         $this->assertDatabaseHas('employees', [
             'id' => $employee->id,
-            'leave_remain' => -240,
+            'leave_remain' => 240,
         ]);
+
+        $negativePayload = $this->validPayload([
+            'code' => 'EMP-LEAVE-FA',
+            'leave_remain' => '-۲۴۰',
+        ]);
+
+        $this->put(route('hr.employees.update', $employee), $negativePayload)
+            ->assertSessionHasErrors(['leave_remain']);
     }
 
-    public function test_store_accepts_persian_digits_and_rejects_non_integer_leave_remain(): void
+    public function test_store_accepts_persian_digits_and_rejects_negative_or_non_integer_leave_remain(): void
     {
         $validPayload = $this->validPayload([
             'code' => 'EMP-STORE-FA',
-            'leave_remain' => '-۲۴۰',
+            'leave_remain' => '۲۴۰',
         ]);
 
         $this->post(route('hr.employees.store'), $validPayload)
@@ -603,8 +611,15 @@ class EmployeeTest extends TestCase
 
         $this->assertDatabaseHas('employees', [
             'code' => 'EMP-STORE-FA',
-            'leave_remain' => -240,
+            'leave_remain' => 240,
         ]);
+
+        $negativePayload = $this->validPayload([
+            'code' => 'EMP-STORE-NEG',
+            'leave_remain' => '-۲۴۰',
+        ]);
+
+        $this->post(route('hr.employees.store'), $negativePayload)->assertSessionHasErrors(['leave_remain']);
 
         $invalidPayload = $this->validPayload([
             'code' => 'EMP-STORE-BAD',

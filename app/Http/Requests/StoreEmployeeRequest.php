@@ -72,7 +72,7 @@ class StoreEmployeeRequest extends FormRequest
             'contract_framework_id' => ['nullable', 'integer', 'exists:work_site_contracts,id'],
 
             'is_active' => ['boolean'],
-            'leave_remain' => ['nullable', 'integer', 'min:-15000', 'max:15000'],
+            'leave_remain' => ['nullable', 'integer', 'min:0', 'max:15000'],
             'device_id' => ['nullable', 'string', 'max:20'],
         ];
     }

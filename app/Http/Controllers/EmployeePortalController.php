@@ -90,7 +90,7 @@ class EmployeePortalController extends Controller
     private function remainingPaidLeaveIncludingCurrentMonth(Employee $employee, ?FiscalYear $fiscalYear = null): int
     {
         $date = now()->copy()->startOfDay();
-        $balance = (int) $employee->leave_remain;
+        $balance = max(0, (int) $employee->leave_remain);
 
         if (! $employee->is_active) {
             return $balance;

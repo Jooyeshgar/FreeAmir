@@ -1120,17 +1120,36 @@ class MonthlyAttendanceTest extends TestCase
             $this->get(route('employee-portal.employee.show'))
                 ->assertOk()
                 ->assertSee(formatMinutesAsTime(1500).' '.__('Remaining Paid Leave'));
-
-            // Negative remaining paid leave renders signed duration instead of clamping to 0
-            $fiscalYear->update(['closed_at' => null, 'year' => 1404]);
-            $this->employee->update(['is_active' => true, 'leave_remain' => -1500]);
-            $this->user->unsetRelation('employee');
-
-            $this->get(route('employee-portal.employee.show'))
-                ->assertOk()
-                ->assertSee(formatMinutesAsTime(-300, true).' '.__('Remaining Paid Leave'));
         } finally {
             Carbon::setTestNow();
         }
+    }
+
+    public function test_store_clamps_leave_remain_to_zero_when_used_paid_leave_exceeds_balance(): void
+    {
+        $this->employee->workShift->update([
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'paid_leave' => 1200,
+        ]);
+        $this->employee->update([
+            'is_active' => true,
+            'leave_remain' => 0,
+        ]);
+
+        AttendanceLog::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2025-10-25',
+            'paid_leave' => 1500,
+        ]);
+
+        $this->post(route('attendance.monthly-attendances.store'), [
+            'employee_id' => $this->employee->id,
+            'start_date' => '1404/08/01',
+            'duration' => 30,
+        ])->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        $this->assertSame(0, $this->employee->fresh()->leave_remain);
     }
 }

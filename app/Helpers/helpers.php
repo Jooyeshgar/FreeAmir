@@ -202,16 +202,14 @@ function formatCode(?string $code)
 /**
  * Format a minute count as H:i and localize digits for Persian locale.
  */
-function formatMinutesAsTime($minutes, bool $allowNegative = false): string
+function formatMinutesAsTime($minutes): string
 {
-    $rawMinutes = (int) $minutes;
-    $isNegative = $allowNegative && $rawMinutes < 0;
-    $totalMinutes = $allowNegative ? abs($rawMinutes) : max(0, $rawMinutes);
+    $totalMinutes = max(0, (int) $minutes);
 
     if ($totalMinutes == 0) {
         $formatted = '0';
     } else {
-        $formatted = ($isNegative ? '-' : '').sprintf('%02d:%02d', intdiv($totalMinutes, 60), $totalMinutes % 60);
+        $formatted = sprintf('%02d:%02d', intdiv($totalMinutes, 60), $totalMinutes % 60);
     }
 
     if (in_array(App::getLocale(), ['fa', 'fa_IR'])) {
