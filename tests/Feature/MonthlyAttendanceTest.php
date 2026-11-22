@@ -953,6 +953,7 @@ class MonthlyAttendanceTest extends TestCase
                 'duration' => 30,
             ]);
             $this->employee->update(['leave_remain' => 1500]);
+            $this->user->unsetRelation('employee');
 
             $this->get(route('employee-portal.employee.show'))
                 ->assertOk()
@@ -967,6 +968,7 @@ class MonthlyAttendanceTest extends TestCase
 
             // If employee's contract ended at end of Aban (2025-11-21): Azar is not included
             $this->employee->update(['contract_end_date' => '2025-11-21']);
+            $this->user->unsetRelation('employee');
 
             $this->get(route('employee-portal.employee.show'))
                 ->assertOk()
@@ -974,6 +976,7 @@ class MonthlyAttendanceTest extends TestCase
 
             // If employee is inactive: current month is not included
             $this->employee->update(['contract_end_date' => null, 'is_active' => false]);
+            $this->user->unsetRelation('employee');
 
             $this->get(route('employee-portal.employee.show'))
                 ->assertOk()
