@@ -206,7 +206,7 @@ class MonthlyAttendanceController extends Controller
 
         if ($validated['paid_leave'] != $monthlyAttendance->paid_leave) {
             $diffMonthPaidLeave = $validated['paid_leave'] - $monthlyAttendance->paid_leave;
-            $monthlyAttendance->employee->leave_remain = max(0, $monthlyAttendance->employee->leave_remain - $diffMonthPaidLeave);
+            $monthlyAttendance->employee->leave_remain -= $diffMonthPaidLeave;
             $monthlyAttendance->employee->save();
         }
 
@@ -224,7 +224,7 @@ class MonthlyAttendanceController extends Controller
             $earnedPaidLeave = $monthlyAttendance->earned_paid_leave
                 ?? (int) ($monthlyAttendance->employee->workShift?->paid_leave ?? 0);
 
-            $monthlyAttendance->employee->leave_remain = max(0, $monthlyAttendance->employee->leave_remain + $monthlyAttendance->paid_leave - $earnedPaidLeave);
+            $monthlyAttendance->employee->leave_remain += $monthlyAttendance->paid_leave - $earnedPaidLeave;
             $monthlyAttendance->employee->save();
 
             $monthlyAttendance->delete();
@@ -269,7 +269,7 @@ class MonthlyAttendanceController extends Controller
 
             if ($oldMonthlyAttendance->paid_leave !== $recalculated->paid_leave) {
                 $diffMonthPaidLeave = $recalculated->paid_leave - $oldMonthlyAttendance->paid_leave;
-                $recalculated->employee->leave_remain = max(0, $recalculated->employee->leave_remain - $diffMonthPaidLeave);
+                $recalculated->employee->leave_remain -= $diffMonthPaidLeave;
                 $recalculated->employee->save();
             }
 
@@ -287,7 +287,7 @@ class MonthlyAttendanceController extends Controller
             $monthlyAttendance->earned_paid_leave = $earnedPaidLeave;
             $monthlyAttendance->save();
 
-            $monthlyAttendance->employee->leave_remain = max(0, $monthlyAttendance->employee->leave_remain + $earnedPaidLeave - $monthlyAttendance->paid_leave);
+            $monthlyAttendance->employee->leave_remain = $monthlyAttendance->employee->leave_remain + $earnedPaidLeave - $monthlyAttendance->paid_leave;
             $monthlyAttendance->employee->save();
 
             return;
@@ -296,7 +296,7 @@ class MonthlyAttendanceController extends Controller
         $diffMonthPaidLeave = $monthlyAttendance->paid_leave - $existing->paid_leave;
 
         if ($diffMonthPaidLeave !== 0) {
-            $monthlyAttendance->employee->leave_remain = max(0, $monthlyAttendance->employee->leave_remain - $diffMonthPaidLeave);
+            $monthlyAttendance->employee->leave_remain -= $diffMonthPaidLeave;
             $monthlyAttendance->employee->save();
         }
     }
