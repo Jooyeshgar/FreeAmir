@@ -206,9 +206,10 @@ class MonthlyAttendanceController extends Controller
 
         DB::transaction(function () use ($monthlyAttendance, $validated) {
             $employee = Employee::whereKey($monthlyAttendance->employee_id)->lockForUpdate()->firstOrFail();
-            $oldPaidLeave = (int) $monthlyAttendance->paid_leave;
+            $lockedAttendance = MonthlyAttendance::whereKey($monthlyAttendance->id)->lockForUpdate()->firstOrFail();
+            $oldPaidLeave = (int) $lockedAttendance->paid_leave;
 
-            $monthlyAttendance->update($validated);
+            $lockedAttendance->update($validated);
 
             $this->attendanceService->adjustLeaveBalanceForPaidLeaveChange($employee, $oldPaidLeave, (int) $validated['paid_leave']);
         });
@@ -223,10 +224,15 @@ class MonthlyAttendanceController extends Controller
 
         DB::transaction(function () use ($monthlyAttendance) {
             $employee = Employee::with('workShift')->whereKey($monthlyAttendance->employee_id)->lockForUpdate()->firstOrFail();
+            $lockedAttendance = MonthlyAttendance::whereKey($monthlyAttendance->id)->lockForUpdate()->first();
 
-            $this->attendanceService->revertMonthlyAttendanceLeaveBalance($monthlyAttendance, $employee);
+            if ($lockedAttendance === null) {
+                return;
+            }
 
-            $monthlyAttendance->delete();
+            $this->attendanceService->revertMonthlyAttendanceLeaveBalance($lockedAttendance, $employee);
+
+            $lockedAttendance->delete();
         });
 
         return redirect()->route('attendance.monthly-attendances.index')
@@ -250,8 +256,10 @@ class MonthlyAttendanceController extends Controller
 
         $monthlyAttendance = DB::transaction(function () use ($monthlyAttendance, $employeeId, $startDate, $validated, $jalaliYear, $jalaliMonth) {
             $employee = Employee::whereKey($employeeId)->lockForUpdate()->firstOrFail();
-            $oldPaidLeave = (int) $monthlyAttendance->paid_leave;
-            $monthlyAttendance->delete();
+            $lockedAttendance = MonthlyAttendance::whereKey($monthlyAttendance->id)->lockForUpdate()->firstOrFail();
+            $oldPaidLeave = (int) $lockedAttendance->paid_leave;
+            $earnedPaidLeave = $lockedAttendance->earned_paid_leave;
+            $lockedAttendance->delete();
 
             $recalculated = $this->attendanceService->calculateAndStore(
                 employeeId: $employeeId,
@@ -260,6 +268,11 @@ class MonthlyAttendanceController extends Controller
                 jalaliYear: $jalaliYear,
                 jalaliMonth: $jalaliMonth,
             );
+
+            if ($earnedPaidLeave !== null) {
+                $recalculated->earned_paid_leave = $earnedPaidLeave;
+                $recalculated->save();
+            }
 
             $this->attendanceService->adjustLeaveBalanceForPaidLeaveChange($employee, $oldPaidLeave, (int) $recalculated->paid_leave);
 

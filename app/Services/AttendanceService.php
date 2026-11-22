@@ -439,6 +439,8 @@ class AttendanceService
 
         if ($existing === null) {
             $earnedPaidLeave = (int) ($employee->workShift?->paid_leave ?? 0);
+            $monthlyAttendance->earned_paid_leave = $earnedPaidLeave;
+            $monthlyAttendance->save();
 
             $employee->leave_remain = $employee->leave_remain + $earnedPaidLeave - $monthlyAttendance->paid_leave;
             $employee->save();
@@ -460,7 +462,8 @@ class AttendanceService
             return;
         }
 
-        $earnedPaidLeave = (int) ($employee->workShift?->paid_leave ?? 0);
+        $earnedPaidLeave = $monthlyAttendance->earned_paid_leave
+            ?? (int) ($employee->workShift?->paid_leave ?? 0);
 
         $employee->leave_remain += $monthlyAttendance->paid_leave - $earnedPaidLeave;
         $employee->save();
