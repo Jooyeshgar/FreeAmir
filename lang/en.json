@@ -1864,6 +1864,7 @@
     "No users have been created yet.": "No users have been created yet.",
     "No users are assigned to this business.": "No users are assigned to this business.",
     "No users records found.": "No users records found.",
+    "No warehouse stock found.": "No warehouse stock found.",
     "No work shifts found.": "No work shifts found.",
     "No work site": "No work site",
     "No work site contracts found.": "No work site contracts found.",
@@ -3749,5 +3750,6 @@
     "No positive allocation basis is available. Enter amounts manually or update product weights.": "No positive allocation basis is available. Enter amounts manually or update product weights.",
     "Line :line: invalid product weight.": "Line :line: invalid product weight.",
     "Automatic allocation must include each invoice product exactly once.": "Automatic allocation must include each invoice product exactly once.",
-    "The product share does not match the selected allocation method and amount.": "The product share does not match the selected allocation method and amount."
+    "The product share does not match the selected allocation method and amount.": "The product share does not match the selected allocation method and amount.",
+    "No warehouse stock found.": "No warehouse stock found."
 }

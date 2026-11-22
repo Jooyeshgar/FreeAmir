@@ -1841,6 +1841,7 @@
     "No users have been created yet.": "هنوز کاربری ایجاد نشده است.",
     "No users are assigned to this business.": "هیچ کاربری به این کسب‌وکار تخصیص داده نشده است.",
     "No users records found.": "هیچ کاربری یافت نشد.",
+    "No warehouse stock found.": "موجودی انباری یافت نشد.",
     "No work shifts found.": "هیچ شیفت کاری‌ای یافت نشد.",
     "No work site": "بدون سایت کاری",
     "No work site contracts found.": "هیچ پیمانی یافت نشد.",
@@ -3740,5 +3741,6 @@
     "No positive allocation basis is available. Enter amounts manually or update product weights.": "مبنای مثبتی برای تخصیص وجود ندارد. مبالغ را دستی وارد کنید یا وزن کالاها را اصلاح کنید.",
     "Line :line: invalid product weight.": "ردیف :line: وزن کالا نامعتبر است.",
     "Automatic allocation must include each invoice product exactly once.": "در تخصیص خودکار، هر کالای فاکتور باید دقیقاً یک بار درج شود.",
-    "The product share does not match the selected allocation method and amount.": "سهم کالا با روش تخصیص و مبلغ انتخاب‌شده مطابقت ندارد."
+    "The product share does not match the selected allocation method and amount.": "سهم کالا با روش تخصیص و مبلغ انتخاب‌شده مطابقت ندارد.",
+    "No warehouse stock found.": "موجودی انباری یافت نشد."
 }

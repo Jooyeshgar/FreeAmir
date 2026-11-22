@@ -132,7 +132,7 @@ class AncillaryCostService
         }
 
         foreach ($invoiceItems as $item) {
-            $item->cog_after = $item->itemable->average_cost;
+            $item->cog_after = $item->itemable->average_cost ?? 0;
             $item->update();
         }
     }
