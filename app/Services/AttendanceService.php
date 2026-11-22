@@ -6,6 +6,7 @@ use App\Enums\PersonnelRequestType;
 use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\MonthlyAttendance;
 use App\Models\PersonnelRequest;
 use App\Models\PublicHoliday;
@@ -423,6 +424,97 @@ class AttendanceService
         );
 
         return $attendance;
+    }
+
+    /**
+     * Apply the paid-leave accrual or delta for a stored monthly attendance record.
+     */
+    public function applyMonthlyAttendanceLeaveBalance(MonthlyAttendance $monthlyAttendance, ?MonthlyAttendance $existing, ?Employee $employee = null): void
+    {
+        $employee ??= $monthlyAttendance->employee()->with('workShift')->first();
+
+        if ($employee === null) {
+            return;
+        }
+
+        if ($existing === null) {
+            $earnedPaidLeave = (int) ($employee->workShift?->paid_leave ?? 0);
+
+            $employee->leave_remain = $employee->leave_remain + $earnedPaidLeave - $monthlyAttendance->paid_leave;
+            $employee->save();
+
+            return;
+        }
+
+        $this->adjustLeaveBalanceForPaidLeaveChange($employee, (int) $existing->paid_leave, (int) $monthlyAttendance->paid_leave);
+    }
+
+    /**
+     * Revert the paid-leave accrual and used leave when a monthly attendance record is deleted.
+     */
+    public function revertMonthlyAttendanceLeaveBalance(MonthlyAttendance $monthlyAttendance, ?Employee $employee = null): void
+    {
+        $employee ??= $monthlyAttendance->employee()->with('workShift')->first();
+
+        if ($employee === null) {
+            return;
+        }
+
+        $earnedPaidLeave = (int) ($employee->workShift?->paid_leave ?? 0);
+
+        $employee->leave_remain += $monthlyAttendance->paid_leave - $earnedPaidLeave;
+        $employee->save();
+    }
+
+    /**
+     * Adjust an employee's leave balance when a monthly attendance's paid_leave changes.
+     */
+    public function adjustLeaveBalanceForPaidLeaveChange(Employee $employee, int $oldPaidLeave, int $newPaidLeave): void
+    {
+        $diffMonthPaidLeave = $newPaidLeave - $oldPaidLeave;
+
+        if ($diffMonthPaidLeave !== 0) {
+            $employee->leave_remain -= $diffMonthPaidLeave;
+            $employee->save();
+        }
+    }
+
+    /**
+     * Compute the employee's remaining paid leave including the current Jalali month's quota when applicable.
+     */
+    public function remainingPaidLeaveIncludingCurrentMonth(Employee $employee, ?FiscalYear $fiscalYear = null): int
+    {
+        $date = now()->copy()->startOfDay();
+        $balance = (int) $employee->leave_remain;
+
+        if (! $employee->is_active) {
+            return $balance;
+        }
+
+        if ($fiscalYear !== null && $fiscalYear->isClosed()) {
+            return $balance;
+        }
+
+        [$jalaliYear, $jalaliMonth] = gregorian_to_jalali($date->year, $date->month, $date->day);
+
+        if ($fiscalYear !== null && $fiscalYear->year !== null && (int) $fiscalYear->year !== (int) $jalaliYear) {
+            return $balance;
+        }
+
+        [$monthStartYear, $monthStartMonth, $monthStartDay] = jalali_to_gregorian($jalaliYear, $jalaliMonth, 1);
+        $currentMonthStart = Carbon::create($monthStartYear, $monthStartMonth, $monthStartDay)->startOfDay();
+
+        if ($employee->contract_end_date !== null && $employee->contract_end_date->copy()->startOfDay()->lt($currentMonthStart)) {
+            return $balance;
+        }
+
+        $currentMonthCalculated = $employee->monthlyAttendances()->where('year', $jalaliYear)->where('month', $jalaliMonth)->exists();
+
+        if ($currentMonthCalculated) {
+            return $balance;
+        }
+
+        return $balance + (int) ($employee->workShift?->paid_leave ?? 0);
     }
 
     /**

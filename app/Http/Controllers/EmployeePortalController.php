@@ -82,44 +82,9 @@ class EmployeePortalController extends Controller
 
         $activeFiscalYear = FiscalYear::find(getActiveFiscalYear());
         $fiscalYearClosed = $activeFiscalYear?->isClosed() ?? false;
-        $remainingPaidLeave = $this->remainingPaidLeaveIncludingCurrentMonth($employee, $activeFiscalYear);
+        $remainingPaidLeave = $this->attendanceService->remainingPaidLeaveIncludingCurrentMonth($employee, $activeFiscalYear);
 
         return view('employee-portal.employee', compact('fiscalYearClosed', 'employee', 'remainingPaidLeave'));
-    }
-
-    private function remainingPaidLeaveIncludingCurrentMonth(Employee $employee, ?FiscalYear $fiscalYear = null): int
-    {
-        $date = now()->copy()->startOfDay();
-        $balance = (int) $employee->leave_remain;
-
-        if (! $employee->is_active) {
-            return $balance;
-        }
-
-        if ($fiscalYear !== null && $fiscalYear->isClosed()) {
-            return $balance;
-        }
-
-        [$jalaliYear, $jalaliMonth] = gregorian_to_jalali($date->year, $date->month, $date->day);
-
-        if ($fiscalYear !== null && $fiscalYear->year !== null && (int) $fiscalYear->year !== (int) $jalaliYear) {
-            return $balance;
-        }
-
-        [$monthStartYear, $monthStartMonth, $monthStartDay] = jalali_to_gregorian($jalaliYear, $jalaliMonth, 1);
-        $currentMonthStart = Carbon::create($monthStartYear, $monthStartMonth, $monthStartDay)->startOfDay();
-
-        if ($employee->contract_end_date !== null && $employee->contract_end_date->copy()->startOfDay()->lt($currentMonthStart)) {
-            return $balance;
-        }
-
-        $currentMonthCalculated = $employee->monthlyAttendances()->where('year', $jalaliYear)->where('month', $jalaliMonth)->exists();
-
-        if ($currentMonthCalculated) {
-            return $balance;
-        }
-
-        return $balance + (int) ($employee->workShift?->paid_leave ?? 0);
     }
 
     public function changeEmployeeInformation(): View

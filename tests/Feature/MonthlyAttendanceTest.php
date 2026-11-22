@@ -995,6 +995,68 @@ class MonthlyAttendanceTest extends TestCase
         $this->assertSame(900, $this->employee->fresh()->leave_remain);
     }
 
+    public function test_update_adjusts_leave_remain_by_paid_leave_delta(): void
+    {
+        $this->employee->update(['leave_remain' => 900]);
+        $attendance = $this->makeMonthlyAttendance([
+            'year' => 1404,
+            'month' => 8,
+            'start_date' => '2025-10-23',
+            'duration' => 30,
+            'paid_leave' => 300,
+        ]);
+
+        $this->put(route('attendance.monthly-attendances.update', $attendance), [
+            'work_days' => 26,
+            'present_days' => 25,
+            'absent_days' => 1,
+            'overtime' => 0,
+            'mission' => 0,
+            'paid_leave' => 450,
+            'unpaid_leave' => 0,
+            'friday' => 0,
+            'holiday' => 0,
+        ])->assertRedirect(route('attendance.monthly-attendances.show', $attendance));
+
+        $this->assertSame(750, $this->employee->fresh()->leave_remain);
+        $this->assertSame(450, $attendance->fresh()->paid_leave);
+    }
+
+    public function test_recalculate_adjusts_leave_remain_by_paid_leave_delta_without_reaccruing(): void
+    {
+        $this->employee->workShift->update([
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'paid_leave' => 1200,
+        ]);
+        $this->employee->update(['leave_remain' => 0]);
+
+        $log = AttendanceLog::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2025-10-25',
+            'paid_leave' => 300,
+        ]);
+
+        $this->post(route('attendance.monthly-attendances.store'), [
+            'employee_id' => $this->employee->id,
+            'start_date' => '1404/08/01',
+            'duration' => 30,
+        ])->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        $this->assertSame(900, $this->employee->fresh()->leave_remain);
+
+        $attendance = MonthlyAttendance::where('employee_id', $this->employee->id)->firstOrFail();
+        $log->update(['paid_leave' => 420]);
+
+        $this->post(route('attendance.monthly-attendances.recalculate', $attendance), [
+            'start_date' => '1404/08/01',
+            'duration' => 30,
+        ])->assertRedirect();
+
+        $this->assertSame(780, $this->employee->fresh()->leave_remain);
+    }
+
     public function test_remaining_paid_leave_including_current_month_for_employee_portal(): void
     {
         $fiscalYear = FiscalYear::findOrFail($this->fiscalYearId);
