@@ -13,6 +13,8 @@ return new class extends Migration
 
         $employees = DB::table('employees')
             ->join('work_shifts', 'work_shifts.id', '=', 'employees.work_shift_id')
+            ->join('fiscal_years', 'fiscal_years.id', '=', 'employees.fiscal_year_id')
+            ->whereNull('fiscal_years.closed_at')
             ->whereNotExists(function ($query) use ($lastPrepaidYear, $lastPrepaidMonth) {
                 $query->select(DB::raw(1))
                     ->from('monthly_attendances')

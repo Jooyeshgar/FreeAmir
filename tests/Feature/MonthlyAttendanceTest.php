@@ -1501,12 +1501,34 @@ class MonthlyAttendanceTest extends TestCase
             'month' => 8,
         ]);
 
-        $migration = require database_path('migrations/2026_11_22_000002_remove_prepaid_leave_for_uncalculated.php');
-        $migration->up();
+        // Employee row of a closed fiscal year must never be rewritten by the cutover
+        $closedFiscalYear = FiscalYear::factory()->create(['year' => 1404, 'closed_at' => now()]);
+        $closedWorkShift = WorkShift::factory()->create([
+            'fiscal_year_id' => $closedFiscalYear->id,
+            'paid_leave' => 1200,
+        ]);
+        $closedYearEmployee = Employee::factory()->create([
+            'fiscal_year_id' => $closedFiscalYear->id,
+            'work_site_id' => $this->employee->work_site_id,
+            'work_shift_id' => $closedWorkShift->id,
+            'leave_remain' => 1500,
+        ]);
+
+        // Freeze the clock in Azar 1405 so the derived cutover month (Aban 1405) is deterministic
+        Carbon::setTestNow(Carbon::create(2026, 11, 22, 12, 0, 0));
+
+        try {
+            $migration = require database_path('migrations/2026_11_22_000002_remove_prepaid_leave_for_uncalculated.php');
+            $migration->up();
+        } finally {
+            Carbon::setTestNow();
+        }
 
         // Aban 1405 not calculated yet: prepaid quota removed so the upcoming accrual does not double count it
         $this->assertSame(300, $this->employee->fresh()->leave_remain);
         // Aban 1405 already calculated by the old logic: untouched
         $this->assertSame(1500, $calculatedEmployee->fresh()->leave_remain);
+        // Closed fiscal year: untouched
+        $this->assertSame(1500, (int) Employee::withoutGlobalScopes()->whereKey($closedYearEmployee->id)->value('leave_remain'));
     }
 }
