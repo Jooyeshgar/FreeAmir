@@ -11,6 +11,7 @@ use App\Models\InvoiceItem;
 use App\Models\Product;
 use App\Models\Warehouse;
 use App\Models\WarehouseProductStock;
+use App\Models\WarehouseTransfer;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -26,6 +27,7 @@ class ProductService
         unset($data['websites']);
 
         $data['fiscal_year_id'] ??= getActiveFiscalYear();
+        $data['average_cost'] ??= 0;
 
         $product = Product::create($data);
 
@@ -330,7 +332,6 @@ class ProductService
             foreach ($invoices as $invoice) {
                 foreach ($invoice->items as $item) {
                     $warehouseId = $invoice->warehouse_id;
-                    $warehouseQuantity = $warehouseQuantities[$warehouseId] ?? 0.0;
                     $item->quantity_at = $quantity;
                     $item->save();
 
@@ -341,22 +342,38 @@ class ProductService
 
                     $quantity += $sign * (float) $item->quantity;
                     if ($warehouseId) {
-                        $warehouseQuantity += $sign * (float) $item->quantity;
-                        $warehouseQuantities[$warehouseId] = $warehouseQuantity;
-
-                        $stock = $stocks->get($warehouseId);
-                        if (! $stock) {
-                            $stock = WarehouseProductStock::query()->firstOrCreate(
-                                ['warehouse_id' => $warehouseId, 'product_id' => $product->id],
-                                ['quantity' => 0, 'average_cost' => $product->average_cost ?? 0]
-                            );
-                            $stocks->put($warehouseId, $stock);
-                        }
-
-                        $stock->quantity = $warehouseQuantity;
-                        $stock->save();
+                        $warehouseQuantities[$warehouseId] = ($warehouseQuantities[$warehouseId] ?? 0.0) + ($sign * (float) $item->quantity);
                     }
                 }
+            }
+
+            $transfers = WarehouseTransfer::withoutGlobalScopes()->where('product_id', $product->id)->where('fiscal_year_id', $product->fiscal_year_id)
+                ->orderBy('transferred_at')->orderBy('id')->lockForUpdate()->get();
+
+            foreach ($transfers as $transfer) {
+                $transferQuantity = (float) $transfer->quantity;
+
+                if ($transfer->from_warehouse_id) {
+                    $warehouseQuantities[$transfer->from_warehouse_id] = ($warehouseQuantities[$transfer->from_warehouse_id] ?? 0.0) - $transferQuantity;
+                }
+
+                if ($transfer->to_warehouse_id) {
+                    $warehouseQuantities[$transfer->to_warehouse_id] = ($warehouseQuantities[$transfer->to_warehouse_id] ?? 0.0) + $transferQuantity;
+                }
+            }
+
+            foreach ($warehouseQuantities as $warehouseId => $warehouseQuantity) {
+                $stock = $stocks->get($warehouseId);
+                if (! $stock) {
+                    $stock = WarehouseProductStock::query()->firstOrCreate(
+                        ['warehouse_id' => $warehouseId, 'product_id' => $product->id],
+                        ['quantity' => 0, 'average_cost' => $product->average_cost ?? 0]
+                    );
+                    $stocks->put($warehouseId, $stock);
+                }
+
+                $stock->quantity = $warehouseQuantity;
+                $stock->save();
             }
 
             $product->quantity = $quantity;

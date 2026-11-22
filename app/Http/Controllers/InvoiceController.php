@@ -30,8 +30,8 @@ use App\Services\InvoiceService;
 use App\Services\MoadianService;
 use App\Services\PaymentService;
 use App\Services\ReportExportService;
-use DB;
 use Closure;
+use DB;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -706,10 +706,10 @@ class InvoiceController extends Controller
 
         $searchedInCustomersGroups = collect();
         if ($groupMatches->isNotEmpty()) {
-            $searchedInCustomersGroups = Customer::with('group')->whereIn('group_id', $groupMatches)->limit(30)->get($returnableFields);
+            $searchedInCustomersGroups = Customer::with('group')->whereIn('group_id', $groupMatches)->limit(50)->get($returnableFields);
         }
 
-        $searchedInCustomers = Customer::with('group')->where('name', 'like', "%{$q}%")->limit(30)->get($returnableFields);
+        $searchedInCustomers = Customer::with('group')->where('name', 'like', "%{$q}%")->limit(50)->get($returnableFields);
 
         $customers = $searchedInCustomers->merge($searchedInCustomersGroups)->unique('id');
 

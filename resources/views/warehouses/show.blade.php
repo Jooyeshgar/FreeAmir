@@ -63,7 +63,7 @@
                             <td>{{ formatNumber($stock->quantity) }}</td>
                             <td>{{ formatNumber($stock->average_cost) }}</td>
                             <td>
-                                <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" class="btn btn-sm btn-outline" href="{{ route('warehouses.transfer', ['from_warehouse_id' => $warehouse->id, 'product_id' => $stock->product_id]) }}">{{ __('Transfer') }}</x-closed-year-action-link>
+                                <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" class="btn btn-sm btn-outline" :href="route('warehouses.transfer', ['from_warehouse_id' => $warehouse->id, 'product_id' => $stock->product_id])">{{ __('Transfer') }}</x-closed-year-action-link>
                                 <a class="btn btn-sm btn-ghost" href="{{ route('products.show', $stock->product) }}">{{ __('View') }}</a>
                             </td>
                         </tr>

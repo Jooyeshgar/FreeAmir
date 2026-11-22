@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Services\SubjectService;
@@ -98,6 +99,13 @@ class TransactionController extends Controller
      */
     private function calculateOpeningBalance(Request $request): float
     {
+        $startDate = $request->filled('start_date') ? convertToGregorian($request->input('start_date')) : null;
+        $startDocNum = $request->filled('start_document_number') ? convertToFloat($request->input('start_document_number')) : null;
+
+        if ($startDate === null && $startDocNum === null) {
+            return 0;
+        }
+
         $query = Transaction::query()
             ->whereHas('document')
             ->join('documents', 'transactions.document_id', '=', 'documents.id');
@@ -107,25 +115,22 @@ class TransactionController extends Controller
             $query->whereIn('subject_id', $subject->getAllDescendantIds());
         }
 
-        $hasFilter = false;
-
-        if ($request->filled('end_date')) {
-            $endDate = convertToGregorian($request->input('end_date'));
-            $query->whereHas('document', fn ($q) => $q->whereDate('date', '>', $endDate)
-            );
-            $hasFilter = true;
+        $closingDocumentId = FiscalYear::find(getActiveFiscalYear())?->closing_document_id;
+        if ($closingDocumentId) {
+            $query->where('documents.id', '!=', $closingDocumentId);
         }
 
-        if ($request->filled('end_document_number')) {
-            $endDocNum = convertToFloat($request->input('end_document_number'));
-            $query->whereHas('document', fn ($q) => $q->where('number', '>', $endDocNum)
-            );
-            $hasFilter = true;
-        }
+        $query->where(function ($q) use ($startDate, $startDocNum) {
+            if ($startDate !== null) {
+                $q->orWhereDate('documents.date', '<', $startDate);
+            }
 
-        return $hasFilter
-            ? (float) $query->sum('transactions.value')
-            : 0;
+            if ($startDocNum !== null) {
+                $q->orWhere('documents.number', '<', $startDocNum);
+            }
+        });
+
+        return (float) $query->sum('transactions.value');
     }
 
     /**
@@ -173,5 +178,4 @@ class TransactionController extends Controller
 
         return view('transactions.show', compact('transaction'));
     }
-
 }

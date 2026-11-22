@@ -55,11 +55,18 @@ class WarehouseService
                 throw ValidationException::withMessages(['quantity' => __('The source warehouse does not have enough stock.')]);
             }
 
-            $unitCost = (float) $source->average_cost;
+            $unitCost = (float) $source->average_cost > 0 ? (float) $source->average_cost : (float) ($product->average_cost ?? 0);
+
+            if ((float) $source->average_cost <= 0 && $unitCost > 0) {
+                $source->average_cost = $unitCost;
+                $source->save();
+            }
+
             $source->decrement('quantity', $quantity);
-            $destination->quantity = (float) $destination->quantity + $quantity;
+            $destinationQuantityBefore = (float) $destination->quantity;
+            $destination->quantity = $destinationQuantityBefore + $quantity;
             $destination->average_cost = $destination->quantity > 0
-                ? (((float) $destination->quantity - $quantity) * (float) $destination->average_cost + $quantity * $unitCost) / (float) $destination->quantity
+                ? (($destinationQuantityBefore * (float) $destination->average_cost) + ($quantity * $unitCost)) / (float) $destination->quantity
                 : $unitCost;
             $destination->save();
 

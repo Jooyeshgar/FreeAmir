@@ -148,6 +148,23 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->assertStock($this->emptyWarehouse, 4);
     }
 
+    public function test_recalculate_quantity_includes_warehouse_transfer_history(): void
+    {
+        $this->createInvoice(InvoiceType::BUY, 10, $this->mainWarehouse, true);
+        app(WarehouseService::class)->transfer($this->product->fresh(), $this->mainWarehouse, $this->emptyWarehouse, 4);
+        $sell = $this->createInvoice(InvoiceType::SELL, 1, $this->emptyWarehouse, true);
+        $this->approve($sell);
+
+        WarehouseProductStock::query()->update(['quantity' => 0]);
+        $this->product->update(['quantity' => 0]);
+
+        $quantity = ProductService::recalculateQuantity($this->product->fresh());
+
+        $this->assertEqualsWithDelta(9, $quantity, 0.001);
+        $this->assertStock($this->mainWarehouse, 6);
+        $this->assertStock($this->emptyWarehouse, 3);
+    }
+
     public function test_recalculate_quantity_uses_approved_beginning_inventory_instead_of_previous_fiscal_year_stock(): void
     {
         $previousFiscalYear = FiscalYear::factory()->create([

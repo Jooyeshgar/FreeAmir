@@ -1,5 +1,10 @@
 <x-app-layout :title="__('Transfer Product')">
-    <div class="card bg-base-100 shadow" x-data="{ selectedValue: '', productId: '{{ old('product_id', $selectedProduct?->id) }}' }">
+    @php
+        $initialProductId = old('product_id', $selectedProduct?->id);
+        $productValue = $initialProductId ? 'product-' . $initialProductId : '';
+        $productLocked = $selectedProduct !== null;
+    @endphp
+    <div class="card bg-base-100 shadow" x-data="{ selectedProduct: @js($productValue), productId: @js($initialProductId ? (string) $initialProductId : '') }">
         <form method="POST" action="{{ route('warehouses.transfer.store') }}">@csrf<div class="card-body gap-5 p-4 sm:p-6">
                 <div class="flex flex-wrap items-center">
                     <h1 class="card-title text-xl">{{ __('Transfer Product') }}</h1>
@@ -9,13 +14,9 @@
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                         <label class="label">{{ __('Product') }}</label>
-                        @php
-                            $productValue = $selectedProduct ? 'product-' . $selectedProduct->id : '';
-                            $productLocked = $selectedProduct !== null;
-                        @endphp
                         <x-select-box url="{{ route('warehouses.search-products') }}"
                             :options="[['headerGroup' => 'product', 'options' => $products]]"
-                            x-model="selectedValue" x-init="selectedValue = '{{ $productValue }}'"
+                            x-model="selectedProduct" x-init="selectedValue = selectedProduct"
                             x-on:selected="productId = $event.detail.id" placeholder="{{ __('Select Product') }}" :disabled="$productLocked" />
                         <input type="hidden" name="product_id" x-bind:value="productId">
                     </div>

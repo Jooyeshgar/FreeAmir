@@ -100,9 +100,15 @@ class WarehouseController extends Controller
             ? Product::with('productGroup')->find(request()->integer('product_id'))
             : null;
 
-        $products = Product::with('productGroup')->orderBy('name')->limit(30)->get();
-        if ($selectedProduct && ! $products->contains('id', $selectedProduct->id)) {
-            $products->prepend($selectedProduct);
+        if ($selectedProduct) {
+            $products = collect([$selectedProduct]);
+        } else {
+            $oldProductId = old('product_id') ? (int) old('product_id') : null;
+            $oldProduct = $oldProductId ? Product::with('productGroup')->find($oldProductId) : null;
+            $products = Product::with('productGroup')->orderBy('name')->limit(30)->get();
+            if ($oldProduct && ! $products->contains('id', $oldProduct->id)) {
+                $products->prepend($oldProduct);
+            }
         }
 
         return view('warehouses.transfer', [
