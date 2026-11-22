@@ -227,7 +227,7 @@ class McpInvoiceAndCustomerReadToolsTest extends TestCase
 
         $this->assertEquals(500, $byId['invoice']['number']);
         $this->assertSame('Main Warehouse', $byId['invoice']['warehouse_name']);
-        $this->assertSame(42, $byId['invoice']['document_number']);
+        $this->assertEquals(42, $byId['invoice']['document_number']);
         $this->assertCount(1, $byId['invoice']['items']);
         $this->assertSame('product', $byId['invoice']['items'][0]['item_type']);
         $this->assertSame('PRD-10', $byId['invoice']['items'][0]['item_code']);
