@@ -790,7 +790,11 @@ class MonthlyAttendanceTest extends TestCase
 
     public function test_store_accrues_worked_month_paid_leave_and_deducts_used_leave(): void
     {
-        $this->employee->workShift->update(['paid_leave' => 1200]);
+        $this->employee->workShift->update([
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'paid_leave' => 1200,
+        ]);
         $this->employee->update([
             'is_active' => true,
             'contract_end_date' => null,
@@ -817,7 +821,11 @@ class MonthlyAttendanceTest extends TestCase
 
     public function test_store_accrues_only_worked_month_for_departing_employee(): void
     {
-        $this->employee->workShift->update(['paid_leave' => 1200]);
+        $this->employee->workShift->update([
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'paid_leave' => 1200,
+        ]);
         $this->employee->update([
             'is_active' => false,
             'contract_end_date' => '2025-11-21',
@@ -844,7 +852,11 @@ class MonthlyAttendanceTest extends TestCase
     public function test_bulk_store_accrues_worked_month_paid_leave_for_each_employee(): void
     {
         $workShift = $this->employee->workShift;
-        $workShift->update(['paid_leave' => 1200]);
+        $workShift->update([
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'paid_leave' => 1200,
+        ]);
 
         $this->employee->update([
             'is_active' => true,
@@ -878,7 +890,11 @@ class MonthlyAttendanceTest extends TestCase
 
     public function test_destroy_reverts_worked_month_accrual_and_used_leave(): void
     {
-        $this->employee->workShift->update(['paid_leave' => 1200]);
+        $this->employee->workShift->update([
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'paid_leave' => 1200,
+        ]);
         $this->employee->update([
             'leave_remain' => 0,
         ]);
