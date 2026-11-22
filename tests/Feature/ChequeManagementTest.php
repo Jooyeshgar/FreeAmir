@@ -733,18 +733,25 @@ class ChequeManagementTest extends TestCase
         $this->assertTrue($invoice->fresh()->status->isPaid());
     }
 
-    public function test_invoice_cheque_overpayment_rolls_back_cheque_and_payment(): void
+    public function test_received_cheque_can_exceed_invoice_total(): void
     {
+        $this->withoutMiddleware(CheckPermission::class);
         $invoice = $this->invoice(InvoiceType::SELL, $this->customer, 1000);
+        $data = $this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 1001);
+        $data['issue_date'] = toEnglish(formatDate($invoice->date));
+        $data['due_date'] = toEnglish(formatDate($invoice->date->copy()->addMonth()));
+        $this->post(route('invoices.payments.store-cheque', $invoice), $data)
+            ->assertSessionHasNoErrors()->assertRedirect(route('invoices.show', $invoice));
 
-        try {
-            $this->service->register($this->user, $this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 1001));
-            $this->fail('Expected invoice cheque overpayment to be rejected.');
-        } catch (ValidationException) {
-            $this->assertSame(0, Cheque::count());
-            $this->assertSame(0, $invoice->payments()->count());
-            $this->assertTrue($invoice->fresh()->status->isApproved());
-        }
+        $payment = $invoice->payments()->sole();
+        $cheque = $payment->cheque;
+        $this->assertSame('1001.00', $cheque->amount);
+        $this->assertSame('1001.00', $payment->amount);
+        $this->assertSame($cheque->histories()->sole()->document_id, $payment->document_id);
+        $this->assertEquals(1001, $payment->document->transactions->where('subject_id', $invoice->customer->subject_id)->sum('value'));
+        $this->assertBalanced($payment->document);
+        $this->assertEquals(0, app(PaymentService::class)->remainingAmount($invoice));
+        $this->assertTrue($invoice->fresh()->status->isPaid());
     }
 
     public function test_updating_invoice_cheque_rebuilds_payment_document_and_invoice_balance(): void
@@ -1298,31 +1305,40 @@ class ChequeManagementTest extends TestCase
         $this->assertTrue($invoice->fresh()->status->isApproved());
     }
 
-    public function test_invalid_invoice_cheque_fee_or_overpayment_leaves_no_records_negative(): void
-    {
-        $this->assertInvalidInvoiceChequeLeavesNoRecords(-2, 100);
-    }
-
-    public function test_invalid_invoice_cheque_fee_or_overpayment_leaves_no_records_overpayment(): void
-    {
-        $this->assertInvalidInvoiceChequeLeavesNoRecords(2, 101);
-    }
-
-    private function assertInvalidInvoiceChequeLeavesNoRecords(float $fee, float $amount): void
+    public function test_invoice_cheque_with_negative_fee_leaves_no_records(): void
     {
         $this->feeSubject();
         $invoice = $this->invoice(InvoiceType::SELL, $this->customer, 100);
         $before = Document::count();
         try {
             $this->service->register($this->user, [
-                ...$this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, $amount), 'bank_service_fee' => $fee,
+                ...$this->invoiceChequeData($invoice, ChequeType::RECEIVABLE, 100), 'bank_service_fee' => -2,
             ]);
             $this->fail('Expected invalid cheque payment to fail.');
-        } catch (ValidationException $exception) {
+        } catch (ValidationException) {
             $this->assertSame(0, $invoice->payments()->count());
             $this->assertSame(0, Cheque::count());
             $this->assertSame($before, Document::count());
         }
+    }
+
+    public function test_issued_invoice_cheque_with_fee_can_be_increased_above_invoice_total(): void
+    {
+        $expenseSubjectId = $this->feeSubject();
+        $invoice = $this->invoice(InvoiceType::BUY, $this->vendor, 100);
+        $data = [...$this->invoiceChequeData($invoice, ChequeType::PAYABLE, 100), 'bank_service_fee' => 2];
+        $cheque = $this->service->register($this->user, $data);
+        $cheque = $this->service->update($cheque, $this->user, [...$data, 'amount' => 101]);
+
+        $payment = $invoice->payments()->sole();
+        $transactions = $payment->document->transactions;
+        $this->assertSame('101.00', $cheque->amount);
+        $this->assertSame('101.00', $payment->amount);
+        $this->assertSame('2.00', $payment->bank_service_fee);
+        $this->assertEquals(-2, $transactions->where('subject_id', $expenseSubjectId)->sum('value'));
+        $this->assertBalanced($payment->document);
+        $this->assertEquals(101, app(PaymentService::class)->paidAmount($invoice));
+        $this->assertTrue($invoice->fresh()->status->isPaid());
     }
 
     public function test_invoice_cheque_http_accepts_optional_fee_blank(): void
