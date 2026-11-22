@@ -1483,4 +1483,30 @@ class MonthlyAttendanceTest extends TestCase
         $this->assertSame(1500, $newEmployee->fresh()->leave_remain);
         $this->assertSame(2400, $this->employee->fresh()->leave_remain);
     }
+
+    public function test_cutover_migration_removes_prepaid_aban_quota_only_for_employees_without_aban_attendance(): void
+    {
+        $this->employee->workShift->update(['paid_leave' => 1200]);
+        $this->employee->update(['leave_remain' => 1500]);
+
+        $calculatedEmployee = Employee::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'work_site_id' => $this->employee->work_site_id,
+            'work_shift_id' => $this->employee->work_shift_id,
+            'leave_remain' => 1500,
+        ]);
+        $this->makeMonthlyAttendance([
+            'employee_id' => $calculatedEmployee->id,
+            'year' => 1405,
+            'month' => 8,
+        ]);
+
+        $migration = require database_path('migrations/2026_11_22_000002_remove_prepaid_leave_for_uncalculated_aban_1405.php');
+        $migration->up();
+
+        // Aban 1405 not calculated yet: prepaid quota removed so the upcoming accrual does not double count it
+        $this->assertSame(300, $this->employee->fresh()->leave_remain);
+        // Aban 1405 already calculated by the old logic: untouched
+        $this->assertSame(1500, $calculatedEmployee->fresh()->leave_remain);
+    }
 }
