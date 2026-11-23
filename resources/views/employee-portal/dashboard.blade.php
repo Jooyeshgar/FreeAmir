@@ -46,15 +46,15 @@
                 <div class="stat-value text-sm sm:text-base break-words">{{ \App\Models\MonthlyAttendance::MONTH_NAMES[$lastMonthlyAttendance->month] ?? $lastMonthlyAttendance->month }}</div>
             </a>
         @else
-            <a href="#" class="stat bg-base-100 shadow rounded-box opacity-50 cursor-not-allowed">
+            <a href="#" class="stat grid-cols-[minmax(0,1fr)_auto] bg-base-100 shadow rounded-box opacity-50 cursor-not-allowed">
                 <div class="stat-figure text-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M8 3v4m8-4v4M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2zm-2 5h18" />
                     </svg>
                 </div>
-                <div class="stat-title text-xs sm:text-sm mb-1">{{ __('Last Monthly Attendances') }}</div>
-                <div class="stat-value text-sm sm:text-base break-words">{{ __('No monthly attendance records found.') }}</div>
+                <div class="stat-title whitespace-normal break-words text-xs sm:text-sm mb-1">{{ __('Last Monthly Attendances') }}</div>
+                <div class="stat-value whitespace-normal break-words text-sm sm:text-base">{{ __('No monthly attendance records found.') }}</div>
             </a>
         @endisset
 
