@@ -66,10 +66,6 @@ class PaymentService
             $decision->addMessage('error', __('The selected settlement account is invalid.'));
         }
 
-        if (isset($data['amount']) && $data['amount'] > $this->remainingAmount($invoice, $except) + 0.001) {
-            $decision->addMessage('error', __('Payment amount exceeds the remaining balance of the invoice.'));
-        }
-
         $fee = ($data['bank_service_fee'] ?? '') === '' ? 0 : $data['bank_service_fee'];
         if (! is_numeric($fee) || ! is_finite((float) $fee) || $fee < 0) {
             $decision->addMessage('error', __('Bank service fee must be zero or greater.'));
