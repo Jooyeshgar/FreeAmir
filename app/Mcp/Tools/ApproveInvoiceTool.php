@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Services\FiscalYearMutationGuard;
 use App\Services\InvoiceService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\Facades\DB;
 use Laravel\Mcp\Response;
 
 class ApproveInvoiceTool extends AccountingTool
@@ -44,8 +45,15 @@ class ApproveInvoiceTool extends AccountingTool
     {
         app(FiscalYearMutationGuard::class)->ensureOpen($fiscalYear);
 
+        // Keep the invoice locked from the eligibility checks through posting.
+        return DB::transaction(fn (): Response => $this->approve($arguments, $fiscalYear));
+    }
+
+    private function approve(array $arguments, FiscalYear $fiscalYear): Response
+    {
         $invoice = Invoice::query()
             ->where('fiscal_year_id', $fiscalYear->id)
+            ->lockForUpdate()
             ->find((int) $arguments['invoice_id']);
 
         if (! $invoice) {

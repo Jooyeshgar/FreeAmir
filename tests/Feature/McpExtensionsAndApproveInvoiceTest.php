@@ -9,6 +9,7 @@ use App\Extensions\InvoiceExtensionRegistry;
 use App\Models\Company;
 use App\Models\Customer;
 use App\Models\CustomerGroup;
+use App\Models\Document;
 use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\Product;
@@ -16,10 +17,13 @@ use App\Models\ProductGroup;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\ApiTokenAbilityService;
+use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use PHPUnit\Framework\Attributes\TestWith;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\Helpers\SeederHelper;
@@ -308,6 +312,56 @@ class McpExtensionsAndApproveInvoiceTest extends TestCase
             'method' => 'tools/call',
             'params' => ['name' => 'approve_invoice', 'arguments' => ['fiscal_year_id' => $this->year->id, 'invoice_id' => $closedYearDraft['id'], 'confirm' => true]],
         ])->assertStatus(400);
+    }
+
+    #[TestWith([['date' => '2025-01-01']])]
+    #[TestWith([['status' => InvoiceStatus::REJECTED->value]])]
+    public function test_approve_invoice_rejects_a_draft_changed_before_the_lock_is_acquired(array $edit): void
+    {
+        $created = $this->callTool('create_invoice', [
+            'fiscal_year_id' => $this->year->id,
+            'invoice_type' => 'buy',
+            'customer_id' => $this->customer->id,
+            'warehouse_id' => $this->warehouse->id,
+            'date' => '2026-05-01',
+            'items' => [[
+                'item_type' => 'product',
+                'item_id' => $this->product->id,
+                'quantity' => 1,
+                'unit' => 100,
+            ]],
+        ]);
+        $invoiceId = $created['id'];
+        $documentCount = Document::withoutGlobalScopes()->count();
+        $initialTransactionLevel = DB::transactionLevel();
+        $edited = false;
+
+        DB::connection()->beforeExecuting(function (string $query, array $bindings, Connection $connection) use ($invoiceId, $edit, $initialTransactionLevel, &$edited): void {
+            if ($edited || $connection->transactionLevel() <= $initialTransactionLevel
+                || ! preg_match('/^select .* from [`"]invoices[`"]/i', $query)
+                || (in_array($connection->getDriverName(), ['mysql', 'mariadb'], true) && ! str_ends_with($query, 'for update'))
+                || ! in_array($invoiceId, $bindings, true)) {
+                return;
+            }
+
+            // Simulate an edit committed just before the transactional read of the invoice.
+            $edited = true;
+            $connection->table('invoices')->where('id', $invoiceId)->update($edit);
+        });
+
+        $this->withToken($this->token)->postJson('/api/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/call',
+            'params' => ['name' => 'approve_invoice', 'arguments' => [
+                'fiscal_year_id' => $this->year->id,
+                'invoice_id' => $invoiceId,
+            ]],
+        ])->assertOk()->assertJsonPath('result.isError', true);
+
+        $this->assertTrue($edited);
+        $this->assertNull(Invoice::withoutGlobalScopes()->findOrFail($invoiceId)->document_id);
+        $this->assertSame($documentCount, Document::withoutGlobalScopes()->count());
     }
 }
 
