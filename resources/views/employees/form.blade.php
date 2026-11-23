@@ -45,7 +45,7 @@
     </div>
 
     <div>
-        <x-date-picker name="birth_date" id="birth_date" title="{{ __('Birth Date') }}" :value="old('birth_date', isset($employee) ? $employee->birth_date?->format('Y-m-d') : '')" />
+        <x-date-picker name="birth_date" id="birth_date" title="{{ __('Birth Date') }}" :value="old('birth_date', isset($employee) ? $employee->birth_date?->format('Y/m/d') : '')" />
     </div>
 
     <div>
