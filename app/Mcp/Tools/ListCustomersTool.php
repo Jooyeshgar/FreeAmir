@@ -116,7 +116,7 @@ class ListCustomersTool extends AccountingTool
             'mobile' => $customer->mobile ?: null,
             'personal_code' => $customer->personal_code ?: null,
             'ecnmcs_code' => $customer->ecnmcs_code ?: null,
-            'credit_limit' => (int) ($customer->credit ?? 0),
+            'credit_limit' => (float) ($customer->credit ?? 0),
         ];
     }
 }

@@ -299,9 +299,9 @@ class McpInvoiceAndCustomerReadToolsTest extends TestCase
         $this->assertSame('Aria Industrial', $detail['customer']['name']);
         $this->assertSame('Tehran, Valiasr St', $detail['customer']['address']);
         $this->assertSame('0012345678', $detail['customer']['personal_code']);
-        $this->assertSame(-350000, $detail['customer']['balance']);
+        $this->assertEqualsWithDelta(-350000, $detail['customer']['balance'], 0.001);
         $this->assertSame('debtor', $detail['customer']['balance_status_code']);
-        $this->assertSame(10000000, $detail['customer']['credit_limit']);
+        $this->assertEqualsWithDelta(10000000, $detail['customer']['credit_limit'], 0.001);
 
         $error = $this->callToolExpectError('get_customer', [
             'fiscal_year_id' => $this->year->id,

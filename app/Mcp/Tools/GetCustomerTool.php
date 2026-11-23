@@ -47,15 +47,22 @@ class GetCustomerTool extends AccountingTool
             return $this->error(__('Customer not found in the selected fiscal year.'));
         }
 
-        $balance = $customer->subject ? (int) SubjectService::sumSubject($customer->subject) : 0;
+        $balance = $customer->subject ? (float) SubjectService::sumSubject($customer->subject) : 0.0;
         [$status, $statusCode] = match (true) {
             $balance < 0 => [__('Debtor'), 'debtor'],
             $balance > 0 => [__('Creditor'), 'creditor'],
             default => [__('Settled (zero)'), 'settled'],
         };
 
-        $formattedBalance = number_format(abs($balance)).' '.$currency.' ('.$status.')';
-        $creditLimit = (int) ($customer->credit ?? 0);
+        $absBalance = abs($balance);
+        $formattedAbsBalance = fmod($absBalance, 1.0) == 0.0
+            ? number_format($absBalance)
+            : rtrim(rtrim(number_format($absBalance, 2, '.', ','), '0'), '.');
+        $formattedBalance = $formattedAbsBalance.' '.$currency.' ('.$status.')';
+        $creditLimit = (float) ($customer->credit ?? 0);
+        $formattedCreditLimit = fmod($creditLimit, 1.0) == 0.0
+            ? number_format($creditLimit)
+            : rtrim(rtrim(number_format($creditLimit, 2, '.', ','), '0'), '.');
 
         return $this->success([
             'fiscal_year_id' => (int) $fiscalYear->id,
@@ -77,7 +84,7 @@ class GetCustomerTool extends AccountingTool
                 'formatted_balance' => $formattedBalance,
                 'balance_status' => $status,
                 'balance_status_code' => $statusCode,
-                'formatted_credit_limit' => number_format($creditLimit).' '.$currency,
+                'formatted_credit_limit' => $formattedCreditLimit.' '.$currency,
             ]),
             'human_summary' => __('Account party :name (ID :id) has a balance of :balance.', [
                 'name' => $customer->name,
