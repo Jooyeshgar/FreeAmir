@@ -3744,5 +3744,7 @@
     "Line :line: invalid product weight.": "ردیف :line: وزن کالا نامعتبر است.",
     "Automatic allocation must include each invoice product exactly once.": "در تخصیص خودکار، هر کالای فاکتور باید دقیقاً یک بار درج شود.",
     "The product share does not match the selected allocation method and amount.": "سهم کالا با روش تخصیص و مبلغ انتخاب‌شده مطابقت ندارد.",
-    "No warehouse stock found.": "موجودی انباری یافت نشد."
+    "No warehouse stock found.": "موجودی انباری یافت نشد.",
+    "Monthly attendance can only be posted after the last eligible day of the month.": "ثبت کارکرد ماهانه پس از پایان آخرین روز مشمول قرارداد در آن ماه امکان‌پذیر است.",
+    "This monthly attendance cannot be deleted because its original paid leave credit is unknown.": "حذف این کارکرد ماهانه امکان‌پذیر نیست، زیرا سهمیه مرخصی با حقوق ثبت‌شده در زمان محاسبه مشخص نیست."
 }

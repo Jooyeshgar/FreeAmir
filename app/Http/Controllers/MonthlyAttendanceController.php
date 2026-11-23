@@ -223,7 +223,7 @@ class MonthlyAttendanceController extends Controller
         app(FiscalYearMutationGuard::class)->ensureOpen($monthlyAttendance);
 
         DB::transaction(function () use ($monthlyAttendance) {
-            $employee = Employee::with('workShift')->whereKey($monthlyAttendance->employee_id)->lockForUpdate()->firstOrFail();
+            $employee = Employee::whereKey($monthlyAttendance->employee_id)->lockForUpdate()->firstOrFail();
             $lockedAttendance = MonthlyAttendance::whereKey($monthlyAttendance->id)->lockForUpdate()->first();
 
             if ($lockedAttendance === null) {

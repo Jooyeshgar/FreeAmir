@@ -3753,5 +3753,7 @@
     "Line :line: invalid product weight.": "Line :line: invalid product weight.",
     "Automatic allocation must include each invoice product exactly once.": "Automatic allocation must include each invoice product exactly once.",
     "The product share does not match the selected allocation method and amount.": "The product share does not match the selected allocation method and amount.",
-    "No warehouse stock found.": "No warehouse stock found."
+    "No warehouse stock found.": "No warehouse stock found.",
+    "Monthly attendance can only be posted after the last eligible day of the month.": "Monthly attendance can only be posted after the last eligible day of the month.",
+    "This monthly attendance cannot be deleted because its original paid leave credit is unknown.": "This monthly attendance cannot be deleted because its original paid leave credit is unknown."
 }

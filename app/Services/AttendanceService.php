@@ -438,7 +438,19 @@ class AttendanceService
         }
 
         if ($existing === null) {
-            $earnedPaidLeave = (int) ($employee->workShift?->paid_leave ?? 0);
+            [$monthStart, $monthEnd] = $this->paidLeaveMonthBounds($monthlyAttendance->year, $monthlyAttendance->month);
+            $contractEnd = $employee->contract_end_date;
+            $lastEligibleDay = $contractEnd !== null && $contractEnd->betweenIncluded($monthStart, $monthEnd)
+                ? $contractEnd
+                : $monthEnd;
+
+            if ($lastEligibleDay->gte(today())) {
+                throw ValidationException::withMessages([
+                    'start_date' => __('Monthly attendance can only be posted after the last eligible day of the month.'),
+                ]);
+            }
+
+            $earnedPaidLeave = $this->paidLeaveForMonth($employee, $monthStart, $monthEnd);
             $monthlyAttendance->earned_paid_leave = $earnedPaidLeave;
             $monthlyAttendance->save();
 
@@ -456,14 +468,19 @@ class AttendanceService
      */
     public function revertMonthlyAttendanceLeaveBalance(MonthlyAttendance $monthlyAttendance, ?Employee $employee = null): void
     {
-        $employee ??= $monthlyAttendance->employee()->with('workShift')->first();
+        $employee ??= $monthlyAttendance->employee;
 
         if ($employee === null) {
             return;
         }
 
-        $earnedPaidLeave = $monthlyAttendance->earned_paid_leave
-            ?? (int) ($employee->workShift?->paid_leave ?? 0);
+        $earnedPaidLeave = $monthlyAttendance->earned_paid_leave;
+
+        if ($earnedPaidLeave === null) {
+            throw ValidationException::withMessages([
+                'monthly_attendance' => __('This monthly attendance cannot be deleted because its original paid leave credit is unknown.'),
+            ]);
+        }
 
         $employee->leave_remain += $monthlyAttendance->paid_leave - $earnedPaidLeave;
         $employee->save();
@@ -504,10 +521,7 @@ class AttendanceService
             return $balance;
         }
 
-        [$monthStartYear, $monthStartMonth, $monthStartDay] = jalali_to_gregorian($jalaliYear, $jalaliMonth, 1);
-        $currentMonthStart = Carbon::create($monthStartYear, $monthStartMonth, $monthStartDay)->startOfDay();
-
-        if ($employee->contract_end_date !== null && $employee->contract_end_date->copy()->startOfDay()->lt($currentMonthStart)) {
+        if ($employee->contract_end_date !== null && $employee->contract_end_date->lt($date)) {
             return $balance;
         }
 
@@ -517,7 +531,46 @@ class AttendanceService
             return $balance;
         }
 
-        return $balance + (int) ($employee->workShift?->paid_leave ?? 0);
+        [$monthStart, $monthEnd] = $this->paidLeaveMonthBounds($jalaliYear, $jalaliMonth);
+
+        return $balance + $this->paidLeaveForMonth($employee, $monthStart, $monthEnd);
+    }
+
+    /** @return array{Carbon, Carbon} */
+    private function paidLeaveMonthBounds(int $year, int $month): array
+    {
+        $start = Carbon::parse(jalali_to_gregorian($year, $month, 1, '/'));
+        $nextYear = $month === 12 ? $year + 1 : $year;
+        $nextMonth = $month === 12 ? 1 : $month + 1;
+        $end = Carbon::parse(jalali_to_gregorian($nextYear, $nextMonth, 1, '/'))->subDay();
+
+        return [$start, $end];
+    }
+
+    private function paidLeaveForMonth(Employee $employee, Carbon $monthStart, Carbon $monthEnd): int
+    {
+        $contractStart = $employee->contract_start_date;
+        $contractEnd = $employee->contract_end_date;
+        $monthlyQuota = (int) ($employee->workShift?->paid_leave ?? 0);
+
+        if ($contractStart !== null && $contractStart->gt($monthEnd)) {
+            return 0;
+        }
+
+        if ($contractEnd === null || $contractEnd->gt($monthEnd)) {
+            return $monthlyQuota;
+        }
+
+        $firstCoveredDay = $contractStart !== null && $contractStart->gt($monthStart) ? $contractStart : $monthStart;
+
+        if ($contractEnd->lt($firstCoveredDay)) {
+            return 0;
+        }
+
+        $coveredDays = $firstCoveredDay->diffInDays($contractEnd) + 1;
+        $monthDays = $monthStart->diffInDays($monthEnd) + 1;
+
+        return (int) round($monthlyQuota * $coveredDays / $monthDays);
     }
 
     /**
