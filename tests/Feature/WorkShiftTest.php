@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Employee;
 use App\Models\FiscalYear;
 use App\Models\User;
 use App\Models\WorkShift;
+use App\Models\WorkSite;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -295,5 +297,25 @@ class WorkShiftTest extends TestCase
             'auto_overtime_coefficient' => 0,
             'max_auto_overtime' => 0,
         ]);
+    }
+
+    public function test_update_paid_leave_does_not_modify_existing_employees_leave_remain(): void
+    {
+        $workSite = WorkSite::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $workShift = $this->makeWorkShift(['paid_leave' => 1200]);
+
+        $employee = Employee::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'work_site_id' => $workSite->id,
+            'work_shift_id' => $workShift->id,
+            'leave_remain' => 450,
+        ]);
+
+        $this->put(route('attendance.work-shifts.update', $workShift), $this->validPayload([
+            'paid_leave' => 1500,
+        ]))->assertRedirect(route('attendance.work-shifts.index'));
+
+        $this->assertSame(1500, $workShift->fresh()->paid_leave);
+        $this->assertSame(450, $employee->fresh()->leave_remain);
     }
 }

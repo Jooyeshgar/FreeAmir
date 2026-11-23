@@ -23,6 +23,8 @@ use App\Services\ReportExportService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -142,12 +144,31 @@ class EmployeeController extends Controller
         app(FiscalYearMutationGuard::class)->ensureOpen($employee);
 
         $validated = $request->validated();
-        if ($employee->user && ($employee->first_name !== $validated['first_name'] || $employee->last_name !== $validated['last_name'])) {
-            $employee->user->name = $validated['first_name'].' '.$validated['last_name'];
-            $employee->user->save();
-        }
+        DB::transaction(function () use ($employee, $validated) {
+            $employee = Employee::whereKey($employee->id)->lockForUpdate()->firstOrFail();
+            $reconciledBalance = $validated['reconciled_leave_balance'] ?? null;
+            unset($validated['reconciled_leave_balance']);
 
-        $employee->update($validated);
+            if ($reconciledBalance !== null) {
+                if (! $employee->prepaid_leave_reconciliation_required) {
+                    throw ValidationException::withMessages([
+                        'reconciled_leave_balance' => __('This employee no longer has a prepaid leave balance to reconcile.'),
+                    ]);
+                }
+
+                $validated['leave_remain'] = (int) $reconciledBalance;
+                $validated['prepaid_leave_reconciliation_required'] = false;
+            } elseif ($employee->prepaid_leave_reconciliation_required) {
+                unset($validated['leave_remain']);
+            }
+
+            if ($employee->user && ($employee->first_name !== $validated['first_name'] || $employee->last_name !== $validated['last_name'])) {
+                $employee->user->name = $validated['first_name'].' '.$validated['last_name'];
+                $employee->user->save();
+            }
+
+            $employee->update($validated);
+        });
 
         return redirect()->route('hr.employees.index')
             ->with('success', __('Employee updated successfully.'));
