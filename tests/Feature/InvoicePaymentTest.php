@@ -264,14 +264,25 @@ class InvoicePaymentTest extends TestCase
         $this->assertEqualsWithDelta(300, $this->paymentService->remainingAmount($buy), 0.01);
     }
 
-    public function test_payment_cannot_exceed_remaining(): void
+    public function test_payment_can_exceed_invoice_total(): void
     {
+        $this->withoutMiddleware(CheckPermission::class);
         $sell = $this->approvedSell(1000, 2);
+        $cashSubjectId = $this->cashSubjectId();
 
-        $decision = $this->paymentService->createPayment($this->user, $sell, ['amount' => 2500, 'subject_id' => $this->cashSubjectId()]);
+        $this->post(route('invoices.payments.store', $sell), [
+            'amount' => '۲,۵۰۰', 'subject_id' => $cashSubjectId,
+        ])->assertSessionHasNoErrors()->assertSessionMissing('error')->assertRedirect(route('invoices.show', $sell));
 
-        $this->assertTrue($decision->hasErrors());
-        $this->assertCount(0, $sell->payments()->get());
+        $payment = $sell->payments()->sole();
+        $transactions = $payment->document->transactions;
+        $this->assertSame('2500.00', $payment->amount);
+        $this->assertEquals(2500, $transactions->where('subject_id', $sell->customer->subject_id)->sum('value'));
+        $this->assertEquals(-2500, $transactions->where('subject_id', $cashSubjectId)->sum('value'));
+        $this->assertEquals(0, $transactions->sum('value'));
+        $this->assertEquals(2500, $this->paymentService->paidAmount($sell));
+        $this->assertEquals(0, $this->paymentService->remainingAmount($sell));
+        $this->assertTrue($sell->fresh()->status->isPaid());
     }
 
     public function test_payment_rejected_for_invalid_settlement_subject(): void
@@ -615,20 +626,22 @@ class InvoicePaymentTest extends TestCase
         $this->assertEquals(-$customerCredit + 2, $transactions->where('subject_id', $settlementSubjectId)->sum('value'));
     }
 
-    public function test_fee_does_not_allow_overpayment_and_does_not_reduce_partial_balance(): void
+    public function test_fee_is_separate_from_invoice_payments_including_overpayment(): void
     {
-        $this->feeSubjectId();
+        $expenseSubjectId = $this->feeSubjectId();
         $invoice = $this->approvedSell(100, 1);
-        $data = ['subject_id' => $this->cashSubjectId(), 'amount' => 101, 'bank_service_fee' => 2];
-        $before = Document::count();
-        $this->assertTrue($this->paymentService->createPayment($this->user, $invoice, $data)->hasErrors());
-        $this->assertSame($before, Document::count());
-        $this->assertSame(0, $invoice->payments()->count());
-
-        $data['amount'] = 40;
+        $data = ['subject_id' => $this->cashSubjectId(), 'amount' => 40, 'bank_service_fee' => 2];
         $this->recordPayment($invoice, $data);
         $this->assertEquals(60, $this->paymentService->remainingAmount($invoice));
         $this->assertTrue($invoice->fresh()->status->isPartiallyPaid());
+
+        $payment = $this->recordPayment($invoice->fresh(), [...$data, 'amount' => 61]);
+        $transactions = $payment->document->transactions;
+        $this->assertEquals(-2, $transactions->where('subject_id', $expenseSubjectId)->sum('value'));
+        $this->assertEquals(0, $transactions->sum('value'));
+        $this->assertEquals(101, $this->paymentService->paidAmount($invoice));
+        $this->assertEquals(0, $this->paymentService->remainingAmount($invoice));
+        $this->assertTrue($invoice->fresh()->status->isPaid());
     }
 
     public function test_negative_fee_is_rejected_by_the_service_without_posting(): void
@@ -853,7 +866,29 @@ class InvoicePaymentTest extends TestCase
         }
     }
 
-    public function test_edit_rejects_overpayment_and_invalid_subject_without_changing_records(): void
+    public function test_edit_payment_can_exceed_remaining_balance(): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+        $invoice = $this->approvedSell(100, 1);
+        $subjectId = $this->cashSubjectId();
+        $payment = $this->recordPayment($invoice, ['amount' => 40, 'subject_id' => $subjectId]);
+        $documentId = $payment->document_id;
+        $this->recordPayment($invoice->fresh(), ['amount' => 60, 'subject_id' => $subjectId]);
+
+        $this->put(route('invoices.payments.update', [$invoice, $payment]), [
+            'amount' => 41, 'subject_id' => $subjectId,
+        ])->assertSessionHasNoErrors()->assertSessionMissing('error')->assertRedirect(route('invoices.show', $invoice));
+
+        $payment->refresh();
+        $this->assertSame('41.00', $payment->amount);
+        $this->assertSame($documentId, $payment->document_id);
+        $this->assertEquals(-41, $payment->document->transactions->where('subject_id', $subjectId)->sum('value'));
+        $this->assertEquals(0, $payment->document->transactions->sum('value'));
+        $this->assertEquals(101, $this->paymentService->paidAmount($invoice));
+        $this->assertTrue($invoice->fresh()->status->isPaid());
+    }
+
+    public function test_edit_rejects_invalid_subject_or_fee_without_changing_records(): void
     {
         $invoice = $this->approvedSell(100, 1);
         $payment = $this->recordPayment($invoice, ['amount' => 40, 'subject_id' => $this->cashSubjectId()]);
@@ -862,7 +897,6 @@ class InvoicePaymentTest extends TestCase
         $otherYear = FiscalYear::factory()->create(['year' => 1406]);
         $otherSubject = Subject::factory()->create(['fiscal_year_id' => $otherYear->id]);
         foreach ([
-            ['amount' => 41],
             ['subject_id' => $otherSubject->id],
             ['bank_service_fee' => -1],
             ['bank_service_fee' => 2], // No expense account configured.
