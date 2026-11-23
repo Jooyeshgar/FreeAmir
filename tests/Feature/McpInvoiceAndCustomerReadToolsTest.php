@@ -17,6 +17,7 @@ use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
@@ -233,6 +234,10 @@ class McpInvoiceAndCustomerReadToolsTest extends TestCase
         $this->assertSame('PRD-10', $byId['invoice']['items'][0]['item_code']);
         $this->assertSame('Router', $byId['invoice']['items'][0]['item_name']);
         $this->assertEquals(2.0, $byId['invoice']['items'][0]['quantity']);
+        $this->assertSame('1000000.00', $byId['invoice']['items'][0]['unit_price']);
+        $this->assertSame('0.00', $byId['invoice']['items'][0]['discount']);
+        $this->assertSame('200000.00', $byId['invoice']['items'][0]['vat']);
+        $this->assertSame('2200000.00', $byId['invoice']['items'][0]['amount']);
 
         $byNumber = $this->callTool('get_invoice', [
             'fiscal_year_id' => $this->year->id,
@@ -403,6 +408,7 @@ class McpInvoiceAndCustomerReadToolsTest extends TestCase
         ]);
         $ambiguous = json_decode($ambiguousText, true);
         $this->assertCount(2, $ambiguous['matching_invoices']);
+        $this->assertSame('100.75', array_column($ambiguous['matching_invoices'], 'amount', 'id')[$sellInvoice->id]);
 
         // Disambiguating by invoice_type selects the exact invoice and preserves decimal amounts
         $sellDetail = $this->callTool('get_invoice', [
@@ -411,9 +417,9 @@ class McpInvoiceAndCustomerReadToolsTest extends TestCase
             'invoice_type' => 'sell',
         ]);
         $this->assertSame($sellInvoice->id, $sellDetail['invoice']['id']);
-        $this->assertEqualsWithDelta(100.75, $sellDetail['invoice']['amount'], 0.001);
-        $this->assertEqualsWithDelta(9.25, $sellDetail['invoice']['vat'], 0.001);
-        $this->assertEqualsWithDelta(2.50, $sellDetail['invoice']['subtraction'], 0.001);
+        $this->assertSame('100.75', $sellDetail['invoice']['amount']);
+        $this->assertSame('9.25', $sellDetail['invoice']['vat']);
+        $this->assertSame('2.50', $sellDetail['invoice']['subtraction']);
         $this->assertSame('100.75 Toman', $sellDetail['invoice']['formatted_amount']);
 
         $buyDetail = $this->callTool('get_invoice', [
@@ -428,8 +434,51 @@ class McpInvoiceAndCustomerReadToolsTest extends TestCase
             'type' => 'sell',
             'query' => '500',
         ]);
-        $this->assertEqualsWithDelta(100.75, $listed['invoices'][0]['amount'], 0.001);
-        $this->assertEqualsWithDelta(9.25, $listed['invoices'][0]['vat'], 0.001);
-        $this->assertEqualsWithDelta(2.50, $listed['invoices'][0]['subtraction'], 0.001);
+        $this->assertSame('100.75', $listed['invoices'][0]['amount']);
+        $this->assertSame('9.25', $listed['invoices'][0]['vat']);
+        $this->assertSame('2.50', $listed['invoices'][0]['subtraction']);
+    }
+
+    public function test_invoice_read_tools_preserve_amounts_at_the_decimal_column_limit(): void
+    {
+        if (DB::getDriverName() === 'sqlite') {
+            $this->markTestSkipped('SQLite stores this decimal as a floating-point value.');
+        }
+
+        config(['active-fiscal-year-id' => $this->year->id]);
+        $customer = Customer::factory()->create(['fiscal_year_id' => $this->year->id]);
+        $amount = '9999999999999999.99';
+        $invoice = Invoice::create([
+            'fiscal_year_id' => $this->year->id,
+            'customer_id' => $customer->id,
+            'creator_id' => $this->user->id,
+            'number' => 501,
+            'invoice_type' => InvoiceType::SELL,
+            'status' => InvoiceStatus::APPROVED,
+            'date' => '2026-04-12',
+            'amount' => $amount,
+            'vat' => 0,
+            'subtraction' => 0,
+        ]);
+        InvoiceItem::create([
+            'invoice_id' => $invoice->id,
+            'quantity' => 1,
+            'unit_price' => $amount,
+            'discount' => 0,
+            'vat' => 0,
+            'amount' => $amount,
+        ]);
+        config(['active-fiscal-year-id' => null]);
+
+        $arguments = ['fiscal_year_id' => $this->year->id];
+        $detail = $this->callTool('get_invoice', $arguments + ['invoice_id' => $invoice->id]);
+        $listed = $this->callTool('list_invoices', $arguments);
+
+        foreach ([$detail['invoice'], $listed['invoices'][0]] as $summary) {
+            $this->assertSame($amount, $summary['amount']);
+            $this->assertSame('9,999,999,999,999,999.99 Toman', $summary['formatted_amount']);
+        }
+        $this->assertSame($amount, $detail['invoice']['items'][0]['unit_price']);
+        $this->assertSame($amount, $detail['invoice']['items'][0]['amount']);
     }
 }

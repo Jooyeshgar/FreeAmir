@@ -112,6 +112,7 @@ Retrieves full details and per-warehouse stock for one product in the selected f
 
 ### 8. `list_invoices`
 Searches and paginates invoices in the selected fiscal year.
+- Monetary fields `amount`, `vat`, and `subtraction` are decimal strings with two fractional digits, for example `"100.75"`. `formatted_amount` is the display value with the company currency.
 - **Arguments:**
   - `query`: Optional search text matching invoice number, title, or exact numeric ID.
   - `type`: Optional invoice type (`buy`, `sell`, `return_buy`, `return_sell`, `void`, `beginning_inventory`).
@@ -123,6 +124,7 @@ Searches and paginates invoices in the selected fiscal year.
 
 ### 9. `get_invoice`
 Retrieves full details for one invoice, including line items, warehouse, and accounting document reference.
+- Invoice amounts follow the same format as `list_invoices`. Line item `unit_price`, `discount`, `vat`, and `amount`, and the `amount` in ambiguous number matches, are also decimal strings with two fractional digits.
 - **Arguments:**
   - `invoice_id`: Invoice ID (required unless `number` is provided).
   - `number`: Exact invoice number (required unless `invoice_id` is provided).

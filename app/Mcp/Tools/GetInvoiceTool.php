@@ -89,7 +89,7 @@ class GetInvoiceTool extends AccountingTool
                     'number' => $match->number !== null ? (string) $match->number : null,
                     'invoice_type' => $match->invoice_type?->valueName(),
                     'date' => $match->date?->format('Y-m-d'),
-                    'amount' => (float) ($match->amount ?? 0),
+                    'amount' => ListInvoicesTool::decimalAmount($match->amount),
                 ])->values()->all(),
             ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
         }
@@ -106,10 +106,10 @@ class GetInvoiceTool extends AccountingTool
                 'item_code' => $itemable?->code ?? null,
                 'item_name' => $itemable?->name ?? null,
                 'quantity' => (float) ($item->quantity ?? 0),
-                'unit_price' => (float) ($item->unit_price ?? 0),
-                'discount' => (float) ($item->discount ?? 0),
-                'vat' => (float) ($item->vat ?? 0),
-                'amount' => (float) ($item->amount ?? 0),
+                'unit_price' => ListInvoicesTool::decimalAmount($item->unit_price),
+                'discount' => ListInvoicesTool::decimalAmount($item->discount),
+                'vat' => ListInvoicesTool::decimalAmount($item->vat),
+                'amount' => ListInvoicesTool::decimalAmount($item->amount),
                 'description' => $item->description,
             ];
         })->values()->all();

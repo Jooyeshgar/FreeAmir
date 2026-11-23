@@ -7,6 +7,8 @@ use App\Enums\InvoiceType;
 use App\Mcp\Support\ContextResolver;
 use App\Models\FiscalYear;
 use App\Models\Invoice;
+use Brick\Math\BigDecimal;
+use Brick\Math\RoundingMode;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Response;
 
@@ -147,10 +149,11 @@ class ListInvoicesTool extends AccountingTool
 
         $rawDate = $invoice->date?->format('Y-m-d');
         $jalaliDate = $rawDate !== null ? (gregorian_to_jalali_date($rawDate, '/', '-') ?: null) : null;
-        $amount = (float) ($invoice->amount ?? 0);
-        $formattedAmount = fmod($amount, 1.0) == 0.0
-            ? number_format($amount)
-            : rtrim(rtrim(number_format($amount, 2, '.', ','), '0'), '.');
+        $amount = self::decimalAmount($invoice->amount);
+        [$whole, $fraction] = explode('.', $amount);
+        $whole = preg_replace('/\B(?=(?:[0-9]{3})+\z)/', ',', $whole);
+        $fraction = rtrim($fraction, '0');
+        $formattedAmount = $fraction === '' ? $whole : $whole.'.'.$fraction;
 
         return [
             'id' => (int) $invoice->id,
@@ -166,8 +169,13 @@ class ListInvoicesTool extends AccountingTool
             'jalali_date' => $jalaliDate,
             'amount' => $amount,
             'formatted_amount' => $formattedAmount.' '.$currency,
-            'vat' => (float) ($invoice->vat ?? 0),
-            'subtraction' => (float) ($invoice->subtraction ?? 0),
+            'vat' => self::decimalAmount($invoice->vat),
+            'subtraction' => self::decimalAmount($invoice->subtraction),
         ];
+    }
+
+    public static function decimalAmount(string|int|float|null $amount): string
+    {
+        return (string) BigDecimal::of((string) ($amount ?? 0))->toScale(2, RoundingMode::HALF_UP);
     }
 }
