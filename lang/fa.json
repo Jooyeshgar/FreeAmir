@@ -2199,6 +2199,7 @@
     "The end date must be on or after the start date.": "تاریخ پایان باید برابر یا بعد از تاریخ شروع باشد.",
     "The end date must be within the active fiscal year.": "تاریخ پایان باید در محدوده سال مالی فعال باشد.",
     "The start date must be within the active fiscal year.": "تاریخ شروع باید در محدوده سال مالی فعال باشد.",
+    "Provide an invoice date within the selected fiscal year.": "تاریخ فاکتور را در محدودهٔ سال مالی انتخاب‌شده وارد کنید.",
     "Profit Margin": "حاشیه سود",
     "Profit percentage": "درصد سود",
     "Profit and loss": "سود و زیان",

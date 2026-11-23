@@ -1472,6 +1472,7 @@
     "The end date must be on or after the start date.": "The end date must be on or after the start date.",
     "The end date must be within the active fiscal year.": "The end date must be within the active fiscal year.",
     "The start date must be within the active fiscal year.": "The start date must be within the active fiscal year.",
+    "Provide an invoice date within the selected fiscal year.": "Provide an invoice date within the selected fiscal year.",
     "Top selling products and services": "Top selling products and services",
     "Total returns in selected period": "Total returns in selected period",
     "Invoices Amount": "Invoices Amount",

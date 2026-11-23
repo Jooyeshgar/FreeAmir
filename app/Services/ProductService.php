@@ -29,12 +29,14 @@ class ProductService
         $data['fiscal_year_id'] ??= getActiveFiscalYear();
         $data['average_cost'] ??= 0;
 
-        $product = Product::create($data);
+        return DB::transaction(function () use ($data, $websites): Product {
+            $product = Product::create($data);
 
-        $this->syncSubjects($product);
-        $this->syncWebsites($product, $websites);
+            $this->syncSubjects($product);
+            $this->syncWebsites($product, $websites);
 
-        return $product;
+            return $product;
+        });
     }
 
     public function update(Product $product, array $data): Product

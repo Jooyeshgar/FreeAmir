@@ -18,9 +18,12 @@ use App\Models\Subject;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Models\WarehouseProductStock;
+use App\Services\SubjectService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
+use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\TestWith;
 use RuntimeException;
 use Spatie\Permission\Models\Permission;
@@ -52,6 +55,7 @@ class McpMutationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->withoutMiddleware(ThrottleRequests::class);
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         app()->setLocale('en');
         $this->user = User::factory()->create();
@@ -176,6 +180,74 @@ class McpMutationTest extends TestCase
         }
     }
 
+    public function test_product_and_created_subjects_are_rolled_back_when_subject_creation_fails(): void
+    {
+        $subjects = Subject::count();
+        $subjectService = $this->partialMock(SubjectService::class);
+        $subjectService->shouldReceive('createSubject')->once()->ordered()->passthru();
+        $subjectService->shouldReceive('createSubject')->once()->ordered()
+            ->andThrow(new InvalidArgumentException('Subject creation failed.'));
+
+        $this->callTool('create_product', $this->arguments('create_product'))
+            ->assertOk()
+            ->assertJsonPath('result.isError', true)
+            ->assertJsonPath('result.content.0.text', 'Subject creation failed.');
+
+        self::assertSame(1, Product::count());
+        self::assertSame($subjects, Subject::count());
+    }
+
+    public function test_product_vat_persists_at_two_decimal_places(): void
+    {
+        $result = $this->created('create_product', $this->arguments('create_product') + ['vat' => 0.00001]);
+
+        self::assertSame('0.00', Product::findOrFail($result['id'])->vat);
+    }
+
+    public function test_product_code_accepts_20_digits_and_rejects_21_with_a_field_error(): void
+    {
+        $arguments = $this->arguments('create_product');
+        $code = str_repeat('1', 20);
+        $result = $this->created('create_product', $arguments + ['code' => $code]);
+        self::assertSame($code, Product::findOrFail($result['id'])->code);
+
+        $response = $this->callTool('create_product', $arguments + ['code' => $code.'1'])
+            ->assertOk()->assertJsonPath('result.isError', true);
+        $error = json_decode($response->json('result.content.0.text'), true, 512, JSON_THROW_ON_ERROR);
+        self::assertArrayHasKey('arguments.code', $error['errors']);
+        self::assertSame(2, Product::count());
+    }
+
+    #[TestWith(['2025-11-16'])]
+    #[TestWith(['2027-03-21'])]
+    #[TestWith([null])]
+    public function test_invoice_rejects_out_of_year_explicit_and_default_dates(?string $date): void
+    {
+        $this->travelTo(now()->setDate(2025, 11, 16));
+        $arguments = $this->arguments('create_invoice');
+        if ($date === null) {
+            unset($arguments['date']);
+        } else {
+            $arguments['date'] = $date;
+        }
+
+        $response = $this->callTool('create_invoice', $arguments)
+            ->assertOk()->assertJsonPath('result.isError', true);
+        $error = json_decode($response->json('result.content.0.text'), true, 512, JSON_THROW_ON_ERROR);
+        self::assertArrayHasKey('date', $error['errors']);
+        self::assertSame(0, Invoice::count());
+    }
+
+    #[TestWith(['2026-03-21'])]
+    #[TestWith(['2027-03-20'])]
+    public function test_invoice_accepts_both_fiscal_year_boundaries(string $date): void
+    {
+        $this->travelTo(now()->setDate(2025, 11, 16));
+        $result = $this->created('create_invoice', array_replace($this->arguments('create_invoice'), ['date' => $date]));
+
+        self::assertSame($date, Invoice::findOrFail($result['id'])->date->toDateString());
+    }
+
     #[TestWith(['sell', 'en'])]
     #[TestWith(['sell', 'fa'])]
     #[TestWith(['buy', 'en'])]
@@ -231,6 +303,7 @@ class McpMutationTest extends TestCase
             self::assertFalse($tools[$tool]['inputSchema']['additionalProperties']);
         }
         self::assertTrue($tools['get_current_context']['annotations']['readOnlyHint']);
+        self::assertSame(20, $tools['create_product']['inputSchema']['properties']['code']['maxLength']);
         self::assertFalse($tools['create_invoice']['inputSchema']['properties']['items']['items']['additionalProperties']);
         $this->created('get_current_context', ['fiscal_year_id' => $this->year->id]);
     }
