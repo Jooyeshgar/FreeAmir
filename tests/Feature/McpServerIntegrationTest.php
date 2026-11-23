@@ -150,15 +150,15 @@ class McpServerIntegrationTest extends TestCase
         self::assertSame('USD', $context['available_fiscal_years'][0]['currency']);
         self::assertSame('Aban', $context['current_month_name']);
 
-        $balance = $this->callTool('get_customer', [
-            'customer_id' => $customer->id,
+        $balance = $this->callTool('get_customer_balance', [
+            'query' => $customer->name,
             'fiscal_year_id' => $this->year->id,
         ]);
         self::assertSame('USD', $balance['currency']);
-        self::assertSame('settled', $balance['customer']['balance_status_code']);
-        self::assertSame('Settled (zero)', $balance['customer']['balance_status']);
-        self::assertSame('0 USD (Settled (zero))', $balance['customer']['formatted_balance']);
-        self::assertSame('1,250 USD', $balance['customer']['formatted_credit_limit']);
+        self::assertSame('settled', $balance['customers'][0]['balance_status_code']);
+        self::assertSame('Settled (zero)', $balance['customers'][0]['balance_status']);
+        self::assertSame('0 USD (Settled (zero))', $balance['customers'][0]['formatted_balance']);
+        self::assertSame('1,250 USD', $balance['customers'][0]['formatted_credit_limit']);
 
         $invoices = $this->callTool('get_invoices_summary', ['fiscal_year_id' => $this->year->id]);
         self::assertSame('USD', $invoices['currency']);
@@ -177,12 +177,12 @@ class McpServerIntegrationTest extends TestCase
         self::assertSame('Profitable', $profit['status']);
 
         app()->setLocale('fa');
-        $translatedBalance = $this->callTool('get_customer', [
-            'customer_id' => $customer->id,
+        $translatedBalance = $this->callTool('get_customer_balance', [
+            'query' => $customer->name,
             'fiscal_year_id' => $this->year->id,
         ]);
-        self::assertSame('تسویه (صفر)', $translatedBalance['customer']['balance_status']);
-        self::assertSame($balance['customer']['balance_status_code'], $translatedBalance['customer']['balance_status_code']);
+        self::assertSame('تسویه (صفر)', $translatedBalance['customers'][0]['balance_status']);
+        self::assertSame($balance['customers'][0]['balance_status_code'], $translatedBalance['customers'][0]['balance_status_code']);
 
         $translatedProfit = $this->callTool('get_profit_loss', ['fiscal_year_id' => $this->year->id]);
         self::assertSame('سودده', $translatedProfit['status']);
@@ -293,7 +293,7 @@ class McpServerIntegrationTest extends TestCase
         $limited = $this->user->createToken('Limited', ['invoices.index'])->plainTextToken;
         app('auth')->forgetGuards();
         $this->withToken($limited)->postJson('/api/mcp', [
-            'jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/call', 'params' => ['name' => 'get_customer', 'arguments' => ['customer_id' => 1]],
+            'jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/call', 'params' => ['name' => 'get_customer_balance', 'arguments' => ['query' => 'Customer']],
         ])->assertStatus(400)->assertJsonPath('error.code', -32602);
     }
 
@@ -314,7 +314,7 @@ class McpServerIntegrationTest extends TestCase
         $other = FiscalYear::factory()->create(['year' => 1404]);
         $visible = Customer::create(['name' => 'Scoped customer', 'fiscal_year_id' => $this->year->id]);
         Customer::create(['name' => 'Scoped customer', 'fiscal_year_id' => $other->id]);
-        $result = $this->callTool('list_customers', ['query' => 'Scoped customer', 'fiscal_year_id' => $this->year->id]);
+        $result = $this->callTool('get_customer_balance', ['query' => 'Scoped customer', 'fiscal_year_id' => $this->year->id]);
         self::assertSame([$visible->id], array_column($result['customers'], 'id'));
         self::assertNull(config('active-fiscal-year-id'));
     }
@@ -351,10 +351,10 @@ class McpServerIntegrationTest extends TestCase
         ]);
         config(['active-fiscal-year-id' => null]);
         foreach ($customers as [$customer, $balance, $status]) {
-            $report = $this->callTool('get_customer', ['customer_id' => $customer->id, 'fiscal_year_id' => $this->year->id]);
-            self::assertSame($customer->id, $report['customer']['id']);
-            self::assertSame($balance, $report['customer']['balance']);
-            self::assertSame($status, $report['customer']['balance_status']);
+            $report = $this->callTool('get_customer_balance', ['query' => $customer->name, 'fiscal_year_id' => $this->year->id]);
+            self::assertSame($customer->id, $report['customers'][0]['id']);
+            self::assertSame($balance, $report['customers'][0]['balance']);
+            self::assertSame($status, $report['customers'][0]['balance_status']);
         }
         self::assertNull(config('active-fiscal-year-id'));
     }
@@ -409,7 +409,7 @@ class McpServerIntegrationTest extends TestCase
         $response = $this->withToken($limited)->postJson('/api/mcp', [
             'jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/list',
         ])->assertOk();
-        self::assertSame(['get_current_context', 'get_invoices_summary', 'list_invoices', 'get_invoice'], array_column($response->json('result.tools'), 'name'));
+        self::assertSame(['get_current_context', 'get_invoices_summary', 'list_invoices'], array_column($response->json('result.tools'), 'name'));
         $this->user->revokePermissionTo('invoices.index');
         app('auth')->forgetGuards();
         $response = $this->withToken($limited)->postJson('/api/mcp', [
@@ -507,7 +507,7 @@ class McpServerIntegrationTest extends TestCase
         self::assertSame([], array_filter($error['available_fiscal_years'], fn ($year) => $year['is_active']));
         self::assertArrayNotHasKey('active_fiscal_year', $error);
 
-        foreach (['get_invoices_summary' => [], 'get_financial_summary' => [], 'get_profit_loss' => [], 'list_customers' => ['query' => 'Customer'], 'get_customer' => ['customer_id' => 1]] as $name => $arguments) {
+        foreach (['get_invoices_summary' => [], 'get_financial_summary' => [], 'get_profit_loss' => [], 'get_customer_balance' => ['query' => 'Customer']] as $name => $arguments) {
             $this->withToken($this->token)->postJson('/api/mcp', [
                 'jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/call',
                 'params' => ['name' => $name, 'arguments' => $arguments],
@@ -554,7 +554,7 @@ class McpServerIntegrationTest extends TestCase
         self::assertCount(2, $lines);
         self::assertSame(1, json_decode($lines[0], true, 512, JSON_THROW_ON_ERROR)['id']);
         $tools = json_decode($lines[1], true, 512, JSON_THROW_ON_ERROR);
-        self::assertSame(['get_current_context', 'get_invoices_summary', 'list_invoices', 'get_invoice'], array_column($tools['result']['tools'], 'name'));
+        self::assertSame(['get_current_context', 'get_invoices_summary', 'list_invoices'], array_column($tools['result']['tools'], 'name'));
 
         $invalid = new Process([PHP_BINARY, base_path('tests/Fixtures/mcp-stdio.php'), 'invalid'], base_path());
         $invalid->setInput('');

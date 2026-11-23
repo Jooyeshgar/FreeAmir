@@ -14,7 +14,7 @@ class GetCustomerTool extends AccountingTool
 
     protected string $description = 'Retrieve full profile details and ledger balance for a single customer by customer ID within the selected authorized fiscal year. Monetary values use the selected fiscal year company currency.';
 
-    protected array $permissionGroups = [['customers.show'], ['customers.index']];
+    protected array $permissionGroups = [['customers.show']];
 
     public function schema(JsonSchema $schema): array
     {

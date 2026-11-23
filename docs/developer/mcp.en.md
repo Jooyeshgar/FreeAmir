@@ -49,11 +49,12 @@ MCP server security is built upon Laravel Sanctum personal access tokens and Spa
 | `get_financial_summary` | Overall financial totals and top income/expense subjects | `reports.trial-balance`, `reports.ledger`, or (`reports.company-overview` + `documents.show`) |
 | `get_invoices_summary` | Sales and purchase invoices, 12-month breakdown, and recent invoices | `invoices.index` or `invoices.show` (`customers.index` needed to expose customer names) |
 | `list_invoices` | Search and paginate invoices by number, title, type, status, customer, or date | `invoices.index` or `invoices.show` (`customers.index` needed to expose customer names) |
-| `get_invoice` | Full details and line items for one invoice by ID or number | `invoices.show` or `invoices.index` (`customers.index` needed to expose customer names) |
+| `get_invoice` | Full details and line items for one invoice by ID or number | `invoices.show` (`customers.index` needed to expose customer names) |
+| `get_customer_balance` | Customer balance, debtor/creditor status, and contact details | `customers.show` |
 | `list_customers` | Search and paginate customers by name, phone, mobile, code, ID, or group | `customers.index` or `customers.show` |
-| `get_customer` | Full profile details and ledger balance for one customer by ID | `customers.show` or `customers.index` |
+| `get_customer` | Full profile details and ledger balance for one customer by ID | `customers.show` |
 | `list_products` | Search and paginate products by name, code, ID, or group | `products.index` or `products.show` |
-| `get_product` | Full details and warehouse stock for one product by ID or code | `products.show` or `products.index` |
+| `get_product` | Full details and warehouse stock for one product by ID or code | `products.show` |
 
 ---
 
@@ -86,7 +87,14 @@ Aggregates sales and purchase invoices, delivers a 12-month breakdown, and lists
   - `year`: Optional four-digit Jalali year.
   - `fiscal_year_id`: Optional authorized fiscal year ID.
 
-### 5. `list_products`
+### 5. `get_customer_balance`
+Searches a customer or counterparty by name, phone, mobile, national code, or ID, returning their ledger balance and debtor/creditor status.
+- **Arguments:**
+  - `query`: Search string (required).
+  - `limit`: Result count limit (default 5).
+  - `fiscal_year_id`: Target fiscal year ID.
+
+### 6. `list_products`
 Searches and paginates products in the selected fiscal year.
 - **Arguments:**
   - `query`: Optional search text matching product name, product code, or exact numeric ID.
@@ -118,6 +126,7 @@ Retrieves full details for one invoice, including line items, warehouse, and acc
 - **Arguments:**
   - `invoice_id`: Invoice ID (required unless `number` is provided).
   - `number`: Exact invoice number (required unless `invoice_id` is provided).
+  - `invoice_type`: Optional invoice type (`buy`, `sell`, `return_buy`, `return_sell`, `void`, `beginning_inventory`) to disambiguate when querying by `number`.
   - `year`, `fiscal_year_id`: Optional fiscal-year selectors.
 
 ### 10. `list_customers`

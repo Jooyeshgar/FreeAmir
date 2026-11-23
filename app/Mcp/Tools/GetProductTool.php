@@ -13,7 +13,7 @@ class GetProductTool extends AccountingTool
 
     protected string $description = 'Retrieve full details for a single product by product ID or exact product code within the selected authorized fiscal year. Monetary values use the selected fiscal year company currency.';
 
-    protected array $permissionGroups = [['products.show'], ['products.index']];
+    protected array $permissionGroups = [['products.show']];
 
     public function schema(JsonSchema $schema): array
     {

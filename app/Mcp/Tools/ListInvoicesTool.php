@@ -147,7 +147,10 @@ class ListInvoicesTool extends AccountingTool
 
         $rawDate = $invoice->date?->format('Y-m-d');
         $jalaliDate = $rawDate !== null ? (gregorian_to_jalali_date($rawDate, '/', '-') ?: null) : null;
-        $amount = (int) ($invoice->amount ?? 0);
+        $amount = (float) ($invoice->amount ?? 0);
+        $formattedAmount = fmod($amount, 1.0) == 0.0
+            ? number_format($amount)
+            : rtrim(rtrim(number_format($amount, 2, '.', ','), '0'), '.');
 
         return [
             'id' => (int) $invoice->id,
@@ -162,9 +165,9 @@ class ListInvoicesTool extends AccountingTool
             'date' => $rawDate,
             'jalali_date' => $jalaliDate,
             'amount' => $amount,
-            'formatted_amount' => number_format($amount).' '.$currency,
-            'vat' => (int) ($invoice->vat ?? 0),
-            'subtraction' => (int) ($invoice->subtraction ?? 0),
+            'formatted_amount' => $formattedAmount.' '.$currency,
+            'vat' => (float) ($invoice->vat ?? 0),
+            'subtraction' => (float) ($invoice->subtraction ?? 0),
         ];
     }
 }

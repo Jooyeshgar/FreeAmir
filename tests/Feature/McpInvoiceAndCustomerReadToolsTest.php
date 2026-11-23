@@ -331,4 +331,105 @@ class McpInvoiceAndCustomerReadToolsTest extends TestCase
             $this->assertNotNull($error);
         }
     }
+
+    public function test_index_only_permissions_cannot_access_get_invoice_or_get_customer(): void
+    {
+        $indexOnlyToken = $this->user->createToken('Index Only', ['invoices.index', 'customers.index'])->plainTextToken;
+        app('auth')->forgetGuards();
+
+        $tools = $this->withToken($indexOnlyToken)->postJson('/api/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/list',
+        ])->assertOk()->json('result.tools');
+        $names = array_column($tools, 'name');
+
+        $this->assertContains('list_invoices', $names);
+        $this->assertContains('list_customers', $names);
+        $this->assertNotContains('get_invoice', $names);
+        $this->assertNotContains('get_customer', $names);
+
+        foreach ([
+            ['get_invoice', ['fiscal_year_id' => $this->year->id, 'invoice_id' => 1]],
+            ['get_customer', ['fiscal_year_id' => $this->year->id, 'customer_id' => 1]],
+        ] as [$tool, $args]) {
+            $error = $this->withToken($indexOnlyToken)->postJson('/api/mcp', [
+                'jsonrpc' => '2.0',
+                'id' => 2,
+                'method' => 'tools/call',
+                'params' => ['name' => $tool, 'arguments' => $args],
+            ])->assertStatus(400)->json('error');
+            $this->assertNotNull($error);
+        }
+    }
+
+    public function test_get_invoice_disambiguates_duplicate_numbers_across_types_and_preserves_decimals(): void
+    {
+        config(['active-fiscal-year-id' => $this->year->id]);
+        $customer = Customer::factory()->create(['fiscal_year_id' => $this->year->id, 'name' => 'Decimal Co']);
+
+        $sellInvoice = Invoice::create([
+            'fiscal_year_id' => $this->year->id,
+            'customer_id' => $customer->id,
+            'creator_id' => $this->user->id,
+            'number' => 500,
+            'invoice_type' => InvoiceType::SELL,
+            'status' => InvoiceStatus::APPROVED,
+            'date' => '2026-04-12',
+            'amount' => 100.75,
+            'vat' => 9.25,
+            'subtraction' => 2.50,
+        ]);
+
+        $buyInvoice = Invoice::create([
+            'fiscal_year_id' => $this->year->id,
+            'customer_id' => $customer->id,
+            'creator_id' => $this->user->id,
+            'number' => 500,
+            'invoice_type' => InvoiceType::BUY,
+            'status' => InvoiceStatus::APPROVED,
+            'date' => '2026-04-13',
+            'amount' => 250.50,
+            'vat' => 0,
+            'subtraction' => 0,
+        ]);
+
+        config(['active-fiscal-year-id' => null]);
+
+        // Ambiguous lookup by number without invoice_type returns an error listing matches
+        $ambiguousText = $this->callToolExpectError('get_invoice', [
+            'fiscal_year_id' => $this->year->id,
+            'number' => '500',
+        ]);
+        $ambiguous = json_decode($ambiguousText, true);
+        $this->assertCount(2, $ambiguous['matching_invoices']);
+
+        // Disambiguating by invoice_type selects the exact invoice and preserves decimal amounts
+        $sellDetail = $this->callTool('get_invoice', [
+            'fiscal_year_id' => $this->year->id,
+            'number' => '500',
+            'invoice_type' => 'sell',
+        ]);
+        $this->assertSame($sellInvoice->id, $sellDetail['invoice']['id']);
+        $this->assertEqualsWithDelta(100.75, $sellDetail['invoice']['amount'], 0.001);
+        $this->assertEqualsWithDelta(9.25, $sellDetail['invoice']['vat'], 0.001);
+        $this->assertEqualsWithDelta(2.50, $sellDetail['invoice']['subtraction'], 0.001);
+        $this->assertSame('100.75 Toman', $sellDetail['invoice']['formatted_amount']);
+
+        $buyDetail = $this->callTool('get_invoice', [
+            'fiscal_year_id' => $this->year->id,
+            'number' => '500',
+            'invoice_type' => 'buy',
+        ]);
+        $this->assertSame($buyInvoice->id, $buyDetail['invoice']['id']);
+
+        $listed = $this->callTool('list_invoices', [
+            'fiscal_year_id' => $this->year->id,
+            'type' => 'sell',
+            'query' => '500',
+        ]);
+        $this->assertEqualsWithDelta(100.75, $listed['invoices'][0]['amount'], 0.001);
+        $this->assertEqualsWithDelta(9.25, $listed['invoices'][0]['vat'], 0.001);
+        $this->assertEqualsWithDelta(2.50, $listed['invoices'][0]['subtraction'], 0.001);
+    }
 }

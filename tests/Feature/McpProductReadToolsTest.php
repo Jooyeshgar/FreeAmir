@@ -266,6 +266,27 @@ class McpProductReadToolsTest extends TestCase
         ])->assertStatus(400)->json('error');
         $this->assertNotNull($deniedError);
 
+        // Token with only products.index can see list_products, but NOT get_product
+        $indexOnlyToken = $this->user->createToken('Products Index Only', ['products.index'])->plainTextToken;
+        app('auth')->forgetGuards();
+
+        $indexOnlyList = $this->withToken($indexOnlyToken)->postJson('/api/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 5,
+            'method' => 'tools/list',
+        ])->assertOk()->json('result.tools');
+        $indexOnlyNames = array_column($indexOnlyList, 'name');
+        $this->assertContains('list_products', $indexOnlyNames);
+        $this->assertNotContains('get_product', $indexOnlyNames);
+
+        $indexOnlyError = $this->withToken($indexOnlyToken)->postJson('/api/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 6,
+            'method' => 'tools/call',
+            'params' => ['name' => 'get_product', 'arguments' => ['fiscal_year_id' => $this->year->id, 'product_id' => 1]],
+        ])->assertStatus(400)->json('error');
+        $this->assertNotNull($indexOnlyError);
+
         // Revoking user permission also blocks existing token
         $this->user->revokePermissionTo(['products.index', 'products.show']);
         app('auth')->forgetGuards();
