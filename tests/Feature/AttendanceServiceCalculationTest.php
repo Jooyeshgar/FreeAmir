@@ -1324,6 +1324,27 @@ class AttendanceServiceCalculationTest extends TestCase
         $this->assertSame(0, (int) $log->early_leave);
     }
 
+    public function test_leave_starting_before_shift_start_does_not_generate_auto_overtime(): void
+    {
+        // Issue #479: shift 08:00–16:00, hourly leave 07:30–10:10, clock 10:10→16:00.
+        // The 30 minutes of leave before the shift starts are outside the shift, so they must not be turned into automatic overtime.
+        $employee = $this->makeEmployee($this->eightToFourShift());
+
+        $log = $this->insertLog($employee, '2025-03-10', [
+            'entry_time' => '10:10:00',
+            'exit_time' => '16:00:00',
+        ], false);
+
+        $this->applyHourlyRequest($employee, PersonnelRequestType::LEAVE_HOURLY, '2025-03-10 07:30:00', '2025-03-10 10:10:00');
+
+        $log = $log->fresh();
+
+        $this->assertSame(0, (int) $log->delay);
+        $this->assertSame(0, (int) $log->early_leave);
+        $this->assertSame(0, (int) $log->overtime);
+        $this->assertSame(0, (int) $log->auto_overtime, 'leave before shift start must not become overtime');
+    }
+
     public function test_mid_shift_leave_with_overtime(): void
     {
         // Clock 08:00→18:00 (2h past shift end) + mid-shift leave 11:00–13:00.
