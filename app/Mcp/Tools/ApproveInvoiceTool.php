@@ -2,9 +2,11 @@
 
 namespace App\Mcp\Tools;
 
+use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Models\FiscalYear;
 use App\Models\Invoice;
+use App\Models\Product;
 use App\Services\FiscalYearMutationGuard;
 use App\Services\InvoiceService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -58,6 +60,21 @@ class ApproveInvoiceTool extends AccountingTool
             return $this->error(__('Invoice is already approved.'));
         }
 
+        if (! in_array($invoice->status, [
+            InvoiceStatus::PENDING,
+            InvoiceStatus::PRE_INVOICE,
+            InvoiceStatus::UNAPPROVED,
+            InvoiceStatus::READY_TO_APPROVE,
+        ], true)) {
+            return $this->error(__('Invalid invoice status.'));
+        }
+
+        [$start, $end] = $fiscalYear->range();
+        $invoiceDate = $invoice->date?->toDateString();
+        if ($invoiceDate === null || $invoiceDate < $start->toDateString() || $invoiceDate > $end->toDateString()) {
+            return $this->error(__('Provide an invoice date within the selected fiscal year.'));
+        }
+
         $invoiceService = app(InvoiceService::class);
         $decision = $invoiceService->getChangeStatusDecision($invoice, 'approved');
 
@@ -73,10 +90,30 @@ class ApproveInvoiceTool extends AccountingTool
             return $this->error(json_encode([
                 'message' => $warning?->text ?? __('Please confirm your action.'),
                 'needs_confirmation' => true,
-                'conflicting_invoices' => $decision->conflicts->map(fn ($conflict) => [
-                    'id' => $conflict->id ?? null,
-                    'number' => $conflict->number ?? null,
-                ])->values()->all(),
+                'conflicts' => $decision->conflicts->map(function ($conflict): array {
+                    if ($conflict instanceof Invoice) {
+                        return [
+                            'type' => 'invoice',
+                            'id' => (int) $conflict->id,
+                            'number' => $conflict->number !== null ? (string) $conflict->number : null,
+                            'invoice_type' => $conflict->invoice_type?->valueName(),
+                        ];
+                    }
+
+                    if ($conflict instanceof Product) {
+                        return [
+                            'type' => 'product',
+                            'id' => (int) $conflict->id,
+                            'code' => $conflict->code !== null ? (string) $conflict->code : null,
+                            'name' => (string) $conflict->name,
+                        ];
+                    }
+
+                    return [
+                        'type' => strtolower(class_basename($conflict)),
+                        'id' => $conflict->id ?? null,
+                    ];
+                })->values()->all(),
             ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
         }
 
