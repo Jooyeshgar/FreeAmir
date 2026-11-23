@@ -39,7 +39,7 @@
         <div class="p-2 bg-base-100 border-b border-base-200 sticky top-0 z-10">
             <input x-ref="searchInput"
                 @if ($searchSubjectCode)
-                    :value="search" @input="updateSubjectSearch($event.target)"
+                    :value="search" @beforeinput="deleteAcrossSubjectCodeSeparator($event)" @input="updateSubjectSearch($event.target)"
                 @else
                     x-model="search" @input.debounce.300ms="handleSearch()"
                 @endif
@@ -248,6 +248,21 @@
                 close() {
                     this.open = false;
                     this.focusedOptionId = null;
+                },
+
+                deleteAcrossSubjectCodeSeparator(event) {
+                    const input = event.target;
+                    const caret = input.selectionStart;
+                    if (event.inputType !== 'deleteContentForward' || !event.cancelable ||
+                        caret !== input.selectionEnd || this.search[caret] !== '/') return;
+
+                    // A generated slash has no corresponding character in the original input.
+                    if (this.subjectSearchRawOffset(caret) !== this.subjectSearchRawOffset(caret + 1)) return;
+
+                    event.preventDefault();
+                    input.setRangeText('', caret + 1, caret + 2, 'start');
+                    this.updateSubjectSearch(input);
+                    input.setSelectionRange(caret, caret);
                 },
 
                 updateSubjectSearch(input) {
