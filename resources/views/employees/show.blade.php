@@ -73,8 +73,10 @@
                                 {{ $employee->user->name }}
                             </a>
                         @endif
-                        <span class="badge badge-lg badge-emerald gap-2">
-                            {{ formatMinutesAsTime($employee->leave_remain, true) }} {{ __('Remaining Paid Leave') }}
+                        <span class="tooltip tooltip-bottom before:max-w-xs before:text-xs before:whitespace-normal" data-tip="{{ __('This balance does not include this month\'s paid leave. Until this month\'s attendance is calculated, the employee portal adds this month\'s paid leave to the balance, so it shows more.') }}">
+                            <span class="badge badge-lg badge-emerald gap-2 cursor-help">
+                                {{ formatMinutesAsTime($employee->leave_remain, true) }} {{ __('Remaining Paid Leave') }}
+                            </span>
                         </span>
                         @if ($employee->device_id)
                             <span class="badge badge-lg badge-neutral gap-2">
