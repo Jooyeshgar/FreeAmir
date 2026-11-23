@@ -146,7 +146,7 @@
                         <div class="stat-title whitespace-normal text-xs md:text-sm text-indigo-500 dark:text-indigo-300">{{ __('Grand total') }}
                             ({{ config('amir.currency') ?? __('Rial') }})</div>
                         <div class="stat-value whitespace-normal text-indigo-600 dark:text-indigo-200 text-xl md:text-2xl lg:text-3xl break-all tabular-nums">
-                            {{ formatNumber(($invoice->amount ?? 0) - ($invoice->subtraction ?? 0)) }}</div>
+                            {{ formatNumber($invoice->amount ?? 0) }}</div>
                         <div class="stat-desc whitespace-normal text-indigo-400 dark:text-indigo-400/80">{{ __('Payable amount') }}</div>
                     </div>
                 </div>
@@ -445,7 +445,7 @@
                                 <div class="stat-title whitespace-normal text-xs md:text-sm text-indigo-500 dark:text-indigo-300">{{ __('Grand total') }}
                                     ({{ config('amir.currency') ?? __('Rial') }})</div>
                                 <div class="stat-value whitespace-normal text-indigo-600 dark:text-indigo-200 text-xl md:text-2xl lg:text-3xl break-all tabular-nums">
-                                    {{ formatNumber(($invoice->getReturnedInvoice()?->amount ?? 0) - ($invoice->getReturnedInvoice()?->subtraction ?? 0)) }}
+                                    {{ formatNumber($invoice->getReturnedInvoice()?->amount ?? 0) }}
                                 </div>
                                 <div class="stat-desc whitespace-normal text-indigo-400 dark:text-indigo-400/80">
                                     {{ __('Payable amount') }}</div>

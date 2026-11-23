@@ -41,6 +41,21 @@ class InvoiceBookmarkTest extends TestCase
         $this->customer = Customer::create(['name' => 'Bookmark customer', 'fiscal_year_id' => $this->fiscalYear->id]);
     }
 
+    public function test_invoice_show_does_not_subtract_invoice_deductions_from_the_stored_total_again(): void
+    {
+        $invoice = $this->invoice();
+        $invoice->update(['amount' => -3, 'subtraction' => 103]);
+
+        $response = $this->actingAs($this->user)->get(route('invoices.show', $invoice))->assertOk();
+        $dom = new \DOMDocument;
+        @$dom->loadHTML('<?xml encoding="UTF-8">'.$response->getContent());
+        $xpath = new \DOMXPath($dom);
+        $grandTotal = $xpath->query('//div[contains(@class, "stat-title") and contains(normalize-space(.), "Grand total")]/following-sibling::div[contains(@class, "stat-value")][1]')->item(0);
+
+        $this->assertNotNull($grandTotal);
+        $this->assertSame(formatNumber(-3), trim($grandTotal->textContent));
+    }
+
     public function test_viewers_share_bookmarks_from_index_and_detail_for_every_invoice_type_buy(): void
     {
         $this->viewersShareBookmarksFromIndexAndDetail(InvoiceType::BUY, false);
