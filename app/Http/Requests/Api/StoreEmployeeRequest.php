@@ -53,7 +53,7 @@ class StoreEmployeeRequest extends FormRequest
             'work_shift_id' => ['required', 'integer', Rule::exists('work_shifts', 'id')->where('fiscal_year_id', getActiveFiscalYear())],
             'contract_framework_id' => ['nullable', 'integer', 'exists:work_site_contracts,id'],
             'is_active' => ['sometimes', 'boolean'],
-            'leave_remain' => ['nullable', 'numeric', 'min:0', 'max:15000'],
+            'leave_remain' => ['nullable', 'integer', 'min:-15000', 'max:15000'],
             'device_id' => ['nullable', 'string', 'max:20'],
         ];
     }

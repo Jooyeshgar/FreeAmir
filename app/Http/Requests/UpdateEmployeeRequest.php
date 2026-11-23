@@ -10,7 +10,6 @@ use App\Enums\EmployeeInsuranceType;
 use App\Enums\EmployeeMaritalStatus;
 use App\Enums\EmployeeNationality;
 use App\Models\Employee;
-use App\Models\WorkShift;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -77,18 +76,25 @@ class UpdateEmployeeRequest extends FormRequest
             'contract_framework_id' => ['nullable', 'integer', 'exists:work_site_contracts,id'],
 
             'is_active' => ['boolean'],
-            'leave_remain' => ['nullable', 'integer', 'min:0', 'max:15000'],
+            'leave_remain' => ['nullable', 'integer', 'min:-15000', 'max:15000'],
+            'reconciled_leave_balance' => ['nullable', 'integer', 'min:-32768', 'max:32767'],
             'device_id' => ['nullable', 'string', 'max:20'],
         ];
     }
 
     protected function prepareForValidation(): void
     {
-        if ($this->has('work_shift_id') && $this->isNotFilled('leave_remain')) {
-            $workShift = WorkShift::find($this->input('work_shift_id'));
+        if ($this->filled('leave_remain')) {
             $this->merge([
-                'leave_remain' => convertToInt($this->input('leave_remain', $workShift->paid_leave ?? 1200)),
+                'leave_remain' => toEnglish(trim((string) $this->input('leave_remain'))),
             ]);
+        } else {
+            $this->offsetUnset('leave_remain');
+        }
+
+        $reconciledBalance = $this->input('reconciled_leave_balance');
+        if (is_string($reconciledBalance)) {
+            $this->merge(['reconciled_leave_balance' => toEnglish(trim($reconciledBalance))]);
         }
 
         $this->merge([

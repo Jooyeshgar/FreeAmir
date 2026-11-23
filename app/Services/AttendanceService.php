@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Enums\PersonnelRequestType;
 use App\Enums\ThursdayStatus;
+use App\Models\Activity;
 use App\Models\AttendanceLog;
 use App\Models\Employee;
+use App\Models\FiscalYear;
 use App\Models\MonthlyAttendance;
 use App\Models\PersonnelRequest;
 use App\Models\PublicHoliday;
@@ -423,6 +425,215 @@ class AttendanceService
         );
 
         return $attendance;
+    }
+
+    /**
+     * Apply the paid-leave accrual or delta for a stored monthly attendance record.
+     */
+    public function applyMonthlyAttendanceLeaveBalance(MonthlyAttendance $monthlyAttendance, ?MonthlyAttendance $existing, ?Employee $employee = null): void
+    {
+        $employee ??= $monthlyAttendance->employee()->with('workShift')->first();
+
+        if ($employee === null) {
+            return;
+        }
+
+        if ($existing === null) {
+            $this->ensurePrepaidLeaveReconciled($employee);
+
+            [$monthStart, $monthEnd] = $this->paidLeaveMonthBounds($monthlyAttendance->year, $monthlyAttendance->month);
+            $contractEnd = $employee->contract_end_date;
+            $lastEligibleDay = $contractEnd !== null && $contractEnd->betweenIncluded($monthStart, $monthEnd)
+                ? $contractEnd
+                : $monthEnd;
+
+            if ($lastEligibleDay->gte(today())) {
+                throw ValidationException::withMessages([
+                    'start_date' => __('Monthly attendance can only be posted after the last eligible day of the month.'),
+                ]);
+            }
+
+            $earnedPaidLeave = $this->paidLeaveForMonth($employee, $monthStart, $monthEnd);
+            $monthlyAttendance->earned_paid_leave = $earnedPaidLeave;
+            $monthlyAttendance->save();
+
+            $employee->leave_remain = $employee->leave_remain + $earnedPaidLeave - $monthlyAttendance->paid_leave;
+            $employee->save();
+
+            return;
+        }
+
+        $this->adjustLeaveBalanceForPaidLeaveChange($employee, (int) $existing->paid_leave, (int) $monthlyAttendance->paid_leave);
+    }
+
+    /**
+     * Revert the paid-leave accrual and used leave when a monthly attendance record is deleted.
+     */
+    public function revertMonthlyAttendanceLeaveBalance(MonthlyAttendance $monthlyAttendance, Employee $employee): void
+    {
+        $this->ensurePrepaidLeaveReconciled($employee);
+
+        $earnedPaidLeave = $monthlyAttendance->earned_paid_leave ?? $this->originalLegacyPaidLeave($monthlyAttendance);
+
+        if ($earnedPaidLeave === null) {
+            throw ValidationException::withMessages([
+                'monthly_attendance' => __('This monthly attendance cannot be deleted because its original paid leave credit is unknown.'),
+            ]);
+        }
+
+        $balance = $employee->leave_remain + $monthlyAttendance->paid_leave - $earnedPaidLeave;
+        if ($balance < -32768 || $balance > 32767) {
+            throw ValidationException::withMessages([
+                'monthly_attendance' => __('The resulting remaining paid leave is outside the supported range.'),
+            ]);
+        }
+
+        $employee->leave_remain = $balance;
+        $employee->save();
+    }
+
+    private function originalLegacyPaidLeave(MonthlyAttendance $attendance): ?int
+    {
+        $postings = Activity::query()
+            ->where('source', 'request')
+            ->where('action', 'post')
+            ->whereIn('details->route', ['attendance.monthly-attendances.store', 'attendance.monthly-attendances.bulk-store'])
+            ->whereJsonContains('details->fiscal_year_ids', (int) $attendance->fiscal_year_id)
+            ->whereJsonContains('details->model_types', MonthlyAttendance::class)
+            ->lazyByIdDesc();
+
+        // Recalculation can replace the database row. Match the original posting by employee and period.
+        foreach ($postings as $posting) {
+            $changes = collect($posting->details?->get('models', []));
+            $originalPosting = $changes->first(fn (array $change) => $change['model_type'] === MonthlyAttendance::class
+                && $change['event'] === 'created'
+                && (int) ($change['attributes']['employee_id'] ?? 0) === (int) $attendance->employee_id
+                && (int) $change['fiscal_year_id'] === (int) $attendance->fiscal_year_id
+                && (int) ($change['attributes']['year'] ?? 0) === $attendance->year
+                && (int) ($change['attributes']['month'] ?? 0) === $attendance->month);
+
+            if ($originalPosting === null) {
+                continue;
+            }
+
+            $used = $originalPosting['attributes']['paid_leave'] ?? null;
+            if ($used === null || isset($originalPosting['attributes']['earned_paid_leave'])) {
+                return null;
+            }
+
+            $employeeChange = $changes->first(fn (array $change) => $change['model_type'] === Employee::class
+                && (int) $change['model_id'] === (int) $attendance->employee_id);
+            $before = $employeeChange['old']['leave_remain'] ?? null;
+            $after = $employeeChange['attributes']['leave_remain'] ?? null;
+            if (($before === null) !== ($after === null)) {
+                return null;
+            }
+
+            // The legacy posting added the original credit and subtracted leave used in the same request.
+            $minutes = (int) $after - (int) $before + (int) $used;
+
+            return $minutes >= 0 && $minutes <= 65535 ? $minutes : null;
+        }
+
+        return null;
+    }
+
+    private function ensurePrepaidLeaveReconciled(Employee $employee): void
+    {
+        if ($employee->prepaid_leave_reconciliation_required) {
+            throw ValidationException::withMessages([
+                'monthly_attendance' => __('Confirm the corrected prepaid leave balance in the employee record for :name.', [
+                    'name' => $employee->first_name.' '.$employee->last_name,
+                ]),
+            ]);
+        }
+    }
+
+    /**
+     * Adjust an employee's leave balance when a monthly attendance's paid_leave changes.
+     */
+    public function adjustLeaveBalanceForPaidLeaveChange(Employee $employee, int $oldPaidLeave, int $newPaidLeave): void
+    {
+        $diffMonthPaidLeave = $newPaidLeave - $oldPaidLeave;
+
+        if ($diffMonthPaidLeave !== 0) {
+            $employee->leave_remain -= $diffMonthPaidLeave;
+            $employee->save();
+        }
+    }
+
+    /**
+     * Compute the employee's remaining paid leave including the current Jalali month's quota when applicable.
+     */
+    public function remainingPaidLeaveIncludingCurrentMonth(Employee $employee, ?FiscalYear $fiscalYear = null): int
+    {
+        $date = now()->copy()->startOfDay();
+        $balance = (int) $employee->leave_remain;
+
+        if (! $employee->is_active || $employee->prepaid_leave_reconciliation_required) {
+            return $balance;
+        }
+
+        if ($fiscalYear !== null && $fiscalYear->isClosed()) {
+            return $balance;
+        }
+
+        [$jalaliYear, $jalaliMonth] = gregorian_to_jalali($date->year, $date->month, $date->day);
+
+        if ($fiscalYear !== null && $fiscalYear->year !== null && (int) $fiscalYear->year !== (int) $jalaliYear) {
+            return $balance;
+        }
+
+        if ($employee->contract_end_date !== null && $employee->contract_end_date->lt($date)) {
+            return $balance;
+        }
+
+        $currentMonthCalculated = $employee->monthlyAttendances()->where('year', $jalaliYear)->where('month', $jalaliMonth)->exists();
+
+        if ($currentMonthCalculated) {
+            return $balance;
+        }
+
+        [$monthStart, $monthEnd] = $this->paidLeaveMonthBounds($jalaliYear, $jalaliMonth);
+
+        return $balance + $this->paidLeaveForMonth($employee, $monthStart, $monthEnd);
+    }
+
+    /** @return array{Carbon, Carbon} */
+    private function paidLeaveMonthBounds(int $year, int $month): array
+    {
+        $start = Carbon::parse(jalali_to_gregorian($year, $month, 1, '/'));
+        $nextYear = $month === 12 ? $year + 1 : $year;
+        $nextMonth = $month === 12 ? 1 : $month + 1;
+        $end = Carbon::parse(jalali_to_gregorian($nextYear, $nextMonth, 1, '/'))->subDay();
+
+        return [$start, $end];
+    }
+
+    private function paidLeaveForMonth(Employee $employee, Carbon $monthStart, Carbon $monthEnd): int
+    {
+        $contractStart = $employee->contract_start_date;
+        $contractEnd = $employee->contract_end_date;
+        $monthlyQuota = (int) ($employee->workShift?->paid_leave ?? 0);
+
+        if ($contractStart !== null && $contractStart->gt($monthEnd)) {
+            return 0;
+        }
+
+        if ($contractEnd === null || $contractEnd->gt($monthEnd)) {
+            return $monthlyQuota;
+        }
+
+        $firstCoveredDay = $contractStart !== null && $contractStart->gt($monthStart) ? $contractStart : $monthStart;
+
+        if ($contractEnd->lt($firstCoveredDay)) {
+            return 0;
+        }
+
+        $coveredDays = $firstCoveredDay->diffInDays($contractEnd) + 1;
+        $monthDays = $monthStart->diffInDays($monthEnd) + 1;
+
+        return (int) round($monthlyQuota * $coveredDays / $monthDays);
     }
 
     /**

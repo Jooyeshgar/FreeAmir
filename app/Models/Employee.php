@@ -56,6 +56,7 @@ class Employee extends Model
         'fiscal_year_id',
         'device_id',
         'leave_remain',
+        'prepaid_leave_reconciliation_required',
     ];
 
     protected $casts = [
@@ -65,6 +66,7 @@ class Employee extends Model
         'is_active' => 'boolean',
         'children_count' => 'integer',
         'leave_remain' => 'integer',
+        'prepaid_leave_reconciliation_required' => 'boolean',
         'nationality' => EmployeeNationality::class,
         'gender' => EmployeeGender::class,
         'marital_status' => EmployeeMaritalStatus::class,

@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Enums\EmployeeNationality;
 use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Enums\ThursdayStatus;
+use App\Models\Activity;
 use App\Models\AttendanceLog;
 use App\Models\Employee;
 use App\Models\FiscalYear;
@@ -17,6 +19,7 @@ use App\Services\AttendanceService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -70,7 +73,7 @@ class MonthlyAttendanceTest extends TestCase
     {
         return array_merge([
             'employee_id' => $this->employee->id,
-            'start_date' => '2025/10/23',  // 1404/08/01 in Jalali (Aban 1404)
+            'start_date' => '1404/08/01',
             'duration' => 30,
         ], $overrides);
     }
@@ -159,7 +162,7 @@ class MonthlyAttendanceTest extends TestCase
     {
         return array_merge([
             'employee_ids' => [$this->employee->id],
-            'start_date' => '2025/10/23',
+            'start_date' => '1404/08/01',
             'duration' => 30,
         ], $overrides);
     }
@@ -435,7 +438,7 @@ class MonthlyAttendanceTest extends TestCase
 
     public function test_destroy_deletes_and_redirects(): void
     {
-        $attendance = $this->makeMonthlyAttendance(['year' => 1403, 'month' => 1]);
+        $attendance = $this->makeMonthlyAttendance(['year' => 1403, 'month' => 1, 'earned_paid_leave' => 0]);
 
         $response = $this->delete(route('attendance.monthly-attendances.destroy', $attendance));
 
@@ -782,5 +785,960 @@ class MonthlyAttendanceTest extends TestCase
         $this->assertSame(0, $totals['undertime']);
         $this->assertSame(120, $totals['unpaid_leave']);
         $this->assertSame(0, $totals['unpaid_leave_days']);
+    }
+
+    // ----------------------------------------------------------------
+    // leave_remain accrual & portal display
+    // ----------------------------------------------------------------
+
+    public function test_store_accrues_worked_month_paid_leave_and_deducts_used_leave(): void
+    {
+        $this->employee->workShift->update([
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'paid_leave' => 1200,
+        ]);
+        $this->employee->update([
+            'is_active' => true,
+            'contract_end_date' => null,
+            'leave_remain' => 0,
+        ]);
+
+        // 1404/08/01 = 2025-10-23, duration 30 => Aban 1404
+        AttendanceLog::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2025-10-25',
+            'paid_leave' => 300,
+        ]);
+
+        $this->post(route('attendance.monthly-attendances.store'), [
+            'employee_id' => $this->employee->id,
+            'start_date' => '1404/08/01',
+            'duration' => 30,
+        ])->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        // 0 (previous) + 1200 (earned for Aban) - 300 (used in Aban) = 900
+        $this->assertSame(900, $this->employee->fresh()->leave_remain);
+    }
+
+    public function test_store_accrues_only_worked_month_for_departing_employee(): void
+    {
+        $this->employee->workShift->update([
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'paid_leave' => 1200,
+        ]);
+        $this->employee->update([
+            'is_active' => false,
+            'contract_end_date' => '2025-11-21',
+            'leave_remain' => 0,
+        ]);
+
+        AttendanceLog::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2025-10-25',
+            'paid_leave' => 480,
+        ]);
+
+        $this->post(route('attendance.monthly-attendances.store'), [
+            'employee_id' => $this->employee->id,
+            'start_date' => '1404/08/01',
+            'duration' => 30,
+        ])->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        // 0 (previous) + 1200 (earned for Aban) - 480 (used in Aban) = 720 (no next-month grant)
+        $this->assertSame(720, $this->employee->fresh()->leave_remain);
+    }
+
+    public function test_store_prorates_the_final_month_after_the_last_contract_day(): void
+    {
+        $this->employee->workShift->update(['paid_leave' => 1200, 'start_time' => '08:00:00', 'end_time' => '17:00:00']);
+        $this->employee->update([
+            'contract_start_date' => '2025-10-28',
+            'contract_end_date' => '2025-11-06',
+            'leave_remain' => 600,
+        ]);
+        AttendanceLog::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2025-10-29',
+            'paid_leave' => 120,
+        ]);
+
+        $this->travelTo(Carbon::create(2025, 11, 6, 12));
+        $this->post(route('attendance.monthly-attendances.store'), $this->validCreatePayload())
+            ->assertSessionHasErrors('start_date');
+        $this->assertDatabaseCount('monthly_attendances', 0);
+        $this->assertSame(600, $this->employee->fresh()->leave_remain);
+
+        $this->travel(1)->day();
+        $this->post(route('attendance.monthly-attendances.store'), $this->validCreatePayload())
+            ->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        $attendance = MonthlyAttendance::sole();
+        $this->assertSame(400, $attendance->earned_paid_leave); // 10 of Aban's 30 calendar days.
+        $this->assertSame(880, $this->employee->fresh()->leave_remain);
+
+        $this->employee->workShift->update(['paid_leave' => 1500]);
+        $this->delete(route('attendance.monthly-attendances.destroy', $attendance))
+            ->assertRedirect(route('attendance.monthly-attendances.index'));
+        $this->assertSame(600, $this->employee->fresh()->leave_remain);
+
+        $this->travelTo(Carbon::create(2025, 12, 22, 12));
+        $this->post(route('attendance.monthly-attendances.store'), $this->validCreatePayload(['start_date' => '1404/09/01']))
+            ->assertRedirect(route('attendance.monthly-attendances.index'));
+        $this->assertSame(0, MonthlyAttendance::sole()->earned_paid_leave);
+        $this->assertSame(600, $this->employee->fresh()->leave_remain);
+    }
+
+    public function test_bulk_store_accrues_worked_month_paid_leave_for_each_employee(): void
+    {
+        $workShift = $this->employee->workShift;
+        $workShift->update([
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'paid_leave' => 1200,
+        ]);
+
+        $this->employee->update([
+            'is_active' => true,
+            'leave_remain' => 600,
+        ]);
+
+        $secondEmployee = Employee::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'work_site_id' => $this->employee->work_site_id,
+            'work_shift_id' => $workShift->id,
+            'is_active' => true,
+            'contract_end_date' => '2025-11-06',
+            'leave_remain' => 0,
+        ]);
+
+        AttendanceLog::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'employee_id' => $secondEmployee->id,
+            'log_date' => '2025-10-25',
+            'paid_leave' => 200,
+        ]);
+
+        $payload = [
+            'employee_ids' => [$secondEmployee->id, $this->employee->id],
+            'start_date' => '1404/08/01',
+            'duration' => 30,
+        ];
+
+        $this->travelTo(Carbon::create(2025, 11, 21, 12));
+        $this->post(route('attendance.monthly-attendances.bulk-store'), $payload)
+            ->assertSessionHasErrors('start_date');
+        $this->assertDatabaseCount('monthly_attendances', 0);
+        $this->assertSame(0, $secondEmployee->fresh()->leave_remain);
+
+        $this->travel(1)->day();
+        $this->post(route('attendance.monthly-attendances.bulk-store'), $payload)
+            ->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        $this->assertSame(1800, $this->employee->fresh()->leave_remain);
+        $this->assertSame(400, $secondEmployee->fresh()->leave_remain);
+    }
+
+    public function test_destroy_reverts_worked_month_accrual_and_used_leave(): void
+    {
+        $this->employee->workShift->update([
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'paid_leave' => 1200,
+        ]);
+        $this->employee->update([
+            'leave_remain' => 0,
+        ]);
+
+        AttendanceLog::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2025-10-25',
+            'paid_leave' => 300,
+        ]);
+
+        $this->post(route('attendance.monthly-attendances.store'), [
+            'employee_id' => $this->employee->id,
+            'start_date' => '1404/08/01',
+            'duration' => 30,
+        ]);
+
+        $this->assertSame(900, $this->employee->fresh()->leave_remain);
+
+        $attendance = MonthlyAttendance::where('employee_id', $this->employee->id)->firstOrFail();
+
+        $this->delete(route('attendance.monthly-attendances.destroy', $attendance))
+            ->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        $this->assertSame(0, $this->employee->fresh()->leave_remain);
+    }
+
+    public function test_destroy_reverts_original_earned_paid_leave_even_after_work_shift_changes(): void
+    {
+        $this->employee->workShift->update([
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'paid_leave' => 1200,
+        ]);
+        $this->employee->update([
+            'leave_remain' => 0,
+        ]);
+
+        AttendanceLog::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2025-10-25',
+            'paid_leave' => 300,
+        ]);
+
+        $this->post(route('attendance.monthly-attendances.store'), [
+            'employee_id' => $this->employee->id,
+            'start_date' => '1404/08/01',
+            'duration' => 30,
+        ])->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        $attendance = MonthlyAttendance::where('employee_id', $this->employee->id)->firstOrFail();
+        $this->assertSame(1200, $attendance->earned_paid_leave);
+        $this->assertSame(900, $this->employee->fresh()->leave_remain);
+
+        // Changing the work shift's paid_leave later must not corrupt destroy() reversal
+        $this->employee->workShift->update(['paid_leave' => 1500]);
+
+        // Recalculating must also preserve the originally earned paid leave
+        $this->post(route('attendance.monthly-attendances.recalculate', $attendance), [
+            'start_date' => '1404/08/01',
+            'duration' => 30,
+        ])->assertRedirect();
+
+        $recalculated = MonthlyAttendance::where('employee_id', $this->employee->id)->firstOrFail();
+        $this->assertSame(1200, $recalculated->earned_paid_leave);
+        $this->assertSame(900, $this->employee->fresh()->leave_remain);
+
+        $this->delete(route('attendance.monthly-attendances.destroy', $recalculated))
+            ->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        $this->assertSame(0, $this->employee->fresh()->leave_remain);
+    }
+
+    public function test_duplicate_store_does_not_double_accrue_paid_leave(): void
+    {
+        $this->employee->workShift->update([
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'paid_leave' => 1200,
+        ]);
+        $this->employee->update([
+            'is_active' => true,
+            'leave_remain' => 0,
+        ]);
+
+        $log = AttendanceLog::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2025-10-25',
+            'paid_leave' => 300,
+        ]);
+
+        $this->post(route('attendance.monthly-attendances.store'), [
+            'employee_id' => $this->employee->id,
+            'start_date' => '1404/08/01',
+            'duration' => 30,
+        ])->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        $this->assertSame(900, $this->employee->fresh()->leave_remain);
+
+        // Re-submitting the same month after paid_leave increased by 100 must only adjust by -100, not re-accrue 1200
+        $log->update(['paid_leave' => 400]);
+
+        $this->post(route('attendance.monthly-attendances.store'), [
+            'employee_id' => $this->employee->id,
+            'start_date' => '1404/08/01',
+            'duration' => 30,
+        ])->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        $this->assertSame(800, $this->employee->fresh()->leave_remain);
+    }
+
+    public function test_duplicate_bulk_store_does_not_double_accrue_paid_leave(): void
+    {
+        $this->employee->workShift->update([
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'paid_leave' => 1200,
+        ]);
+        $this->employee->update([
+            'is_active' => true,
+            'leave_remain' => 0,
+        ]);
+
+        AttendanceLog::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2025-10-25',
+            'paid_leave' => 300,
+        ]);
+
+        $payload = [
+            'employee_ids' => [$this->employee->id],
+            'start_date' => '1404/08/01',
+            'duration' => 30,
+        ];
+
+        $this->post(route('attendance.monthly-attendances.bulk-store'), $payload)->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        $this->assertSame(900, $this->employee->fresh()->leave_remain);
+
+        $this->post(route('attendance.monthly-attendances.bulk-store'), $payload)->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        $this->assertSame(900, $this->employee->fresh()->leave_remain);
+    }
+
+    public function test_update_adjusts_leave_remain_by_paid_leave_delta(): void
+    {
+        $this->employee->update(['leave_remain' => 900]);
+        $attendance = $this->makeMonthlyAttendance([
+            'year' => 1404,
+            'month' => 8,
+            'start_date' => '2025-10-23',
+            'duration' => 30,
+            'paid_leave' => 300,
+        ]);
+
+        $this->put(route('attendance.monthly-attendances.update', $attendance), [
+            'work_days' => 26,
+            'present_days' => 25,
+            'absent_days' => 1,
+            'overtime' => 0,
+            'mission' => 0,
+            'paid_leave' => 450,
+            'unpaid_leave' => 0,
+            'friday' => 0,
+            'holiday' => 0,
+        ])->assertRedirect(route('attendance.monthly-attendances.show', $attendance));
+
+        $this->assertSame(750, $this->employee->fresh()->leave_remain);
+        $this->assertSame(450, $attendance->fresh()->paid_leave);
+    }
+
+    public function test_recalculate_adjusts_leave_remain_by_paid_leave_delta_without_reaccruing(): void
+    {
+        $this->employee->workShift->update([
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'paid_leave' => 1200,
+        ]);
+        $this->employee->update(['leave_remain' => 0]);
+
+        $log = AttendanceLog::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2025-10-25',
+            'paid_leave' => 300,
+        ]);
+
+        $this->post(route('attendance.monthly-attendances.store'), [
+            'employee_id' => $this->employee->id,
+            'start_date' => '1404/08/01',
+            'duration' => 30,
+        ])->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        $this->assertSame(900, $this->employee->fresh()->leave_remain);
+
+        $attendance = MonthlyAttendance::where('employee_id', $this->employee->id)->firstOrFail();
+        $log->update(['paid_leave' => 420]);
+
+        $this->post(route('attendance.monthly-attendances.recalculate', $attendance), [
+            'start_date' => '1404/08/01',
+            'duration' => 30,
+        ])->assertRedirect();
+
+        $this->assertSame(780, $this->employee->fresh()->leave_remain);
+    }
+
+    public function test_remaining_paid_leave_including_current_month_for_employee_portal(): void
+    {
+        $fiscalYear = FiscalYear::findOrFail($this->fiscalYearId);
+        $fiscalYear->update(['year' => 1404]);
+
+        $this->employee->workShift->update(['paid_leave' => 1200]);
+        $this->employee->update([
+            'user_id' => $this->user->id,
+            'is_active' => true,
+            'contract_end_date' => null,
+            'leave_remain' => 600,
+        ]);
+
+        $this->user->givePermissionTo(
+            Permission::firstOrCreate(['name' => 'employee-portal.*'])
+        );
+
+        try {
+            // 2025-11-06 is 1404/08/15 (mid-Aban)
+            Carbon::setTestNow(Carbon::create(2025, 11, 6, 12, 0, 0));
+
+            // Before Aban's monthly attendance is created: 600 + 1200 = 1800
+            $this->get(route('employee-portal.employee.show'))
+                ->assertOk()
+                ->assertSee(formatMinutesAsTime(1800).' '.__('Remaining Paid Leave'));
+
+            // Once Aban's monthly attendance exists: do not double-count Aban's 1200
+            $this->makeMonthlyAttendance([
+                'year' => 1404,
+                'month' => 8,
+                'start_date' => '2025-10-23',
+                'duration' => 30,
+            ]);
+            $this->employee->update(['leave_remain' => 1500]);
+            $this->user->unsetRelation('employee');
+
+            $this->get(route('employee-portal.employee.show'))
+                ->assertOk()
+                ->assertSee(formatMinutesAsTime(1500).' '.__('Remaining Paid Leave'));
+
+            // Next month (1404/09/01 = 2025-11-22): Azar is not calculated yet => 1500 + 1200 = 2700
+            Carbon::setTestNow(Carbon::create(2025, 11, 22, 12, 0, 0));
+
+            $this->get(route('employee-portal.employee.show'))
+                ->assertOk()
+                ->assertSee(formatMinutesAsTime(2700).' '.__('Remaining Paid Leave'));
+
+            $this->employee->update(['contract_end_date' => '2025-11-24']);
+            $this->user->unsetRelation('employee');
+
+            $this->get(route('employee-portal.employee.show'))
+                ->assertOk()
+                ->assertSee(formatMinutesAsTime(1620).' '.__('Remaining Paid Leave'));
+
+            // If employee's contract ended at end of Aban (2025-11-21): Azar is not included
+            $this->employee->update(['contract_end_date' => '2025-11-21']);
+            $this->user->unsetRelation('employee');
+
+            $this->get(route('employee-portal.employee.show'))
+                ->assertOk()
+                ->assertSee(formatMinutesAsTime(1500).' '.__('Remaining Paid Leave'));
+
+            Carbon::setTestNow(Carbon::create(2025, 11, 28, 12, 0, 0));
+            $this->employee->update(['contract_end_date' => '2025-11-24']);
+            $this->user->unsetRelation('employee');
+
+            $this->get(route('employee-portal.employee.show'))
+                ->assertOk()
+                ->assertSee(formatMinutesAsTime(1500).' '.__('Remaining Paid Leave'));
+
+            // If employee is inactive: current month is not included
+            $this->employee->update(['contract_end_date' => null, 'is_active' => false]);
+            $this->user->unsetRelation('employee');
+
+            $this->get(route('employee-portal.employee.show'))
+                ->assertOk()
+                ->assertSee(formatMinutesAsTime(1500).' '.__('Remaining Paid Leave'));
+
+            // If viewing a closed fiscal year: current month is not included
+            $this->employee->update(['is_active' => true]);
+            $this->user->unsetRelation('employee');
+            $fiscalYear->update(['closed_at' => now()]);
+
+            $this->get(route('employee-portal.employee.show'))
+                ->assertOk()
+                ->assertSee(formatMinutesAsTime(1500).' '.__('Remaining Paid Leave'));
+
+            // If viewing a past (non-current) open fiscal year: current month is not included
+            $fiscalYear->update(['closed_at' => null, 'year' => 1403]);
+
+            $this->get(route('employee-portal.employee.show'))
+                ->assertOk()
+                ->assertSee(formatMinutesAsTime(1500).' '.__('Remaining Paid Leave'));
+
+            // Negative remaining paid leave renders signed duration instead of clamping to 0
+            $fiscalYear->update(['closed_at' => null, 'year' => 1404]);
+            $this->employee->update(['is_active' => true, 'leave_remain' => -1500]);
+            $this->user->unsetRelation('employee');
+
+            $this->get(route('employee-portal.employee.show'))
+                ->assertOk()
+                ->assertSee(formatMinutesAsTime(-300, true).' '.__('Remaining Paid Leave'));
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_legacy_pre_merge_monthly_attendance_preserves_existing_employee_leave_remain(): void
+    {
+        $this->employee->workShift->update([
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'paid_leave' => 1200,
+        ]);
+
+        $this->employee->update(['is_active' => true, 'leave_remain' => 2100]);
+
+        // Pre-merge MonthlyAttendance for Mehr 1404 (month 7) where earned_paid_leave is null
+        $legacyLog = AttendanceLog::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2025-09-25',
+            'paid_leave' => 300,
+        ]);
+
+        $legacyAttendance = $this->makeMonthlyAttendance([
+            'year' => 1404,
+            'month' => 7,
+            'start_date' => '2025-09-23',
+            'duration' => 30,
+            'paid_leave' => 300,
+            'earned_paid_leave' => null,
+        ]);
+
+        // Re-submitting the pre-merge month with unchanged logs must not alter leave_remain or re-accrue
+        $this->post(route('attendance.monthly-attendances.store'), [
+            'employee_id' => $this->employee->id,
+            'start_date' => '1404/07/01',
+            'duration' => 30,
+        ])->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        $this->assertSame(2100, $this->employee->fresh()->leave_remain);
+        $this->assertNull($legacyAttendance->fresh()->earned_paid_leave);
+
+        // Manually editing the pre-merge month's paid_leave only applies the delta (-150)
+        $this->put(route('attendance.monthly-attendances.update', $legacyAttendance), [
+            'work_days' => 26,
+            'present_days' => 25,
+            'absent_days' => 1,
+            'overtime' => 0,
+            'mission' => 0,
+            'paid_leave' => 450,
+            'unpaid_leave' => 0,
+            'friday' => 0,
+            'holiday' => 0,
+        ])->assertRedirect(route('attendance.monthly-attendances.show', $legacyAttendance));
+
+        $this->assertSame(1950, $this->employee->fresh()->leave_remain);
+
+        // Recalculating the pre-merge month back to the log's 300 paid_leave restores +150 without re-accruing
+        $legacyLog->update(['paid_leave' => 300]);
+        $this->post(route('attendance.monthly-attendances.recalculate', $legacyAttendance), [
+            'start_date' => '1404/07/01',
+            'duration' => 30,
+        ])->assertRedirect();
+
+        $recalculated = MonthlyAttendance::where('employee_id', $this->employee->id)
+            ->where('year', 1404)
+            ->where('month', 7)
+            ->firstOrFail();
+
+        $this->assertSame(2100, $this->employee->fresh()->leave_remain);
+        $this->assertNull($recalculated->earned_paid_leave);
+
+        $this->get(route('attendance.monthly-attendances.show', $recalculated))->assertOk()->assertDontSee('name="historical_paid_leave"', false);
+
+        $this->employee->workShift->update(['paid_leave' => 1500]);
+        $this->delete(route('attendance.monthly-attendances.destroy', $recalculated), ['historical_paid_leave' => 1500])
+            ->assertSessionHasErrors('monthly_attendance');
+
+        $this->assertModelExists($recalculated);
+        $this->assertSame(2100, $this->employee->fresh()->leave_remain);
+
+        activity('request')->causedBy($this->user)->event('post')->withProperties([
+            'route' => 'attendance.monthly-attendances.bulk-store',
+            'fiscal_year_ids' => [$this->fiscalYearId],
+            'model_types' => [MonthlyAttendance::class, Employee::class],
+            'models' => [
+                [
+                    'model_type' => MonthlyAttendance::class,
+                    'model_id' => $legacyAttendance->id,
+                    'fiscal_year_id' => $this->fiscalYearId,
+                    'event' => 'created',
+                    'attributes' => ['employee_id' => $this->employee->id, 'year' => 1404, 'month' => 7, 'paid_leave' => 300],
+                ],
+                [
+                    'model_type' => Employee::class,
+                    'model_id' => $this->employee->id,
+                    'old' => ['leave_remain' => 1200],
+                    'attributes' => ['leave_remain' => 2100],
+                ],
+            ],
+        ])->log('POST monthly attendance');
+
+        $this->delete(route('attendance.monthly-attendances.destroy', $recalculated))
+            ->assertRedirect(route('attendance.monthly-attendances.index'))
+            ->assertSessionHasNoErrors();
+        $this->assertModelMissing($recalculated);
+        $this->assertSame(1200, $this->employee->fresh()->leave_remain);
+    }
+
+    public function test_existing_employee_future_months_accrue_leave_remain_continuously_after_merge(): void
+    {
+        $fiscalYear = FiscalYear::findOrFail($this->fiscalYearId);
+        $fiscalYear->update(['year' => 1404]);
+
+        $this->user->givePermissionTo(
+            Permission::firstOrCreate(['name' => 'employee-portal.*'])
+        );
+
+        $workShift = $this->employee->workShift;
+        $workShift->update([
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'paid_leave' => 1200,
+        ]);
+
+        // Existing employee with pre-merge balance (1500) and pre-merge Mehr 1404 attendance
+        $this->employee->update([
+            'user_id' => $this->user->id,
+            'is_active' => true,
+            'contract_end_date' => null,
+            'leave_remain' => 1500,
+        ]);
+
+        $preMergeAttendance = $this->makeMonthlyAttendance([
+            'year' => 1404,
+            'month' => 7,
+            'start_date' => '2025-09-23',
+            'duration' => 30,
+            'paid_leave' => 240,
+            'earned_paid_leave' => null,
+        ]);
+
+        try {
+            // Month 8 (Aban 1404): uses 300 -> 1500 + 1200 - 300 = 2400
+            AttendanceLog::factory()->create([
+                'fiscal_year_id' => $this->fiscalYearId,
+                'employee_id' => $this->employee->id,
+                'log_date' => '2025-10-25',
+                'paid_leave' => 300,
+            ]);
+
+            $this->post(route('attendance.monthly-attendances.store'), [
+                'employee_id' => $this->employee->id,
+                'start_date' => '1404/08/01',
+                'duration' => 30,
+            ])->assertRedirect(route('attendance.monthly-attendances.index'));
+
+            $this->assertSame(2400, $this->employee->fresh()->leave_remain);
+            $this->assertSame(
+                1200,
+                MonthlyAttendance::where('employee_id', $this->employee->id)->where('month', 8)->value('earned_paid_leave')
+            );
+            $this->assertNull($preMergeAttendance->fresh()->earned_paid_leave);
+
+            // Mid-Azar before Azar is calculated: portal displays 2400 + 1200 = 3600 without mutating DB balance
+            Carbon::setTestNow(Carbon::create(2025, 11, 25, 12, 0, 0));
+            $this->user->unsetRelation('employee');
+
+            $this->get(route('employee-portal.employee.show'))
+                ->assertOk()
+                ->assertSee(formatMinutesAsTime(3600).' '.__('Remaining Paid Leave'));
+            $this->assertSame(2400, $this->employee->fresh()->leave_remain);
+
+            // Month 9 (Azar 1404) via bulkStore: uses 1500 -> 2400 + 1200 - 1500 = 2100
+            AttendanceLog::factory()->create([
+                'fiscal_year_id' => $this->fiscalYearId,
+                'employee_id' => $this->employee->id,
+                'log_date' => '2025-11-25',
+                'paid_leave' => 1500,
+            ]);
+
+            $this->travelTo(Carbon::create(2025, 12, 22, 12));
+            $this->post(route('attendance.monthly-attendances.bulk-store'), [
+                'employee_ids' => [$this->employee->id],
+                'start_date' => '1404/09/01',
+                'duration' => 30,
+            ])->assertRedirect(route('attendance.monthly-attendances.index'));
+
+            $this->assertSame(2100, $this->employee->fresh()->leave_remain);
+            $this->assertSame(
+                1200,
+                MonthlyAttendance::where('employee_id', $this->employee->id)->where('month', 9)->value('earned_paid_leave')
+            );
+
+            // On the first day of Dey, the portal includes Dey's quota on top of the posted Azar balance.
+            $this->user->unsetRelation('employee');
+            $this->get(route('employee-portal.employee.show'))
+                ->assertOk()
+                ->assertSee(formatMinutesAsTime(3300).' '.__('Remaining Paid Leave'));
+
+            // Month 10 (Dey 1404) after workShift paid_leave changes to 1500: uses 4000 -> 2100 + 1500 - 4000 = -400
+            $workShift->update(['paid_leave' => 1500]);
+            $this->assertSame(2100, $this->employee->fresh()->leave_remain);
+
+            AttendanceLog::factory()->create([
+                'fiscal_year_id' => $this->fiscalYearId,
+                'employee_id' => $this->employee->id,
+                'log_date' => '2025-12-25',
+                'paid_leave' => 4000,
+            ]);
+
+            $this->travelTo(Carbon::create(2026, 1, 21, 12));
+            $this->post(route('attendance.monthly-attendances.store'), [
+                'employee_id' => $this->employee->id,
+                'start_date' => '1404/10/01',
+                'duration' => 30,
+            ])->assertRedirect(route('attendance.monthly-attendances.index'));
+
+            $this->assertSame(-400, $this->employee->fresh()->leave_remain);
+            $this->assertSame(
+                1500,
+                MonthlyAttendance::where('employee_id', $this->employee->id)->where('month', 10)->value('earned_paid_leave')
+            );
+
+            // Month 11 (Bahman 1404): uses 0 -> -400 + 1500 - 0 = 1100
+            $this->travelTo(Carbon::create(2026, 2, 21, 12));
+            $this->post(route('attendance.monthly-attendances.store'), [
+                'employee_id' => $this->employee->id,
+                'start_date' => '1404/11/01',
+                'duration' => 30,
+            ])->assertRedirect(route('attendance.monthly-attendances.index'));
+
+            $this->assertSame(1100, $this->employee->fresh()->leave_remain);
+            $this->assertSame(
+                1500,
+                MonthlyAttendance::where('employee_id', $this->employee->id)->where('month', 11)->value('earned_paid_leave')
+            );
+        } finally {
+            Carbon::setTestNow();
+        }
+    }
+
+    public function test_new_employee_starts_at_zero_and_accrues_future_months_without_affecting_existing_employees(): void
+    {
+        $this->user->givePermissionTo(
+            Permission::firstOrCreate(['name' => 'hr.employees.*'])
+        );
+
+        $workShift = $this->employee->workShift;
+        $workShift->update([
+            'start_time' => '08:00:00',
+            'end_time' => '17:00:00',
+            'paid_leave' => 1200,
+        ]);
+
+        // Existing employee's balance must remain untouched by new hires and their monthly calculations
+        $this->employee->update(['is_active' => true, 'leave_remain' => 2400]);
+
+        $this->post(route('hr.employees.store'), [
+            'code' => 'EMP-POST-MERGE',
+            'first_name' => 'New',
+            'last_name' => 'Hire',
+            'nationality' => 'iranian',
+            'work_site_id' => $this->employee->work_site_id,
+            'work_shift_id' => $workShift->id,
+            'is_active' => '1',
+        ])->assertRedirect();
+
+        $newEmployee = Employee::where('code', 'EMP-POST-MERGE')->firstOrFail();
+        $this->assertSame(0, $newEmployee->leave_remain);
+        $this->assertSame(2400, $this->employee->fresh()->leave_remain);
+
+        // Month 8 (Aban 1404): uses 300 -> 0 + 1200 - 300 = 900
+        AttendanceLog::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'employee_id' => $newEmployee->id,
+            'log_date' => '2025-10-25',
+            'paid_leave' => 300,
+        ]);
+        $this->post(route('attendance.monthly-attendances.store'), [
+            'employee_id' => $newEmployee->id,
+            'start_date' => '1404/08/01',
+            'duration' => 30,
+        ])->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        $this->assertSame(900, $newEmployee->fresh()->leave_remain);
+
+        // Month 9 (Azar 1404): uses 1200 -> 900 + 1200 - 1200 = 900
+        AttendanceLog::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'employee_id' => $newEmployee->id,
+            'log_date' => '2025-11-25',
+            'paid_leave' => 1200,
+        ]);
+        $this->post(route('attendance.monthly-attendances.store'), [
+            'employee_id' => $newEmployee->id,
+            'start_date' => '1404/09/01',
+            'duration' => 30,
+        ])->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        $this->assertSame(900, $newEmployee->fresh()->leave_remain);
+
+        // Month 10 (Dey 1404): uses 600 -> 900 + 1200 - 600 = 1500
+        AttendanceLog::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'employee_id' => $newEmployee->id,
+            'log_date' => '2025-12-25',
+            'paid_leave' => 600,
+        ]);
+        $this->post(route('attendance.monthly-attendances.store'), [
+            'employee_id' => $newEmployee->id,
+            'start_date' => '1404/10/01',
+            'duration' => 30,
+        ])->assertRedirect(route('attendance.monthly-attendances.index'));
+
+        $this->assertSame(1500, $newEmployee->fresh()->leave_remain);
+        $this->assertSame(2400, $this->employee->fresh()->leave_remain);
+    }
+
+    public function test_cutover_reconciles_a_prepayment_before_prorated_posting(): void
+    {
+        $this->travelTo(Carbon::create(2027, 1, 10, 12)); // Dey 1405
+        FiscalYear::findOrFail($this->fiscalYearId)->update(['year' => 1405]);
+
+        $this->employee->workShift->update(['paid_leave' => 1200, 'start_time' => '08:00:00', 'end_time' => '17:00:00']);
+        $this->employee->update([
+            'user_id' => $this->user->id,
+            'is_active' => true,
+            'contract_start_date' => '2026-10-28',
+            'contract_end_date' => '2026-11-06',
+            'leave_remain' => 600,
+        ]);
+        $this->makeMonthlyAttendance(['year' => 1405, 'month' => 7, 'paid_leave' => 300]);
+
+        $calculatedEmployee = Employee::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'work_site_id' => $this->employee->work_site_id,
+            'work_shift_id' => $this->employee->work_shift_id,
+            'is_active' => true,
+            'contract_end_date' => null,
+            'leave_remain' => 1500,
+        ]);
+        $this->makeMonthlyAttendance([
+            'employee_id' => $calculatedEmployee->id,
+            'year' => 1405,
+            'month' => 8,
+            'paid_leave' => 300,
+            'earned_paid_leave' => 1200,
+        ]);
+
+        $activityCount = Activity::count();
+        $this->reconcilePrepaidLeave();
+
+        $this->assertSame($activityCount, Activity::count());
+        $this->assertSame(-600, $this->employee->fresh()->leave_remain);
+        $this->assertSame(1500, $calculatedEmployee->fresh()->leave_remain);
+
+        AttendanceLog::factory()->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'employee_id' => $this->employee->id,
+            'log_date' => '2026-10-31',
+            'paid_leave' => 120,
+        ]);
+        $this->post(route('attendance.monthly-attendances.store'), [
+            'employee_id' => $this->employee->id,
+            'start_date' => '1405/08/01',
+            'duration' => 30,
+        ])->assertRedirect(route('attendance.monthly-attendances.index'));
+        $this->assertSame(-320, $this->employee->fresh()->leave_remain);
+        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'employee-portal.*']));
+        $this->get(route('employee-portal.employee.show'))->assertOk()->assertSee(formatMinutesAsTime(-320, true).' '.__('Remaining Paid Leave'));
+
+        foreach ([$this->employee, $calculatedEmployee] as $employee) {
+            $this->post(route('attendance.monthly-attendances.store'), [
+                'employee_id' => $employee->id,
+                'start_date' => '1405/09/01',
+                'duration' => 30,
+            ])->assertRedirect(route('attendance.monthly-attendances.index'));
+        }
+
+        $this->assertSame(-320, $this->employee->fresh()->leave_remain);
+        $this->assertSame(2700, $calculatedEmployee->fresh()->leave_remain);
+    }
+
+    #[DataProvider('prepaidLeavePeriods')]
+    public function test_cutover_reconciles_the_latest_attendance_regardless_of_deployment_date(string $deploymentDate, int $lastAttendanceMonth): void
+    {
+        $postedAt = Carbon::parse($deploymentDate)->subWeeks(3);
+        $this->travelTo($postedAt);
+        FiscalYear::findOrFail($this->fiscalYearId)->update(['year' => 1405]);
+        $this->employee->workShift->update(['paid_leave' => 1200]);
+        $this->employee->update(['leave_remain' => 2100]);
+        $this->makeMonthlyAttendance(['year' => 1405, 'month' => $lastAttendanceMonth, 'paid_leave' => 300]);
+        $this->makeMonthlyAttendance([
+            'year' => 1405,
+            'month' => $lastAttendanceMonth - 1,
+            'paid_leave' => 200,
+            'created_at' => $postedAt->copy()->subMonth(),
+        ]);
+
+        $otherEmployee = Employee::factory()->create([
+            'fiscal_year_id' => FiscalYear::factory()->create(['year' => 1404])->id,
+            'leave_remain' => 1500,
+        ]);
+
+        $this->travelTo(Carbon::parse($deploymentDate));
+        $this->reconcilePrepaidLeave();
+
+        $this->assertSame(900, $this->employee->fresh()->leave_remain);
+        $this->assertSame(1500, $otherEmployee->fresh()->leave_remain);
+    }
+
+    public static function prepaidLeavePeriods(): array
+    {
+        return [
+            'Dey deployment after Azar attendance' => ['2027-01-10', 9],
+            'Esfand deployment after Bahman attendance' => ['2027-03-01', 11],
+            'Farvardin deployment after Esfand attendance' => ['2027-04-10', 12],
+        ];
+    }
+
+    public function test_cutover_requires_a_corrected_balance_before_accruing_when_the_shift_changed(): void
+    {
+        $this->travelTo(Carbon::create(2026, 11, 28, 12));
+        FiscalYear::findOrFail($this->fiscalYearId)->update(['year' => 1405]);
+        $this->employee->workShift->update(['paid_leave' => 1200]);
+        $this->employee->update(['leave_remain' => 2100, 'user_id' => $this->user->id, 'contract_end_date' => null]);
+        $this->makeMonthlyAttendance(['year' => 1405, 'month' => 8, 'paid_leave' => 300]);
+        $this->travelTo(Carbon::create(2026, 12, 23, 12));
+        $this->employee->workShift->update(['paid_leave' => 1500]);
+
+        $this->reconcilePrepaidLeave();
+
+        $this->assertSame(2100, $this->employee->fresh()->leave_remain);
+        $this->assertTrue($this->employee->fresh()->prepaid_leave_reconciliation_required);
+        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'employee-portal.*']));
+        $this->get(route('employee-portal.employee.show'))->assertOk()
+            ->assertSee(formatMinutesAsTime(2100, true).' '.__('Remaining Paid Leave'))
+            ->assertSee(__('Paid leave balance pending confirmation'));
+
+        $payload = $this->validCreatePayload(['start_date' => '1405/09/01']);
+        $this->post(route('attendance.monthly-attendances.store'), $payload)->assertSessionHasErrors('monthly_attendance');
+        $this->assertDatabaseMissing('monthly_attendances', ['employee_id' => $this->employee->id, 'month' => 9]);
+
+        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'hr.employees.*']));
+        $update = [
+            'code' => $this->employee->code,
+            'first_name' => $this->employee->first_name,
+            'last_name' => $this->employee->last_name,
+            'nationality' => EmployeeNationality::IRANIAN->valueName(),
+            'work_site_id' => $this->employee->work_site_id,
+            'work_shift_id' => $this->employee->work_shift_id,
+            'is_active' => '1',
+        ];
+        $this->get(route('hr.employees.edit', $this->employee))->assertOk()->assertSee('name="reconciled_leave_balance"', false);
+        $this->put(route('hr.employees.update', $this->employee), $update + ['leave_remain' => 0])
+            ->assertSessionHasNoErrors();
+        $this->assertTrue($this->employee->fresh()->prepaid_leave_reconciliation_required);
+        $this->assertSame(2100, $this->employee->fresh()->leave_remain);
+
+        $this->put(route('hr.employees.update', $this->employee), $update + ['reconciled_leave_balance' => '۹۰۰'])
+            ->assertSessionHasNoErrors();
+        $this->assertFalse($this->employee->fresh()->prepaid_leave_reconciliation_required);
+        $this->assertSame(900, $this->employee->fresh()->leave_remain);
+
+        $this->post(route('attendance.monthly-attendances.store'), $payload)
+            ->assertRedirect(route('attendance.monthly-attendances.index'))
+            ->assertSessionHasNoErrors();
+        $this->assertSame(2400, $this->employee->fresh()->leave_remain);
+
+        $this->put(route('hr.employees.update', $this->employee), $update + ['reconciled_leave_balance' => 900])
+            ->assertSessionHasErrors('reconciled_leave_balance');
+        $this->assertSame(2400, $this->employee->fresh()->leave_remain);
+    }
+
+    private function reconcilePrepaidLeave(): void
+    {
+        $migration = require database_path('migrations/2026_11_22_000003_reconcile_prepaid_leave.php');
+        $migration->reconcileBalances();
     }
 }
