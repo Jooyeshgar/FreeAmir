@@ -124,6 +124,7 @@
             return {
                 open: false,
                 search: '',
+                rawSubjectSearch: '',
                 initialOptions: options,
                 filteredOptions: options,
                 selectedValue: '',
@@ -251,21 +252,70 @@
 
                 updateSubjectSearch(input) {
                     const value = input.value;
-                    const query = value.trim();
-                    const code = /^[0-9۰-۹/]+$/.test(query) ?
-                        this.$store.utils.convertToEnglish(query).replaceAll('/', '') : '';
+                    let rawValue = value;
+                    let rawCaret = input.selectionStart;
 
-                    if (code) {
-                        const formatted = this.$store.utils.localizeNumber(this.$store.utils.formatCode(code));
-                        if (formatted !== value) {
-                            const digitsBeforeCaret = value.slice(0, input.selectionStart).replace(/[^0-9۰-۹]/g, '').length;
-                            const caret = digitsBeforeCaret + Math.floor(Math.max(0, digitsBeforeCaret - 1) / 3);
-                            input.value = formatted;
-                            input.setSelectionRange(caret, caret);
+                    if (this.search !== this.rawSubjectSearch) {
+                        // Find the edit in the displayed text, then apply it to the original input.
+                        let start = 0;
+                        let previousEnd = this.search.length;
+                        let currentEnd = value.length;
+                        while (previousEnd > 0 && currentEnd > rawCaret &&
+                            this.search[previousEnd - 1] === value[currentEnd - 1]) {
+                            previousEnd--;
+                            currentEnd--;
+                        }
+                        while (start < previousEnd && start < rawCaret && this.search[start] === value[start]) {
+                            start++;
+                        }
+
+                        const rawStart = this.subjectSearchRawOffset(start);
+                        const rawEnd = this.subjectSearchRawOffset(previousEnd);
+                        rawValue = this.rawSubjectSearch.slice(0, rawStart) +
+                            value.slice(start, currentEnd) + this.rawSubjectSearch.slice(rawEnd);
+                        rawCaret = rawStart + rawCaret - start;
+                    }
+
+                    this.rawSubjectSearch = rawValue;
+                    const query = rawValue.trim().toLowerCase();
+                    const isSubjectCode = /^[0-9۰-۹/]+$/.test(query) && /[0-9۰-۹]/.test(query);
+                    const formatted = isSubjectCode && rawValue === query ?
+                        this.formatSubjectSearch(rawValue) : rawValue;
+
+                    if (formatted !== value) {
+                        const caret = formatted === rawValue ? rawCaret :
+                            this.formatSubjectSearch(rawValue.slice(0, rawCaret)).length;
+                        input.value = formatted;
+                        input.setSelectionRange(caret, caret);
+                    }
+                    this.search = formatted;
+                    this.handleSearch(query, isSubjectCode);
+                },
+
+                subjectSearchRawOffset(displayOffset) {
+                    let rawOffset = 0;
+                    for (let index = 0; index < displayOffset; index++) {
+                        if (this.search[index] !== '/' || this.rawSubjectSearch[rawOffset] === '/') {
+                            rawOffset++;
                         }
                     }
-                    this.search = input.value;
-                    this.handleSearch(query.toLowerCase(), Boolean(code));
+                    return rawOffset;
+                },
+
+                formatSubjectSearch(value) {
+                    const utils = this.$store.utils;
+                    return value.split('/').map(group => utils.localizeNumber(utils.formatCode(group))).join('/');
+                },
+
+                matchingSearchQuery(text, query) {
+                    const lowerText = text.toLowerCase();
+                    if (lowerText.includes(query)) return query;
+                    if (!searchSubjectCode) return null;
+
+                    const utils = this.$store.utils;
+                    const englishQuery = query.replace(/[۰-۹]/g, digit => utils.convertToEnglish(digit));
+                    const persianQuery = utils.convertToFarsi(englishQuery);
+                    return [englishQuery, persianQuery].find(candidate => lowerText.includes(candidate)) ?? null;
                 },
 
                 handleSearch(q = this.search.trim().toLowerCase(), isSubjectCode = false) {
@@ -289,9 +339,9 @@
                             return;
                         }
 
-                        const local = this.searchLocal(q);
-                        if (local.found) {
-                            this.filteredOptions = local.options;
+                        const local = this.filterOptions(q, this.initialOptions);
+                        if (local.length) {
+                            this.filteredOptions = local;
                             this.isLoading = false;
                         } else if (this.url) {
                             this.searchRemote(q);
@@ -302,40 +352,29 @@
                     }, 300);
                 },
 
-                searchLocal(query) {
+                filterOptions(query, blocks) {
                     let resultBlocks = [];
 
-                    this.initialOptions.forEach(block => {
+                    blocks.forEach(block => {
                         let resultGroups = {};
 
                         for (let gid in block.options) {
                             const items = block.options[gid];
                             if (!items.length) continue;
 
-                            const groupName = items[0].groupName.toLowerCase();
-                            const isGroupMatch = groupName.includes(query);
+                            const groupQuery = this.matchingSearchQuery(items[0].groupName, query);
 
-                            // If group matches, include ALL items
-                            let itemMatches = [];
-                            if (!isGroupMatch) {
-                                itemMatches = items.filter(i =>
-                                    i.text.toLowerCase().includes(query)
-                                );
-                            }
+                            const matches = items.flatMap(item => {
+                                const itemQuery = groupQuery ? null : this.matchingSearchQuery(item.text, query);
+                                if (!groupQuery && !itemQuery) return [];
 
-                            // Skip group if no match in this group
-                            if (!isGroupMatch && itemMatches.length === 0) continue;
-
-                            // Final items assigned based on match type
-                            const finalItems = (isGroupMatch ? items : itemMatches).map(i => ({
-                                ...i,
-                                groupNameHighlighted: isGroupMatch ?
-                                    this.highlight(i.groupName, query) : null,
-                                highlighted: !isGroupMatch ?
-                                    this.highlight(i.text, query) : null
-                            }));
-
-                            resultGroups[gid] = finalItems;
+                                return [{
+                                    ...item,
+                                    groupNameHighlighted: groupQuery ? this.highlight(item.groupName, groupQuery) : null,
+                                    highlighted: itemQuery ? this.highlight(item.text, itemQuery) : null
+                                }];
+                            });
+                            if (matches.length) resultGroups[gid] = matches;
                         }
 
                         if (Object.keys(resultGroups).length > 0) {
@@ -346,10 +385,7 @@
                         }
                     });
 
-                    return {
-                        found: resultBlocks.length > 0,
-                        options: resultBlocks
-                    };
+                    return resultBlocks;
                 },
 
                 searchRemote(q, isSubjectCode = false) {
@@ -367,40 +403,7 @@
                                 return;
                             }
 
-                            const query = q.toLowerCase();
-
-                            data.forEach(block => {
-                                let newGroups = {};
-
-                                for (let gid in block.options) {
-                                    const items = block.options[gid];
-                                    if (!items.length) continue;
-
-                                    const groupName = items[0].groupName.toLowerCase();
-                                    const isGroupMatch = groupName.includes(query);
-
-                                    let itemMatches = [];
-                                    if (!isGroupMatch) {
-                                        itemMatches = items.filter(i =>
-                                            i.text.toLowerCase().includes(query)
-                                        );
-                                    }
-
-                                    if (!isGroupMatch && itemMatches.length === 0) continue;
-
-                                    newGroups[gid] = (isGroupMatch ? items : itemMatches).map(i => ({
-                                        ...i,
-                                        groupNameHighlighted: isGroupMatch ?
-                                            this.highlight(i.groupName, query) : null,
-                                        highlighted: !isGroupMatch ?
-                                            this.highlight(i.text, query) : null
-                                    }));
-                                }
-
-                                block.options = newGroups;
-                            });
-
-                            this.filteredOptions = data.filter(b => Object.keys(b.options).length);
+                            this.filteredOptions = this.filterOptions(q.toLowerCase(), data);
                             this.isLoading = false;
                         })
                         .catch(() => {
@@ -424,6 +427,7 @@
                     this.selectedSubjectCode = opt.subjectCode || '';
                     this.open = false;
                     this.search = '';
+                    this.rawSubjectSearch = '';
                     this.filteredOptions = this.initialOptions;
 
                     this.$dispatch('selected', {

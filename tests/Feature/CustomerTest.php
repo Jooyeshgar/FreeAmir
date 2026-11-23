@@ -155,8 +155,8 @@ class CustomerTest extends TestCase
         $this->user->givePermissionTo(Permission::firstOrCreate(['name' => $routeName]));
         $this->actingAs($this->user);
 
-        $this->customer->update(['name' => 'Harbor Trading ۱۲۳۴۵']);
-        $groupName = 'Wholesale Partners ۵۶۷۸۹';
+        $this->customer->update(['name' => '۱۲۳۴۵ Harbor Trading']);
+        $groupName = '۵۶۷۸۹ Wholesale Partners';
         $this->customerGroup->update(['name' => $groupName]);
         $code = '904246789';
         $this->customer->subject->update(['code' => $code]);
@@ -169,7 +169,8 @@ class CustomerTest extends TestCase
         ]);
         Subject::withoutGlobalScopes()->whereKey($otherCustomer->subject_id)->update(['code' => $code]);
 
-        foreach ([$code, '904/246/789', '۲۴۶/۷', 'Harbor', 'Wholesale', '۱۲۳۴', '۵۶۷۸', '۱۲۳/۴5', '۵۶۷/۸۹', '789'] as $query) {
+        foreach ([$code, '904/246/789', '۲۴۶/۷', 'Harbor', 'Wholesale', '۱۲۳۴', '۵۶۷۸', '۱۲۳/۴5', '۵۶۷/۸۹', '789',
+            '12345 Harbor', '۱۲۳۴۵ Harbor', '56789 Wholesale', '۵۶۷۸۹ Wholesale'] as $query) {
             $resultPath = '0.options.'.$this->customerGroup->id;
 
             $this->getJson(route($routeName, ['q' => $query]))

@@ -15,9 +15,11 @@ class CustomerService
     {
         $customers = Customer::with('group', 'subject')->limit($limit);
         $fields = ['id', 'name', 'group_id', 'subject_id'];
-        $code = str_replace('/', '', toEnglish($query));
+        $englishQuery = toEnglish($query);
+        $code = str_replace('/', '', $englishQuery);
         $isCode = ctype_digit($code);
-        $nameQueries = $isCode ? array_unique([$query, $code, convertToFarsi($code)]) : [$query];
+        $textQuery = $isCode ? $code : $englishQuery;
+        $nameQueries = array_unique([$query, $textQuery, convertToFarsi($textQuery)]);
         $matchesName = function ($builder) use ($nameQueries) {
             foreach ($nameQueries as $nameQuery) {
                 $builder->orWhere('name', 'like', "%{$nameQuery}%");
