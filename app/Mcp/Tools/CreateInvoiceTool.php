@@ -45,7 +45,7 @@ class CreateInvoiceTool extends AccountingTool
             'customer_id' => $schema->integer()->min(1)->required(),
             'warehouse_id' => $schema->integer()->min(1)->description('Optional warehouse ID. Defaults to the first warehouse in the selected fiscal year.'),
             'number' => $schema->integer()->min(1)->description('Optional invoice number. Defaults to the next number for this invoice type in the selected fiscal year.'),
-            'date' => $schema->string()->description('Optional Gregorian date in YYYY-MM-DD format, regardless of locale. Defaults to today.'),
+            'date' => $schema->string()->description('Gregorian date in YYYY-MM-DD format, regardless of locale. Defaults to today if it falls within the selected fiscal year.'),
             'title' => $schema->string()->max(255),
             'description' => $schema->string(),
             'subtraction' => $schema->number()->min(0)->description('Invoice deduction in the selected fiscal year company currency.'),
@@ -79,6 +79,12 @@ class CreateInvoiceTool extends AccountingTool
 
     protected function report(array $arguments, FiscalYear $fiscalYear): Response
     {
+        $date = $arguments['date'] ?? now()->toDateString();
+        [$start, $end] = $fiscalYear->range();
+        if ($date < $start->toDateString() || $date > $end->toDateString()) {
+            throw ValidationException::withMessages(['date' => __('Provide an invoice date within the selected fiscal year.')]);
+        }
+
         $yearId = (int) $arguments['fiscal_year_id'];
         $customer = Customer::query()->find($arguments['customer_id']);
         if (! $customer || (int) $customer->fiscal_year_id !== $yearId) {
@@ -99,7 +105,6 @@ class CreateInvoiceTool extends AccountingTool
                 ->where('invoice_type', InvoiceType::fromName($arguments['invoice_type']))
                 ->max('number') ?? 0) + 1
         );
-        $date = $arguments['date'] ?? date('Y-m-d');
 
         $items = collect($arguments['items']);
         $products = Product::query()->where('fiscal_year_id', $yearId)
