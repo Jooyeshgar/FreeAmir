@@ -192,7 +192,7 @@ class AttendanceLogController extends Controller
         // A day is effectively a holiday if it is a public holiday OR a Thursday-holiday
         $isHoliday = $isPublicHoliday || $isThursdayHoliday;
 
-        // Compute what the service WOULD calculate right now (without saving)
+        // Same inputs and calculation as recalculateLog(), without saving (see previewLogColumns docblock, #480)
         $computed = $this->attendanceService->previewLogColumns(clone $attendanceLog);
 
         // Effective (real) shift start accounting for float grace window

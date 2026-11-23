@@ -81,7 +81,12 @@ class AttendanceService
     /**
      * Compute the columns recalculateLog() would store, without persisting them.
      * Request-backed fields (paid_leave, mission, ...) are set on the given model in memory (not saved), so pass a clone when previewing.
-     * Used by both the recalculation and the "Calculation Check" table so they can never disagree.
+     *
+     * This is the single place that gathers the inputs for computeLogColumns(). It is used by:
+     *   • recalculateLog() — stores the result
+     *   • AttendanceLogController::show() — the "Calculation Check" table compares the result with stored values
+     * Any new input (request, flag, pre-processing of the log) must be added here, never at a call site,
+     * so both paths stay identical. See #480 for what happens when they drift.
      */
     public function previewLogColumns(AttendanceLog $log): array
     {
@@ -158,6 +163,14 @@ class AttendanceService
     /**
      * Compute derived attendance columns without persisting.
      *
+     * Do not call this directly from application code; use previewLogColumns() (or recalculateLog()).
+     * previewLogColumns() gathers every input below from the database, and both the stored values
+     * (recalculateLog) and the "Calculation Check" table (AttendanceLogController::show) go through it.
+     * Calling this with hand-built inputs is how the two paths drifted apart in #480.
+     *
+     * All parameters are required on purpose: when you add a parameter, every call site breaks
+     * until it is updated. Add the new input in previewLogColumns(), not with a default value here.
+     *
      * Rules:
      * - worked = actual clocked minutes only
      * - paid_leave + mission + remote_work are coverage minutes, not worked minutes
@@ -176,7 +189,7 @@ class AttendanceService
      *     is_holiday?:bool
      * }
      */
-    public function computeLogColumns(AttendanceLog $log, ?WorkShift $workShift, bool $isFriday = false, bool $isHoliday = false, bool $isThursday = false, ?PersonnelRequest $remoteRequest = null, int $midShiftCoverage = 0, $hourlyCoverageRequests = null): array
+    public function computeLogColumns(AttendanceLog $log, ?WorkShift $workShift, bool $isFriday, bool $isHoliday, bool $isThursday, ?PersonnelRequest $remoteRequest, int $midShiftCoverage, ?Collection $hourlyCoverageRequests): array
     {
         // ── Thursday handling ──────────────────────────────────────────────
         $thursdayStatus = $isThursday ? ($workShift?->thursday_status ?? ThursdayStatus::FULL_DAY) : null;

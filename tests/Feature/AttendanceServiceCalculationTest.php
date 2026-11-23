@@ -4,16 +4,20 @@ namespace Tests\Feature;
 
 use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
+use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
 use App\Models\Employee;
 use App\Models\FiscalYear;
 use App\Models\PersonnelRequest;
 use App\Models\PublicHoliday;
+use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
 use App\Services\AttendanceService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 /**
@@ -209,7 +213,7 @@ class AttendanceServiceCalculationTest extends TestCase
 
         // Leave ends at entry, so none of it overlaps physical attendance.
         $columns = $this->service->computeLogColumns(
-            $log, $shift, midShiftCoverage: 0, hourlyCoverageRequests: collect([$request])
+            $log, $shift, false, false, false, null, 0, collect([$request])
         );
 
         $this->assertSame($delay, $columns['delay']);
@@ -1490,6 +1494,55 @@ class AttendanceServiceCalculationTest extends TestCase
         $recalculated = $this->service->recalculateLog($log);
         foreach (['worked', 'delay', 'early_leave', 'overtime', 'auto_overtime', 'mission'] as $field) {
             $this->assertSame((int) $recalculated->{$field}, (int) $preview[$field], $field);
+        }
+    }
+
+    public static function calculationCheckScenarios(): array
+    {
+        return [
+            'no request' => [null],
+            'hourly leave inside presence' => [PersonnelRequestType::LEAVE_HOURLY],
+            'unpaid hourly leave inside presence' => [PersonnelRequestType::LEAVE_WITHOUT_PAY_HOURLY],
+            'hourly mission inside presence' => [PersonnelRequestType::MISSION_HOURLY],
+        ];
+    }
+
+    /**
+     * The "Calculation Check" table on the log page must show exactly what recalculateLog() stores (#480).
+     */
+    #[DataProvider('calculationCheckScenarios')]
+    public function test_calculation_check_table_matches_stored_values_after_recalculate(?PersonnelRequestType $requestType): void
+    {
+        $user = User::factory()->create();
+        $this->fiscalYear->users()->attach($user);
+        $user->givePermissionTo(Permission::firstOrCreate(['name' => 'attendance.*']));
+        $this->actingAs($user);
+
+        $shift = $this->makeShift(['thursday_status' => ThursdayStatus::FULL_DAY]);
+        $employee = $this->makeEmployee($shift);
+
+        if ($requestType !== null) {
+            PersonnelRequest::factory()->approved()->create([
+                'fiscal_year_id' => $this->fiscalYear->id,
+                'employee_id' => $employee->id,
+                'request_type' => $requestType,
+                'start_date' => '2025-03-03 11:00:00',
+                'end_date' => '2025-03-03 13:00:00',
+            ]);
+        }
+
+        $log = $this->insertLog($employee, '2025-03-03', [
+            'entry_time' => '08:00:00',
+            'exit_time' => '17:00:00',
+        ]);
+
+        $computed = $this->get(route('attendance.attendance-logs.show', $log))
+            ->assertOk()
+            ->viewData('computed');
+
+        $stored = $log->fresh();
+        foreach ($computed as $field => $value) {
+            $this->assertSame((int) $stored->{$field}, (int) $value, $field);
         }
     }
 }
