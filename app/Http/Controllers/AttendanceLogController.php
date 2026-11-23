@@ -193,7 +193,7 @@ class AttendanceLogController extends Controller
         $isHoliday = $isPublicHoliday || $isThursdayHoliday;
 
         // Compute what the service WOULD calculate right now (without saving)
-        $computed = $this->attendanceService->computeLogColumns($attendanceLog, $workShift, $isFriday, $isHoliday, $isThursday);
+        $computed = $this->attendanceService->previewLogColumns(clone $attendanceLog);
 
         // Effective (real) shift start accounting for float grace window
         $effectiveShiftStart = null;

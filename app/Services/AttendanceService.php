@@ -71,6 +71,20 @@ class AttendanceService
     {
         app(FiscalYearMutationGuard::class)->ensureOpen($log);
 
+        $columns = $this->previewLogColumns($log);
+
+        $log->update($columns);
+
+        return $log->fresh();
+    }
+
+    /**
+     * Compute the columns recalculateLog() would store, without persisting them.
+     * Request-backed fields (paid_leave, mission, ...) are set on the given model in memory (not saved), so pass a clone when previewing.
+     * Used by both the recalculation and the "Calculation Check" table so they can never disagree.
+     */
+    public function previewLogColumns(AttendanceLog $log): array
+    {
         $logDate = $log->log_date instanceof Carbon
             ? $log->log_date
             : Carbon::parse($log->log_date);
@@ -113,9 +127,7 @@ class AttendanceService
 
         $columns = $this->computeLogColumns($log, $workShift, $isFriday, $isHoliday, $isThursday, $remoteRequest, $midShiftCoverage, $hourlyCoverageRequests);
 
-        $log->update($columns);
-
-        return $log->fresh();
+        return $columns;
     }
 
     private function approvedRequestMinutesForDate(Collection $requests, Carbon $date, ?WorkShift $workShift): array

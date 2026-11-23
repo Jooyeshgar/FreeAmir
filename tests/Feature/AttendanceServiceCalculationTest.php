@@ -1458,4 +1458,38 @@ class AttendanceServiceCalculationTest extends TestCase
         $this->assertSame(0, (int) $log->overtime);
         $this->assertSame(90, (int) $log->auto_overtime, '60 early + 60 late = 120 raw, capped at max 90');
     }
+
+    public function test_preview_log_columns_matches_recalculate_log_and_does_not_persist(): void
+    {
+        $shift = $this->makeShift([
+            'start_time' => '07:30:00', 'end_time' => '15:30:00',
+            'float' => 60, 'max_auto_overtime' => 120,
+        ]);
+        $employee = $this->makeEmployee($shift);
+        PersonnelRequest::factory()->approved()->create([
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'employee_id' => $employee->id,
+            'request_type' => PersonnelRequestType::LEAVE_HOURLY,
+            'start_date' => '2025-03-03 08:31:00',
+            'end_date' => '2025-03-03 10:35:00',
+        ]);
+        $log = $this->insertLog($employee, '2025-03-03', [
+            'entry_time' => '10:35:00', 'exit_time' => '16:37:00',
+            'paid_leave' => 0, 'delay' => 125, 'early_leave' => 60, 'auto_overtime' => 120,
+        ], false);
+
+        $preview = $this->service->previewLogColumns(clone $log);
+
+        // Nothing is saved by a preview.
+        $stored = $log->fresh();
+        $this->assertSame(125, (int) $stored->delay);
+        $this->assertSame(60, (int) $stored->early_leave);
+        $this->assertSame(120, (int) $stored->auto_overtime);
+
+        // The "Calculation Check" table must agree with what recalculation stores.
+        $recalculated = $this->service->recalculateLog($log);
+        foreach (['worked', 'delay', 'early_leave', 'overtime', 'auto_overtime', 'mission'] as $field) {
+            $this->assertSame((int) $recalculated->{$field}, (int) $preview[$field], $field);
+        }
+    }
 }
