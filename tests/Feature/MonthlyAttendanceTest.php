@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\EmployeeNationality;
 use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Enums\ThursdayStatus;
@@ -1335,11 +1336,38 @@ class MonthlyAttendanceTest extends TestCase
         $this->get(route('attendance.monthly-attendances.show', $recalculated))->assertOk()->assertDontSee('name="historical_paid_leave"', false);
 
         $this->employee->workShift->update(['paid_leave' => 1500]);
-        $this->delete(route('attendance.monthly-attendances.destroy', $recalculated))
+        $this->delete(route('attendance.monthly-attendances.destroy', $recalculated), ['historical_paid_leave' => 1500])
             ->assertSessionHasErrors('monthly_attendance');
 
         $this->assertModelExists($recalculated);
         $this->assertSame(2100, $this->employee->fresh()->leave_remain);
+
+        activity('request')->causedBy($this->user)->event('post')->withProperties([
+            'route' => 'attendance.monthly-attendances.bulk-store',
+            'fiscal_year_ids' => [$this->fiscalYearId],
+            'model_types' => [MonthlyAttendance::class, Employee::class],
+            'models' => [
+                [
+                    'model_type' => MonthlyAttendance::class,
+                    'model_id' => $legacyAttendance->id,
+                    'fiscal_year_id' => $this->fiscalYearId,
+                    'event' => 'created',
+                    'attributes' => ['employee_id' => $this->employee->id, 'year' => 1404, 'month' => 7, 'paid_leave' => 300],
+                ],
+                [
+                    'model_type' => Employee::class,
+                    'model_id' => $this->employee->id,
+                    'old' => ['leave_remain' => 1200],
+                    'attributes' => ['leave_remain' => 2100],
+                ],
+            ],
+        ])->log('POST monthly attendance');
+
+        $this->delete(route('attendance.monthly-attendances.destroy', $recalculated))
+            ->assertRedirect(route('attendance.monthly-attendances.index'))
+            ->assertSessionHasNoErrors();
+        $this->assertModelMissing($recalculated);
+        $this->assertSame(1200, $this->employee->fresh()->leave_remain);
     }
 
     public function test_existing_employee_future_months_accrue_leave_remain_continuously_after_merge(): void
@@ -1654,23 +1682,63 @@ class MonthlyAttendanceTest extends TestCase
         ];
     }
 
-    public function test_cutover_skips_an_employee_whose_shift_was_edited_after_posting(): void
+    public function test_cutover_requires_a_corrected_balance_before_accruing_when_the_shift_changed(): void
     {
         $this->travelTo(Carbon::create(2026, 11, 28, 12));
+        FiscalYear::findOrFail($this->fiscalYearId)->update(['year' => 1405]);
         $this->employee->workShift->update(['paid_leave' => 1200]);
-        $this->employee->update(['leave_remain' => 600]);
-        $this->makeMonthlyAttendance(['year' => 1405, 'month' => 8]);
+        $this->employee->update(['leave_remain' => 2100, 'user_id' => $this->user->id, 'contract_end_date' => null]);
+        $this->makeMonthlyAttendance(['year' => 1405, 'month' => 8, 'paid_leave' => 300]);
         $this->travelTo(Carbon::create(2026, 12, 23, 12));
         $this->employee->workShift->update(['paid_leave' => 1500]);
 
         $this->reconcilePrepaidLeave();
 
-        $this->assertSame(600, $this->employee->fresh()->leave_remain);
+        $this->assertSame(2100, $this->employee->fresh()->leave_remain);
+        $this->assertTrue($this->employee->fresh()->prepaid_leave_reconciliation_required);
+        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'employee-portal.*']));
+        $this->get(route('employee-portal.employee.show'))->assertOk()
+            ->assertSee(formatMinutesAsTime(2100, true).' '.__('Remaining Paid Leave'))
+            ->assertSee(__('Paid leave balance pending confirmation'));
+
+        $payload = $this->validCreatePayload(['start_date' => '1405/09/01']);
+        $this->post(route('attendance.monthly-attendances.store'), $payload)->assertSessionHasErrors('monthly_attendance');
+        $this->assertDatabaseMissing('monthly_attendances', ['employee_id' => $this->employee->id, 'month' => 9]);
+
+        $this->user->givePermissionTo(Permission::firstOrCreate(['name' => 'hr.employees.*']));
+        $update = [
+            'code' => $this->employee->code,
+            'first_name' => $this->employee->first_name,
+            'last_name' => $this->employee->last_name,
+            'nationality' => EmployeeNationality::IRANIAN->valueName(),
+            'work_site_id' => $this->employee->work_site_id,
+            'work_shift_id' => $this->employee->work_shift_id,
+            'is_active' => '1',
+        ];
+        $this->get(route('hr.employees.edit', $this->employee))->assertOk()->assertSee('name="reconciled_leave_balance"', false);
+        $this->put(route('hr.employees.update', $this->employee), $update + ['leave_remain' => 0])
+            ->assertSessionHasNoErrors();
+        $this->assertTrue($this->employee->fresh()->prepaid_leave_reconciliation_required);
+        $this->assertSame(2100, $this->employee->fresh()->leave_remain);
+
+        $this->put(route('hr.employees.update', $this->employee), $update + ['reconciled_leave_balance' => '۹۰۰'])
+            ->assertSessionHasNoErrors();
+        $this->assertFalse($this->employee->fresh()->prepaid_leave_reconciliation_required);
+        $this->assertSame(900, $this->employee->fresh()->leave_remain);
+
+        $this->post(route('attendance.monthly-attendances.store'), $payload)
+            ->assertRedirect(route('attendance.monthly-attendances.index'))
+            ->assertSessionHasNoErrors();
+        $this->assertSame(2400, $this->employee->fresh()->leave_remain);
+
+        $this->put(route('hr.employees.update', $this->employee), $update + ['reconciled_leave_balance' => 900])
+            ->assertSessionHasErrors('reconciled_leave_balance');
+        $this->assertSame(2400, $this->employee->fresh()->leave_remain);
     }
 
     private function reconcilePrepaidLeave(): void
     {
         $migration = require database_path('migrations/2026_11_22_000003_reconcile_prepaid_leave.php');
-        $migration->up();
+        $migration->reconcileBalances();
     }
 }

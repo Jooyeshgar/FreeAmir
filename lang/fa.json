@@ -3746,5 +3746,11 @@
     "The product share does not match the selected allocation method and amount.": "سهم کالا با روش تخصیص و مبلغ انتخاب‌شده مطابقت ندارد.",
     "No warehouse stock found.": "موجودی انباری یافت نشد.",
     "Monthly attendance can only be posted after the last eligible day of the month.": "ثبت کارکرد ماهانه پس از پایان آخرین روز مشمول قرارداد در آن ماه امکان‌پذیر است.",
-    "This monthly attendance cannot be deleted because its original paid leave credit is unknown.": "حذف این کارکرد ماهانه امکان‌پذیر نیست، زیرا سهمیه مرخصی با حقوق ثبت‌شده در زمان محاسبه مشخص نیست."
+    "This monthly attendance cannot be deleted because its original paid leave credit is unknown.": "حذف این کارکرد ماهانه امکان‌پذیر نیست، زیرا سهمیه مرخصی با حقوق ثبت‌شده در زمان محاسبه مشخص نیست.",
+    "The resulting remaining paid leave is outside the supported range.": "مانده حاصل مرخصی با حقوق خارج از محدوده مجاز است.",
+    "Confirm the corrected prepaid leave balance in the employee record for :name.": "مانده اصلاح‌شده مرخصی با حقوق :name را در پرونده کارمند ثبت کنید.",
+    "Corrected Remaining Paid Leave (minutes)": "مانده اصلاح‌شده مرخصی با حقوق (دقیقه)",
+    "Paid leave balance pending confirmation": "مانده مرخصی با حقوق در انتظار تأیید",
+    "Enter the verified remaining balance after removing any prepaid leave, before posting new attendance.": "پیش از ثبت کارکرد جدید، مانده تأییدشده مرخصی با حقوق را پس از کسر پیش‌پرداخت وارد کنید.",
+    "This employee no longer has a prepaid leave balance to reconcile.": "مانده پیش‌پرداخت مرخصی با حقوق این کارمند قبلاً تعیین تکلیف شده است."
 }

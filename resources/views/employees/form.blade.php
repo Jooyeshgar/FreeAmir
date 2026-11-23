@@ -96,7 +96,11 @@
 
      @if (isset($employee) && $employee->exists)
         <div>
-            <x-input name="leave_remain" id="leave_remain" title="{{ __('Remaining Paid Leave (minutes)') }}" :value="old('leave_remain', $employee->leave_remain ?? '')" placeholder="0" />
+            <x-input name="leave_remain" id="leave_remain" title="{{ __('Remaining Paid Leave (minutes)') }}" :value="old('leave_remain', $employee->leave_remain ?? '')" :disabled="$employee->prepaid_leave_reconciliation_required" placeholder="0" />
+            @if ($employee->prepaid_leave_reconciliation_required)
+                <x-input name="reconciled_leave_balance" id="reconciled_leave_balance" title="{{ __('Corrected Remaining Paid Leave (minutes)') }}" :value="old('reconciled_leave_balance')" />
+                <p class="mt-1 text-sm">{{ __('Enter the verified remaining balance after removing any prepaid leave, before posting new attendance.') }}</p>
+            @endif
         </div>
     @endif
 

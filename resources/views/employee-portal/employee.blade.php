@@ -51,6 +51,9 @@
                         <span class="badge badge-lg badge-emerald gap-2">
                             {{ formatMinutesAsTime($remainingPaidLeave, true) }} {{ __('Remaining Paid Leave') }}
                         </span>
+                        @if ($employee->prepaid_leave_reconciliation_required)
+                            <span class="badge badge-lg badge-warning">{{ __('Paid leave balance pending confirmation') }}</span>
+                        @endif
                         @if ($employee->device_id)
                             <span class="badge badge-lg badge-neutral gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -77,6 +77,7 @@ class UpdateEmployeeRequest extends FormRequest
 
             'is_active' => ['boolean'],
             'leave_remain' => ['nullable', 'integer', 'min:-15000', 'max:15000'],
+            'reconciled_leave_balance' => ['nullable', 'integer', 'min:-32768', 'max:32767'],
             'device_id' => ['nullable', 'string', 'max:20'],
         ];
     }
@@ -88,10 +89,12 @@ class UpdateEmployeeRequest extends FormRequest
                 'leave_remain' => toEnglish(trim((string) $this->input('leave_remain'))),
             ]);
         } else {
-            $employee = $this->route('employee');
-            $this->merge([
-                'leave_remain' => $employee instanceof Employee ? (int) $employee->leave_remain : 0,
-            ]);
+            $this->offsetUnset('leave_remain');
+        }
+
+        $reconciledBalance = $this->input('reconciled_leave_balance');
+        if (is_string($reconciledBalance)) {
+            $this->merge(['reconciled_leave_balance' => toEnglish(trim($reconciledBalance))]);
         }
 
         $this->merge([
