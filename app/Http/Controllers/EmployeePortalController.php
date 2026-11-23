@@ -80,9 +80,11 @@ class EmployeePortalController extends Controller
     {
         $employee = $this->currentEmployee();
 
-        $fiscalYearClosed = FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+        $activeFiscalYear = FiscalYear::find(getActiveFiscalYear());
+        $fiscalYearClosed = $activeFiscalYear?->isClosed() ?? false;
+        $remainingPaidLeave = $this->attendanceService->remainingPaidLeaveIncludingCurrentMonth($employee, $activeFiscalYear);
 
-        return view('employee-portal.employee', compact('fiscalYearClosed', 'employee'));
+        return view('employee-portal.employee', compact('fiscalYearClosed', 'employee', 'remainingPaidLeave'));
     }
 
     public function changeEmployeeInformation(): View

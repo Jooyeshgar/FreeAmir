@@ -293,7 +293,7 @@ class RolesAndPermissionsSeeder extends Seeder
                     'org_chart_id' => $orgCharts->get($config['org_chart'])?->id,
                     'organization_unit_id' => $orgUnits->get($config['org_unit'])?->id,
                     'is_active' => true,
-                    'leave_remain' => 1200,
+                    'leave_remain' => 0,
                 ]
             );
         }
