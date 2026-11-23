@@ -142,7 +142,7 @@
                 </div>
                 <div class="bg-base-200 rounded-lg px-4 py-3">
                     <div class="text-xs text-gray-500 mb-1">{{ __('Birth Date') }}</div>
-                    <div class="font-semibold">{{ $employee->birth_date ? formatDate($employee->birth_date) : '—' }}</div>
+                    <div class="font-semibold">{{ localizeNumber($employee->birth_date?->format('Y/m/d') ?? '—') }}</div>
                 </div>
                 <div class="bg-base-200 rounded-lg px-4 py-3">
                     <div class="text-xs text-gray-500 mb-1">{{ __('Birth Place') }}</div>
