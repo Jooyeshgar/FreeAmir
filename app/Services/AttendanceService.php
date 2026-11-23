@@ -253,6 +253,7 @@ class AttendanceService
         $entryCoverageEnd = null;
         $entryCoverageStart = null;
         $shiftStartCoverageOverlap = 0;
+        $outsideShiftCoverage = 0;
 
         if ($hourlyCoverageRequests !== null) {
             $entryTime = $log->entry_time ? Carbon::parse($log->entry_time)->format('H:i:s') : null;
@@ -262,6 +263,11 @@ class AttendanceService
             foreach ($hourlyCoverageRequests as $req) {
                 $reqStart = Carbon::parse($req->start_date)->format('H:i:s');
                 $reqEnd = Carbon::parse($req->end_date)->format('H:i:s');
+
+                // Leave minutes before shift start carry no delay to absorb and must not become overtime.
+                if ($shiftStartTime && $reqStart < $shiftStartTime) {
+                    $outsideShiftCoverage += (int) Carbon::parse($reqStart)->diffInMinutes(Carbon::parse(min($reqEnd, $shiftStartTime)));
+                }
 
                 if ($shiftStartTime && $reqStart <= $shiftStartTime && $reqEnd > $shiftStartTime) {
                     $entryCoverageEnd = $entryCoverageEnd === null ? $reqEnd : max($entryCoverageEnd, $reqEnd);
@@ -287,8 +293,9 @@ class AttendanceService
                 }
 
                 // Leave occurring prior to physical check-in covers morning delays
+                // Only the part inside the shift counts: leave before shift start cannot absorb delay nor become overtime.
                 if ($entryTime) {
-                    $start = $reqStart;
+                    $start = $shiftStartTime ? max($reqStart, $shiftStartTime) : $reqStart;
                     $end = min($reqEnd, $entryTime);
                     if ($start < $end) {
                         $explicitDelayCoverage += (int) Carbon::parse($start)->diffInMinutes(Carbon::parse($end));
@@ -321,7 +328,7 @@ class AttendanceService
         $explicitEarlyLeaveCoverage = min($explicitEarlyLeaveCoverage, max(0, $coveredMinutes - $explicitDelayCoverage));
 
         // Any coverage originating from DB logs strictly missing request records (legacy or manual inputs)
-        $blindCoverage = max(0, $coveredMinutes - $explicitDelayCoverage - $explicitEarlyLeaveCoverage);
+        $blindCoverage = max(0, $coveredMinutes - $explicitDelayCoverage - $explicitEarlyLeaveCoverage - $outsideShiftCoverage);
 
         $netDelay = max(0, $bounds['delay'] - $explicitDelayCoverage);
         $unusedExplicitDelay = max(0, $explicitDelayCoverage - $bounds['delay']);
