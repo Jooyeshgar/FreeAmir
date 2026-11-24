@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ThursdayStatus;
 use App\Models\Employee;
 use App\Models\FiscalYear;
 use App\Models\User;
@@ -317,5 +318,13 @@ class WorkShiftTest extends TestCase
 
         $this->assertSame(1500, $workShift->fresh()->paid_leave);
         $this->assertSame(450, $employee->fresh()->leave_remain);
+    }
+
+    public function test_work_shift_defaults_to_half_day_on_thursdays(): void
+    {
+        $workShift = $this->makeWorkShift()->refresh();
+
+        $this->assertSame(ThursdayStatus::HALF_DAY, $workShift->thursday_status);
+        $this->assertEquals(ThursdayStatus::HALF_DAY->value, $workShift->getRawOriginal('thursday_status'));
     }
 }
