@@ -53,6 +53,15 @@ class PersonnelRequest extends Model
         return $this->belongsTo(Payroll::class, 'payroll_id');
     }
 
+    public function durationMinutes(): ?int
+    {
+        if ($this->start_date === null || $this->end_date === null) {
+            return null;
+        }
+
+        return (int) $this->start_date->diffInMinutes($this->end_date);
+    }
+
     public function scopeOfType(Builder $query, PersonnelRequestType $type): Builder
     {
         return $query->where('request_type', $type);
