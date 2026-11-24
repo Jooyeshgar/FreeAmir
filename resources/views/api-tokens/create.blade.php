@@ -19,7 +19,7 @@
                         return permissions.some((permission) => this.matches(permission));
                     },
                 }">
-                    <div class="col-span-4 flex items-center justify-between gap-3">
+                    <div class="col-span-full flex items-center justify-between gap-3">
                         <span class="card-title">{{ __('Create token') }}</span>
 
                         <div class="flex items-center gap-3">
@@ -28,13 +28,13 @@
                         </div>
                     </div>
 
-                    <div class="col-span-4 grid gap-4 md:grid-cols-2">
+                    <div class="col-span-full grid gap-4 md:grid-cols-2">
                         <x-input name="name" id="name" placeholder="{{ __('Token name') }}" title="" :value="old('name')" required />
 
                         <x-input name="permission_search" id="permission-search" placeholder="{{ __('Search') }}" title="" x-model="permissionSearch" />
                     </div>
 
-                    <div class="col-span-4">
+                    <div class="col-span-full">
                         <div class="mt-5 grid gap-4 xl:grid-cols-2">
                             @foreach ($permissionGroups as $group => $groupPermissions)
                                 <section class="rounded-xl border border-base-300 bg-base-100/80 p-4 shadow-sm"
@@ -54,21 +54,28 @@
                                             <div
                                                 class="relative flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-base-200 px-3 py-2 transition hover:border-primary/40 hover:bg-base-200/60"
                                                 x-show="matches({{ Js::from($permission) }})">
-                                                <span class="flex min-w-0 items-center gap-2">
+                                                <span class="flex min-w-0 items-center gap-2" @if ($permission === 'invoices.approve') x-data="{ warningOpen: false }" @endif>
                                                     <label for="{{ $permissionId }}" class="cursor-pointer truncate text-sm after:absolute after:inset-0" title="{{ $permission }}">
                                                         {{ \Illuminate\Support\Str::headline(\Illuminate\Support\Str::after($permission, '.')) }}
                                                     </label>
                                                     @if ($permission === 'invoices.approve')
-                                                        <span class="tooltip tooltip-warning z-20 shrink-0">
-                                                            <span id="invoice-approval-warning" role="tooltip" class="tooltip-content start-0! end-auto! transform-none! max-w-[min(18rem,calc(100vw-8rem))]!">
-                                                                {{ __('This token can approve invoices and post accounting documents through MCP. Enable this only for clients that ask for user confirmation before approval.') }}
-                                                            </span>
-                                                            <button type="button" class="grid size-5 place-items-center rounded text-warning focus-visible:outline"
-                                                                aria-label="{{ __('Invoice approval warning') }}" aria-describedby="invoice-approval-warning">
-                                                                <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                                                </svg>
-                                                            </button>
+                                                        <button type="button" class="relative z-20 grid size-5 shrink-0 place-items-center rounded text-warning focus-visible:outline"
+                                                            @pointerenter="if ($event.pointerType !== 'touch') warningOpen = true"
+                                                            @pointerleave="if ($event.pointerType !== 'touch') warningOpen = false"
+                                                            @focus="if ($el.matches(':focus-visible')) warningOpen = true"
+                                                            @blur="warningOpen = false"
+                                                            @pointerup="if ($event.pointerType === 'touch') warningOpen = !warningOpen"
+                                                            @click.outside="warningOpen = false"
+                                                            @keydown.escape.stop="warningOpen = false"
+                                                            @scroll.window.capture="warningOpen = false"
+                                                            aria-label="{{ __('Invoice approval warning') }}" aria-describedby="invoice-approval-warning">
+                                                            <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                                            </svg>
+                                                        </button>
+                                                        <span id="invoice-approval-warning" role="tooltip" x-show="warningOpen" style="display: none"
+                                                            class="pointer-events-none absolute inset-x-0 top-full z-30 mt-1 rounded-md bg-warning px-2 py-1.5 text-xs leading-relaxed text-warning-content shadow wrap-anywhere">
+                                                            {{ __('This token can approve invoices and post accounting documents. The client must ask the user first.') }}
                                                         </span>
                                                     @endif
                                                 </span>
@@ -82,7 +89,7 @@
                         </div>
                     </div>
 
-                    <div class="col-span-4">
+                    <div class="col-span-full">
                         <button class="btn btn-primary" type="submit">{{ __('Create token') }}</button>
                     </div>
                 </div>

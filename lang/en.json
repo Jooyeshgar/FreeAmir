@@ -3734,7 +3734,7 @@
     "Failed to create record. Please try again or contact support.": "Failed to create record. Please try again or contact support.",
     "Failed to approve invoice. Please try again or contact support.": "Failed to approve invoice. Please try again or contact support.",
     "Invoice approval warning": "Invoice approval warning",
-    "This token can approve invoices and post accounting documents through MCP. Enable this only for clients that ask for user confirmation before approval.": "This token can approve invoices and post accounting documents through MCP. Enable this only for clients that ask for user confirmation before approval.",
+    "This token can approve invoices and post accounting documents. The client must ask the user first.": "This token can approve invoices and post accounting documents. The client must ask the user first.",
     "The given data was invalid.": "The given data was invalid.",
     "The selected customer group is invalid.": "The selected customer group is invalid.",
     "The selected product group is invalid.": "The selected product group is invalid.",

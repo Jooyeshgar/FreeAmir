@@ -173,13 +173,13 @@ class ApiTokenTest extends TestCase
             $user->givePermissionTo(Permission::findOrCreate($permission, 'web'));
         }
 
-        $warning = __('This token can approve invoices and post accounting documents through MCP. Enable this only for clients that ask for user confirmation before approval.');
+        $warning = __('This token can approve invoices and post accounting documents. The client must ask the user first.');
         $this->actingAs($user)->get(route('api-tokens.create'))->assertOk()->assertDontSee($warning);
 
         $user->givePermissionTo(Permission::findOrCreate('invoices.approve', 'web'));
         $this->get(route('api-tokens.create'))->assertOk()->assertSee('invoices.approve')
             ->assertSee('aria-describedby="invoice-approval-warning"', false)
-            ->assertSee('role="tooltip"', false)
+            ->assertSee('role="tooltip" x-show="warningOpen" style="display: none"', false)
             ->assertSee($warning);
     }
 }
