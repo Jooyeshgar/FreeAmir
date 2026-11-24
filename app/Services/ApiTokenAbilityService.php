@@ -23,6 +23,7 @@ class ApiTokenAbilityService
                 'reports.company-overview', 'reports.trial-balance', 'reports.ledger',
                 'customers.index', 'customers.show',
                 'products.index', 'products.show',
+                'customers.store', 'products.store', 'invoices.store',
             ])
             ->reject(fn (string $permission) => in_array($permission, [
                 'api.access',

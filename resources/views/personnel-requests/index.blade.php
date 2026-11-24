@@ -45,10 +45,10 @@
 
             {{-- Filters --}}
             <div class="flex flex-col items-stretch justify-between gap-3 md:flex-row md:items-end">
-                <form action="{{ route('hr.personnel-requests.index') }}" method="GET" class="grid w-full grid-cols-2 gap-2 md:w-auto md:grid-cols-[minmax(12rem,15rem)_minmax(8rem,10rem)_auto]">
+                <form action="{{ route('hr.personnel-requests.index') }}" method="GET" class="flex min-w-0 flex-wrap items-end gap-2">
                     <x-input name="tab" value="{{ $tab }}" hidden />
 
-                    <select name="employee_id" class="select select-sm col-span-2 w-full md:col-span-1">
+                    <select name="employee_id" class="select select-sm w-44 shrink-0">
                         <option value="">{{ __('All Employees') }}</option>
                         @foreach ($employees as $employee)
                             <option value="{{ $employee->id }}" {{ request('employee_id') == $employee->id ? 'selected' : '' }}>
@@ -57,7 +57,7 @@
                         @endforeach
                     </select>
 
-                    <select name="status" class="select select-sm w-full">
+                    <select name="status" class="select select-sm w-32 shrink-0">
                         <option value="">{{ __('All Statuses') }}</option>
                         <option value="pending" {{ request('status') === 'pending' ? 'selected' : '' }}>
                             {{ __('Pending') }}
@@ -70,11 +70,18 @@
                         </option>
                     </select>
 
-                    <button type="submit" class="btn btn-sm btn-neutral w-full md:w-auto">{{ __('Search') }}</button>
+                    <div class="w-32 shrink-0 [&_.input]:input-sm">
+                        <x-date-picker name="date_from" id="date_from" :title="__('From Date')" :value="request('date_from')" readonly />
+                    </div>
+                    <div class="w-32 shrink-0 [&_.input]:input-sm">
+                        <x-date-picker name="date_to" id="date_to" :title="__('To Date')" :value="request('date_to')" readonly />
+                    </div>
+
+                    <button type="submit" class="btn btn-sm btn-neutral shrink-0">{{ __('Search') }}</button>
                 </form>
 
                 @can('hr.personnel-requests.create')
-                    <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('hr.personnel-requests.create', ['tab' => $tab]) }}" class="btn btn-primary btn-circle self-end">
+                    <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('hr.personnel-requests.create', ['tab' => $tab]) }}" class="btn btn-primary btn-circle shrink-0 self-end">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                         </svg>
@@ -106,14 +113,10 @@
                                 <td>{{ $personnelRequest->request_type->label() }}</td>
                                 <td dir="ltr">{{ formatDateTime($personnelRequest->start_date) }}</td>
                                 <td dir="ltr">{{ formatDateTime($personnelRequest->end_date) }}</td>
-                                <td class="whitespace-nowrap">
-                                    @if ($personnelRequest->start_date && $personnelRequest->end_date)
-                                        @php
-                                            $totalMinutes = $personnelRequest->start_date->diffInMinutes($personnelRequest->end_date);
-                                            $hours = intdiv($totalMinutes, 60);
-                                            $minutes = $totalMinutes % 60;
-                                        @endphp
-                                        {{ localizeNumber(str_pad($hours, 2, '0', STR_PAD_LEFT)) }}:{{ localizeNumber(str_pad($minutes, 2, '0', STR_PAD_LEFT)) }}
+                                <td class="whitespace-nowrap" dir="ltr">
+                                    @php($durationMinutes = $personnelRequest->durationMinutes())
+                                    @if ($durationMinutes !== null)
+                                        {{ localizeNumber(sprintf('%02d:%02d', intdiv($durationMinutes, 60), $durationMinutes % 60)) }}
                                     @else
                                         —
                                     @endif
@@ -184,6 +187,15 @@
                             </tr>
                         @endforelse
                     </tbody>
+                    @if ($pageDurationMinutes !== null)
+                        <tfoot>
+                            <tr class="bg-base-200 text-base-content">
+                                <th colspan="4" scope="row">{{ __('Total') }}</th>
+                                <td class="whitespace-nowrap" dir="ltr">{{ localizeNumber(sprintf('%02d:%02d', intdiv($pageDurationMinutes, 60), $pageDurationMinutes % 60)) }}</td>
+                                <td colspan="2"></td>
+                            </tr>
+                        </tfoot>
+                    @endif
                 </table>
             </div>
 
