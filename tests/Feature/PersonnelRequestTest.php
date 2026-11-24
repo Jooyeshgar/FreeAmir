@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
 use App\Enums\ThursdayStatus;
-use App\Models\Company;
 use App\Models\Employee;
 use App\Models\FiscalYear;
 use App\Models\PersonnelRequest;
