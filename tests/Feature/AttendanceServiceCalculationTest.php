@@ -138,7 +138,7 @@ class AttendanceServiceCalculationTest extends TestCase
             'end_date' => '2025-03-03 10:35:00',
         ]);
 
-        $columns = $this->service->computeLogColumns($log, $shift, false, false, false, null, 0, collect([$request]));
+        $columns = $this->service->computeLogColumns($log, $shift, false, false, false, null, 0, collect([$request]), collect());
 
         $this->assertSame(0, $columns['delay']);
         $this->assertSame(0, $columns['early_leave']);
@@ -215,7 +215,7 @@ class AttendanceServiceCalculationTest extends TestCase
 
         // Leave ends at entry, so none of it overlaps physical attendance.
         $columns = $this->service->computeLogColumns(
-            $log, $shift, false, false, false, null, 0, collect([$request])
+            $log, $shift, false, false, false, null, 0, collect([$request]), collect()
         );
 
         $this->assertSame($delay, $columns['delay']);
@@ -547,7 +547,7 @@ class AttendanceServiceCalculationTest extends TestCase
         $attendance = $this->service->calculateAndStore($employee->id, $this->startDate, $this->durationDays, 1404, 1);
 
         $this->assertSame(480, $attendance->mission, 'Mission on Friday should be recorded');
-        $this->assertSame(480, $attendance->friday);
+        $this->assertSame(0, $attendance->friday, 'Mission minutes are paid once, with the mission coefficient');
     }
 
     public function test_friday_with_mission_spanning_multiple_days(): void
@@ -601,7 +601,7 @@ class AttendanceServiceCalculationTest extends TestCase
         $attendance = $this->service->calculateAndStore($employee->id, $this->startDate, $this->durationDays, 1404, 1);
 
         $this->assertSame(480, $attendance->mission, 'Mission on Thursday holiday should be recorded');
-        $this->assertSame(480, $attendance->holiday);
+        $this->assertSame(0, $attendance->holiday, 'Mission minutes are paid once, with the mission coefficient');
     }
 
     // -----------------------------------------------------------------------
@@ -728,15 +728,14 @@ class AttendanceServiceCalculationTest extends TestCase
         // Friday: remote work + overtime
         $this->insertLog($employee, $friday, [
             'remote_work' => 540,
-            'worked' => 660,
             'overtime' => 120,
-        ], false);
+        ]);
 
         $attendance = $this->service->calculateAndStore($employee->id, $this->startDate, $this->durationDays, 1404, 1);
 
         $this->assertSame(540, $attendance->remote_work);
-        $this->assertSame(0, $attendance->overtime); // Overtime should not be recorded on holiday
-        $this->assertSame(660, $attendance->friday);
+        $this->assertSame(0, $attendance->overtime); // No approved overtime request: the stored value is ignored on an off day
+        $this->assertSame(540, $attendance->friday); // The whole presence keeps the Friday bucket
     }
 
     public function test_holiday_with_multiple_conditions(): void
@@ -752,13 +751,14 @@ class AttendanceServiceCalculationTest extends TestCase
             'remote_work' => 240,
             'mission' => 240,
             'overtime' => 120,
-        ], false);
+        ]);
 
         $attendance = $this->service->calculateAndStore($employee->id, $this->startDate, $this->durationDays, 1404, 1);
 
         $this->assertSame(240, $attendance->remote_work);
         $this->assertSame(240, $attendance->mission);
-        $this->assertSame(0, $attendance->overtime); // Overtime should not be recorded on holiday
+        $this->assertSame(0, $attendance->overtime); // Mission has priority over overtime, so the 240 presence minutes are all mission
+        $this->assertSame(0, $attendance->friday);
     }
 
     public function test_hourly_leave_mission_and_overtime_combination(): void
@@ -795,8 +795,8 @@ class AttendanceServiceCalculationTest extends TestCase
         $attendance = $this->service->calculateAndStore($employee->id, $this->startDate, $this->durationDays, 1404, 1);
 
         $this->assertSame(960, $attendance->mission, 'Both days mission should be calculated');
-        $this->assertSame(480, $attendance->holiday);
-        $this->assertSame(480, $attendance->friday);
+        $this->assertSame(0, $attendance->holiday);
+        $this->assertSame(0, $attendance->friday);
     }
 
     public function test_complex_week_with_multiple_special_conditions(): void
@@ -1554,5 +1554,120 @@ class AttendanceServiceCalculationTest extends TestCase
         foreach ($computed as $field => $value) {
             $this->assertSame((int) $stored->{$field}, (int) $value, $field);
         }
+    }
+
+    // -----------------------------------------------------------------------
+    // Off-day pay: mission > overtime > holiday work, per minute
+    // -----------------------------------------------------------------------
+
+    private function offDayLogAndTotals(string $date, array $requests, string $entry = '08:00:00', string $exit = '16:00:00'): array
+    {
+        $shift = $this->makeShift(['thursday_status' => ThursdayStatus::HOLIDAY, 'break' => 0]);
+        $employee = $this->makeEmployee($shift);
+
+        foreach ($requests as [$type, $start, $end]) {
+            PersonnelRequest::factory()->approved()->create([
+                'fiscal_year_id' => $this->fiscalYear->id,
+                'employee_id' => $employee->id,
+                'request_type' => $type,
+                'start_date' => "$date $start",
+                'end_date' => "$date $end",
+            ]);
+        }
+
+        $log = $this->insertLog($employee, $date, ['entry_time' => $entry, 'exit_time' => $exit]);
+        $totals = $this->service->computeTotals(Carbon::parse($date), 1, collect([$log]), [], $shift);
+
+        return [$log, $totals];
+    }
+
+    public function test_off_day_overtime_request_is_paid_with_overtime_coefficient_for_its_minutes(): void
+    {
+        [$log, $totals] = $this->offDayLogAndTotals('2025-03-06', [
+            [PersonnelRequestType::OVERTIME_ORDER, '14:00:00', '16:00:00'],
+        ]);
+
+        $this->assertSame(0, $log->auto_overtime);
+        $this->assertSame(120, $log->overtime);
+        $this->assertSame(480, $log->worked);
+        $this->assertSame(120, $totals['overtime']);
+        $this->assertSame(360, $totals['holiday']);
+        $this->assertSame(0, $totals['mission']);
+    }
+
+    public function test_off_day_mission_wins_over_overtime_and_no_minute_is_counted_twice(): void
+    {
+        [$log, $totals] = $this->offDayLogAndTotals('2025-03-06', [
+            [PersonnelRequestType::MISSION_HOURLY, '08:00:00', '12:00:00'],
+            [PersonnelRequestType::OVERTIME_ORDER, '10:00:00', '14:00:00'],
+        ]);
+
+        $this->assertSame(120, $log->overtime);
+        $this->assertSame(240, $log->worked);
+        $this->assertSame(240, $totals['mission']);
+        $this->assertSame(120, $totals['overtime']);
+        $this->assertSame(120, $totals['holiday']);
+        $this->assertSame(480, $totals['mission'] + $totals['overtime'] + $totals['holiday']);
+    }
+
+    public function test_off_day_overtime_only_counts_up_to_actual_presence(): void
+    {
+        [$log] = $this->offDayLogAndTotals('2025-03-06', [
+            [PersonnelRequestType::OVERTIME_ORDER, '15:00:00', '20:00:00'],
+        ]);
+
+        $this->assertSame(60, $log->overtime);
+        $this->assertSame(480, $log->worked);
+    }
+
+    public function test_off_day_hourly_mission_outside_presence_is_paid_once_and_does_not_reduce_holiday_work(): void
+    {
+        [$log, $totals] = $this->offDayLogAndTotals('2025-03-06', [
+            [PersonnelRequestType::MISSION_HOURLY, '17:00:00', '19:00:00'],
+        ]);
+
+        $this->assertSame(480, $log->worked);
+        $this->assertSame(120, $totals['mission']);
+        $this->assertSame(480, $totals['holiday']);
+    }
+
+    public function test_off_day_daily_mission_is_not_also_paid_as_holiday_work(): void
+    {
+        [$log, $totals] = $this->offDayLogAndTotals('2025-03-06', [
+            [PersonnelRequestType::MISSION_DAILY, '00:00:00', '23:59:00'],
+        ]);
+
+        $this->assertSame(0, $log->worked);
+        $this->assertSame(540, $totals['mission']);
+        $this->assertSame(0, $totals['holiday']);
+    }
+
+    public function test_off_day_stored_overtime_without_request_is_ignored(): void
+    {
+        $shift = $this->makeShift(['thursday_status' => ThursdayStatus::HOLIDAY, 'break' => 0]);
+        $employee = $this->makeEmployee($shift);
+
+        // Stored/manual overtime with no approved overtime request must not turn holiday work into overtime.
+        $log = $this->insertLog($employee, '2025-03-07', [
+            'entry_time' => '08:00:00',
+            'exit_time' => '16:00:00',
+            'overtime' => 120,
+        ]);
+        $totals = $this->service->computeTotals(Carbon::parse('2025-03-07'), 1, collect([$log]), [], $shift);
+
+        $this->assertSame(0, $log->overtime);
+        $this->assertSame(480, $log->worked);
+        $this->assertSame(0, $totals['overtime']);
+        $this->assertSame(480, $totals['friday']);
+    }
+
+    public function test_friday_without_requests_is_paid_entirely_with_friday_bucket(): void
+    {
+        [$log, $totals] = $this->offDayLogAndTotals('2025-03-07', []);
+
+        $this->assertSame(480, $log->worked);
+        $this->assertSame(480, $totals['friday']);
+        $this->assertSame(0, $totals['holiday']);
+        $this->assertSame(0, $totals['overtime']);
     }
 }

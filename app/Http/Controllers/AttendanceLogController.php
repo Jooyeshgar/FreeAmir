@@ -224,7 +224,7 @@ class AttendanceLogController extends Controller
         // recalculateLog() passes only the public-holiday flag; Thursday holidays are handled inside computeLogColumns().
         $computed = $this->attendanceService->computeLogColumns(
             $logForCheck, $workShift, $isFriday, $isPublicHoliday, $isThursday,
-            $remoteRequest, $midShiftCoverage, $hourlyCoverageRequests
+            $remoteRequest, $midShiftCoverage, $hourlyCoverageRequests, $approvedRequests
         );
 
         // Effective (real) shift start accounting for float grace window
