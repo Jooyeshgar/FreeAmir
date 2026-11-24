@@ -13,6 +13,8 @@ use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Pagination\LengthAwarePaginator;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
@@ -170,6 +172,101 @@ class PersonnelRequestTest extends TestCase
         ]));
 
         $response->assertStatus(200);
+    }
+
+    #[DataProvider('requestTabs')]
+    public function test_index_totals_requests_matching_all_filters(string $tab, PersonnelRequestType $type): void
+    {
+        $otherEmployee = Employee::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $activeYear = FiscalYear::findOrFail($this->fiscalYearId);
+        $otherYear = FiscalYear::factory()->create(['company_id' => $activeYear->company_id, 'year' => $activeYear->year + 1]);
+        $onFromDate = ['start_date' => '2025-03-21 00:00:00', 'end_date' => '2025-03-21 00:30:59', 'request_type' => $type];
+        $onToDate = ['start_date' => '2025-03-22 23:00:00', 'end_date' => '2025-03-22 23:59:59', 'request_type' => $type];
+
+        $first = $this->makePersonnelRequest($onFromDate);
+        $last = $this->makePersonnelRequest($onToDate);
+        $this->makePersonnelRequest(array_replace($onFromDate, ['employee_id' => $otherEmployee->id]));
+        $this->makePersonnelRequest(array_replace($onFromDate, ['status' => PersonnelRequestStatus::APPROVED]));
+        $this->makePersonnelRequest(array_replace($onFromDate, ['fiscal_year_id' => $otherYear->id]));
+        $this->makePersonnelRequest(array_replace($onFromDate, [
+            'request_type' => $tab === 'leaves' ? PersonnelRequestType::OTHER : PersonnelRequestType::LEAVE_DAILY,
+        ]));
+        $this->makePersonnelRequest(['start_date' => '2025-03-20 23:00:00', 'end_date' => '2025-03-21 01:00:00', 'request_type' => $type]);
+        $this->makePersonnelRequest(['start_date' => '2025-03-23 00:00:00', 'end_date' => '2025-03-23 01:00:00', 'request_type' => $type]);
+
+        $this->get(route('hr.personnel-requests.index', [
+            'tab' => $tab,
+            'employee_id' => $this->employee->id,
+            'status' => 'pending',
+            'date_from' => '۱۴۰۴/۰۱/۰۱',
+            'date_to' => '1404/01/02',
+        ]))->assertOk()
+            ->assertViewHas('personnelRequests', fn (LengthAwarePaginator $page) => $page->getCollection()->modelKeys() === [$last->id, $first->id])
+            ->assertViewHas('pageDurationMinutes', 89)
+            ->assertSee('name="date_from"', false)
+            ->assertSee('name="date_to"', false)
+            ->assertSeeInOrder(['<tfoot>', __('Total'), localizeNumber('01:29'), '</tfoot>'], false);
+    }
+
+    public static function requestTabs(): array
+    {
+        return [
+            'leaves' => ['leaves', PersonnelRequestType::LEAVE_DAILY],
+            'missions' => ['missions', PersonnelRequestType::MISSION_DAILY],
+            'work orders' => ['work_orders', PersonnelRequestType::REMOTE_WORK],
+            'other' => ['other', PersonnelRequestType::OTHER],
+        ];
+    }
+
+    public function test_index_totals_only_the_current_page_with_a_from_date_and_no_employee_filter(): void
+    {
+        $otherEmployee = Employee::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $earliest = $this->makePersonnelRequest(['start_date' => '2025-03-21 08:00:00', 'end_date' => '2025-03-21 08:30:00']);
+        $this->makePersonnelRequest(['start_date' => '2025-03-20 08:00:00', 'end_date' => '2025-03-20 08:30:00']);
+        PersonnelRequest::factory()->count(15)->create([
+            'fiscal_year_id' => $this->fiscalYearId,
+            'employee_id' => $otherEmployee->id,
+            'request_type' => PersonnelRequestType::LEAVE_DAILY,
+            'start_date' => '2025-03-22 08:00:00',
+            'end_date' => '2025-03-22 10:05:00',
+        ]);
+
+        $firstPage = $this->get(route('hr.personnel-requests.index', ['date_from' => '1404/01/01']))
+            ->assertOk()
+            ->assertViewHas('pageDurationMinutes', 1875)
+            ->assertSeeInOrder(['<tfoot>', localizeNumber('31:15'), '</tfoot>'], false);
+
+        $nextPageUrl = $firstPage->viewData('personnelRequests')->nextPageUrl();
+        $this->assertStringContainsString('date_from=1404%2F01%2F01', $nextPageUrl);
+        $this->get($nextPageUrl)->assertOk()
+            ->assertViewHas('personnelRequests', fn (LengthAwarePaginator $page) => $page->getCollection()->modelKeys() === [$earliest->id])
+            ->assertViewHas('pageDurationMinutes', 30);
+    }
+
+    public function test_index_supports_only_a_to_date_and_hides_the_total_when_dates_are_cleared(): void
+    {
+        $this->makePersonnelRequest(['start_date' => '2025-03-21 08:00:00', 'end_date' => '2025-03-21 09:00:00']);
+        $this->makePersonnelRequest(['start_date' => '2025-03-22 08:00:00', 'end_date' => '2025-03-22 10:00:00']);
+
+        $this->get(route('hr.personnel-requests.index', ['date_to' => '1404/01/01']))
+            ->assertOk()
+            ->assertViewHas('pageDurationMinutes', 60);
+
+        $this->get(route('hr.personnel-requests.index', ['date_to' => '1403/12/29']))
+            ->assertOk()
+            ->assertViewHas('pageDurationMinutes', 0)
+            ->assertSeeInOrder(['<tfoot>', __('Total'), localizeNumber('00:00'), '</tfoot>'], false);
+
+        $this->get(route('hr.personnel-requests.index', ['date_from' => '', 'date_to' => '']))
+            ->assertOk()
+            ->assertViewHas('personnelRequests', fn (LengthAwarePaginator $page) => $page->total() === 2)
+            ->assertDontSee('<tfoot>', false);
+    }
+
+    public function test_index_rejects_an_invalid_jalali_date(): void
+    {
+        $this->get(route('hr.personnel-requests.index', ['date_from' => '1404/07/31']))
+            ->assertSessionHasErrors('date_from');
     }
 
     // ----------------------------------------------------------------
