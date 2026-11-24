@@ -1331,7 +1331,7 @@ class AttendanceServiceCalculationTest extends TestCase
 
     public function test_leave_starting_before_shift_start_does_not_generate_auto_overtime(): void
     {
-        // Issue #479: shift 08:00–16:00, hourly leave 07:30–10:10, clock 10:10→16:00.
+        // Shift 08:00–16:00, hourly leave 07:30–10:10, clock 10:10→16:00.
         // The 30 minutes of leave before the shift starts are outside the shift, so they must not be turned into automatic overtime.
         $employee = $this->makeEmployee($this->eightToFourShift());
 
@@ -1520,7 +1520,7 @@ class AttendanceServiceCalculationTest extends TestCase
     }
 
     /**
-     * The "Calculation Check" table on the log page must show exactly what recalculateLog() stores (#480).
+     * The "Calculation Check" table on the log page must show exactly what recalculateLog() stores.
      */
     #[DataProvider('calculationCheckScenarios')]
     public function test_calculation_check_table_matches_stored_values_after_recalculate(?PersonnelRequestType $requestType): void

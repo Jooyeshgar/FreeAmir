@@ -146,13 +146,13 @@ class AttendanceService
     /**
      * Compute derived attendance columns without persisting.
      *
-     * ⚠ This method is called from TWO places, and each one gathers the inputs on its own:
+     * This method is called from TWO places, and each one gathers the inputs on its own:
      *   • AttendanceService::recalculateLog()      — computes and stores the columns
      *   • AttendanceLogController::show()          — the "Calculation Check" table compares
      *                                                these values with the stored ones
      * Both places MUST pass exactly the same inputs, including any pre-processing of the log
      * (e.g. request-backed paid_leave/mission/... set before the call). When you change one of
-     * them, change the other too; otherwise the check table shows false mismatches (see #480).
+     * them, change the other too; otherwise the check table shows false mismatches.
      * AttendanceServiceCalculationTest::test_calculation_check_table_matches_stored_values_after_recalculate
      * guards this.
      *

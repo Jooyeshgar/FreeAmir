@@ -194,7 +194,7 @@ class AttendanceLogController extends Controller
         $isHoliday = $isPublicHoliday || $isThursdayHoliday;
 
         // Compute what recalculateLog() WOULD store right now, without saving.
-        // ⚠ These inputs must match AttendanceService::recalculateLog() exactly; when you change one, change the other (see computeLogColumns docblock, #480).
+        // These inputs must match AttendanceService::recalculateLog() exactly; when you change one, change the other (see computeLogColumns docblock).
         $dateStr = $logDate->toDateString();
         $logForCheck = clone $attendanceLog;
 
