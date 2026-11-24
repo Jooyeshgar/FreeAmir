@@ -59,7 +59,7 @@ class CreateInvoiceTool extends AccountingTool
         if ($extensions !== []) {
             $extensionProperties = [];
             foreach (array_keys($extensions) as $key) {
-                $extensionProperties[$key] = $schema->object()->description($registry->mcpDescription($key));
+                $extensionProperties[$key] = $schema->union(['object', 'array'])->description($registry->mcpDescription($key));
             }
             $properties['extensions'] = $schema->object($extensionProperties)
                 ->withoutAdditionalProperties()

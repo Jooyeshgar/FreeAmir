@@ -44,7 +44,7 @@ MCP server security is built upon Laravel Sanctum personal access tokens and Spa
 
 | Tool Name | Description | Required Permissions / Abilities |
 |---|---|---|
-| `get_current_context` | Calendar context, active fiscal year, and accessible fiscal years | A supported report/read permission or `customers.store`, `products.store`, `invoices.store` |
+| `get_current_context` | Calendar context, active fiscal year, and accessible fiscal years | A supported report/read permission or one of `customers.store`, `products.store`, `invoices.store`, `invoices.approve` |
 | `get_profit_loss` | P&L calculation, income, cost, and profit margin | `reports.cost-income`, `reports.result`, or (`reports.company-overview` + `documents.show`) |
 | `get_financial_summary` | Overall financial totals and top income/expense subjects | `reports.trial-balance`, `reports.ledger`, or (`reports.company-overview` + `documents.show`) |
 | `get_invoices_summary` | Sales and purchase invoices, 12-month breakdown, and recent invoices | `invoices.index` or `invoices.show` (`customers.index` needed to expose customer names) |
@@ -96,12 +96,11 @@ Searches a customer or counterparty by name, phone, mobile, national code, or ID
 
 ### 6. Creation tools
 
-All three tools require an explicit `fiscal_year_id` assigned to the token owner and reject closed years. Referenced groups, customers, warehouses and items must belong to that same year. Grant the corresponding ability when creating the API token; ordinary read tokens do not gain write access. `get_current_context` exposes `customer_groups`, `product_groups`, and `warehouses` for discovery.
+The creation tools require an explicit `fiscal_year_id` assigned to the token owner and reject closed years. Referenced groups, customers, warehouses and items must belong to that same year. Each creation permission is required on both the user and the API token. `get_current_context` exposes `customer_groups`, `product_groups`, and `warehouses` for discovery.
 
 - `create_customer`: required `fiscal_year_id` and `name`. Optional `group_id` (defaults to the first customer group), `type` (defaults to `individual`), `phone`, `mobile`, `email`, `personal_code`, `postal_code`, `address`, `description`, `subject_code`.
 - `create_product`: required `fiscal_year_id` and `name`. Optional `group_id` (defaults to the first product group), `oversell` (defaults to `false`), `code` (a string of up to 20 digits, generated when omitted), `quantity_warning`, `selling_price`, `vat`, `location`, `description`. Prices use the selected fiscal year company currency. Initial stock is zero.
-- `create_invoice`: required `fiscal_year_id`, `invoice_type` (`sell` or `buy`), `customer_id`, `items` (1–500 lines). Optional `warehouse_id` (defaults to the first warehouse), `number` (defaults to the next consecutive number), `title`, `description`, `subtraction`. The Gregorian `date` must fall within the selected fiscal year. You may omit it if today falls within that year. When invoice extensions (such as invoice categories) are registered via `InvoiceExtensionRegistry`, `create_invoice` also exposes an optional `extensions` object and `get_current_context` exposes `invoice_extensions`.
-- `approve_invoice`: required `fiscal_year_id`, `invoice_id` (optional `confirm`). Approves an existing unapproved/draft invoice, posting its accounting document and updating stock/COGS. Only call when explicitly instructed by the user.
+- `create_invoice`: required `fiscal_year_id`, `invoice_type` (`sell` or `buy`), `customer_id`, `items` (1–500 lines). Optional `warehouse_id` (defaults to the first warehouse), `number` (defaults to the next consecutive number), `title`, `description`, `subtraction`. The Gregorian `date` must fall within the selected fiscal year. You may omit it if today falls within that year.
 
 Each invoice line requires `item_type` (`product` or `service`), `item_id`, `quantity` and `unit` (unit price). Optional `discount` is the absolute line discount in the selected fiscal year company currency, `vat` is a percentage from 0 to 100, and `description` is free text. The server computes totals with `InvoiceService`; duplicate items and invalid monetary bounds are rejected. The same minimum quantity rule as the web form applies (currently 1).
 
@@ -121,9 +120,24 @@ Example `create_invoice` arguments (IDs must already exist in the selected year)
 }
 ```
 
-Creation results include the entity ID, fiscal year and stored details. Product and invoice results include `currency` for all monetary fields, including invoice line prices and discounts. Invoice results include the actual status (`pre_invoice` for sales, `pending` for purchases), calculated amounts and line items. These tools cannot approve, post, pay, void or submit invoices. Drafting does not create an accounting document or change stock. Unknown arguments, including `approve` or `status`, are rejected. Validation failures return `isError: true` with field errors; internal failures do not expose SQL or credentials.
+Creation results include the entity ID, fiscal year and stored details. Product and invoice results include `currency` for all monetary fields, including invoice line prices and discounts. `create_invoice` saves a draft (`pre_invoice` for sales, `pending` for purchases) and returns its calculated amounts and line items. Posting the accounting document and updating stock require separate approval. The creation tools reject unknown arguments, including `approve` and `status`. Validation failures return `isError: true` with field errors.
 
-These tools are **not idempotent**. After an uncertain timeout, reconcile whether a record was created before retrying. Names, codes and invoice numbers use existing application uniqueness rules, not a general retry guarantee.
+After a creation timeout, check whether the record was created before retrying.
+
+#### Invoice extensions
+
+When an extension is registered with `InvoiceExtensionRegistry`, `create_invoice` lists its key under the optional `extensions` object. Each value may be an object or a list. The handler validates its own payload and persists it in the draft's transaction. The `amir/invoice-categories` package accepts a direct list of category IDs, for example `{"extensions":{"invoice_categories":[7]}}`.
+
+In addition to `ModelExtension`, a handler may provide these public methods.
+
+- `mcpOptions(int $fiscalYearId): array` returns JSON-serializable options scoped to the supplied fiscal year, for example `[['id' => 7, 'name' => 'Online Sales']]`. Nonempty options appear in `get_current_context` under `invoice_extensions.<key>`.
+- `mcpDescription(): string` describes the accepted value and can include a JSON example. It appears on the extension field in `tools/list`. Otherwise, the field gets the registry's default description.
+
+### 7. `approve_invoice`
+
+Provide `fiscal_year_id` and `invoice_id`. Both the user and the token need `invoices.approve`. The tool only approves an eligible draft or unapproved invoice dated within the selected open fiscal year. On success it posts the accounting document, updates stock and COGS where applicable, and returns `approved: true` and `document_id`.
+
+Call this tool only on explicit user instruction. `tools/list` announces `destructiveHint: true`. When a warning requires confirmation and `confirm` is absent or false, the tool returns `isError: true` with JSON in `content[0].text` containing `needs_confirmation: true`, `message`, and `conflicts`. An invoice conflict has `type: "invoice"`, `id`, `number`, and `invoice_type`. A product conflict has `type: "product"`, `id`, `code`, and `name`. Retry with `confirm: true` only after the user accepts that warning.
 
 ## 4. Client Configuration Examples
 

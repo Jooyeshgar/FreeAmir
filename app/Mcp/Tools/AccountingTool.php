@@ -20,6 +20,8 @@ abstract class AccountingTool extends Tool
 
     protected bool $readOnlyHint = true;
 
+    protected bool $destructiveHint = false;
+
     public function shouldRegister(): bool
     {
         $context = ContextResolver::authContext();
@@ -43,7 +45,7 @@ abstract class AccountingTool extends Tool
         $definition['annotations'] = [
             ...$definition['annotations'],
             'readOnlyHint' => $this->readOnlyHint,
-            'destructiveHint' => false,
+            'destructiveHint' => $this->destructiveHint,
             'openWorldHint' => false,
         ];
 
@@ -74,10 +76,15 @@ abstract class AccountingTool extends Tool
         } catch (Throwable $exception) {
             report($exception);
 
-            return Response::error($this->readOnlyHint
-                ? __('Failed to retrieve report. Please try again or contact support.')
-                : __('Failed to create record. Please try again or contact support.'));
+            return Response::error($this->unexpectedErrorMessage());
         }
+    }
+
+    protected function unexpectedErrorMessage(): string
+    {
+        return $this->readOnlyHint
+            ? __('Failed to retrieve report. Please try again or contact support.')
+            : __('Failed to create record. Please try again or contact support.');
     }
 
     protected function success(array $data): Response

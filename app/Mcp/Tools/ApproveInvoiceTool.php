@@ -23,6 +23,13 @@ class ApproveInvoiceTool extends AccountingTool
 
     protected bool $readOnlyHint = false;
 
+    protected bool $destructiveHint = true;
+
+    protected function unexpectedErrorMessage(): string
+    {
+        return __('Failed to approve invoice. Please try again or contact support.');
+    }
+
     public function schema(JsonSchema $schema): array
     {
         return [

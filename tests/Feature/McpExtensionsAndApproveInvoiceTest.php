@@ -17,6 +17,7 @@ use App\Models\ProductGroup;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\ApiTokenAbilityService;
+use App\Services\InvoiceService;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -24,6 +25,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\TestWith;
+use RuntimeException;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\Helpers\SeederHelper;
@@ -113,7 +115,9 @@ class McpExtensionsAndApproveInvoiceTest extends TestCase
         $this->assertTrue($abilities->contains('invoices.approve'));
     }
 
-    public function test_invoice_extensions_are_hidden_when_unregistered_and_persisted_when_registered(): void
+    #[TestWith([['category_ids' => [7]]])]
+    #[TestWith([[7]])]
+    public function test_invoice_extensions_are_hidden_when_unregistered_and_persisted_when_registered(array $categoryPayload): void
     {
         $registry = new InvoiceExtensionRegistry(app());
         app()->instance(InvoiceExtensionRegistry::class, $registry);
@@ -126,6 +130,9 @@ class McpExtensionsAndApproveInvoiceTest extends TestCase
 
         $createInvoiceBefore = collect($toolsBefore)->firstWhere('name', 'create_invoice');
         $this->assertArrayNotHasKey('extensions', $createInvoiceBefore['inputSchema']['properties']);
+        $this->assertFalse($createInvoiceBefore['annotations']['destructiveHint']);
+        $approveInvoice = collect($toolsBefore)->firstWhere('name', 'approve_invoice');
+        $this->assertTrue($approveInvoice['annotations']['destructiveHint']);
 
         $contextBefore = $this->callTool('get_current_context', ['fiscal_year_id' => $this->year->id]);
         $this->assertArrayNotHasKey('invoice_extensions', $contextBefore);
@@ -141,8 +148,9 @@ class McpExtensionsAndApproveInvoiceTest extends TestCase
         ])->assertOk()->json('result.tools');
 
         $createInvoiceAfter = collect($toolsAfter)->firstWhere('name', 'create_invoice');
-        $this->assertArrayHasKey('extensions', $createInvoiceAfter['inputSchema']['properties']);
-        $this->assertArrayHasKey('categories', $createInvoiceAfter['inputSchema']['properties']['extensions']['properties']);
+        $categorySchema = $createInvoiceAfter['inputSchema']['properties']['extensions']['properties']['categories'];
+        $this->assertSame(['object', 'array'], $categorySchema['type']);
+        $this->assertSame((new FakeInvoiceCategoryExtension)->mcpDescription(), $categorySchema['description']);
 
         $contextAfter = $this->callTool('get_current_context', ['fiscal_year_id' => $this->year->id]);
         $this->assertSame([['id' => 7, 'name' => 'Online Sales']], $contextAfter['invoice_extensions']['categories']);
@@ -159,7 +167,7 @@ class McpExtensionsAndApproveInvoiceTest extends TestCase
                 'unit' => 1000,
             ]],
             'extensions' => [
-                'categories' => ['category_ids' => [7]],
+                'categories' => $categoryPayload,
             ],
         ]);
 
@@ -219,6 +227,23 @@ class McpExtensionsAndApproveInvoiceTest extends TestCase
         $this->assertSame($this->product->id, $confirmPayload['conflicts'][0]['id']);
         $this->assertSame('100', $confirmPayload['conflicts'][0]['code']);
         $this->assertSame($this->product->name, $confirmPayload['conflicts'][0]['name']);
+
+        $invoiceService = app(InvoiceService::class);
+        $this->partialMock(InvoiceService::class)->shouldReceive('changeInvoiceStatus')->once()
+            ->andThrow(new RuntimeException('Posting failed.'));
+        $this->withToken($this->token)->postJson('/api/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 8,
+            'method' => 'tools/call',
+            'params' => ['name' => 'approve_invoice', 'arguments' => [
+                'fiscal_year_id' => $this->year->id,
+                'invoice_id' => $created['id'],
+                'confirm' => true,
+            ]],
+        ])->assertOk()
+            ->assertJsonPath('result.isError', true)
+            ->assertJsonPath('result.content.0.text', __('Failed to approve invoice. Please try again or contact support.'));
+        app()->instance(InvoiceService::class, $invoiceService);
 
         // Authorized token with confirm: true approves the draft invoice
         $approved = $this->callTool('approve_invoice', [
@@ -371,7 +396,7 @@ class FakeInvoiceCategoryExtension implements ModelExtension
 
     public function validate(array $input, ?Model $model = null): array
     {
-        return ['category_ids' => array_map('intval', $input['category_ids'] ?? [])];
+        return ['category_ids' => array_map('intval', $input['category_ids'] ?? $input)];
     }
 
     public function persist(Model $model, array $data): void
@@ -391,6 +416,6 @@ class FakeInvoiceCategoryExtension implements ModelExtension
 
     public function mcpDescription(): string
     {
-        return 'Optional invoice category IDs (e.g. {"category_ids": [7]}).';
+        return 'Optional invoice category IDs. Use a list of IDs or an object with category_ids.';
     }
 }
