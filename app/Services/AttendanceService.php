@@ -111,7 +111,7 @@ class AttendanceService
 
         $midShiftCoverage = $this->midShiftCoverageMinutes($log, $hourlyCoverageRequests);
 
-        $columns = $this->computeLogColumns($log, $workShift, $isFriday, $isHoliday, $isThursday, $remoteRequest, $midShiftCoverage, $hourlyCoverageRequests);
+        $columns = $this->computeLogColumns($log, $workShift, $isFriday, $isHoliday, $isThursday, $remoteRequest, $midShiftCoverage, $hourlyCoverageRequests, $approvedRequests);
 
         $log->update($columns);
 
@@ -165,6 +165,7 @@ class AttendanceService
      * - coverage absorbs delay and early_leave
      * - total coverage is capped by shift minutes
      *
+     * @param  Collection  $approvedRequests  Approved requests covering the log date; used to split off-day minutes by mission/overtime window.
      * @return array{
      *     worked:int,
      *     delay:int,
@@ -177,7 +178,7 @@ class AttendanceService
      *     is_holiday?:bool
      * }
      */
-    public function computeLogColumns(AttendanceLog $log, ?WorkShift $workShift, bool $isFriday, bool $isHoliday, bool $isThursday, ?PersonnelRequest $remoteRequest, int $midShiftCoverage, ?Collection $hourlyCoverageRequests): array
+    public function computeLogColumns(AttendanceLog $log, ?WorkShift $workShift, bool $isFriday, bool $isHoliday, bool $isThursday, ?PersonnelRequest $remoteRequest, int $midShiftCoverage, ?Collection $hourlyCoverageRequests, Collection $approvedRequests): array
     {
         // ── Thursday handling ──────────────────────────────────────────────
         $thursdayStatus = $isThursday ? ($workShift?->thursday_status ?? ThursdayStatus::FULL_DAY) : null;
@@ -208,11 +209,15 @@ class AttendanceService
 
         // ── Off-day (Friday / holiday) ─────────────────────────────────────
         if ($isFriday || $isHoliday) {
+            // Every presence minute is paid once: mission > approved overtime > holiday work.
+            $split = $this->splitOffDayMinutes($log, $approvedRequests, $rawWorked, $remoteWork, $mission, $approvedOvertimeInput);
+
             return [
-                'worked' => $rawWorked + $remoteWork,
+                // Like mid-shift coverage on a normal day, minutes covered by a mission are not worked minutes.
+                'worked' => max(0, $rawWorked + $remoteWork - $split['mission_overlap']),
                 'delay' => 0,
                 'early_leave' => 0,
-                'overtime' => 0,
+                'overtime' => $split['overtime'],
                 'auto_overtime' => 0,
                 'mission' => $mission,
                 'remote_work' => $remoteWork,
@@ -731,14 +736,13 @@ class AttendanceService
             if ($isOffDay) {
                 $presentDays++;
 
-                if (isset($logsByDate[$dateStr])) {
-                    $log = $logsByDate[$dateStr];
-                    $totalWork = (int) $log->worked + (int) $log->mission;
-                    if ($isFriday) {
-                        $fridayMin += $totalWork;
-                    } else {
-                        $holidayMin += $totalWork;
-                    }
+                // Mission and approved overtime minutes are paid by their own buckets (once per minute);
+                // only the remaining worked minutes (worked excludes mission-covered presence) are paid with the Friday / holiday coefficient.
+                $overtimeMin += (int) $log->overtime;
+                if ($isFriday) {
+                    $fridayMin += max(0, (int) $log->worked - (int) $log->overtime);
+                } else {
+                    $holidayMin += max(0, (int) $log->worked - (int) $log->overtime);
                 }
 
                 continue;
@@ -1087,6 +1091,130 @@ class AttendanceService
         }
 
         return max(0, $overlap);
+    }
+
+    /**
+     * Split the presence of an off day into mission-covered and overtime-covered minutes.
+     *
+     * The split is per minute with priority mission > overtime > holiday work, so no minute is counted twice.
+     * Mission minutes themselves stay in the `mission` column (paid once with the mission coefficient);
+     * only their overlap with the presence is removed from the other buckets.
+     *
+     * @return array{overtime:int, mission_overlap:int}
+     */
+    private function splitOffDayMinutes(AttendanceLog $log, Collection $approvedRequests, int $rawWorked, int $remoteWork, int $mission, int $approvedOvertimeInput): array
+    {
+        $presenceMinutes = $rawWorked + $remoteWork;
+        if ($presenceMinutes <= 0) {
+            return ['overtime' => 0, 'mission_overlap' => 0];
+        }
+
+        $presence = [];
+        if ($log->entry_time !== null && $log->exit_time !== null) {
+            $start = $this->minuteOfDay((string) $log->entry_time);
+            $end = $this->minuteOfDay((string) $log->exit_time);
+            if ($end > $start) {
+                $presence = [[$start, $end]];
+            }
+        }
+
+        $missionWindows = [];
+        $overtimeWindows = [];
+        $hasDailyMission = false;
+        foreach ($approvedRequests as $request) {
+            $type = $request->request_type;
+            if ($type === PersonnelRequestType::MISSION_DAILY) {
+                $hasDailyMission = true;
+            } elseif ($type === PersonnelRequestType::MISSION_HOURLY) {
+                $missionWindows[] = [$this->minuteOfDay($request->start_date->format('H:i:s')), $this->minuteOfDay($request->end_date->format('H:i:s'))];
+            } elseif ($type === PersonnelRequestType::OVERTIME_ORDER) {
+                $overtimeWindows[] = [$this->minuteOfDay($request->start_date->format('H:i:s')), $this->minuteOfDay($request->end_date->format('H:i:s'))];
+            }
+        }
+
+        // Mission minutes overlapping the presence.
+        // A daily mission covers the whole day; mission minutes without any request window (manual values) are assumed to overlap the presence.
+        if ($hasDailyMission || ($mission > 0 && $missionWindows === [])) {
+            $missionOverlap = $hasDailyMission ? $presenceMinutes : min($mission, $presenceMinutes);
+            $missionIntervals = $presence;
+        } else {
+            $missionIntervals = $this->intersectIntervals($presence, $missionWindows);
+            $missionOverlap = min($presenceMinutes, $this->intervalsLength($missionIntervals));
+        }
+
+        // Approved overtime outside mission minutes, capped by the remaining presence.
+        if ($overtimeWindows !== []) {
+            $overtimeIntervals = $this->intersectIntervals($presence, $overtimeWindows);
+            $overtimeOnly = $this->intervalsLength($overtimeIntervals) - $this->intervalsLength($this->intersectIntervals($overtimeIntervals, $missionIntervals));
+        } else {
+            $overtimeOnly = $approvedOvertimeInput;
+        }
+
+        return [
+            'overtime' => max(0, min($overtimeOnly, $presenceMinutes - $missionOverlap)),
+            'mission_overlap' => $missionOverlap,
+        ];
+    }
+
+    private function minuteOfDay(string $time): int
+    {
+        [$hours, $minutes] = array_map('intval', explode(':', $time));
+
+        return $hours * 60 + $minutes;
+    }
+
+    /**
+     * Intersect two lists of [start, end) minute intervals (each list is merged first).
+     *
+     * @param  array<int, array{0:int,1:int}>  $a
+     * @param  array<int, array{0:int,1:int}>  $b
+     * @return array<int, array{0:int,1:int}>
+     */
+    private function intersectIntervals(array $a, array $b): array
+    {
+        $a = $this->mergeIntervals($a);
+        $b = $this->mergeIntervals($b);
+        $result = [];
+        foreach ($a as [$aStart, $aEnd]) {
+            foreach ($b as [$bStart, $bEnd]) {
+                $start = max($aStart, $bStart);
+                $end = min($aEnd, $bEnd);
+                if ($start < $end) {
+                    $result[] = [$start, $end];
+                }
+            }
+        }
+
+        return $this->mergeIntervals($result);
+    }
+
+    /**
+     * @param  array<int, array{0:int,1:int}>  $intervals
+     * @return array<int, array{0:int,1:int}>
+     */
+    private function mergeIntervals(array $intervals): array
+    {
+        $intervals = array_values(array_filter($intervals, fn ($i) => $i[0] < $i[1]));
+        usort($intervals, fn ($x, $y) => $x[0] <=> $y[0]);
+        $merged = [];
+        foreach ($intervals as [$start, $end]) {
+            $last = count($merged) - 1;
+            if ($last >= 0 && $start <= $merged[$last][1]) {
+                $merged[$last][1] = max($merged[$last][1], $end);
+            } else {
+                $merged[] = [$start, $end];
+            }
+        }
+
+        return $merged;
+    }
+
+    /**
+     * @param  array<int, array{0:int,1:int}>  $intervals
+     */
+    private function intervalsLength(array $intervals): int
+    {
+        return array_sum(array_map(fn ($i) => $i[1] - $i[0], $this->mergeIntervals($intervals)));
     }
 
     private function parseTime(string $time): ?Carbon
