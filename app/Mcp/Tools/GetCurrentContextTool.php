@@ -11,9 +11,9 @@ class GetCurrentContextTool extends AccountingTool
 {
     protected string $name = 'get_current_context';
 
-    protected string $description = 'Return the current Jalali and Gregorian calendar context, active authorized fiscal year, company currency, and available fiscal years. If fiscal-year selection is ambiguous, return an error with the available fiscal years for the user to choose from.';
+    protected string $description = 'Return the current Jalali and Gregorian calendar context, active authorized fiscal year, company currency, available fiscal years, customer and product groups, and warehouses. If fiscal-year selection is ambiguous, return an error with the available fiscal years for the user to choose from.';
 
-    protected array $permissionGroups = [['invoices.index'], ['invoices.show'], ['reports.cost-income'], ['reports.company-overview'], ['customers.index'], ['customers.show'], ['reports.ledger'], ['reports.trial-balance'], ['reports.result']];
+    protected array $permissionGroups = [['invoices.index'], ['invoices.show'], ['reports.cost-income'], ['reports.company-overview'], ['customers.index'], ['customers.show'], ['reports.ledger'], ['reports.trial-balance'], ['reports.result'], ['customers.store'], ['products.store'], ['invoices.store']];
 
     public function schema(JsonSchema $schema): array
     {
@@ -49,6 +49,13 @@ class GetCurrentContextTool extends AccountingTool
             'end' => $context['active_fiscal_year']['end_date'],
             'currency' => $context['active_fiscal_year']['currency'],
             'available_years' => ! empty($availableList) ? implode(', ', $availableList) : __('Unknown'),
+        ]);
+
+        $customerGroupsList = array_map(fn ($group) => __(':name (ID :id)', $group), $context['customer_groups'] ?? []);
+        $warehousesList = array_map(fn ($warehouse) => __(':name (ID :id)', $warehouse), $context['warehouses'] ?? []);
+        $humanSummary .= ' '.__('Customer groups: :customer_groups. Warehouses: :warehouses.', [
+            'customer_groups' => ! empty($customerGroupsList) ? implode(', ', $customerGroupsList) : __('Unknown'),
+            'warehouses' => ! empty($warehousesList) ? implode(', ', $warehousesList) : __('Unknown'),
         ]);
 
         return $this->success(array_merge($context, [

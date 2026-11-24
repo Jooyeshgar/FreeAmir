@@ -37,18 +37,21 @@ MCP server security is built upon Laravel Sanctum personal access tokens and Spa
 2. **Two-Layer Authorization (User Permissions & Token Abilities):** Tools are exposed and executed only if:
    - The token owner holds the underlying permission.
    - The token was granted the matching ability at creation time.
-3. **Read-Only Operations:** All MCP tools are strictly read-only (`readOnlyHint: true`, `destructiveHint: false`).
+3. **Operation Hints:** Reports use `readOnlyHint: true`. Creation tools use `readOnlyHint: false`, `destructiveHint: false` and require explicit access to an open fiscal year.
 4. **Fiscal-Year Scoping:** Tool calls temporarily activate the requested fiscal year and company context, safely restoring the previous state in a `finally` block. If accessible fiscal years span multiple companies, reports require an explicit `fiscal_year_id` or a `year` that identifies a single company. For a single company, omission uses its active authorized fiscal year or the latest assigned year. On a fiscal-year selection error, `get_current_context` returns `isError: true` and JSON text containing `message` and `available_fiscal_years`; no report or active fiscal year is selected. Use the returned company and fiscal-year IDs to ask the user which one they intended.
 
 ### Required Permissions per Tool:
 
 | Tool Name | Description | Required Permissions / Abilities |
 |---|---|---|
-| `get_current_context` | Calendar context, active fiscal year, and accessible fiscal years | Any report, invoice, or customer permission |
+| `get_current_context` | Calendar context, active fiscal year, and accessible fiscal years | A supported report/read permission or `customers.store`, `products.store`, `invoices.store` |
 | `get_profit_loss` | P&L calculation, income, cost, and profit margin | `reports.cost-income`, `reports.result`, or (`reports.company-overview` + `documents.show`) |
 | `get_financial_summary` | Overall financial totals and top income/expense subjects | `reports.trial-balance`, `reports.ledger`, or (`reports.company-overview` + `documents.show`) |
 | `get_invoices_summary` | Sales and purchase invoices, 12-month breakdown, and recent invoices | `invoices.index` or `invoices.show` (`customers.index` needed to expose customer names) |
 | `get_customer_balance` | Customer balance, debtor/creditor status, and contact details | `customers.show` |
+| `create_customer` | Customer/counterparty and its accounting subject | `customers.store` |
+| `create_product` | Product, pricing, category and accounting subjects | `products.store` |
+| `create_invoice` | Unapproved sales/purchase invoice with line items | `invoices.store` |
 
 ---
 
@@ -89,6 +92,36 @@ Searches a customer or counterparty by name, phone, mobile, national code, or ID
   - `fiscal_year_id`: Target fiscal year ID.
 
 ---
+
+### 6. Creation tools
+
+All three tools require an explicit `fiscal_year_id` assigned to the token owner and reject closed years. Referenced groups, customers, warehouses and items must belong to that same year. Grant the corresponding ability when creating the API token; ordinary read tokens do not gain write access. `get_current_context` exposes `customer_groups`, `product_groups`, and `warehouses` for discovery.
+
+- `create_customer`: required `fiscal_year_id` and `name`. Optional `group_id` (defaults to the first customer group), `type` (defaults to `individual`), `phone`, `mobile`, `email`, `personal_code`, `postal_code`, `address`, `description`, `subject_code`.
+- `create_product`: required `fiscal_year_id` and `name`. Optional `group_id` (defaults to the first product group), `oversell` (defaults to `false`), `code` (a string of up to 20 digits, generated when omitted), `quantity_warning`, `selling_price`, `vat`, `location`, `description`. Prices use the selected fiscal year company currency. Initial stock is zero.
+- `create_invoice`: required `fiscal_year_id`, `invoice_type` (`sell` or `buy`), `customer_id`, `items` (1–500 lines). Optional `warehouse_id` (defaults to the first warehouse), `number` (defaults to the next consecutive number), `title`, `description`, `subtraction`. The Gregorian `date` must fall within the selected fiscal year. You may omit it if today falls within that year.
+
+Each invoice line requires `item_type` (`product` or `service`), `item_id`, `quantity` and `unit` (unit price). Optional `discount` is the absolute line discount in the selected fiscal year company currency, `vat` is a percentage from 0 to 100, and `description` is free text. The server computes totals with `InvoiceService`; duplicate items and invalid monetary bounds are rejected. The same minimum quantity rule as the web form applies (currently 1).
+
+Example `create_invoice` arguments (IDs must already exist in the selected year):
+
+```json
+{
+  "fiscal_year_id": 1,
+  "invoice_type": "sell",
+  "customer_id": 10,
+  "warehouse_id": 2,
+  "number": 101,
+  "date": "2026-11-16",
+  "items": [
+    {"item_type": "product", "item_id": 20, "quantity": 2, "unit": 100000, "vat": 10}
+  ]
+}
+```
+
+Creation results include the entity ID, fiscal year and stored details. Product and invoice results include `currency` for all monetary fields, including invoice line prices and discounts. Invoice results include the actual status (`pre_invoice` for sales, `pending` for purchases), calculated amounts and line items. These tools cannot approve, post, pay, void or submit invoices. Drafting does not create an accounting document or change stock. Unknown arguments, including `approve` or `status`, are rejected. Validation failures return `isError: true` with field errors; internal failures do not expose SQL or credentials.
+
+These tools are **not idempotent**. After an uncertain timeout, reconcile whether a record was created before retrying. Names, codes and invoice numbers use existing application uniqueness rules, not a general retry guarantee.
 
 ## 4. Client Configuration Examples
 
