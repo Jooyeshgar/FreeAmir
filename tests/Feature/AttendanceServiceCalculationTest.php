@@ -74,6 +74,7 @@ class AttendanceServiceCalculationTest extends TestCase
             'break' => 60,
             'float' => 0,
             'is_active' => true,
+            'thursday_status' => ThursdayStatus::FULL_DAY,
         ], $overrides));
     }
 
