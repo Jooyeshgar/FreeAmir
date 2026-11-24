@@ -3768,5 +3768,6 @@
     "This balance does not include this month's paid leave. Until this month's attendance is calculated, the employee portal adds this month's paid leave to the balance, so it shows more.": "این مانده، مرخصی این ماه را شامل نمی‌شود. تا زمانی که حضور و غیاب این ماه محاسبه نشده، پرتال کارمند مرخصی این ماه را به مانده اضافه می‌کند و عدد بیشتری نشان می‌دهد.",
     "Paid leave balance pending confirmation": "مانده مرخصی با حقوق در انتظار تأیید",
     "Enter the verified remaining balance after removing any prepaid leave, before posting new attendance.": "پیش از ثبت کارکرد جدید، مانده تأییدشده مرخصی با حقوق را پس از کسر پیش‌پرداخت وارد کنید.",
-    "This employee no longer has a prepaid leave balance to reconcile.": "مانده پیش‌پرداخت مرخصی با حقوق این کارمند قبلاً تعیین تکلیف شده است."
+    "This employee no longer has a prepaid leave balance to reconcile.": "مانده پیش‌پرداخت مرخصی با حقوق این کارمند قبلاً تعیین تکلیف شده است.",
+    "An invoice with this reference ID already exists in the selected fiscal year.": "فاکتوری با این شناسه مرجع در سال مالی انتخاب‌شده قبلاً ثبت شده است."
 }
