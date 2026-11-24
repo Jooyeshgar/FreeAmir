@@ -3765,6 +3765,7 @@
     "The resulting remaining paid leave is outside the supported range.": "مانده حاصل مرخصی با حقوق خارج از محدوده مجاز است.",
     "Confirm the corrected prepaid leave balance in the employee record for :name.": "مانده اصلاح‌شده مرخصی با حقوق :name را در پرونده کارمند ثبت کنید.",
     "Corrected Remaining Paid Leave (minutes)": "مانده اصلاح‌شده مرخصی با حقوق (دقیقه)",
+    "This balance does not include this month's paid leave. Until this month's attendance is calculated, the employee portal adds this month's paid leave to the balance, so it shows more.": "این مانده، مرخصی این ماه را شامل نمی‌شود. تا زمانی که حضور و غیاب این ماه محاسبه نشده، پرتال کارمند مرخصی این ماه را به مانده اضافه می‌کند و عدد بیشتری نشان می‌دهد.",
     "Paid leave balance pending confirmation": "مانده مرخصی با حقوق در انتظار تأیید",
     "Enter the verified remaining balance after removing any prepaid leave, before posting new attendance.": "پیش از ثبت کارکرد جدید، مانده تأییدشده مرخصی با حقوق را پس از کسر پیش‌پرداخت وارد کنید.",
     "This employee no longer has a prepaid leave balance to reconcile.": "مانده پیش‌پرداخت مرخصی با حقوق این کارمند قبلاً تعیین تکلیف شده است."

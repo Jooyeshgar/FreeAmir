@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AttendanceImportType;
+use App\Enums\PersonnelRequestType;
 use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
 use App\Models\Employee;
@@ -192,8 +193,39 @@ class AttendanceLogController extends Controller
         // A day is effectively a holiday if it is a public holiday OR a Thursday-holiday
         $isHoliday = $isPublicHoliday || $isThursdayHoliday;
 
-        // Compute what the service WOULD calculate right now (without saving)
-        $computed = $this->attendanceService->computeLogColumns($attendanceLog, $workShift, $isFriday, $isHoliday, $isThursday);
+        // Compute what recalculateLog() WOULD store right now, without saving.
+        // These inputs must match AttendanceService::recalculateLog() exactly; when you change one, change the other (see computeLogColumns docblock).
+        $dateStr = $logDate->toDateString();
+        $logForCheck = clone $attendanceLog;
+
+        $remoteRequest = $employee?->personnelRequests()
+            ->ofType(PersonnelRequestType::REMOTE_WORK)
+            ->approved()
+            ->coveringDate($dateStr)
+            ->orderByDesc('id')
+            ->first();
+
+        $hourlyCoverageRequests = $employee?->personnelRequests()->whereIn('request_type', [
+            PersonnelRequestType::LEAVE_HOURLY->value,
+            PersonnelRequestType::LEAVE_WITHOUT_PAY_HOURLY->value,
+            PersonnelRequestType::MISSION_HOURLY->value,
+        ])->approved()->coveringDate($dateStr)->get() ?? collect();
+
+        $approvedRequests = $employee?->personnelRequests()->approved()->coveringDate($dateStr)->get() ?? collect();
+        $requestMinutes = $this->attendanceService->approvedRequestMinutesForDate($approvedRequests, $logDate, $workShift);
+        foreach (['paid_leave', 'unpaid_leave', 'mission', 'overtime', 'remote_work'] as $field) {
+            if ($requestMinutes[$field]['has_request']) {
+                $logForCheck->setAttribute($field, $requestMinutes[$field]['minutes']);
+            }
+        }
+
+        $midShiftCoverage = $this->attendanceService->midShiftCoverageMinutes($logForCheck, $hourlyCoverageRequests);
+
+        // recalculateLog() passes only the public-holiday flag; Thursday holidays are handled inside computeLogColumns().
+        $computed = $this->attendanceService->computeLogColumns(
+            $logForCheck, $workShift, $isFriday, $isPublicHoliday, $isThursday,
+            $remoteRequest, $midShiftCoverage, $hourlyCoverageRequests, $approvedRequests
+        );
 
         // Effective (real) shift start accounting for float grace window
         $effectiveShiftStart = null;
