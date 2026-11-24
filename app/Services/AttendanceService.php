@@ -71,25 +71,6 @@ class AttendanceService
     {
         app(FiscalYearMutationGuard::class)->ensureOpen($log);
 
-        $columns = $this->previewLogColumns($log);
-
-        $log->update($columns);
-
-        return $log->fresh();
-    }
-
-    /**
-     * Compute the columns recalculateLog() would store, without persisting them.
-     * Request-backed fields (paid_leave, mission, ...) are set on the given model in memory (not saved), so pass a clone when previewing.
-     *
-     * This is the single place that gathers the inputs for computeLogColumns(). It is used by:
-     *   • recalculateLog() — stores the result
-     *   • AttendanceLogController::show() — the "Calculation Check" table compares the result with stored values
-     * Any new input (request, flag, pre-processing of the log) must be added here, never at a call site,
-     * so both paths stay identical. See #480 for what happens when they drift.
-     */
-    public function previewLogColumns(AttendanceLog $log): array
-    {
         $logDate = $log->log_date instanceof Carbon
             ? $log->log_date
             : Carbon::parse($log->log_date);
@@ -132,10 +113,12 @@ class AttendanceService
 
         $columns = $this->computeLogColumns($log, $workShift, $isFriday, $isHoliday, $isThursday, $remoteRequest, $midShiftCoverage, $hourlyCoverageRequests);
 
-        return $columns;
+        $log->update($columns);
+
+        return $log->fresh();
     }
 
-    private function approvedRequestMinutesForDate(Collection $requests, Carbon $date, ?WorkShift $workShift): array
+    public function approvedRequestMinutesForDate(Collection $requests, Carbon $date, ?WorkShift $workShift): array
     {
         $result = array_fill_keys(['paid_leave', 'unpaid_leave', 'mission', 'overtime', 'remote_work'], ['minutes' => 0, 'has_request' => false]);
         foreach ($requests as $request) {
@@ -163,13 +146,18 @@ class AttendanceService
     /**
      * Compute derived attendance columns without persisting.
      *
-     * Do not call this directly from application code; use previewLogColumns() (or recalculateLog()).
-     * previewLogColumns() gathers every input below from the database, and both the stored values
-     * (recalculateLog) and the "Calculation Check" table (AttendanceLogController::show) go through it.
-     * Calling this with hand-built inputs is how the two paths drifted apart in #480.
+     * ⚠ This method is called from TWO places, and each one gathers the inputs on its own:
+     *   • AttendanceService::recalculateLog()      — computes and stores the columns
+     *   • AttendanceLogController::show()          — the "Calculation Check" table compares
+     *                                                these values with the stored ones
+     * Both places MUST pass exactly the same inputs, including any pre-processing of the log
+     * (e.g. request-backed paid_leave/mission/... set before the call). When you change one of
+     * them, change the other too; otherwise the check table shows false mismatches (see #480).
+     * AttendanceServiceCalculationTest::test_calculation_check_table_matches_stored_values_after_recalculate
+     * guards this.
      *
-     * All parameters are required on purpose: when you add a parameter, every call site breaks
-     * until it is updated. Add the new input in previewLogColumns(), not with a default value here.
+     * All parameters are required on purpose: when you add a parameter, both call sites break
+     * until they are updated. Do not give new parameters a default value.
      *
      * Rules:
      * - worked = actual clocked minutes only
@@ -1073,7 +1061,7 @@ class AttendanceService
      *
      * @param  Collection<int,PersonnelRequest>  $requests
      */
-    private function midShiftCoverageMinutes(AttendanceLog $log, Collection $requests): int
+    public function midShiftCoverageMinutes(AttendanceLog $log, Collection $requests): int
     {
         if ($log->entry_time === null || $log->exit_time === null || $requests->isEmpty()) {
             return 0;

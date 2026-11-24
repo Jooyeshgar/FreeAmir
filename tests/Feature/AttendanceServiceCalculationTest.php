@@ -200,6 +200,7 @@ class AttendanceServiceCalculationTest extends TestCase
         $shift = new WorkShift([
             'start_time' => '07:30:00', 'end_time' => '15:30:00',
             'float' => 60, 'max_auto_overtime' => 120,
+            'thursday_status' => ThursdayStatus::FULL_DAY,
         ]);
         $leaveMinutes = (int) Carbon::parse($leaveStart)->diffInMinutes(Carbon::parse('10:35:00'));
         $log = new AttendanceLog([
@@ -1463,8 +1464,17 @@ class AttendanceServiceCalculationTest extends TestCase
         $this->assertSame(90, (int) $log->auto_overtime, '60 early + 60 late = 120 raw, capped at max 90');
     }
 
-    public function test_preview_log_columns_matches_recalculate_log_and_does_not_persist(): void
+    private function actingAsAttendanceUser(): void
     {
+        $user = User::factory()->create();
+        $this->fiscalYear->users()->attach($user);
+        $user->givePermissionTo(Permission::firstOrCreate(['name' => 'attendance.*']));
+        $this->actingAs($user);
+    }
+
+    public function test_show_page_calculation_check_matches_recalculate_log_and_does_not_persist(): void
+    {
+        $this->actingAsAttendanceUser();
         $shift = $this->makeShift([
             'start_time' => '07:30:00', 'end_time' => '15:30:00',
             'float' => 60, 'max_auto_overtime' => 120,
@@ -1482,9 +1492,11 @@ class AttendanceServiceCalculationTest extends TestCase
             'paid_leave' => 0, 'delay' => 125, 'early_leave' => 60, 'auto_overtime' => 120,
         ], false);
 
-        $preview = $this->service->previewLogColumns(clone $log);
+        $preview = $this->get(route('attendance.attendance-logs.show', $log))
+            ->assertOk()
+            ->viewData('computed');
 
-        // Nothing is saved by a preview.
+        // Viewing the page saves nothing.
         $stored = $log->fresh();
         $this->assertSame(125, (int) $stored->delay);
         $this->assertSame(60, (int) $stored->early_leave);
@@ -1513,10 +1525,7 @@ class AttendanceServiceCalculationTest extends TestCase
     #[DataProvider('calculationCheckScenarios')]
     public function test_calculation_check_table_matches_stored_values_after_recalculate(?PersonnelRequestType $requestType): void
     {
-        $user = User::factory()->create();
-        $this->fiscalYear->users()->attach($user);
-        $user->givePermissionTo(Permission::firstOrCreate(['name' => 'attendance.*']));
-        $this->actingAs($user);
+        $this->actingAsAttendanceUser();
 
         $shift = $this->makeShift(['thursday_status' => ThursdayStatus::FULL_DAY]);
         $employee = $this->makeEmployee($shift);
