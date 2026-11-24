@@ -19,7 +19,7 @@ use Spatie\Permission\PermissionRegistrar;
 use Tests\Helpers\SeederHelper;
 use Tests\TestCase;
 
-class McpInvoiceReferenceIdTest extends TestCase
+class McpInvoiceExternalReferenceIdTest extends TestCase
 {
     use RefreshDatabase, SeederHelper;
 
@@ -75,7 +75,7 @@ class McpInvoiceReferenceIdTest extends TestCase
         config(['active-fiscal-year-id' => null]);
     }
 
-    private function invoiceArguments(string $referenceId): array
+    private function invoiceArguments(string $externalReferenceId): array
     {
         return [
             'fiscal_year_id' => $this->year->id,
@@ -83,7 +83,7 @@ class McpInvoiceReferenceIdTest extends TestCase
             'customer_id' => $this->customer->id,
             'warehouse_id' => $this->warehouse->id,
             'date' => '2026-05-01',
-            'reference_id' => $referenceId,
+            'external_reference_id' => $externalReferenceId,
             'items' => [[
                 'item_type' => 'product',
                 'item_id' => $this->product->id,
@@ -93,7 +93,7 @@ class McpInvoiceReferenceIdTest extends TestCase
         ];
     }
 
-    public function test_create_invoice_stores_reference_id_and_blocks_duplicates_until_rejected_or_voided(): void
+    public function test_create_invoice_stores_external_reference_id_and_blocks_duplicates_until_rejected_or_voided(): void
     {
         $firstResponse = $this->withToken($this->token)->postJson('/api/mcp', [
             'jsonrpc' => '2.0',
@@ -104,10 +104,10 @@ class McpInvoiceReferenceIdTest extends TestCase
 
         $this->assertFalse($firstResponse['isError'] ?? true);
         $created = json_decode($firstResponse['content'][0]['text'], true);
-        $this->assertSame('fnirsi:FN-180625', $created['reference_id']);
-        $this->assertSame('fnirsi:FN-180625', Invoice::withoutGlobalScopes()->findOrFail($created['id'])->reference_id);
+        $this->assertSame('fnirsi:FN-180625', $created['external_reference_id']);
+        $this->assertSame('fnirsi:FN-180625', Invoice::withoutGlobalScopes()->findOrFail($created['id'])->external_reference_id);
 
-        // Duplicate reference_id in the same fiscal year is rejected with existing invoice details
+        // Duplicate external_reference_id in the same fiscal year is rejected with existing invoice details
         $duplicateResponse = $this->withToken($this->token)->postJson('/api/mcp', [
             'jsonrpc' => '2.0',
             'id' => 2,
@@ -118,10 +118,10 @@ class McpInvoiceReferenceIdTest extends TestCase
         $this->assertTrue($duplicateResponse['isError']);
         $duplicatePayload = json_decode($duplicateResponse['content'][0]['text'], true);
         $this->assertSame($created['id'], $duplicatePayload['existing_invoice']['id']);
-        $this->assertSame('fnirsi:FN-180625', $duplicatePayload['existing_invoice']['reference_id']);
+        $this->assertSame('fnirsi:FN-180625', $duplicatePayload['existing_invoice']['external_reference_id']);
         $this->assertSame(1, Invoice::withoutGlobalScopes()->count());
 
-        // Rejecting the existing invoice allows creating a replacement invoice with the same reference_id
+        // Rejecting the existing invoice allows creating a replacement invoice with the same external_reference_id
         Invoice::withoutGlobalScopes()->whereKey($created['id'])->update(['status' => InvoiceStatus::REJECTED->value]);
 
         $replacementResponse = $this->withToken($this->token)->postJson('/api/mcp', [
@@ -134,7 +134,7 @@ class McpInvoiceReferenceIdTest extends TestCase
         $this->assertFalse($replacementResponse['isError'] ?? true);
         $replacement = json_decode($replacementResponse['content'][0]['text'], true);
         $this->assertNotSame($created['id'], $replacement['id']);
-        $this->assertSame('fnirsi:FN-180625', $replacement['reference_id']);
+        $this->assertSame('fnirsi:FN-180625', $replacement['external_reference_id']);
 
         // Voiding also allows reuse
         Invoice::withoutGlobalScopes()->whereKey($replacement['id'])->update(['invoice_type' => InvoiceType::VOID->value]);

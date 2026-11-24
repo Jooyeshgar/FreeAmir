@@ -48,7 +48,7 @@ class CreateInvoiceTool extends AccountingTool
             'customer_id' => $schema->integer()->min(1)->required(),
             'warehouse_id' => $schema->integer()->min(1)->description('Optional warehouse ID. Defaults to the first warehouse in the selected fiscal year.'),
             'number' => $schema->integer()->min(1)->description('Optional invoice number. Defaults to the next number for this invoice type in the selected fiscal year.'),
-            'reference_id' => $schema->string()->max(100)->description('Optional external reference ID to prevent duplicate invoices for external orders (recommended format: "<source>:<order_code>", e.g. "fnirsi:FN-180625").'),
+            'external_reference_id' => $schema->string()->max(100)->description('Optional external reference ID to prevent duplicate invoices for external orders (recommended format: "<source>:<order_code>", e.g. "fnirsi:FN-180625").'),
             'date' => $schema->string()->description('Gregorian date in YYYY-MM-DD format, regardless of locale. Defaults to today if it falls within the selected fiscal year.'),
             'title' => $schema->string()->max(255),
             'description' => $schema->string(),
@@ -79,7 +79,7 @@ class CreateInvoiceTool extends AccountingTool
             'customer_id' => ['required', 'integer', 'min:1'],
             'warehouse_id' => ['sometimes', 'nullable', 'integer', 'min:1'],
             'number' => ['sometimes', 'nullable', 'integer', 'min:1'],
-            'reference_id' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'external_reference_id' => ['sometimes', 'nullable', 'string', 'max:100'],
             'date' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
             'title' => ['sometimes', 'nullable', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
@@ -112,26 +112,26 @@ class CreateInvoiceTool extends AccountingTool
         }
 
         $yearId = (int) $arguments['fiscal_year_id'];
-        $referenceId = isset($arguments['reference_id']) ? trim((string) $arguments['reference_id']) : null;
-        if ($referenceId === '') {
-            $referenceId = null;
+        $externalReferenceId = isset($arguments['external_reference_id']) ? trim((string) $arguments['external_reference_id']) : null;
+        if ($externalReferenceId === '') {
+            $externalReferenceId = null;
         }
 
-        if ($referenceId !== null) {
+        if ($externalReferenceId !== null) {
             $existing = Invoice::query()
                 ->where('fiscal_year_id', $yearId)
-                ->where('reference_id', $referenceId)
+                ->where('external_reference_id', $externalReferenceId)
                 ->where('invoice_type', '!=', InvoiceType::VOID->value)
                 ->where('status', '!=', InvoiceStatus::REJECTED->value)
                 ->first();
 
             if ($existing) {
                 return $this->error(json_encode([
-                    'message' => __('An invoice with this reference ID already exists in the selected fiscal year.'),
+                    'message' => __('An invoice with this external reference ID already exists in the selected fiscal year.'),
                     'existing_invoice' => [
                         'id' => (int) $existing->id,
                         'number' => $existing->number,
-                        'reference_id' => $existing->reference_id,
+                        'external_reference_id' => $existing->external_reference_id,
                         'invoice_type' => $existing->invoice_type?->valueName(),
                         'status' => $existing->status?->valueName(),
                     ],
@@ -189,7 +189,7 @@ class CreateInvoiceTool extends AccountingTool
             'customer_id' => $arguments['customer_id'],
             'warehouse_id' => $warehouseId,
             'invoice_number' => $invoiceNumber,
-            'reference_id' => $referenceId,
+            'external_reference_id' => $externalReferenceId,
             'document_number' => floor(Document::max('number') ?? 0) + 1,
             'subtraction' => sprintf('%.18F', $arguments['subtraction'] ?? 0),
             'transactions' => $transactions,
@@ -223,7 +223,7 @@ class CreateInvoiceTool extends AccountingTool
             'id' => $invoice->id,
             'fiscal_year_id' => $invoice->fiscal_year_id,
             'number' => $invoice->number,
-            'reference_id' => $invoice->reference_id,
+            'external_reference_id' => $invoice->external_reference_id,
             'invoice_type' => $invoice->invoice_type->valueName(),
             'status' => $invoice->status->valueName(),
             'date' => $invoice->date->format('Y-m-d'),

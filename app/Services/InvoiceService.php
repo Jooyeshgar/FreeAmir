@@ -1382,7 +1382,7 @@ class InvoiceService
             'returned_invoice_id' => $validated['returned_invoice_id'] ?? null,
             'document_number' => $validated['document_number'] ?? null,
             'number' => $validated['invoice_number'],
-            'reference_id' => isset($validated['reference_id']) && trim((string) $validated['reference_id']) !== '' ? trim((string) $validated['reference_id']) : null,
+            'external_reference_id' => isset($validated['external_reference_id']) && trim((string) $validated['external_reference_id']) !== '' ? trim((string) $validated['external_reference_id']) : null,
             'subtraction' => $validated['subtractions'] ?? 0,
             'invoice_id' => $validated['invoice_id'] ?? null,
             'description' => $validated['description'] ?? null,
