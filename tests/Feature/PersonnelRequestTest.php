@@ -12,6 +12,8 @@ use App\Models\PersonnelRequest;
 use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
+use App\Services\AttendanceService;
+use Database\Seeders\PersonnelRequestSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Pagination\LengthAwarePaginator;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -672,5 +674,37 @@ class PersonnelRequestTest extends TestCase
         $response = $this->get(route('hr.personnel-requests.index'));
 
         $response->assertRedirect(route('login'));
+    }
+
+    // ----------------------------------------------------------------
+    // seeder
+    // ----------------------------------------------------------------
+
+    public function test_seeder_creates_single_day_daily_requests_matching_shift_length(): void
+    {
+        config(['active-fiscal-year-id' => $this->fiscalYearId]);
+
+        $this->seed(PersonnelRequestSeeder::class);
+
+        $daily = PersonnelRequest::withoutGlobalScopes()->whereIn('request_type', [
+            PersonnelRequestType::LEAVE_DAILY->value,
+            PersonnelRequestType::SICK_LEAVE->value,
+            PersonnelRequestType::LEAVE_WITHOUT_PAY->value,
+            PersonnelRequestType::MISSION_DAILY->value,
+        ])->get();
+
+        $this->assertCount(4, $daily);
+
+        $service = app(AttendanceService::class);
+
+        foreach ($daily as $request) {
+            $shift = $service->shiftTimesForDate($this->workShift, $request->start_date);
+
+            $this->assertTrue($request->start_date->isSameDay($request->end_date));
+            $this->assertSame($shift['start'], $request->start_date->format('H:i'));
+            $this->assertSame($shift['end'], $request->end_date->format('H:i'));
+            $this->assertGreaterThan(0, $request->durationMinutes());
+            $this->assertLessThanOrEqual(24 * 60, $request->durationMinutes());
+        }
     }
 }
