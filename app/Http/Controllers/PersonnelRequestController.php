@@ -24,6 +24,12 @@ class PersonnelRequestController extends Controller
     public function index(Request $request): View
     {
         $tab = $request->get('tab', 'leaves');
+        $filters = $request->validate([
+            'date_from' => ['nullable', 'string'],
+            'date_to' => ['nullable', 'string'],
+        ]);
+        $dateFrom = $this->parseDateFilter($filters['date_from'] ?? null, 'date_from');
+        $dateTo = $this->parseDateFilter($filters['date_to'] ?? null, 'date_to');
 
         $types = match ($tab) {
             'missions' => PersonnelRequestType::missionTypes(),
@@ -50,7 +56,23 @@ class PersonnelRequestController extends Controller
             }
         }
 
+        if ($dateFrom !== null) {
+            $query->whereDate('start_date', '>=', $dateFrom);
+        }
+
+        if ($dateTo !== null) {
+            $query->whereDate('start_date', '<=', $dateTo);
+        }
+
+        $hasDateFilter = $dateFrom !== null || $dateTo !== null;
+        if ($hasDateFilter) {
+            $query->orderByDesc('id');
+        }
+
         $personnelRequests = $query->paginate(15)->withQueryString();
+        $pageDurationMinutes = $hasDateFilter
+            ? $personnelRequests->getCollection()->sum(fn (PersonnelRequest $personnelRequest) => $personnelRequest->durationMinutes())
+            : null;
 
         // Pending counts per tab for badges
         $pendingCounts = [
@@ -71,10 +93,28 @@ class PersonnelRequestController extends Controller
         return view('personnel-requests.index', compact(
             'fiscalYearClosed',
             'personnelRequests',
+            'pageDurationMinutes',
             'pendingCounts',
             'employees',
             'tab'
         ));
+    }
+
+    private function parseDateFilter(?string $date, string $field): ?string
+    {
+        if ($date === null) {
+            return null;
+        }
+
+        $date = toEnglish(str_replace('-', '/', $date));
+
+        if (! preg_match('/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/', $date, $parts) || ! jcheckdate($parts[2], $parts[3], $parts[1])) {
+            throw ValidationException::withMessages([
+                $field => __('validation.date', ['attribute' => __("validation.attributes.$field")]),
+            ]);
+        }
+
+        return jalali_to_gregorian_date($date, '-');
     }
 
     public function create(Request $request): View
