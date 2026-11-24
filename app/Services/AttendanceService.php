@@ -210,7 +210,7 @@ class AttendanceService
         // ── Off-day (Friday / holiday) ─────────────────────────────────────
         if ($isFriday || $isHoliday) {
             // Every presence minute is paid once: mission > approved overtime > holiday work.
-            $split = $this->splitOffDayMinutes($log, $approvedRequests, $rawWorked, $remoteWork, $mission, $approvedOvertimeInput);
+            $split = $this->splitOffDayMinutes($log, $approvedRequests, $rawWorked, $remoteWork, $mission);
 
             return [
                 // Like mid-shift coverage on a normal day, minutes covered by a mission are not worked minutes.
@@ -1102,7 +1102,7 @@ class AttendanceService
      *
      * @return array{overtime:int, mission_overlap:int}
      */
-    private function splitOffDayMinutes(AttendanceLog $log, Collection $approvedRequests, int $rawWorked, int $remoteWork, int $mission, int $approvedOvertimeInput): array
+    private function splitOffDayMinutes(AttendanceLog $log, Collection $approvedRequests, int $rawWorked, int $remoteWork, int $mission): array
     {
         $presenceMinutes = $rawWorked + $remoteWork;
         if ($presenceMinutes <= 0) {
@@ -1143,11 +1143,11 @@ class AttendanceService
         }
 
         // Approved overtime outside mission minutes, capped by the remaining presence.
+        // Overtime comes only from approved OVERTIME_ORDER windows: without one, any stored/manual overtime value is ignored so plain off-day work keeps the holiday coefficient.
+        $overtimeOnly = 0;
         if ($overtimeWindows !== []) {
             $overtimeIntervals = $this->intersectIntervals($presence, $overtimeWindows);
             $overtimeOnly = $this->intervalsLength($overtimeIntervals) - $this->intervalsLength($this->intersectIntervals($overtimeIntervals, $missionIntervals));
-        } else {
-            $overtimeOnly = $approvedOvertimeInput;
         }
 
         return [
