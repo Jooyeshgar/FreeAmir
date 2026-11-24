@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\StoreProductRequest;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Services\ProductService;
@@ -65,23 +66,9 @@ class ProductController extends Controller
         ]);
     }
 
-    public function store(Request $request, ProductService $productService): JsonResponse
+    public function store(StoreProductRequest $request, ProductService $productService): JsonResponse
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'code' => ['required', 'string', 'max:100'],
-            'sstid' => ['nullable', 'string', 'max:100'],
-            'group' => ['required', 'integer', 'min:1'],
-            'location' => ['nullable', 'string', 'max:255'],
-            'quantity' => ['nullable', 'numeric', 'min:0'],
-            'quantity_warning' => ['nullable', 'numeric', 'min:0'],
-            'oversell' => ['nullable', 'boolean'],
-            'selling_price' => ['nullable', 'numeric', 'min:0'],
-            'discount_formula' => ['nullable', 'string', 'max:255'],
-            'description' => ['nullable', 'string', 'max:500'],
-            'vat' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            'average_cost' => ['nullable', 'numeric', 'min:0'],
-        ]);
+        $data = $request->validated();
 
         $group = ProductGroup::query()
             ->find((int) $data['group']);

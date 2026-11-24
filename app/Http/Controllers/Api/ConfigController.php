@@ -125,8 +125,7 @@ class ConfigController extends Controller
                 'as_map' => $request->boolean('as_map'),
             ],
             'meta' => [
-                'company_id' => $company,
-                'fiscal_year_id' => getScopedFiscalYear(),
+                'fiscal_year_id' => getActiveFiscalYear(),
                 'count' => $total,
                 'account_mapping_keys' => array_map(
                     fn (ConfigTitle $t) => strtolower($t->value),

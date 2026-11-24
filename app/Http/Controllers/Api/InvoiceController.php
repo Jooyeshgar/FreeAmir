@@ -5,14 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\StoreInvoiceRequest;
 use App\Models\Invoice;
-use App\Models\Product;
-use App\Models\Service;
 use App\Services\InvoiceService;
-use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class InvoiceController extends Controller
@@ -192,195 +189,21 @@ class InvoiceController extends Controller
         ]);
     }
 
-    public function store(Request $request, int $company): JsonResponse
+    public function store(StoreInvoiceRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'invoice_type' => ['required', 'string', Rule::in(['buy', 'sell', 'return_buy', 'return_sell'])],
-            'date' => ['required', 'string'],
-            'customer_id' => ['required', 'integer', Rule::exists('customers', 'id')->where('fiscal_year_id', getScopedFiscalYear())],
-            'warehouse_id' => ['required', 'integer', Rule::exists('warehouses', 'id')->where('fiscal_year_id', getScopedFiscalYear())],
-            'invoice_number' => ['required', 'integer'],
-            'document_number' => ['required', 'numeric'],
-            'title' => ['nullable', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'subtraction' => ['nullable', 'numeric', 'min:0'],
-            'returned_invoice_id' => ['nullable', 'integer', 'exists:invoices,id'],
-            'approve' => ['nullable', 'boolean'],
-            'items' => ['required', 'array', 'min:1'],
-            'items.*.item_type' => ['required', 'string', Rule::in(['product', 'service'])],
-            'items.*.item_id' => ['required', 'integer'],
-            'items.*.quantity' => ['required', 'numeric', 'min:0.01'],
-            'items.*.unit_price' => ['required', 'numeric', 'min:0'],
-            'items.*.unit_discount' => ['nullable', 'numeric', 'min:0'],
-            'items.*.vat' => ['required', 'numeric', 'min:0', 'max:100'],
-            'items.*.description' => ['nullable', 'string', 'max:500'],
-        ]);
-
-        $normalizedDate = toEnglish(str_replace('-', '/', trim($validated['date'])));
-
-        if (! preg_match('/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/', $normalizedDate, $dateParts)) {
-            throw ValidationException::withMessages([
-                'date' => __('Invalid date format. Example: 1405/08/10 (Jalali) or 2026-11-01 (Gregorian)'),
-            ]);
-        }
-
-        [$dateYear, $dateMonth, $dateDay] = [(int) $dateParts[1], (int) $dateParts[2], (int) $dateParts[3]];
-
-        try {
-            if ($dateYear < 1700) {
-                if (! jcheckdate($dateMonth, $dateDay, $dateYear)) {
-                    throw new \InvalidArgumentException('invalid jalali date');
-                }
-                $date = Carbon::createFromFormat('Y/n/j', jalali_to_gregorian_date($normalizedDate))->format('Y-m-d');
-            } else {
-                if (! checkdate($dateMonth, $dateDay, $dateYear)) {
-                    throw new \InvalidArgumentException('invalid gregorian date');
-                }
-                $date = sprintf('%04d-%02d-%02d', $dateYear, $dateMonth, $dateDay);
-            }
-        } catch (\Throwable $e) {
-            throw ValidationException::withMessages([
-                'date' => __('Invalid date. Example: 1405/08/10 (Jalali) or 2026-11-01 (Gregorian)'),
-            ]);
-        }
-        $invoiceTypeEnum = InvoiceType::fromName($validated['invoice_type']);
-
-        if (in_array($validated['invoice_type'], ['return_buy', 'return_sell'], true)) {
-            $returned = Invoice::query()
-                ->find($validated['returned_invoice_id'] ?? null);
-
-            if (! $returned) {
-                throw ValidationException::withMessages([
-                    'returned_invoice_id' => __('For a return invoice, the original invoice ID is required and must be valid.'),
-                ]);
-            }
-
-            $expectedType = $validated['invoice_type'] === 'return_buy' ? InvoiceType::BUY : InvoiceType::SELL;
-            if ($returned->invoice_type !== $expectedType) {
-                throw ValidationException::withMessages([
-                    'returned_invoice_id' => __('The original invoice type does not match the return invoice type.'),
-                ]);
-            }
-
-            if (Carbon::parse($date)->lt($returned->date)) {
-                throw ValidationException::withMessages([
-                    'date' => __('The return invoice date cannot be before the original invoice.'),
-                ]);
-            }
-
-            $previousReturns = Invoice::where('returned_invoice_id', $returned->id)->with('items')->get();
-
-            foreach ($validated['items'] as $index => $item) {
-                $modelClass = $item['item_type'] === 'product' ? Product::class : Service::class;
-
-                $original = $returned->items()
-                    ->where('itemable_type', $modelClass)
-                    ->where('itemable_id', $item['item_id'])
-                    ->first();
-
-                if (! $original) {
-                    throw ValidationException::withMessages([
-                        "items.$index.item_id" => __('This product or service does not exist in the original invoice.'),
-                    ]);
-                }
-
-                $alreadyReturned = $previousReturns->sum(fn ($inv) => $inv->items
-                    ->where('itemable_type', $modelClass)
-                    ->where('itemable_id', $item['item_id'])
-                    ->sum('quantity'));
-
-                if ($original->quantity < $item['quantity'] + $alreadyReturned) {
-                    throw ValidationException::withMessages([
-                        "items.$index.quantity" => __('The returned quantity (including previous returns) exceeds the original invoice quantity (:quantity).', [
-                            'quantity' => $original->quantity,
-                        ]),
-                    ]);
-                }
-            }
-
-            if ($validated['invoice_type'] === 'return_sell') {
-                $submitted = collect($validated['items'])->mapWithKeys(
-                    fn ($item) => [$item['item_type'].':'.$item['item_id'] => (float) $item['quantity']]
-                );
-
-                $originals = $returned->items->mapWithKeys(function ($item) {
-                    $type = $item->itemable_type === Product::class ? 'product' : 'service';
-
-                    return [$type.':'.$item->itemable_id => (float) $item->quantity];
-                });
-
-                $isFullReturn = $originals->count() === $submitted->count()
-                    && $originals->every(fn ($qty, $key) => $submitted->get($key) === $qty);
-
-                if ($isFullReturn) {
-                    throw ValidationException::withMessages([
-                        'items' => __('Returning all items with the original quantities is equivalent to voiding the sales invoice; reduce the quantity of at least one item.'),
-                    ]);
-                }
-            }
-        }
-
-        $numberExists = Invoice::query()
-            ->where('number', $validated['invoice_number'])
-            ->where('invoice_type', $invoiceTypeEnum)
-            ->exists();
-
-        if ($numberExists) {
-            throw ValidationException::withMessages([
-                'invoice_number' => __('The invoice number has already been taken.'),
-            ]);
-        }
-
-        $transactions = collect($validated['items'])->map(function (array $item) {
-            $quantity = (float) $item['quantity'];
-            $unitPrice = (float) $item['unit_price'];
-            $unitDiscount = (float) ($item['unit_discount'] ?? 0);
-            $vatPercent = (float) $item['vat'];
-
-            $lineAfterDiscount = ($quantity * $unitPrice) - $unitDiscount;
-            $vatAmount = $lineAfterDiscount * ($vatPercent / 100);
-            $total = $lineAfterDiscount + $vatAmount;
-
-            return [
-                'item_id' => $item['item_id'],
-                'item_type' => $item['item_type'],
-                'quantity' => $quantity,
-                'unit' => $unitPrice,
-                'unit_discount' => $unitDiscount,
-                'vat' => $vatPercent,
-                'desc' => $item['description'] ?? null,
-                'total' => $total,
-            ];
-        })->values()->all();
-
-        $invoiceData = [
-            'title' => $validated['title'] ?? null,
-            'date' => $date,
-            'invoice_type' => $invoiceTypeEnum,
-            'customer_id' => $validated['customer_id'],
-            'warehouse_id' => $validated['warehouse_id'],
-            'returned_invoice_id' => $validated['returned_invoice_id'] ?? null,
-            'document_number' => $validated['document_number'],
-            'number' => $validated['invoice_number'],
-            'subtraction' => $validated['subtraction'] ?? 0,
-            'description' => $validated['description'] ?? null,
-        ];
-
-        $items = InvoiceService::mapTransactionsToItems($transactions, false);
-
-        $approved = (bool) ($validated['approve'] ?? false);
-
-        if ($approved && ! $request->user()->can('invoices.approve')) {
+        if ($request->boolean('approve') && ! $request->user()->can('invoices.approve')) {
             throw ValidationException::withMessages([
                 'approve' => __('You do not have permission to approve invoices.'),
             ]);
         }
 
+        $validated = $request->validated();
+
         $result = InvoiceService::createInvoice(
             $request->user(),
-            $invoiceData,
-            $items,
-            $approved
+            InvoiceService::extractInvoiceData($validated),
+            InvoiceService::mapTransactionsToItems($validated['transactions']),
+            $request->boolean('approve')
         );
 
         $invoice = $result['invoice']->load(['customer', 'items.itemable', 'warehouse']);
@@ -408,31 +231,25 @@ class InvoiceController extends Controller
                 'approved' => $invoice->status?->valueName() === 'approved',
                 'document_id' => $result['document']?->id,
                 'next_action' => $invoice->status?->valueName() === 'ready_to_approve'
-                    ? "POST /api/companies/{$company}/invoices/{$invoice->id}/change-status/approved"
+                    ? 'POST /api/companies/{fiscal_year}/invoices/{id}/approve'
                     : null,
             ],
         ], 201);
     }
 
-    public function changeStatus(Request $request, int $company, int $invoice, string $status): JsonResponse
+    public function approve(Request $request, int $company, int $invoice): JsonResponse
     {
-        $invoice = Invoice::query()->findOrFail($invoice);
+        return $this->applyStatusChange($request, $invoice, 'approved');
+    }
 
-        $allowed = $invoice->invoice_type === InvoiceType::SELL
-            ? ['approved', 'unapproved', 'ready_to_approve', 'rejected']
-            : ['approved', 'unapproved'];
+    public function unapprove(Request $request, int $company, int $invoice): JsonResponse
+    {
+        return $this->applyStatusChange($request, $invoice, 'unapproved');
+    }
 
-        if (! in_array($status, $allowed, true)) {
-            throw ValidationException::withMessages([
-                'status' => __('Invalid status. Allowed statuses: :statuses', ['statuses' => implode(', ', $allowed)]),
-            ]);
-        }
-
-        if (in_array($status, ['approved', 'unapproved'], true) && ! $request->user()->can('invoices.approve')) {
-            throw ValidationException::withMessages([
-                'status' => __('You do not have permission to approve or unapprove invoices.'),
-            ]);
-        }
+    private function applyStatusChange(Request $request, int $invoiceId, string $status): JsonResponse
+    {
+        $invoice = Invoice::query()->findOrFail($invoiceId);
 
         if ($invoice->status->isPartiallyPaid() || $invoice->status->isPaid()) {
             throw ValidationException::withMessages([

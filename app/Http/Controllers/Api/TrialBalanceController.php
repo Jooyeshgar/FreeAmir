@@ -90,8 +90,7 @@ class TrialBalanceController extends Controller
                     'note' => __('Signed fields keep FreeAmir internal sign. Absolute fields (*_debit / *_credit) are always >= 0.'),
                 ],
                 'meta' => [
-                    'company_id' => $company,
-                    'fiscal_year_id' => getScopedFiscalYear(),
+                    'fiscal_year_id' => getActiveFiscalYear(),
                     'subject_count' => $total,
                     'has_non_zero_balance' => $hasNonZero,
                     'message' => $hasNonZero

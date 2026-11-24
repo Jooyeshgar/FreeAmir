@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\StoreServiceRequest;
 use App\Models\Service;
 use App\Models\ServiceGroup;
 use App\Services\ServiceService;
@@ -65,17 +66,9 @@ class ServiceController extends Controller
         ]);
     }
 
-    public function store(Request $request, ServiceService $serviceService): JsonResponse
+    public function store(StoreServiceRequest $request, ServiceService $serviceService): JsonResponse
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'code' => ['required', 'string', 'max:100'],
-            'sstid' => ['nullable', 'string', 'max:100'],
-            'group' => ['required', 'integer', 'min:1'],
-            'selling_price' => ['nullable', 'numeric', 'min:0'],
-            'description' => ['nullable', 'string', 'max:150'],
-            'vat' => ['nullable', 'numeric', 'min:0', 'max:100'],
-        ]);
+        $data = $request->validated();
 
         $group = ServiceGroup::query()
             ->find((int) $data['group']);

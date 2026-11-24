@@ -111,8 +111,12 @@ Route::prefix('companies/{fiscal_year}')->middleware(['auth:sanctum', 'api-fisca
     Route::post('invoices', [InvoiceController::class, 'store'])
         ->middleware('check-permission:invoices.store')
         ->name('api.invoices.store');
-    Route::post('invoices/{invoice}/change-status/{status}', [InvoiceController::class, 'changeStatus'])
-        ->middleware('check-permission:invoices.change-status')
+    Route::post('invoices/{invoice}/approve', [InvoiceController::class, 'approve'])
+        ->middleware('check-permission:invoices.approve')
         ->whereNumber('invoice')
-        ->name('api.invoices.change-status');
+        ->name('api.invoices.approve');
+    Route::post('invoices/{invoice}/unapprove', [InvoiceController::class, 'unapprove'])
+        ->middleware('check-permission:invoices.approve')
+        ->whereNumber('invoice')
+        ->name('api.invoices.unapprove');
 });

@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\FiscalYear;
-use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -14,23 +13,19 @@ class FiscalYearController extends Controller
     {
         $user = $request->user();
 
-        $currentFiscalYear = FiscalYear::query()
-            ->where('legacy_company_id', $company)
-            ->firstOrFail();
+        $currentFiscalYear = FiscalYear::query()->findOrFail($company);
 
-        $query = $currentFiscalYear->companyIdentity
+        $query = $currentFiscalYear->company
             ->fiscalYears()
-            ->with('legacyCompany:id,name,currency')
+            ->with('company:id,name,currency')
             ->orderByDesc('year');
 
         $onlyAccessible = $request->boolean('only_accessible', true);
 
         if ($onlyAccessible) {
-            $accessibleLegacyIds = $user->fiscalYears()
-                ->pluck('legacy_company_id')
-                ->all();
+            $accessibleFiscalYearIds = $user->fiscalYears()->pluck('fiscal_years.id')->all();
 
-            $query->whereIn('legacy_company_id', $accessibleLegacyIds);
+            $query->whereIn('fiscal_years.id', $accessibleFiscalYearIds);
         }
 
         if ($request->boolean('only_open')) {
@@ -43,28 +38,25 @@ class FiscalYearController extends Controller
 
         $all = $query->get();
 
-        $mapped = $all->map(function (FiscalYear $fy) use ($company) {
-            $year = (int) $fy->year;
-            $start = Carbon::parse(jalali_to_gregorian($year, 1, 1, '/'))->startOfDay();
-            $end = Carbon::parse(jalali_to_gregorian($year + 1, 1, 1, '/'))->subDay()->endOfDay();
-            $legacyCompany = $fy->legacyCompany;
+        $mapped = $all->map(function (FiscalYear $fiscalYear) use ($company) {
+            [$start, $end] = $fiscalYear->range();
 
             return [
-                'id' => $fy->id,
-                'company_id' => $fy->legacy_company_id,
-                'year' => $year,
-                'name' => $legacyCompany?->name,
-                'currency' => $legacyCompany?->currency,
-                'is_closed' => $fy->closed_at !== null,
-                'closed_at' => $fy->closed_at,
-                'closed_by' => $fy->closed_by,
+                'id' => $fiscalYear->id,
+                'company_id' => $fiscalYear->company_id,
+                'year' => (int) $fiscalYear->year,
+                'name' => $fiscalYear->company?->name,
+                'currency' => $fiscalYear->company?->currency,
+                'is_closed' => $fiscalYear->isClosed(),
+                'closed_at' => $fiscalYear->closed_at,
+                'closed_by' => $fiscalYear->closed_by,
                 'start_date' => $start->toDateString(),
                 'end_date' => $end->toDateString(),
-                'start_date_jalali' => sprintf('%d/01/01', $year),
-                'end_date_jalali' => sprintf('%d/12/29', $year),
-                'is_current_context' => (int) $fy->legacy_company_id === $company,
-                'pl_document_id' => $fy->pl_document_id,
-                'closing_document_id' => $fy->closing_document_id,
+                'start_date_jalali' => sprintf('%d/01/01', (int) $fiscalYear->year),
+                'end_date_jalali' => sprintf('%d/12/29', (int) $fiscalYear->year),
+                'is_current_context' => $fiscalYear->id === $company,
+                'pl_document_id' => $fiscalYear->pl_document_id,
+                'closing_document_id' => $fiscalYear->closing_document_id,
             ];
         })->values();
 
@@ -89,12 +81,12 @@ class FiscalYearController extends Controller
                     'only_closed' => $request->boolean('only_closed'),
                 ],
                 'meta' => [
-                    'company_id' => $company,
+                    'company_id' => $currentFiscalYear->company_id,
                     'current_fiscal_year_id' => $currentFiscalYear->id,
                     'count' => $total,
                     'open_count' => $mapped->where('is_closed', false)->count(),
                     'closed_count' => $mapped->where('is_closed', true)->count(),
-                    'note' => __('Each fiscal year is a separate company workspace. Use the company_id value as {company} in other API routes.'),
+                    'note' => __('Each fiscal year is a separate workspace. Use its id as {fiscal_year} in other API routes.'),
                 ],
                 'pagination' => [
                     'current_page' => $page,

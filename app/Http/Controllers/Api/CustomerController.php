@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Enums\CustomerType;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\StoreCustomerRequest;
 use App\Models\Customer;
 use App\Services\CustomerService;
 use Illuminate\Http\JsonResponse;
@@ -87,48 +88,9 @@ class CustomerController extends Controller
         ]);
     }
 
-    public function store(Request $request, $company): JsonResponse
+    public function store(StoreCustomerRequest $request): JsonResponse
     {
-        $fiscalYearId = getScopedFiscalYear();
-
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100'],
-            'type' => [
-                'required',
-                Rule::in(CustomerType::valueNames()),
-            ],
-            'group_id' => [
-                'required',
-                'integer',
-                Rule::exists('customer_groups', 'id')
-                    ->where('fiscal_year_id', $fiscalYearId),
-            ],
-            'subject_code' => [
-                'nullable',
-                'string',
-                'max:20',
-                'regex:/^[0-9]+$/',
-            ],
-            'mobile' => ['nullable', 'string', 'max:15'],
-            'phone' => ['nullable', 'string', 'max:15'],
-            'fax' => ['nullable', 'string', 'max:30'],
-            'email' => ['nullable', 'email', 'max:64'],
-            'address' => ['nullable', 'string', 'max:100'],
-            'postal_code' => ['nullable', 'string', 'max:15'],
-            'personal_code' => ['nullable', 'string', 'max:15'],
-            'ecnmcs_code' => ['nullable', 'string', 'max:20'],
-            'web_page' => ['nullable', 'string', 'max:50'],
-            'responsible' => ['nullable', 'string', 'max:50'],
-            'connector' => ['nullable', 'string', 'max:50'],
-            'desc' => ['nullable', 'string', 'max:150'],
-            'rep_via_email' => ['sometimes', 'boolean'],
-            'acc_name_1' => ['nullable', 'string', 'max:50'],
-            'acc_no_1' => ['nullable', 'string', 'max:30'],
-            'acc_bank_1' => ['nullable', 'string', 'max:50'],
-            'acc_name_2' => ['nullable', 'string', 'max:50'],
-            'acc_no_2' => ['nullable', 'string', 'max:30'],
-            'acc_bank_2' => ['nullable', 'string', 'max:50'],
-        ]);
+        $validated = $request->validated();
 
         $duplicate = Customer::query()
             ->where(function ($query) use ($validated) {
