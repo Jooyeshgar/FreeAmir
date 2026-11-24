@@ -3,7 +3,7 @@
 namespace Tests\Feature\Api;
 
 use App\Enums\SubjectType;
-use App\Models\Company;
+use App\Models\FiscalYear;
 use App\Models\Subject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -15,7 +15,7 @@ class TrialBalanceTest extends TestCase
 {
     use RefreshDatabase;
 
-    private Company $company;
+    private FiscalYear $fiscalYear;
 
     private User $user;
 
@@ -23,14 +23,13 @@ class TrialBalanceTest extends TestCase
     {
         parent::setUp();
 
-        $this->company = Company::factory()->create();
-        config(['active-company-id' => $this->company->id]);
-
+        $this->fiscalYear = FiscalYear::factory()->create(['year' => 1404]);
         $this->user = User::factory()->create();
-        $this->company->users()->attach($this->user);
+        $this->fiscalYear->users()->attach($this->user);
+        config(['active-fiscal-year-id' => $this->fiscalYear->id]);
 
         foreach (['api.access', 'reports.trial-balance'] as $permission) {
-            $this->user->givePermissionTo(Permission::firstOrCreate(['name' => $permission, 'guard_name' => 'web']));
+            $this->user->givePermissionTo(Permission::firstOrCreate(['name' => $permission]));
         }
     }
 
@@ -44,20 +43,25 @@ class TrialBalanceTest extends TestCase
         ];
     }
 
+    private function apiUrl(string $query = ''): string
+    {
+        return '/api/companies/'.$this->fiscalYear->id.'/reports/trial-balance'.$query;
+    }
+
     public function test_trial_balance_requires_authentication(): void
     {
-        $this->getJson("/api/companies/{$this->company->id}/reports/trial-balance")
+        $this->getJson($this->apiUrl())
             ->assertUnauthorized();
     }
 
     public function test_trial_balance_requires_permission(): void
     {
         $limitedUser = User::factory()->create();
-        $this->company->users()->attach($limitedUser);
-        $limitedUser->givePermissionTo(Permission::firstOrCreate(['name' => 'api.access', 'guard_name' => 'web']));
+        $this->fiscalYear->users()->attach($limitedUser);
+        $limitedUser->givePermissionTo(Permission::firstOrCreate(['name' => 'api.access']));
 
         $this->getJson(
-            "/api/companies/{$this->company->id}/reports/trial-balance",
+            $this->apiUrl(),
             $this->apiHeaders($limitedUser, ['api.access'])
         )->assertForbidden();
     }
@@ -65,7 +69,7 @@ class TrialBalanceTest extends TestCase
     public function test_trial_balance_returns_subjects_structure(): void
     {
         Subject::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'code' => '011',
             'name' => 'بانک ها',
             'parent_id' => null,
@@ -73,7 +77,7 @@ class TrialBalanceTest extends TestCase
         ]);
 
         $response = $this->getJson(
-            "/api/companies/{$this->company->id}/reports/trial-balance",
+            $this->apiUrl(),
             $this->apiHeaders($this->user, ['api.access', 'reports.trial-balance'])
         );
 
@@ -94,14 +98,13 @@ class TrialBalanceTest extends TestCase
                 ],
             ])
             ->assertJsonPath('data.subjects.0.code', '011')
-            ->assertJsonPath('data.meta.company_id', $this->company->id)
-            ->assertJsonPath('data.meta.fiscal_year_id', $this->company->fiscalYear->id);
+            ->assertJsonPath('data.meta.fiscal_year_id', $this->fiscalYear->id);
     }
 
     public function test_trial_balance_rejects_start_date_after_end_date(): void
     {
         $this->getJson(
-            "/api/companies/{$this->company->id}/reports/trial-balance?start_date=1403/05/10&end_date=1403/05/01",
+            $this->apiUrl('?start_date=1403/05/10&end_date=1403/05/01'),
             $this->apiHeaders($this->user, ['api.access', 'reports.trial-balance'])
         )->assertUnprocessable()
             ->assertJsonValidationErrors('start_date');
@@ -110,7 +113,7 @@ class TrialBalanceTest extends TestCase
     public function test_trial_balance_rejects_invalid_date_format(): void
     {
         $this->getJson(
-            "/api/companies/{$this->company->id}/reports/trial-balance?start_date=not-a-date",
+            $this->apiUrl('?start_date=not-a-date'),
             $this->apiHeaders($this->user, ['api.access', 'reports.trial-balance'])
         )->assertUnprocessable()
             ->assertJsonValidationErrors('start_date');
@@ -119,21 +122,21 @@ class TrialBalanceTest extends TestCase
     public function test_trial_balance_excludes_subjects_from_other_fiscal_years(): void
     {
         $subject = Subject::create([
-            'company_id' => $this->company->id,
+            'fiscal_year_id' => $this->fiscalYear->id,
             'code' => '011',
             'name' => 'بانک ها',
             'parent_id' => null,
             'type' => SubjectType::BOTH,
         ]);
 
-        $otherFiscalYear = Company::factory()->create()->fiscalYear;
+        $otherYear = FiscalYear::create(['company_id' => $this->fiscalYear->company_id, 'year' => 1405]);
 
         DB::table('subjects')->where('id', $subject->id)->update([
-            'fiscal_year_id' => $otherFiscalYear->id,
+            'fiscal_year_id' => $otherYear->id,
         ]);
 
         $this->getJson(
-            "/api/companies/{$this->company->id}/reports/trial-balance",
+            $this->apiUrl(),
             $this->apiHeaders($this->user, ['api.access', 'reports.trial-balance'])
         )->assertOk()
             ->assertJsonCount(0, 'data.subjects')
