@@ -78,6 +78,14 @@ class AttendanceLogTest extends TestCase
         ], $overrides);
     }
 
+    public function test_work_shift_defaults_to_half_day_on_thursdays(): void
+    {
+        $workShift = WorkShift::factory()->create(['fiscal_year_id' => $this->fiscalYearId])->refresh();
+
+        $this->assertSame(ThursdayStatus::HALF_DAY->value, $workShift->getRawOriginal('thursday_status'));
+        $this->assertSame(ThursdayStatus::HALF_DAY, $workShift->thursday_status);
+    }
+
     // ----------------------------------------------------------------
     // index
     // ----------------------------------------------------------------
