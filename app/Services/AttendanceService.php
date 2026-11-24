@@ -118,7 +118,7 @@ class AttendanceService
         return $log->fresh();
     }
 
-    private function approvedRequestMinutesForDate(Collection $requests, Carbon $date, ?WorkShift $workShift): array
+    public function approvedRequestMinutesForDate(Collection $requests, Carbon $date, ?WorkShift $workShift): array
     {
         $result = array_fill_keys(['paid_leave', 'unpaid_leave', 'mission', 'overtime', 'remote_work'], ['minutes' => 0, 'has_request' => false]);
         foreach ($requests as $request) {
@@ -146,6 +146,19 @@ class AttendanceService
     /**
      * Compute derived attendance columns without persisting.
      *
+     * This method is called from TWO places, and each one gathers the inputs on its own:
+     *   • AttendanceService::recalculateLog()      — computes and stores the columns
+     *   • AttendanceLogController::show()          — the "Calculation Check" table compares
+     *                                                these values with the stored ones
+     * Both places MUST pass exactly the same inputs, including any pre-processing of the log
+     * (e.g. request-backed paid_leave/mission/... set before the call). When you change one of
+     * them, change the other too; otherwise the check table shows false mismatches.
+     * AttendanceServiceCalculationTest::test_calculation_check_table_matches_stored_values_after_recalculate
+     * guards this.
+     *
+     * All parameters are required on purpose: when you add a parameter, both call sites break
+     * until they are updated. Do not give new parameters a default value.
+     *
      * Rules:
      * - worked = actual clocked minutes only
      * - paid_leave + mission + remote_work are coverage minutes, not worked minutes
@@ -164,7 +177,7 @@ class AttendanceService
      *     is_holiday?:bool
      * }
      */
-    public function computeLogColumns(AttendanceLog $log, ?WorkShift $workShift, bool $isFriday = false, bool $isHoliday = false, bool $isThursday = false, ?PersonnelRequest $remoteRequest = null, int $midShiftCoverage = 0, $hourlyCoverageRequests = null): array
+    public function computeLogColumns(AttendanceLog $log, ?WorkShift $workShift, bool $isFriday, bool $isHoliday, bool $isThursday, ?PersonnelRequest $remoteRequest, int $midShiftCoverage, ?Collection $hourlyCoverageRequests): array
     {
         // ── Thursday handling ──────────────────────────────────────────────
         $thursdayStatus = $isThursday ? ($workShift?->thursday_status ?? ThursdayStatus::FULL_DAY) : null;
@@ -1048,7 +1061,7 @@ class AttendanceService
      *
      * @param  Collection<int,PersonnelRequest>  $requests
      */
-    private function midShiftCoverageMinutes(AttendanceLog $log, Collection $requests): int
+    public function midShiftCoverageMinutes(AttendanceLog $log, Collection $requests): int
     {
         if ($log->entry_time === null || $log->exit_time === null || $requests->isEmpty()) {
             return 0;

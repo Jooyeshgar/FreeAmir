@@ -4,16 +4,20 @@ namespace Tests\Feature;
 
 use App\Enums\PersonnelRequestStatus;
 use App\Enums\PersonnelRequestType;
+use App\Enums\ThursdayStatus;
 use App\Models\AttendanceLog;
 use App\Models\Employee;
 use App\Models\FiscalYear;
 use App\Models\PersonnelRequest;
 use App\Models\PublicHoliday;
+use App\Models\User;
 use App\Models\WorkShift;
 use App\Models\WorkSite;
 use App\Services\AttendanceService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 /**
@@ -70,6 +74,7 @@ class AttendanceServiceCalculationTest extends TestCase
             'break' => 60,
             'float' => 0,
             'is_active' => true,
+            'thursday_status' => ThursdayStatus::FULL_DAY,
         ], $overrides));
     }
 
@@ -196,6 +201,7 @@ class AttendanceServiceCalculationTest extends TestCase
         $shift = new WorkShift([
             'start_time' => '07:30:00', 'end_time' => '15:30:00',
             'float' => 60, 'max_auto_overtime' => 120,
+            'thursday_status' => ThursdayStatus::FULL_DAY,
         ]);
         $leaveMinutes = (int) Carbon::parse($leaveStart)->diffInMinutes(Carbon::parse('10:35:00'));
         $log = new AttendanceLog([
@@ -209,7 +215,7 @@ class AttendanceServiceCalculationTest extends TestCase
 
         // Leave ends at entry, so none of it overlaps physical attendance.
         $columns = $this->service->computeLogColumns(
-            $log, $shift, midShiftCoverage: 0, hourlyCoverageRequests: collect([$request])
+            $log, $shift, false, false, false, null, 0, collect([$request])
         );
 
         $this->assertSame($delay, $columns['delay']);
@@ -1326,7 +1332,7 @@ class AttendanceServiceCalculationTest extends TestCase
 
     public function test_leave_starting_before_shift_start_does_not_generate_auto_overtime(): void
     {
-        // Issue #479: shift 08:00–16:00, hourly leave 07:30–10:10, clock 10:10→16:00.
+        // Shift 08:00–16:00, hourly leave 07:30–10:10, clock 10:10→16:00.
         // The 30 minutes of leave before the shift starts are outside the shift, so they must not be turned into automatic overtime.
         $employee = $this->makeEmployee($this->eightToFourShift());
 
@@ -1457,5 +1463,96 @@ class AttendanceServiceCalculationTest extends TestCase
         $this->assertSame(0, (int) $log->early_leave);
         $this->assertSame(0, (int) $log->overtime);
         $this->assertSame(90, (int) $log->auto_overtime, '60 early + 60 late = 120 raw, capped at max 90');
+    }
+
+    private function actingAsAttendanceUser(): void
+    {
+        $user = User::factory()->create();
+        $this->fiscalYear->users()->attach($user);
+        $user->givePermissionTo(Permission::firstOrCreate(['name' => 'attendance.*']));
+        $this->actingAs($user);
+    }
+
+    public function test_show_page_calculation_check_matches_recalculate_log_and_does_not_persist(): void
+    {
+        $this->actingAsAttendanceUser();
+        $shift = $this->makeShift([
+            'start_time' => '07:30:00', 'end_time' => '15:30:00',
+            'float' => 60, 'max_auto_overtime' => 120,
+        ]);
+        $employee = $this->makeEmployee($shift);
+        PersonnelRequest::factory()->approved()->create([
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'employee_id' => $employee->id,
+            'request_type' => PersonnelRequestType::LEAVE_HOURLY,
+            'start_date' => '2025-03-03 08:31:00',
+            'end_date' => '2025-03-03 10:35:00',
+        ]);
+        $log = $this->insertLog($employee, '2025-03-03', [
+            'entry_time' => '10:35:00', 'exit_time' => '16:37:00',
+            'paid_leave' => 0, 'delay' => 125, 'early_leave' => 60, 'auto_overtime' => 120,
+        ], false);
+
+        $preview = $this->get(route('attendance.attendance-logs.show', $log))
+            ->assertOk()
+            ->viewData('computed');
+
+        // Viewing the page saves nothing.
+        $stored = $log->fresh();
+        $this->assertSame(125, (int) $stored->delay);
+        $this->assertSame(60, (int) $stored->early_leave);
+        $this->assertSame(120, (int) $stored->auto_overtime);
+
+        // The "Calculation Check" table must agree with what recalculation stores.
+        $recalculated = $this->service->recalculateLog($log);
+        foreach (['worked', 'delay', 'early_leave', 'overtime', 'auto_overtime', 'mission'] as $field) {
+            $this->assertSame((int) $recalculated->{$field}, (int) $preview[$field], $field);
+        }
+    }
+
+    public static function calculationCheckScenarios(): array
+    {
+        return [
+            'no request' => [null],
+            'hourly leave inside presence' => [PersonnelRequestType::LEAVE_HOURLY],
+            'unpaid hourly leave inside presence' => [PersonnelRequestType::LEAVE_WITHOUT_PAY_HOURLY],
+            'hourly mission inside presence' => [PersonnelRequestType::MISSION_HOURLY],
+        ];
+    }
+
+    /**
+     * The "Calculation Check" table on the log page must show exactly what recalculateLog() stores.
+     */
+    #[DataProvider('calculationCheckScenarios')]
+    public function test_calculation_check_table_matches_stored_values_after_recalculate(?PersonnelRequestType $requestType): void
+    {
+        $this->actingAsAttendanceUser();
+
+        $shift = $this->makeShift(['thursday_status' => ThursdayStatus::FULL_DAY]);
+        $employee = $this->makeEmployee($shift);
+
+        if ($requestType !== null) {
+            PersonnelRequest::factory()->approved()->create([
+                'fiscal_year_id' => $this->fiscalYear->id,
+                'employee_id' => $employee->id,
+                'request_type' => $requestType,
+                'start_date' => '2025-03-03 11:00:00',
+                'end_date' => '2025-03-03 13:00:00',
+            ]);
+        }
+
+        $log = $this->insertLog($employee, '2025-03-03', [
+            'entry_time' => '08:00:00',
+            'exit_time' => '17:00:00',
+        ]);
+
+        $computed = $this->get(route('attendance.attendance-logs.show', $log))
+            ->assertOk()
+            ->viewData('computed');
+
+        $stored = $log->fresh();
+        foreach ($computed as $field => $value) {
+            $this->assertSame((int) $stored->{$field}, (int) $value, $field);
+        }
     }
 }
