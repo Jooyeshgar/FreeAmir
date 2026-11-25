@@ -204,6 +204,68 @@ class InvoiceDashboardTest extends TestCase
         $this->assertNull($data['topSales']->first()['profit_margin']);
     }
 
+    public function test_english_trends_group_invoice_dates_by_gregorian_month(): void
+    {
+        $this->grant('invoices.dashboard');
+        $product = Product::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $service = Service::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
+
+        $marchSale = $this->invoice(InvoiceType::SELL, InvoiceStatus::APPROVED, 1, '2026-03-25', 120);
+        $this->item($marchSale, $product, 1, 120, 120);
+        $marchReturn = $this->invoice(InvoiceType::RETURN_SELL, InvoiceStatus::APPROVED, 2, '2026-03-31', 20);
+        $this->item($marchReturn, $product, 1, 20, 20);
+        $aprilSale = $this->invoice(InvoiceType::SELL, InvoiceStatus::APPROVED, 3, '2026-04-01', 200);
+        $this->item($aprilSale, $product, 1, 200, 200);
+        $finalMarchPurchase = $this->invoice(InvoiceType::BUY, InvoiceStatus::APPROVED, 4, '2027-03-15', 300);
+        $this->item($finalMarchPurchase, $service, 1, 300, 300);
+
+        $english = $this->actingAs($this->user)->withSession(['locale' => 'en'])
+            ->get(route('invoices.dashboard'))->assertOk();
+        $products = $english->viewData('productTrend');
+        $services = $english->viewData('serviceTrend');
+
+        $this->assertCount(13, $products['labels']);
+        $this->assertSame('Mar 2026', $products['labels'][0]);
+        $this->assertSame('Apr 2026', $products['labels'][1]);
+        $this->assertSame('Mar 2027', $products['labels'][12]);
+        $this->assertSame($products['labels'], $services['labels']);
+        $this->assertSame([100.0, 200.0], array_slice($products['sell'], 0, 2));
+        $this->assertSame(0.0, $products['sell'][2]);
+        $this->assertSame(300.0, $services['buy'][12]);
+        $this->assertSame($english->viewData('summary')['net_sales'], array_sum($products['sell']));
+        $this->assertSame($english->viewData('summary')['net_purchases'], array_sum($services['buy']));
+        $english->assertSee('"Mar 2026","Apr 2026"', false);
+
+        $persian = $this->withSession(['locale' => 'fa'])->get(route('invoices.dashboard'))->assertOk();
+        $persianProducts = $persian->viewData('productTrend');
+        $this->assertCount(12, $persianProducts['labels']);
+        $this->assertSame('1405/01', $persianProducts['labels'][0]);
+        $this->assertSame(300.0, $persianProducts['sell'][0]);
+    }
+
+    public function test_english_trends_use_the_selected_date_range(): void
+    {
+        $this->grant('invoices.dashboard');
+        $product = Product::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);
+        $beforeRange = $this->invoice(InvoiceType::SELL, InvoiceStatus::APPROVED, 1, '2026-03-29', 500);
+        $this->item($beforeRange, $product, 1, 500, 500);
+        $insideRange = $this->invoice(InvoiceType::SELL, InvoiceStatus::APPROVED, 2, '2026-04-01', 200);
+        $this->item($insideRange, $product, 1, 200, 200);
+        $afterRange = $this->invoice(InvoiceType::SELL, InvoiceStatus::APPROVED, 3, '2026-04-02', 400);
+        $this->item($afterRange, $product, 1, 400, 400);
+
+        $this->actingAs($this->user)->withSession(['locale' => 'en'])
+            ->get(route('invoices.dashboard', ['start_date' => '2026-03-30', 'end_date' => '2026-04-01']))
+            ->assertOk()
+            ->assertViewHas('periodLabel', '2026-03-30 - 2026-04-01')
+            ->assertViewHas('recentInvoices', fn ($invoices) => $invoices->pluck('id')->all() === [$insideRange->id])
+            ->assertViewHas('productTrend', [
+                'labels' => ['Mar 2026', 'Apr 2026'],
+                'sell' => [0.0, 200.0],
+                'buy' => [0.0, 0.0],
+            ]);
+    }
+
     public function test_summary_uses_invoice_totals_including_invoice_level_adjustments(): void
     {
         $product = Product::factory()->create(['fiscal_year_id' => $this->fiscalYearId]);

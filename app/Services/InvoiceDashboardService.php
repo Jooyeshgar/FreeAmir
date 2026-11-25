@@ -23,6 +23,8 @@ class InvoiceDashboardService
         $to = Carbon::parse($filters['end_date'])->endOfDay();
 
         $items = $this->itemsBetween($from, $to);
+        $english = app()->isLocale('en');
+        $monthLabels = $english ? ChartCalendar::gregorianMonths($from, $to) : $this->jalaliMonthLabels($from, $to);
 
         return [
             'filters' => $filters,
@@ -30,8 +32,8 @@ class InvoiceDashboardService
             'fiscalYearEnd' => $fiscalEnd,
             'periodLabel' => $this->periodLabel($from, $to),
             'summary' => $this->summary($items),
-            'productTrend' => $this->trend($items, Product::class, $from, $to),
-            'serviceTrend' => $this->trend($items, Service::class, $from, $to),
+            'productTrend' => $this->trend($items, Product::class, $monthLabels, $english),
+            'serviceTrend' => $this->trend($items, Service::class, $monthLabels, $english),
             'productSalesBreakdown' => $this->salesBreakdown($items, Product::class),
             'serviceSalesBreakdown' => $this->salesBreakdown($items, Service::class),
             'topSales' => $this->topSales($items),
@@ -76,7 +78,8 @@ class InvoiceDashboardService
                 InvoiceType::RETURN_BUY,
                 InvoiceType::VOID,
             ])
-            ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->where('date', '>=', $from->toDateString())
+            ->where('date', '<', $to->copy()->addDay()->toDateString())
             ->with('customer:id,name')
             ->get(['id', 'number', 'date', 'amount', 'invoice_type', 'status', 'customer_id']);
     }
@@ -93,7 +96,8 @@ class InvoiceDashboardService
                         InvoiceType::RETURN_BUY,
                         InvoiceType::VOID,
                     ])
-                    ->whereBetween('date', [$from->toDateString(), $to->toDateString()]);
+                    ->where('date', '>=', $from->toDateString())
+                    ->where('date', '<', $to->copy()->addDay()->toDateString());
             })
             ->with([
                 'invoice:id,date,amount,invoice_type,status',
@@ -177,12 +181,13 @@ class InvoiceDashboardService
             ->sum(fn (Collection $group) => (float) $group->first()->invoice->amount);
     }
 
-    private function trend(Collection $items, string $itemableType, Carbon $from, Carbon $to): array
+    private function trend(Collection $items, string $itemableType, array $monthLabels, bool $english): array
     {
-        $buckets = $this->monthlyBuckets($from, $to);
+        $buckets = array_fill_keys(array_keys($monthLabels), ['sell' => 0.0, 'buy' => 0.0]);
 
         foreach ($items->where('itemable_type', $itemableType) as $item) {
-            $key = $this->monthKey($item->invoice->date);
+            $date = $item->invoice->date;
+            $key = $english ? $date->format('Y-m') : $this->jalaliMonthKey($date);
             if (! isset($buckets[$key])) {
                 continue;
             }
@@ -202,7 +207,7 @@ class InvoiceDashboardService
         }
 
         return [
-            'labels' => array_keys($buckets),
+            'labels' => array_values($monthLabels),
             'sell' => array_map(fn (array $bucket) => round($bucket['sell'], 2), array_values($buckets)),
             'buy' => array_map(fn (array $bucket) => round($bucket['buy'], 2), array_values($buckets)),
         ];
@@ -313,14 +318,15 @@ class InvoiceDashboardService
         return (float) $item->amount - (float) $item->vat;
     }
 
-    private function monthlyBuckets(Carbon $from, Carbon $to): array
+    private function jalaliMonthLabels(Carbon $from, Carbon $to): array
     {
-        [$year, $month] = array_map('intval', explode('/', $this->monthKey($from)));
-        [$endYear, $endMonth] = array_map('intval', explode('/', $this->monthKey($to)));
-        $buckets = [];
+        [$year, $month] = array_map('intval', explode('/', $this->jalaliMonthKey($from)));
+        [$endYear, $endMonth] = array_map('intval', explode('/', $this->jalaliMonthKey($to)));
+        $labels = [];
 
         while ($year < $endYear || ($year === $endYear && $month <= $endMonth)) {
-            $buckets[sprintf('%04d/%02d', $year, $month)] = ['sell' => 0.0, 'buy' => 0.0];
+            $key = sprintf('%04d/%02d', $year, $month);
+            $labels[$key] = $key;
             $month++;
             if ($month === 13) {
                 $month = 1;
@@ -328,18 +334,20 @@ class InvoiceDashboardService
             }
         }
 
-        return $buckets;
+        return $labels;
     }
 
-    private function monthKey(Carbon|string $date): string
+    private function jalaliMonthKey(Carbon $date): string
     {
-        $carbon = $date instanceof Carbon ? $date : Carbon::parse($date);
-
-        return toEnglish(jdate('Y/m', $carbon->timestamp));
+        return toEnglish(jdate('Y/m', $date->timestamp));
     }
 
     private function periodLabel(Carbon $from, Carbon $to): string
     {
+        if (app()->isLocale('en')) {
+            return $from->toDateString().' - '.$to->toDateString();
+        }
+
         return toEnglish(jdate('Y/m/d', $from->timestamp))
             .' - '.toEnglish(jdate('Y/m/d', $to->timestamp));
     }
