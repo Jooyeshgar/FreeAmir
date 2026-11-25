@@ -13,7 +13,10 @@ use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Models\WarehouseProductStock;
+use App\Services\InvoiceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\Helpers\SeederHelper;
@@ -67,11 +70,19 @@ class McpInvoiceExternalReferenceIdTest extends TestCase
             'code' => 'MAIN',
         ]);
 
-        foreach (['api.access', 'invoices.store', 'invoices.index'] as $permission) {
+        WarehouseProductStock::create([
+            'fiscal_year_id' => $this->year->id,
+            'warehouse_id' => $this->warehouse->id,
+            'product_id' => $this->product->id,
+            'quantity' => 5,
+            'average_cost' => 500,
+        ]);
+
+        foreach (['api.access', 'invoices.store', 'invoices.index', 'invoices.approve'] as $permission) {
             $this->user->givePermissionTo(Permission::findOrCreate($permission, 'web'));
         }
 
-        $this->token = $this->user->createToken('Invoice Ref Writer', ['invoices.store', 'invoices.index'])->plainTextToken;
+        $this->token = $this->user->createToken('Invoice Ref Writer', ['invoices.store', 'invoices.index', 'invoices.approve'])->plainTextToken;
         config(['active-fiscal-year-id' => null]);
     }
 
@@ -136,8 +147,18 @@ class McpInvoiceExternalReferenceIdTest extends TestCase
         $this->assertNotSame($created['id'], $replacement['id']);
         $this->assertSame('fnirsi:FN-180625', $replacement['external_reference_id']);
 
-        // Voiding also allows reuse
-        Invoice::withoutGlobalScopes()->whereKey($replacement['id'])->update(['invoice_type' => InvoiceType::VOID->value]);
+        // Real void flow: approve the sell invoice, then void it via InvoiceService::voidInvoice()
+        $replacementInvoice = Invoice::withoutGlobalScopes()->findOrFail($replacement['id']);
+        $this->actingAs($this->user);
+        config(['active-fiscal-year-id' => $this->year->id]);
+        $invoiceService = app(InvoiceService::class);
+        $invoiceService->changeInvoiceStatus($replacementInvoice, 'approved');
+        $invoiceService->voidInvoice($replacementInvoice->fresh(['items.itemable']), $this->user, '2026-05-02', 99);
+        config(['active-fiscal-year-id' => null]);
+
+        // Original sell invoice stays SELL, yet its effective void releases the external_reference_id
+        $this->assertSame(InvoiceType::SELL, $replacementInvoice->fresh()->invoice_type);
+        $this->assertNotNull($replacementInvoice->fresh()->voidInvoice);
 
         $afterVoid = $this->withToken($this->token)->postJson('/api/mcp', [
             'jsonrpc' => '2.0',
@@ -146,6 +167,79 @@ class McpInvoiceExternalReferenceIdTest extends TestCase
             'params' => ['name' => 'create_invoice', 'arguments' => $this->invoiceArguments('fnirsi:FN-180625')],
         ])->assertOk()->json('result');
         $this->assertFalse($afterVoid['isError'] ?? true);
+        $recreated = json_decode($afterVoid['content'][0]['text'], true);
+        $this->assertNotSame($replacement['id'], $recreated['id']);
+        $this->assertSame('fnirsi:FN-180625', $recreated['external_reference_id']);
+    }
+
+    public function test_reopening_or_approving_rejected_invoice_is_blocked_when_replacement_exists(): void
+    {
+        $firstResponse = $this->withToken($this->token)->postJson('/api/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/call',
+            'params' => ['name' => 'create_invoice', 'arguments' => $this->invoiceArguments('fnirsi:FN-REOPEN-1')],
+        ])->assertOk()->json('result');
+
+        $this->assertFalse($firstResponse['isError'] ?? true);
+        $first = json_decode($firstResponse['content'][0]['text'], true);
+        $firstInvoice = Invoice::withoutGlobalScopes()->findOrFail($first['id']);
+
+        $this->actingAs($this->user);
+        config(['active-fiscal-year-id' => $this->year->id]);
+        $invoiceService = app(InvoiceService::class);
+        $invoiceService->changeInvoiceStatus($firstInvoice, 'rejected');
+        config(['active-fiscal-year-id' => null]);
+
+        // Replacement invoice with the same external_reference_id is allowed while the first is rejected
+        $replacementResponse = $this->withToken($this->token)->postJson('/api/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 2,
+            'method' => 'tools/call',
+            'params' => ['name' => 'create_invoice', 'arguments' => $this->invoiceArguments('fnirsi:FN-REOPEN-1')],
+        ])->assertOk()->json('result');
+
+        $this->assertFalse($replacementResponse['isError'] ?? true);
+        $replacement = json_decode($replacementResponse['content'][0]['text'], true);
+
+        // Reopening the rejected invoice to ready_to_approve is blocked by InvoiceService
+        config(['active-fiscal-year-id' => $this->year->id]);
+        try {
+            $invoiceService->changeInvoiceStatus($firstInvoice->fresh(), 'ready_to_approve');
+            $this->fail('Expected ValidationException when reopening a rejected invoice with a conflicting external_reference_id.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('external_reference_id', $exception->errors());
+        }
+        $this->assertSame(InvoiceStatus::REJECTED, $firstInvoice->fresh()->status);
+
+        // Approving the first invoice directly via service or MCP is also blocked so two documents cannot be posted
+        try {
+            $invoiceService->changeInvoiceStatus($firstInvoice->fresh(), 'approved');
+            $this->fail('Expected ValidationException when approving a conflicting invoice.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('external_reference_id', $exception->errors());
+        }
+        $this->assertNull($firstInvoice->fresh()->document_id);
+        config(['active-fiscal-year-id' => null]);
+
+        // Approving the active replacement invoice via MCP succeeds and posts a single document
+        $approveReplacement = $this->withToken($this->token)->postJson('/api/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 3,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'approve_invoice',
+                'arguments' => [
+                    'fiscal_year_id' => $this->year->id,
+                    'invoice_id' => $replacement['id'],
+                    'confirm' => true,
+                ],
+            ],
+        ])->assertOk()->json('result');
+
+        $this->assertFalse($approveReplacement['isError'] ?? true);
+        $this->assertNotNull(Invoice::withoutGlobalScopes()->findOrFail($replacement['id'])->document_id);
+        $this->assertNull($firstInvoice->fresh()->document_id);
     }
 
     public function test_web_invoice_edit_preserves_external_reference_id_and_blocks_subsequent_duplicates(): void

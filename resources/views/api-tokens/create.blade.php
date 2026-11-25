@@ -54,27 +54,26 @@
                                             <div
                                                 class="relative flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-base-200 px-3 py-2 transition hover:border-primary/40 hover:bg-base-200/60"
                                                 x-show="matches({{ Js::from($permission) }})">
-                                                <span class="flex min-w-0 items-center gap-2" @if ($permission === 'invoices.approve') x-data="{ warningOpen: false }" @endif>
+                                                <span class="flex min-w-0 items-center gap-2" @if ($permission === 'invoices.approve') x-data="{ warningOpen: false, closeTimer: null, openWarning() { clearTimeout(this.closeTimer); this.warningOpen = true; }, scheduleClose() { clearTimeout(this.closeTimer); this.closeTimer = setTimeout(() => { this.warningOpen = false; }, 120); }, closeWarning() { clearTimeout(this.closeTimer); this.warningOpen = false; } }" @keydown.escape.window="if (warningOpen) closeWarning()" @scroll.window.capture="if (warningOpen) closeWarning()" @click.outside="closeWarning()" @endif>
                                                     <label for="{{ $permissionId }}" class="cursor-pointer truncate text-sm after:absolute after:inset-0" title="{{ $permission }}">
                                                         {{ \Illuminate\Support\Str::headline(\Illuminate\Support\Str::after($permission, '.')) }}
                                                     </label>
                                                     @if ($permission === 'invoices.approve')
                                                         <button type="button" class="relative z-20 grid size-5 shrink-0 place-items-center rounded text-warning focus-visible:outline"
-                                                            @pointerenter="if ($event.pointerType !== 'touch') warningOpen = true"
-                                                            @pointerleave="if ($event.pointerType !== 'touch') warningOpen = false"
-                                                            @focus="if ($el.matches(':focus-visible')) warningOpen = true"
-                                                            @blur="warningOpen = false"
-                                                            @pointerup="if ($event.pointerType === 'touch') warningOpen = !warningOpen"
-                                                            @click.outside="warningOpen = false"
-                                                            @keydown.escape.stop="warningOpen = false"
-                                                            @scroll.window.capture="warningOpen = false"
+                                                            @pointerenter="if ($event.pointerType !== 'touch') openWarning()"
+                                                            @pointerleave="if ($event.pointerType !== 'touch') scheduleClose()"
+                                                            @focus="if ($el.matches(':focus-visible')) openWarning()"
+                                                            @blur="closeWarning()"
+                                                            @pointerup="if ($event.pointerType === 'touch') { warningOpen ? closeWarning() : openWarning() }"
                                                             aria-label="{{ __('Invoice approval warning') }}" aria-describedby="invoice-approval-warning">
                                                             <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                                             </svg>
                                                         </button>
                                                         <span id="invoice-approval-warning" role="tooltip" x-show="warningOpen" style="display: none"
-                                                            class="pointer-events-none absolute inset-x-0 top-full z-30 mt-1 rounded-md bg-warning px-2 py-1.5 text-xs leading-relaxed text-warning-content shadow wrap-anywhere">
+                                                            @pointerenter="if ($event.pointerType !== 'touch') openWarning()"
+                                                            @pointerleave="if ($event.pointerType !== 'touch') scheduleClose()"
+                                                            class="absolute inset-x-0 top-full z-30 mt-1 rounded-md bg-warning px-2 py-1.5 text-xs leading-relaxed text-warning-content shadow wrap-anywhere">
                                                             {{ __('This token can approve invoices and post accounting documents. The client must ask the user first.') }}
                                                         </span>
                                                     @endif

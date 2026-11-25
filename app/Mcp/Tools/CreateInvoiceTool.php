@@ -2,7 +2,6 @@
 
 namespace App\Mcp\Tools;
 
-use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Extensions\InvoiceExtensionRegistry;
 use App\Http\Requests\StoreInvoiceRequest;
@@ -190,15 +189,9 @@ class CreateInvoiceTool extends AccountingTool
 
         return DB::transaction(function () use ($yearId, $externalReferenceId, $validated, $extensionPersister, $fiscalYear): Response {
             if ($externalReferenceId !== null) {
-                FiscalYear::query()->whereKey($yearId)->lockForUpdate()->first();
+                InvoiceService::lockExternalReferenceScope($yearId);
 
-                $existing = Invoice::query()
-                    ->where('fiscal_year_id', $yearId)
-                    ->where('external_reference_id', $externalReferenceId)
-                    ->where('invoice_type', '!=', InvoiceType::VOID->value)
-                    ->where('status', '!=', InvoiceStatus::REJECTED->value)
-                    ->lockForUpdate()
-                    ->first();
+                $existing = InvoiceService::findActiveInvoiceByExternalReference($yearId, $externalReferenceId, lockForUpdate: true);
 
                 if ($existing) {
                     return $this->error(json_encode([
