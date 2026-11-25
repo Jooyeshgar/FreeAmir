@@ -52,7 +52,7 @@
                     <template x-if="groupBlock.headerGroup && hasOptionsInBlock(groupBlock)">
                         <li class="mt-2 first:mt-0 bg-base-200/50">
                             <span class="menu-title text-xs font-bold uppercase tracking-wider opacity-70 px-4 py-1"
-                                x-text="groupBlock.headerGroup"></span>
+                                x-text="@js($headerLabel) || groupBlock.headerGroup"></span>
                         </li>
                     </template>
 

@@ -27,6 +27,7 @@ use App\Services\ProductService;
 use App\Services\WarehouseService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
+use Spatie\Permission\Models\Permission;
 use Tests\Helpers\SeederHelper;
 use Tests\TestCase;
 
@@ -423,6 +424,16 @@ class WarehouseInvoiceStockTest extends TestCase
             'warehouse_id',
             $this->validateForm($this->formPayload(InvoiceType::BUY, 1, $foreignWarehouse, false))
         );
+
+        $buy = $this->createInvoice(InvoiceType::BUY, 2, $this->mainWarehouse, true);
+        $missingReturn = $this->formPayload(InvoiceType::RETURN_BUY, 1, $this->mainWarehouse, false, $buy);
+        unset($missingReturn['warehouse_id']);
+
+        $this->assertArrayHasKey('warehouse_id', $this->validateForm($missingReturn));
+        $this->assertArrayHasKey(
+            'warehouse_id',
+            $this->validateForm($this->formPayload(InvoiceType::RETURN_BUY, 1, $foreignWarehouse, false, $buy))
+        );
     }
 
     public function test_editing_pending_invoice_changes_warehouse_without_changing_stock(): void
@@ -496,28 +507,69 @@ class WarehouseInvoiceStockTest extends TestCase
         $this->assertStock($this->mainWarehouse, 6);
     }
 
-    public function test_return_service_buy_request_validates_the_service_model(): void
+    public function test_service_purchases_and_returns_can_be_created_and_edited_without_a_warehouse(): void
     {
+        $this->withoutVite();
+        $this->app->setLocale('en');
+        foreach (['invoices.create', 'invoices.store', 'invoices.edit', 'invoices.update', 'invoices.approve'] as $permission) {
+            $this->user->givePermissionTo(Permission::findOrCreate($permission));
+        }
+
         $serviceGroup = ServiceGroup::factory()->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
         $service = Service::factory()->withGroup($serviceGroup)->withSubject()->create(['fiscal_year_id' => $this->fiscalYearId]);
-        $buy = InvoiceService::createInvoice(
-            $this->user,
-            $this->invoiceData(InvoiceType::BUY, $this->mainWarehouse),
-            [[
-                'itemable_type' => 'service',
-                'itemable_id' => $service->id,
-                'quantity' => 2,
-                'unit' => 100,
-                'discount' => 0,
-                'vat' => 0,
-            ]]
-        )['invoice'];
+        $this->setStock($this->mainWarehouse, 5);
 
-        $payload = $this->formPayload(InvoiceType::RETURN_BUY, 1, $this->mainWarehouse, false, $buy);
-        $payload['transactions'][0]['item_id'] = 'service-'.$service->id;
-        $errors = $this->validateForm($payload);
+        $mixedPurchase = $this->formPayload(InvoiceType::BUY, 1, $this->mainWarehouse, false);
+        $mixedPurchase['transactions'][] = [...$mixedPurchase['transactions'][0], 'item_id' => 'service-'.$service->id];
+        unset($mixedPurchase['warehouse_id']);
+        $this->assertArrayHasKey('warehouse_id', $this->validateForm($mixedPurchase));
 
-        $this->assertArrayNotHasKey('transactions.0.item_id', $errors);
+        $this->get(route('invoices.create', ['invoice_type' => 'buy']))
+            ->assertOk()
+            ->assertSee(__('Select Supplier'))
+            ->assertSee('name="warehouse_id"', false);
+
+        $buy = null;
+        foreach ([InvoiceType::BUY, InvoiceType::RETURN_BUY] as $type) {
+            $this->get(route('invoices.create', [
+                'invoice_type' => $type->valueName(),
+                'service_buy' => '1',
+                'returned_invoice_id' => $buy?->id,
+            ]))
+                ->assertOk()
+                ->assertSee(__('Select Supplier'))
+                ->assertDontSee('name="warehouse_id"', false);
+
+            $payload = $this->formPayload($type, $buy ? 1 : 2, $this->mainWarehouse, true, $buy);
+            if ($buy) {
+                $payload['date'] = $buy->date->copy()->addDay()->toDateString();
+            }
+            unset($payload['warehouse_id']);
+            $payload['transactions'][0]['item_id'] = 'service-'.$service->id;
+
+            $this->post(route('invoices.store'), $payload)->assertSessionHasNoErrors();
+            $invoice = Invoice::where('invoice_type', $type)->where('number', $payload['invoice_number'])->firstOrFail();
+            $this->assertNull($invoice->warehouse_id);
+
+            $this->get(route('invoices.edit', $invoice))->assertOk()
+                ->assertSee(__('Select Supplier'))
+                ->assertDontSee('name="warehouse_id"', false);
+
+            // Existing service invoices can still have a warehouse assigned.
+            $invoice->update(['warehouse_id' => $this->mainWarehouse->id]);
+            $payload['invoice_id'] = $invoice->id;
+            $payload['title'] = 'Updated service invoice';
+            $this->put(route('invoices.update', $invoice), $payload)->assertSessionHasNoErrors();
+
+            $invoice->refresh();
+            $this->assertSame('Updated service invoice', $invoice->title);
+            $this->assertNull($invoice->warehouse_id);
+            $this->assertTrue($invoice->status->isApproved());
+            $buy ??= $invoice;
+        }
+
+        $this->assertStock($this->mainWarehouse, 5);
+        $this->assertStock($this->emptyWarehouse, 0);
     }
 
     public function test_buy_updates_selected_warehouse_cost_before_a_transfer(): void

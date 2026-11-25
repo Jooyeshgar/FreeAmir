@@ -76,7 +76,9 @@
                 <x-input name="returned_invoice_id" x-bind:value="returnedInvoiceId" hidden />
             </div>
         </div>
-        @include('invoices.forms.warehouse-select')
+        @unless ($isReturnServiceBuy)
+            @include('invoices.forms.warehouse-select')
+        @endunless
         <x-input id="invoice_type" name="invoice_type" value="return_buy" hidden />
         <div class="flex w-full xl:w-1/3">
             <x-text-input input_name="title" title="{{ __('Invoice Name') }}"
@@ -113,14 +115,14 @@
                     refreshCustomerSelect();
                 }
             ">
-                <span class="flex flex-wrap text-gray-500 w-full">{{ __('Customer') }}</span>
+                <span class="flex flex-wrap text-gray-500 w-full">{{ __('Supplier') }}</span>
 
                 <template x-if="customerSelectRender">
-                    <x-select-box url="{{ route('invoices.search-customer') }}" :options="[['headerGroup' => 'customer', 'options' => $customers]]"
+                    <x-select-box :header-label="__('Supplier')" url="{{ route('invoices.search-customer') }}" :options="[['headerGroup' => 'customer', 'options' => $customers]]"
                         x-model="selectedValue" x-init="if (!selectedValue && customer_id) {
                             selectedValue = 'customer-' + customer_id;
                         }
-                        disabled = !lastYearsInvoices;" placeholder="{{ __('Select Customer') }}"
+                        disabled = !lastYearsInvoices;" placeholder="{{ __('Select Supplier') }}"
                         @selected="customer_id = $event.detail.id;" :disabled="!$includeLastYearsInvoices"
                         x-on:include-last-years-invoices-changed.window="disabled = !$event.detail.enabled" />
                 </template>
