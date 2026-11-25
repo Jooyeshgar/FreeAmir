@@ -551,9 +551,15 @@ class WarehouseInvoiceStockTest extends TestCase
             $invoice = Invoice::where('invoice_type', $type)->where('number', $payload['invoice_number'])->firstOrFail();
             $this->assertNull($invoice->warehouse_id);
 
-            $this->get(route('invoices.edit', $invoice))->assertOk()
+            $editHtml = $this->get(route('invoices.edit', $invoice))->assertOk()
                 ->assertSee(__('Select Supplier'))
-                ->assertDontSee('name="warehouse_id"', false);
+                ->assertDontSee('name="warehouse_id"', false)
+                ->getContent();
+            // The edit form must submit the type name the update request validates against.
+            $this->assertMatchesRegularExpression(
+                '/<input[^>]*name="invoice_type"[^>]*value="'.$type->valueName().'"/',
+                $editHtml
+            );
 
             // Existing service invoices can still have a warehouse assigned.
             $invoice->update(['warehouse_id' => $this->mainWarehouse->id]);

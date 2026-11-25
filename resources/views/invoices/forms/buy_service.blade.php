@@ -37,7 +37,7 @@
                 <x-input x-bind:value="customer_id" name="customer_id" hidden />
             </div>
         </div>
-        <x-input id="invoice_type" name="invoice_type" value="{{ $invoice->invoice_type ?? $invoice_type }}" hidden />
+        <x-input id="invoice_type" name="invoice_type" value="buy" hidden />
         <div class="flex w-full xl:w-1/3">
             <x-text-input input_name="title" title="{{ __('Invoice Name') }}"
                 input_value="{{ old('title') ?? ($invoice->title ?? '') }}" placeholder="{{ __('Invoice Name') }}"
@@ -252,7 +252,7 @@
 </x-card>
 
 <div class="mt-4 flex gap-2 justify-start sm:justify-end">
-    <a href="{{ route('invoices.index', ['invoice_type' => $invoice->invoice_type ?? $invoice_type]) }}"
+    <a href="{{ route('invoices.index', ['invoice_type' => 'buy']) }}"
         type="submit"
         class="btn btn-sm lg:btn-md btn-default rounded-md dark:bg-slate-700 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-600">{{ __('cancel') }}</a>
     <button id="submitForm" type="submit"
