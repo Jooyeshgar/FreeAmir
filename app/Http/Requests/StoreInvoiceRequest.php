@@ -40,7 +40,6 @@ class StoreInvoiceRequest extends FormRequest
             'invoice_number' => convertToInt($this->input('invoice_number')),
             'subtractions' => convertToFloat($this->input('subtraction', 0)),
             'customer_id' => $isBeginningInventory ? null : convertToInt($this->input('customer_id')),
-            'warehouse_id' => convertToInt($this->input('warehouse_id')),
             'include_last_years_invoices' => $this->boolean('include_last_years_invoices'),
         ]);
 
@@ -86,6 +85,12 @@ class StoreInvoiceRequest extends FormRequest
 
             $this->merge(['transactions' => $transactions->values()->toArray()]);
         }
+
+        $this->merge([
+            'warehouse_id' => ! $this->isServicePurchase() && $this->filled('warehouse_id')
+                ? convertToInt($this->input('warehouse_id'))
+                : null,
+        ]);
     }
 
     /**
@@ -355,7 +360,8 @@ class StoreInvoiceRequest extends FormRequest
             'subtractions' => $isBeginningInventory ? 'nullable|in:0' : 'nullable|numeric|min:0|max:'.self::DECIMAL_10_2_MAX,
 
             'warehouse_id' => [
-                'required',
+                Rule::requiredIf(! $this->isServicePurchase()),
+                'nullable',
                 'integer',
                 Rule::exists('warehouses', 'id')->where('fiscal_year_id', getActiveFiscalYear()),
             ],
@@ -392,6 +398,29 @@ class StoreInvoiceRequest extends FormRequest
         ];
 
         return $rules;
+    }
+
+    public function attributes(): array
+    {
+        return $this->isPurchase() ? ['customer_id' => __('Supplier')] : [];
+    }
+
+    private function isServicePurchase(): bool
+    {
+        if (! $this->isPurchase()) {
+            return false;
+        }
+
+        $transactions = collect($this->input('transactions'));
+
+        return $transactions->isNotEmpty() && $transactions->every(
+            fn ($transaction) => ($transaction['item_type'] ?? null) === 'service'
+        );
+    }
+
+    private function isPurchase(): bool
+    {
+        return in_array($this->effectiveInvoiceType(), ['buy', 'return_buy'], true);
     }
 
     private function effectiveInvoiceType(): ?string
