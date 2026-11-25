@@ -9,7 +9,7 @@
                     '<a class="link text-blue-500 hover:underline dark:text-sky-300" href="' .
                     route('customers.create') .
                     '" target="_blank">' .
-                    __('Add Customer') .
+                    __('Add Supplier') .
                     '</a>';
             @endphp
 
@@ -17,10 +17,10 @@
                 customer_id: '{{ $initialCustomerId }}',
                 selectedValue: '{{ $initialSelectedValue }}',
             }">
-                <span class="flex flex-wrap text-gray-500 w-full">{{ __('Customer') }}
+                <span class="flex flex-wrap text-gray-500 w-full">{{ __('Supplier') }}
                     <a href="{{ route('customers.create') }}" target="_blank"
                         class="btn btn-xs btn-ghost text-blue-500 hover:text-blue-700 dark:text-sky-300 dark:hover:text-sky-200 dark:hover:bg-sky-500/10"
-                        title="{{ __('Add Customer') }}">
+                        title="{{ __('Add Supplier') }}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
                             stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -29,10 +29,10 @@
                     </a>
                 </span>
 
-                <x-select-box url="{{ route('invoices.search-customer') }}" :options="[['headerGroup' => 'customer', 'options' => $customers]]" x-model="selectedValue"
+                <x-select-box :header-label="__('Supplier')" url="{{ route('invoices.search-customer') }}" :options="[['headerGroup' => 'customer', 'options' => $customers]]" x-model="selectedValue"
                     x-init="if (!selectedValue && customer_id) {
                         selectedValue = 'customer-' + customer_id;
-                    }" placeholder="{{ __('Select Customer') }}" hint='{!! $hint !!}'
+                    }" placeholder="{{ __('Select Supplier') }}" hint='{!! $hint !!}'
                     @selected="customer_id = $event.detail.id;" />
 
                 <x-input x-bind:value="customer_id" name="customer_id" hidden />

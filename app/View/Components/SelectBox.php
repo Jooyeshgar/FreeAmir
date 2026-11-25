@@ -36,7 +36,8 @@ class SelectBox extends Component
         bool $selectableGroups = false,
         bool $disabled = false,
         ?string $hint = null,
-        ?string $hint2 = null
+        ?string $hint2 = null,
+        public ?string $headerLabel = null
     ) {
         $this->url = $url;
         $this->options = $options;
