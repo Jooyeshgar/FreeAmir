@@ -19,7 +19,7 @@
                         return permissions.some((permission) => this.matches(permission));
                     },
                 }">
-                    <div class="col-span-4 flex items-center justify-between gap-3">
+                    <div class="col-span-full flex items-center justify-between gap-3">
                         <span class="card-title">{{ __('Create token') }}</span>
 
                         <div class="flex items-center gap-3">
@@ -28,13 +28,13 @@
                         </div>
                     </div>
 
-                    <div class="col-span-4 grid gap-4 md:grid-cols-2">
+                    <div class="col-span-full grid gap-4 md:grid-cols-2">
                         <x-input name="name" id="name" placeholder="{{ __('Token name') }}" title="" :value="old('name')" required />
 
                         <x-input name="permission_search" id="permission-search" placeholder="{{ __('Search') }}" title="" x-model="permissionSearch" />
                     </div>
 
-                    <div class="col-span-4">
+                    <div class="col-span-full">
                         <div class="mt-5 grid gap-4 xl:grid-cols-2">
                             @foreach ($permissionGroups as $group => $groupPermissions)
                                 <section class="rounded-xl border border-base-300 bg-base-100/80 p-4 shadow-sm"
@@ -50,15 +50,37 @@
 
                                     <div class="grid gap-2 sm:grid-cols-2">
                                         @foreach ($groupPermissions as $permission)
-                                            <label
-                                                class="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-base-200 px-3 py-2 transition hover:border-primary/40 hover:bg-base-200/60"
+                                            @php($permissionId = 'permissions-'.\Illuminate\Support\Str::slug($permission))
+                                            <div
+                                                class="relative flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-base-200 px-3 py-2 transition hover:border-primary/40 hover:bg-base-200/60"
                                                 x-show="matches({{ Js::from($permission) }})">
-                                                <span class="truncate text-sm" title="{{ $permission }}">
-                                                    {{ \Illuminate\Support\Str::headline(\Illuminate\Support\Str::after($permission, '.')) }}
+                                                <span class="flex min-w-0 items-center gap-2" @if ($permission === 'invoices.approve') x-data="{ warningOpen: false, closeTimer: null, openWarning() { clearTimeout(this.closeTimer); this.warningOpen = true; }, scheduleClose() { clearTimeout(this.closeTimer); this.closeTimer = setTimeout(() => { this.warningOpen = false; }, 120); }, closeWarning() { clearTimeout(this.closeTimer); this.warningOpen = false; } }" @keydown.escape.window="if (warningOpen) closeWarning()" @scroll.window.capture="if (warningOpen) closeWarning()" @click.outside="closeWarning()" @endif>
+                                                    <label for="{{ $permissionId }}" class="cursor-pointer truncate text-sm after:absolute after:inset-0" title="{{ $permission }}">
+                                                        {{ \Illuminate\Support\Str::headline(\Illuminate\Support\Str::after($permission, '.')) }}
+                                                    </label>
+                                                    @if ($permission === 'invoices.approve')
+                                                        <button type="button" class="relative z-20 grid size-5 shrink-0 place-items-center rounded text-warning focus-visible:outline"
+                                                            @pointerenter="if ($event.pointerType !== 'touch') openWarning()"
+                                                            @pointerleave="if ($event.pointerType !== 'touch') scheduleClose()"
+                                                            @focus="if ($el.matches(':focus-visible')) openWarning()"
+                                                            @blur="closeWarning()"
+                                                            @pointerup="if ($event.pointerType === 'touch') { warningOpen ? closeWarning() : openWarning() }"
+                                                            aria-label="{{ __('Invoice approval warning') }}" aria-describedby="invoice-approval-warning">
+                                                            <svg aria-hidden="true" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                                            </svg>
+                                                        </button>
+                                                        <span id="invoice-approval-warning" role="tooltip" x-show="warningOpen" style="display: none"
+                                                            @pointerenter="if ($event.pointerType !== 'touch') openWarning()"
+                                                            @pointerleave="if ($event.pointerType !== 'touch') scheduleClose()"
+                                                            class="absolute inset-x-0 top-full z-30 mt-1 rounded-md bg-warning px-2 py-1.5 text-xs leading-relaxed text-warning-content shadow wrap-anywhere">
+                                                            {{ __('This token can approve invoices and post accounting documents. The client must ask the user first.') }}
+                                                        </span>
+                                                    @endif
                                                 </span>
-                                                <x-checkbox name="permissions[]" id="permissions-{{ \Illuminate\Support\Str::slug($permission) }}"
-                                                    :value="$permission" :checked="in_array($permission, old('permissions', []), true)" title="" />
-                                            </label>
+                                                <input class="checkbox relative z-10 shrink-0" type="checkbox" name="permissions[]" id="{{ $permissionId }}"
+                                                    value="{{ $permission }}" @checked(in_array($permission, old('permissions', []), true)) />
+                                            </div>
                                         @endforeach
                                     </div>
                                 </section>
@@ -66,7 +88,7 @@
                         </div>
                     </div>
 
-                    <div class="col-span-4">
+                    <div class="col-span-full">
                         <button class="btn btn-primary" type="submit">{{ __('Create token') }}</button>
                     </div>
                 </div>

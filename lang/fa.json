@@ -3720,6 +3720,9 @@
     "Jalali month must be between 1 and 12. Given: :month": "شماره ماه شمسی باید عددی بین ۱ تا ۱۲ باشد. مقدار وارد شده: :month",
     "No customer found matching ':query'.": "طرف‌حسابی با مشخصات ':query' یافت نشد.",
     "Failed to create record. Please try again or contact support.": "ایجاد رکورد با خطا مواجه شد. لطفاً دوباره تلاش کنید یا با پشتیبانی تماس بگیرید.",
+    "Failed to approve invoice. Please try again or contact support.": "تأیید فاکتور با خطا مواجه شد. لطفاً دوباره تلاش کنید یا با پشتیبانی تماس بگیرید.",
+    "Invoice approval warning": "هشدار تأیید فاکتور",
+    "This token can approve invoices and post accounting documents. The client must ask the user first.": "این توکن می‌تواند فاکتور را تأیید و سند حسابداری ثبت کند. کلاینت باید پیش از تأیید از کاربر اجازه بگیرد.",
     "The given data was invalid.": "اطلاعات واردشده معتبر نیست.",
     "The selected customer group is invalid.": "گروه مشتری انتخاب‌شده معتبر نیست.",
     "The selected product group is invalid.": "گروه کالای انتخاب‌شده معتبر نیست.",
@@ -3765,5 +3768,6 @@
     "This balance does not include this month's paid leave. Until this month's attendance is calculated, the employee portal adds this month's paid leave to the balance, so it shows more.": "این مانده، مرخصی این ماه را شامل نمی‌شود. تا زمانی که حضور و غیاب این ماه محاسبه نشده، پرتال کارمند مرخصی این ماه را به مانده اضافه می‌کند و عدد بیشتری نشان می‌دهد.",
     "Paid leave balance pending confirmation": "مانده مرخصی با حقوق در انتظار تأیید",
     "Enter the verified remaining balance after removing any prepaid leave, before posting new attendance.": "پیش از ثبت کارکرد جدید، مانده تأییدشده مرخصی با حقوق را پس از کسر پیش‌پرداخت وارد کنید.",
-    "This employee no longer has a prepaid leave balance to reconcile.": "مانده پیش‌پرداخت مرخصی با حقوق این کارمند قبلاً تعیین تکلیف شده است."
+    "This employee no longer has a prepaid leave balance to reconcile.": "مانده پیش‌پرداخت مرخصی با حقوق این کارمند قبلاً تعیین تکلیف شده است.",
+    "An invoice with this external reference ID already exists in the selected fiscal year.": "فاکتوری با این شناسه مرجع خارجی در سال مالی انتخاب‌شده قبلاً ثبت شده است."
 }

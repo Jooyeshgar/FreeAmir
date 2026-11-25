@@ -596,12 +596,68 @@ class InvoiceService
         app(ActivityLogService::class)->deleteModels($invoice->items()->whereNotIn('id', $itemId)->getQuery());
     }
 
+    /**
+     * Serialize external_reference_id checks and writes within a fiscal year.
+     */
+    public static function lockExternalReferenceScope(int $fiscalYearId): void
+    {
+        FiscalYear::withoutGlobalScopes()->whereKey($fiscalYearId)->lockForUpdate()->first();
+    }
+
+    /**
+     * Find an active (non-rejected, non-void, and not effectively voided) invoice
+     * using the given external_reference_id within a fiscal year.
+     */
+    public static function findActiveInvoiceByExternalReference(
+        int $fiscalYearId,
+        string $externalReferenceId,
+        ?int $exceptInvoiceId = null,
+        bool $lockForUpdate = false,
+    ): ?Invoice {
+        $externalReferenceId = trim($externalReferenceId);
+        if ($externalReferenceId === '') {
+            return null;
+        }
+
+        $approvedOrSettledValues = array_map(
+            static fn (InvoiceStatus $status): int => $status->value,
+            InvoiceStatus::approvedOrSettled(),
+        );
+
+        $query = Invoice::withoutGlobalScopes()
+            ->where('fiscal_year_id', $fiscalYearId)
+            ->where('external_reference_id', $externalReferenceId)
+            ->where('invoice_type', '!=', InvoiceType::VOID->value)
+            ->where('status', '!=', InvoiceStatus::REJECTED->value)
+            ->whereDoesntHave('voidInvoice', static function ($voidQuery) use ($approvedOrSettledValues): void {
+                $voidQuery->withoutGlobalScopes()
+                    ->whereIn('status', $approvedOrSettledValues);
+            });
+
+        if ($exceptInvoiceId !== null) {
+            $query->whereKeyNot($exceptInvoiceId);
+        }
+
+        if ($lockForUpdate) {
+            $query->lockForUpdate();
+        }
+
+        return $query->first();
+    }
+
     public function changeInvoiceStatus(Invoice $invoice, string $status): void
     {
         // Fail fast for closed years before opening a transaction or waiting on the invoice row lock.
         app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
 
-        DB::transaction(function () use ($invoice, $status) {
+        $enforcesExternalReferenceUniqueness = in_array($status, ['ready_to_approve', 'approved', 'unapproved'], true);
+
+        DB::transaction(function () use ($invoice, $status, $enforcesExternalReferenceUniqueness) {
+            // Acquire the fiscal-year lock before the invoice lock to match CreateInvoiceTool's lock order.
+            if ($enforcesExternalReferenceUniqueness && $invoice->external_reference_id !== null) {
+                self::lockExternalReferenceScope((int) $invoice->fiscal_year_id);
+            }
+
             $invoice = Invoice::withoutGlobalScopes()->whereKey($invoice->id)->lockForUpdate()->firstOrFail();
             // Recheck against the freshly loaded invoice after locking; the caller's model may be stale.
             app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
@@ -609,6 +665,25 @@ class InvoiceService
             // A repeated or concurrent approval must not post another accounting document for an invoice that is already approved.
             if ($status === 'approved' && $invoice->status->isApprovedOrSettled() && $invoice->document_id !== null) {
                 return;
+            }
+
+            if (
+                $enforcesExternalReferenceUniqueness
+                && $invoice->invoice_type !== InvoiceType::VOID
+                && $invoice->external_reference_id !== null
+            ) {
+                $conflicting = self::findActiveInvoiceByExternalReference(
+                    (int) $invoice->fiscal_year_id,
+                    $invoice->external_reference_id,
+                    exceptInvoiceId: (int) $invoice->id,
+                    lockForUpdate: true,
+                );
+
+                if ($conflicting !== null) {
+                    throw ValidationException::withMessages([
+                        'external_reference_id' => __('An invoice with this external reference ID already exists in the selected fiscal year.'),
+                    ]);
+                }
             }
 
             $reactivating = $status === 'approved' && $invoice->status->isApprovedInactive();
@@ -1373,7 +1448,7 @@ class InvoiceService
      */
     public static function extractInvoiceData(array $validated): array
     {
-        return [
+        $data = [
             'title' => $validated['title'],
             'date' => $validated['date'],
             'invoice_type' => InvoiceType::fromName($validated['invoice_type']),
@@ -1386,6 +1461,13 @@ class InvoiceService
             'invoice_id' => $validated['invoice_id'] ?? null,
             'description' => $validated['description'] ?? null,
         ];
+
+        if (array_key_exists('external_reference_id', $validated)) {
+            $externalReferenceId = trim((string) ($validated['external_reference_id'] ?? ''));
+            $data['external_reference_id'] = $externalReferenceId !== '' ? $externalReferenceId : null;
+        }
+
+        return $data;
     }
 
     /**

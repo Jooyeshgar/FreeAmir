@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class ApiTokenTest extends TestCase
@@ -162,5 +163,23 @@ class ApiTokenTest extends TestCase
         $this->post(route('api-tokens.store'), [
             'name' => 'Forbidden writer', 'permissions' => ['products.store'],
         ])->assertSessionHasErrors('permissions.0');
+    }
+
+    public function test_token_form_warns_when_invoice_approval_can_be_enabled(): void
+    {
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $user = User::factory()->create();
+        foreach (['api-tokens.*', 'api.access'] as $permission) {
+            $user->givePermissionTo(Permission::findOrCreate($permission, 'web'));
+        }
+
+        $warning = __('This token can approve invoices and post accounting documents. The client must ask the user first.');
+        $this->actingAs($user)->get(route('api-tokens.create'))->assertOk()->assertDontSee($warning);
+
+        $user->givePermissionTo(Permission::findOrCreate('invoices.approve', 'web'));
+        $this->get(route('api-tokens.create'))->assertOk()->assertSee('invoices.approve')
+            ->assertSee('aria-describedby="invoice-approval-warning"', false)
+            ->assertSee('role="tooltip" x-show="warningOpen" style="display: none"', false)
+            ->assertSee($warning);
     }
 }

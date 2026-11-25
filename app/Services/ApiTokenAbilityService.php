@@ -18,7 +18,7 @@ class ApiTokenAbilityService
                 ->filter(fn (string $middleware) => str_starts_with($middleware, 'check-permission:'))
                 ->map(fn (string $middleware) => substr($middleware, strlen('check-permission:'))))
             ->concat([
-                'invoices.index', 'invoices.show',
+                'invoices.index', 'invoices.show', 'invoices.approve',
                 'reports.cost-income', 'reports.result',
                 'reports.company-overview', 'reports.trial-balance', 'reports.ledger',
                 'customers.index', 'customers.show',

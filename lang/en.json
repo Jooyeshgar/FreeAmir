@@ -3732,6 +3732,9 @@
     "Jalali month must be between 1 and 12. Given: :month": "Jalali month must be between 1 and 12. Given: :month",
     "No customer found matching ':query'.": "No customer found matching ':query'.",
     "Failed to create record. Please try again or contact support.": "Failed to create record. Please try again or contact support.",
+    "Failed to approve invoice. Please try again or contact support.": "Failed to approve invoice. Please try again or contact support.",
+    "Invoice approval warning": "Invoice approval warning",
+    "This token can approve invoices and post accounting documents. The client must ask the user first.": "This token can approve invoices and post accounting documents. The client must ask the user first.",
     "The given data was invalid.": "The given data was invalid.",
     "The selected customer group is invalid.": "The selected customer group is invalid.",
     "The selected product group is invalid.": "The selected product group is invalid.",
@@ -3773,5 +3776,6 @@
     "This balance does not include this month's paid leave. Until this month's attendance is calculated, the employee portal adds this month's paid leave to the balance, so it shows more.": "This balance does not include this month's paid leave. Until this month's attendance is calculated, the employee portal adds this month's paid leave to the balance, so it shows more.",
     "Paid leave balance pending confirmation": "Paid leave balance pending confirmation",
     "Enter the verified remaining balance after removing any prepaid leave, before posting new attendance.": "Enter the verified remaining balance after removing any prepaid leave, before posting new attendance.",
-    "This employee no longer has a prepaid leave balance to reconcile.": "This employee no longer has a prepaid leave balance to reconcile."
+    "This employee no longer has a prepaid leave balance to reconcile.": "This employee no longer has a prepaid leave balance to reconcile.",
+    "An invoice with this external reference ID already exists in the selected fiscal year.": "An invoice with this external reference ID already exists in the selected fiscal year."
 }

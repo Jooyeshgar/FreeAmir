@@ -141,4 +141,39 @@ final class InvoiceExtensionRegistry
 
         return $row;
     }
+
+    /**
+     * Collect optional MCP discovery options from registered extensions for a fiscal year.
+     *
+     * @return array<string, mixed>
+     */
+    public function mcpContextOptions(int $fiscalYearId): array
+    {
+        $options = [];
+        foreach ($this->extensions() as $key => $definition) {
+            $handler = $this->container->make($definition['handler']);
+            if (method_exists($handler, 'mcpOptions')) {
+                $extensionOptions = $handler->mcpOptions($fiscalYearId);
+                if (! empty($extensionOptions)) {
+                    $options[$key] = $extensionOptions;
+                }
+            }
+        }
+
+        return $options;
+    }
+
+    public function mcpDescription(string $key): string
+    {
+        if (! isset($this->extensions[$key])) {
+            return '';
+        }
+
+        $handler = $this->container->make($this->extensions[$key]['handler']);
+        if (method_exists($handler, 'mcpDescription')) {
+            return (string) $handler->mcpDescription();
+        }
+
+        return "Optional payload for invoice extension '{$key}'.";
+    }
 }
