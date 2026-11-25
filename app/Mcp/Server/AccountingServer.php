@@ -10,9 +10,15 @@ use App\Mcp\Tools\CreateInvoiceTool;
 use App\Mcp\Tools\CreateProductTool;
 use App\Mcp\Tools\GetCurrentContextTool;
 use App\Mcp\Tools\GetCustomerBalanceTool;
+use App\Mcp\Tools\GetCustomerTool;
 use App\Mcp\Tools\GetFinancialSummaryTool;
 use App\Mcp\Tools\GetInvoicesSummaryTool;
+use App\Mcp\Tools\GetInvoiceTool;
+use App\Mcp\Tools\GetProductTool;
 use App\Mcp\Tools\GetProfitLossTool;
+use App\Mcp\Tools\ListCustomersTool;
+use App\Mcp\Tools\ListInvoicesTool;
+use App\Mcp\Tools\ListProductsTool;
 use Illuminate\Auth\AuthenticationException;
 use Laravel\Mcp\Server;
 
@@ -29,7 +35,13 @@ class AccountingServer extends Server
         GetProfitLossTool::class,
         GetFinancialSummaryTool::class,
         GetInvoicesSummaryTool::class,
+        ListInvoicesTool::class,
+        GetInvoiceTool::class,
         GetCustomerBalanceTool::class,
+        ListCustomersTool::class,
+        GetCustomerTool::class,
+        ListProductsTool::class,
+        GetProductTool::class,
         CreateCustomerTool::class,
         CreateProductTool::class,
         CreateInvoiceTool::class,

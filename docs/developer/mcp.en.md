@@ -48,7 +48,13 @@ MCP server security is built upon Laravel Sanctum personal access tokens and Spa
 | `get_profit_loss` | P&L calculation, income, cost, and profit margin | `reports.cost-income`, `reports.result`, or (`reports.company-overview` + `documents.show`) |
 | `get_financial_summary` | Overall financial totals and top income/expense subjects | `reports.trial-balance`, `reports.ledger`, or (`reports.company-overview` + `documents.show`) |
 | `get_invoices_summary` | Sales and purchase invoices, 12-month breakdown, and recent invoices | `invoices.index` or `invoices.show` (`customers.index` needed to expose customer names) |
+| `list_invoices` | Search and paginate invoices by number, title, type, status, customer, or date | `invoices.index` or `invoices.show` (`customers.index` needed to expose customer names) |
+| `get_invoice` | Full details and line items for one invoice by ID or number | `invoices.show` (`customers.index` needed to expose customer names) |
 | `get_customer_balance` | Customer balance, debtor/creditor status, and contact details | `customers.show` |
+| `list_customers` | Search and paginate customers by name, phone, mobile, code, ID, or group | `customers.index` or `customers.show` |
+| `get_customer` | Full profile details and ledger balance for one customer by ID | `customers.show` |
+| `list_products` | Search and paginate products by name, code, ID, or group | `products.index` or `products.show` |
+| `get_product` | Full details and warehouse stock for one product by ID or code | `products.show` |
 | `create_customer` | Customer/counterparty and its accounting subject | `customers.store` |
 | `create_product` | Product, pricing, category and accounting subjects | `products.store` |
 | `create_invoice` | Unapproved sales/purchase invoice with line items (and optional registered extensions) | `invoices.store` |
@@ -92,9 +98,60 @@ Searches a customer or counterparty by name, phone, mobile, national code, or ID
   - `limit`: Result count limit (default 5).
   - `fiscal_year_id`: Target fiscal year ID.
 
+### 6. `list_products`
+Searches and paginates products in the selected fiscal year.
+- **Arguments:**
+  - `query`: Optional search text matching product name, product code, or exact numeric ID.
+  - `group_id`: Optional product group ID filter.
+  - `page`: Page number (default 1).
+  - `limit`: Results per page (default 15, max 50).
+  - `year`, `fiscal_year_id`: Optional fiscal-year selectors.
+
+### 7. `get_product`
+Retrieves full details and per-warehouse stock for one product in the selected fiscal year.
+- **Arguments:**
+  - `product_id`: Product ID (required unless `code` is provided).
+  - `code`: Exact product code (required unless `product_id` is provided).
+  - `year`, `fiscal_year_id`: Optional fiscal-year selectors.
+
+### 8. `list_invoices`
+Searches and paginates invoices in the selected fiscal year.
+- Monetary fields `amount`, `vat`, and `subtraction` are decimal strings with two fractional digits, for example `"100.75"`. `formatted_amount` is the display value with the company currency.
+- **Arguments:**
+  - `query`: Optional search text matching invoice number, title, or exact numeric ID.
+  - `type`: Optional invoice type (`buy`, `sell`, `return_buy`, `return_sell`, `void`, `beginning_inventory`).
+  - `status`: Optional invoice status filter.
+  - `customer_id`: Optional customer ID filter.
+  - `date_from`, `date_to`: Optional Gregorian date range (`YYYY-MM-DD`).
+  - `page`, `limit`: Pagination controls (default 15, max 50).
+  - `year`, `fiscal_year_id`: Optional fiscal-year selectors.
+
+### 9. `get_invoice`
+Retrieves full details for one invoice, including line items, warehouse, and accounting document reference.
+- Invoice amounts follow the same format as `list_invoices`. Line item `unit_price`, `discount`, `vat`, and `amount`, and the `amount` in ambiguous number matches, are also decimal strings with two fractional digits.
+- **Arguments:**
+  - `invoice_id`: Invoice ID (required unless `number` is provided).
+  - `number`: Exact invoice number (required unless `invoice_id` is provided).
+  - `invoice_type`: Optional invoice type (`buy`, `sell`, `return_buy`, `return_sell`, `void`, `beginning_inventory`) to disambiguate when querying by `number`.
+  - `year`, `fiscal_year_id`: Optional fiscal-year selectors.
+
+### 10. `list_customers`
+Searches and paginates customers in the selected fiscal year.
+- **Arguments:**
+  - `query`: Optional search text matching name, phone, mobile, personal/economic code, or exact numeric ID.
+  - `group_id`: Optional customer group ID filter.
+  - `page`, `limit`: Pagination controls (default 15, max 50).
+  - `year`, `fiscal_year_id`: Optional fiscal-year selectors.
+
+### 11. `get_customer`
+Retrieves full profile details and ledger balance for one customer by ID.
+- **Arguments:**
+  - `customer_id`: Customer ID (required).
+  - `year`, `fiscal_year_id`: Optional fiscal-year selectors.
+
 ---
 
-### 6. Creation tools
+### 12. Creation tools
 
 The creation tools require an explicit `fiscal_year_id` assigned to the token owner and reject closed years. Referenced groups, customers, warehouses and items must belong to that same year. Each creation permission is required on both the user and the API token. `get_current_context` exposes `customer_groups`, `product_groups`, and `warehouses` for discovery.
 
@@ -133,7 +190,7 @@ In addition to `ModelExtension`, a handler may provide these public methods.
 - `mcpOptions(int $fiscalYearId): array` returns JSON-serializable options scoped to the supplied fiscal year, for example `[['id' => 7, 'name' => 'Online Sales']]`. Nonempty options appear in `get_current_context` under `invoice_extensions.<key>`.
 - `mcpDescription(): string` describes the accepted value and can include a JSON example. It appears on the extension field in `tools/list`. Otherwise, the field gets the registry's default description.
 
-### 7. `approve_invoice`
+### 13. `approve_invoice`
 
 Provide `fiscal_year_id` and `invoice_id`. Both the user and the token need `invoices.approve`. The tool only approves an eligible draft or unapproved invoice dated within the selected open fiscal year. On success it posts the accounting document, updates stock and COGS where applicable, and returns `approved: true` and `document_id`.
 

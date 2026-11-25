@@ -409,7 +409,7 @@ class McpServerIntegrationTest extends TestCase
         $response = $this->withToken($limited)->postJson('/api/mcp', [
             'jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/list',
         ])->assertOk();
-        self::assertSame(['get_current_context', 'get_invoices_summary'], array_column($response->json('result.tools'), 'name'));
+        self::assertSame(['get_current_context', 'get_invoices_summary', 'list_invoices'], array_column($response->json('result.tools'), 'name'));
         $this->user->revokePermissionTo('invoices.index');
         app('auth')->forgetGuards();
         $response = $this->withToken($limited)->postJson('/api/mcp', [
@@ -554,7 +554,7 @@ class McpServerIntegrationTest extends TestCase
         self::assertCount(2, $lines);
         self::assertSame(1, json_decode($lines[0], true, 512, JSON_THROW_ON_ERROR)['id']);
         $tools = json_decode($lines[1], true, 512, JSON_THROW_ON_ERROR);
-        self::assertSame(['get_current_context', 'get_invoices_summary'], array_column($tools['result']['tools'], 'name'));
+        self::assertSame(['get_current_context', 'get_invoices_summary', 'list_invoices'], array_column($tools['result']['tools'], 'name'));
 
         $invalid = new Process([PHP_BINARY, base_path('tests/Fixtures/mcp-stdio.php'), 'invalid'], base_path());
         $invalid->setInput('');
