@@ -328,6 +328,7 @@ class StoreInvoiceRequest extends FormRequest
             'invoice_type' => ['required', Rule::in($isEditing ? [$invoiceType] : InvoiceType::valueNames())],
             'customer_id' => Rule::when(! $isBeginningInventory, ['required', 'exists:customers,id', 'integer'], ['nullable']),
             'invoice_id' => Rule::when($invoice !== null, ['required', 'integer', 'exists:invoices,id']),
+            'external_reference_id' => ['sometimes', 'nullable', 'string', 'max:100'],
             'include_last_years_invoices' => 'nullable|boolean',
             'returned_invoice_id' => 'nullable|integer|exists:invoices,id',
             'document_number' => [

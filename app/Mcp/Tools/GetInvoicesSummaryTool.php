@@ -112,6 +112,7 @@ class GetInvoicesSummaryTool extends AccountingTool
             $invoicesList[] = [
                 'id' => $inv->id,
                 'number' => $inv->number,
+                'external_reference_id' => $inv->external_reference_id,
                 'type' => $typeLabel,
                 'type_code' => $invoiceType?->valueName(),
                 'customer' => $canReadCustomers ? ($inv->customer?->name ?? __('Unknown')) : null,

@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools;
 
 use App\Enums\InvoiceType;
+use App\Extensions\InvoiceExtensionRegistry;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Mcp\Support\ContextResolver;
 use App\Models\Customer;
@@ -14,6 +15,8 @@ use App\Models\Service;
 use App\Models\Warehouse;
 use App\Services\InvoiceService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Http\Request as HttpRequest;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Laravel\Mcp\Response;
 
@@ -39,28 +42,44 @@ class CreateInvoiceTool extends AccountingTool
             'description' => $schema->string()->max(500),
         ])->withoutAdditionalProperties();
 
-        return [
+        $properties = [
             'fiscal_year_id' => $schema->integer()->min(1)->required(),
             'invoice_type' => $schema->string()->enum(['buy', 'sell'])->required(),
             'customer_id' => $schema->integer()->min(1)->required(),
             'warehouse_id' => $schema->integer()->min(1)->description('Optional warehouse ID. Defaults to the first warehouse in the selected fiscal year.'),
             'number' => $schema->integer()->min(1)->description('Optional invoice number. Defaults to the next number for this invoice type in the selected fiscal year.'),
+            'external_reference_id' => $schema->string()->max(100)->description('Optional external reference ID to prevent duplicate invoices for external orders (recommended format: "<source>:<order_code>", e.g. "fnirsi:FN-180625").'),
             'date' => $schema->string()->description('Gregorian date in YYYY-MM-DD format, regardless of locale. Defaults to today if it falls within the selected fiscal year.'),
             'title' => $schema->string()->max(255),
             'description' => $schema->string(),
             'subtraction' => $schema->number()->min(0)->description('Invoice deduction in the selected fiscal year company currency.'),
             'items' => $schema->array()->min(1)->max(500)->items($item)->required(),
         ];
+
+        $registry = app(InvoiceExtensionRegistry::class);
+        $extensions = $registry->extensions();
+        if ($extensions !== []) {
+            $extensionProperties = [];
+            foreach (array_keys($extensions) as $key) {
+                $extensionProperties[$key] = $schema->union(['object', 'array'])->description($registry->mcpDescription($key));
+            }
+            $properties['extensions'] = $schema->object($extensionProperties)
+                ->withoutAdditionalProperties()
+                ->description('Optional registered invoice extension payloads.');
+        }
+
+        return $properties;
     }
 
     protected function rules(): array
     {
-        return [
+        $rules = [
             'fiscal_year_id' => ['required', 'integer', 'min:1'],
             'invoice_type' => ['required', 'string', 'in:buy,sell'],
             'customer_id' => ['required', 'integer', 'min:1'],
             'warehouse_id' => ['sometimes', 'nullable', 'integer', 'min:1'],
             'number' => ['sometimes', 'nullable', 'integer', 'min:1'],
+            'external_reference_id' => ['sometimes', 'nullable', 'string', 'max:100'],
             'date' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
             'title' => ['sometimes', 'nullable', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
@@ -75,6 +94,13 @@ class CreateInvoiceTool extends AccountingTool
             'items.*.vat' => ['sometimes', 'numeric', 'min:0', 'max:100'],
             'items.*.description' => ['sometimes', 'nullable', 'string', 'max:500'],
         ];
+
+        if (app(InvoiceExtensionRegistry::class)->extensions() !== []) {
+            $rules['extensions'] = ['sometimes', 'array'];
+            $rules['extensions.*'] = ['array'];
+        }
+
+        return $rules;
     }
 
     protected function report(array $arguments, FiscalYear $fiscalYear): Response
@@ -86,6 +112,11 @@ class CreateInvoiceTool extends AccountingTool
         }
 
         $yearId = (int) $arguments['fiscal_year_id'];
+        $externalReferenceId = isset($arguments['external_reference_id']) ? trim((string) $arguments['external_reference_id']) : null;
+        if ($externalReferenceId === '') {
+            $externalReferenceId = null;
+        }
+
         $customer = Customer::query()->find($arguments['customer_id']);
         if (! $customer || (int) $customer->fiscal_year_id !== $yearId) {
             throw ValidationException::withMessages(['customer_id' => __('The selected customer is invalid.')]);
@@ -137,47 +168,83 @@ class CreateInvoiceTool extends AccountingTool
             'customer_id' => $arguments['customer_id'],
             'warehouse_id' => $warehouseId,
             'invoice_number' => $invoiceNumber,
+            'external_reference_id' => $externalReferenceId,
             'document_number' => floor(Document::max('number') ?? 0) + 1,
             'subtraction' => sprintf('%.18F', $arguments['subtraction'] ?? 0),
             'transactions' => $transactions,
         ]);
         $validated = $request->validated();
 
-        $result = InvoiceService::createInvoice(
-            ContextResolver::authContext()->user,
-            InvoiceService::extractInvoiceData($validated),
-            InvoiceService::mapTransactionsToItems($validated['transactions']),
-            false,
-        );
+        $extensionPayloads = [];
+        if (isset($arguments['extensions']) && $arguments['extensions'] !== []) {
+            $extensionRequest = HttpRequest::create('/', 'POST', ['extensions' => $arguments['extensions']]);
+            $extensionPayloads = app(InvoiceExtensionRegistry::class)->validateRequest($extensionRequest);
+        }
 
-        /** @var Invoice $invoice */
-        $invoice = $result['invoice']->fresh(['items']);
+        $extensionPersister = $extensionPayloads === []
+            ? null
+            : static function (Invoice $invoice) use ($extensionPayloads): void {
+                app(InvoiceExtensionRegistry::class)->persist($invoice, $extensionPayloads);
+            };
 
-        return $this->success([
-            'id' => $invoice->id,
-            'fiscal_year_id' => $invoice->fiscal_year_id,
-            'number' => $invoice->number,
-            'invoice_type' => $invoice->invoice_type->valueName(),
-            'status' => $invoice->status->valueName(),
-            'date' => $invoice->date->format('Y-m-d'),
-            'customer_id' => $invoice->customer_id,
-            'warehouse_id' => $invoice->warehouse_id,
-            'amount' => (float) $invoice->amount,
-            'currency' => (string) ($fiscalYear->company?->currency ?: 'Rial'),
-            'vat' => (float) $invoice->vat,
-            'item_count' => $invoice->items->count(),
-            'approved' => false,
-            'items' => $invoice->items->map(fn ($item) => [
-                'id' => $item->id,
-                'item_type' => $item->itemable_type === Product::class ? 'product' : 'service',
-                'item_id' => $item->itemable_id,
-                'quantity' => (float) $item->quantity,
-                'unit' => (float) $item->unit_price,
-                'discount' => (float) $item->discount,
-                'vat' => (float) $item->vat,
-                'amount' => (float) $item->amount,
-            ])->all(),
-            'message' => __('Invoice created successfully.'),
-        ]);
+        return DB::transaction(function () use ($yearId, $externalReferenceId, $validated, $extensionPersister, $fiscalYear): Response {
+            if ($externalReferenceId !== null) {
+                InvoiceService::lockExternalReferenceScope($yearId);
+
+                $existing = InvoiceService::findActiveInvoiceByExternalReference($yearId, $externalReferenceId, lockForUpdate: true);
+
+                if ($existing) {
+                    return $this->error(json_encode([
+                        'message' => __('An invoice with this external reference ID already exists in the selected fiscal year.'),
+                        'existing_invoice' => [
+                            'id' => (int) $existing->id,
+                            'number' => $existing->number,
+                            'external_reference_id' => $existing->external_reference_id,
+                            'invoice_type' => $existing->invoice_type?->valueName(),
+                            'status' => $existing->status?->valueName(),
+                        ],
+                    ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+                }
+            }
+
+            $result = InvoiceService::createInvoice(
+                ContextResolver::authContext()->user,
+                InvoiceService::extractInvoiceData($validated),
+                InvoiceService::mapTransactionsToItems($validated['transactions']),
+                false,
+                $extensionPersister,
+            );
+
+            /** @var Invoice $invoice */
+            $invoice = $result['invoice']->fresh(['items']);
+
+            return $this->success([
+                'id' => $invoice->id,
+                'fiscal_year_id' => $invoice->fiscal_year_id,
+                'number' => $invoice->number,
+                'external_reference_id' => $invoice->external_reference_id,
+                'invoice_type' => $invoice->invoice_type->valueName(),
+                'status' => $invoice->status->valueName(),
+                'date' => $invoice->date->format('Y-m-d'),
+                'customer_id' => $invoice->customer_id,
+                'warehouse_id' => $invoice->warehouse_id,
+                'amount' => (float) $invoice->amount,
+                'currency' => (string) ($fiscalYear->company?->currency ?: 'Rial'),
+                'vat' => (float) $invoice->vat,
+                'item_count' => $invoice->items->count(),
+                'approved' => false,
+                'items' => $invoice->items->map(fn ($item) => [
+                    'id' => $item->id,
+                    'item_type' => $item->itemable_type === Product::class ? 'product' : 'service',
+                    'item_id' => $item->itemable_id,
+                    'quantity' => (float) $item->quantity,
+                    'unit' => (float) $item->unit_price,
+                    'discount' => (float) $item->discount,
+                    'vat' => (float) $item->vat,
+                    'amount' => (float) $item->amount,
+                ])->all(),
+                'message' => __('Invoice created successfully.'),
+            ]);
+        });
     }
 }

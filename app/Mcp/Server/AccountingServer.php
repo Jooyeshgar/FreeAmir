@@ -4,6 +4,7 @@ namespace App\Mcp\Server;
 
 use App\Mcp\Auth\TokenAuthenticator;
 use App\Mcp\Support\ContextResolver;
+use App\Mcp\Tools\ApproveInvoiceTool;
 use App\Mcp\Tools\CreateCustomerTool;
 use App\Mcp\Tools\CreateInvoiceTool;
 use App\Mcp\Tools\CreateProductTool;
@@ -32,6 +33,7 @@ class AccountingServer extends Server
         CreateCustomerTool::class,
         CreateProductTool::class,
         CreateInvoiceTool::class,
+        ApproveInvoiceTool::class,
     ];
 
     private ?string $token = null;
