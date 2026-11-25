@@ -17,6 +17,7 @@ use App\Models\Warehouse;
 use App\Services\InvoiceService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Http\Request as HttpRequest;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Laravel\Mcp\Response;
 
@@ -117,27 +118,6 @@ class CreateInvoiceTool extends AccountingTool
             $externalReferenceId = null;
         }
 
-        if ($externalReferenceId !== null) {
-            $existing = Invoice::query()
-                ->where('fiscal_year_id', $yearId)
-                ->where('external_reference_id', $externalReferenceId)
-                ->where('invoice_type', '!=', InvoiceType::VOID->value)
-                ->where('status', '!=', InvoiceStatus::REJECTED->value)
-                ->first();
-
-            if ($existing) {
-                return $this->error(json_encode([
-                    'message' => __('An invoice with this external reference ID already exists in the selected fiscal year.'),
-                    'existing_invoice' => [
-                        'id' => (int) $existing->id,
-                        'number' => $existing->number,
-                        'external_reference_id' => $existing->external_reference_id,
-                        'invoice_type' => $existing->invoice_type?->valueName(),
-                        'status' => $existing->status?->valueName(),
-                    ],
-                ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
-            }
-        }
         $customer = Customer::query()->find($arguments['customer_id']);
         if (! $customer || (int) $customer->fiscal_year_id !== $yearId) {
             throw ValidationException::withMessages(['customer_id' => __('The selected customer is invalid.')]);
@@ -208,43 +188,70 @@ class CreateInvoiceTool extends AccountingTool
                 app(InvoiceExtensionRegistry::class)->persist($invoice, $extensionPayloads);
             };
 
-        $result = InvoiceService::createInvoice(
-            ContextResolver::authContext()->user,
-            InvoiceService::extractInvoiceData($validated),
-            InvoiceService::mapTransactionsToItems($validated['transactions']),
-            false,
-            $extensionPersister,
-        );
+        return DB::transaction(function () use ($yearId, $externalReferenceId, $validated, $extensionPersister, $fiscalYear): Response {
+            if ($externalReferenceId !== null) {
+                FiscalYear::query()->whereKey($yearId)->lockForUpdate()->first();
 
-        /** @var Invoice $invoice */
-        $invoice = $result['invoice']->fresh(['items']);
+                $existing = Invoice::query()
+                    ->where('fiscal_year_id', $yearId)
+                    ->where('external_reference_id', $externalReferenceId)
+                    ->where('invoice_type', '!=', InvoiceType::VOID->value)
+                    ->where('status', '!=', InvoiceStatus::REJECTED->value)
+                    ->lockForUpdate()
+                    ->first();
 
-        return $this->success([
-            'id' => $invoice->id,
-            'fiscal_year_id' => $invoice->fiscal_year_id,
-            'number' => $invoice->number,
-            'external_reference_id' => $invoice->external_reference_id,
-            'invoice_type' => $invoice->invoice_type->valueName(),
-            'status' => $invoice->status->valueName(),
-            'date' => $invoice->date->format('Y-m-d'),
-            'customer_id' => $invoice->customer_id,
-            'warehouse_id' => $invoice->warehouse_id,
-            'amount' => (float) $invoice->amount,
-            'currency' => (string) ($fiscalYear->company?->currency ?: 'Rial'),
-            'vat' => (float) $invoice->vat,
-            'item_count' => $invoice->items->count(),
-            'approved' => false,
-            'items' => $invoice->items->map(fn ($item) => [
-                'id' => $item->id,
-                'item_type' => $item->itemable_type === Product::class ? 'product' : 'service',
-                'item_id' => $item->itemable_id,
-                'quantity' => (float) $item->quantity,
-                'unit' => (float) $item->unit_price,
-                'discount' => (float) $item->discount,
-                'vat' => (float) $item->vat,
-                'amount' => (float) $item->amount,
-            ])->all(),
-            'message' => __('Invoice created successfully.'),
-        ]);
+                if ($existing) {
+                    return $this->error(json_encode([
+                        'message' => __('An invoice with this external reference ID already exists in the selected fiscal year.'),
+                        'existing_invoice' => [
+                            'id' => (int) $existing->id,
+                            'number' => $existing->number,
+                            'external_reference_id' => $existing->external_reference_id,
+                            'invoice_type' => $existing->invoice_type?->valueName(),
+                            'status' => $existing->status?->valueName(),
+                        ],
+                    ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+                }
+            }
+
+            $result = InvoiceService::createInvoice(
+                ContextResolver::authContext()->user,
+                InvoiceService::extractInvoiceData($validated),
+                InvoiceService::mapTransactionsToItems($validated['transactions']),
+                false,
+                $extensionPersister,
+            );
+
+            /** @var Invoice $invoice */
+            $invoice = $result['invoice']->fresh(['items']);
+
+            return $this->success([
+                'id' => $invoice->id,
+                'fiscal_year_id' => $invoice->fiscal_year_id,
+                'number' => $invoice->number,
+                'external_reference_id' => $invoice->external_reference_id,
+                'invoice_type' => $invoice->invoice_type->valueName(),
+                'status' => $invoice->status->valueName(),
+                'date' => $invoice->date->format('Y-m-d'),
+                'customer_id' => $invoice->customer_id,
+                'warehouse_id' => $invoice->warehouse_id,
+                'amount' => (float) $invoice->amount,
+                'currency' => (string) ($fiscalYear->company?->currency ?: 'Rial'),
+                'vat' => (float) $invoice->vat,
+                'item_count' => $invoice->items->count(),
+                'approved' => false,
+                'items' => $invoice->items->map(fn ($item) => [
+                    'id' => $item->id,
+                    'item_type' => $item->itemable_type === Product::class ? 'product' : 'service',
+                    'item_id' => $item->itemable_id,
+                    'quantity' => (float) $item->quantity,
+                    'unit' => (float) $item->unit_price,
+                    'discount' => (float) $item->discount,
+                    'vat' => (float) $item->vat,
+                    'amount' => (float) $item->amount,
+                ])->all(),
+                'message' => __('Invoice created successfully.'),
+            ]);
+        });
     }
 }

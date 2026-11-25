@@ -147,4 +147,80 @@ class McpInvoiceExternalReferenceIdTest extends TestCase
         ])->assertOk()->json('result');
         $this->assertFalse($afterVoid['isError'] ?? true);
     }
+
+    public function test_web_invoice_edit_preserves_external_reference_id_and_blocks_subsequent_duplicates(): void
+    {
+        $createResponse = $this->withToken($this->token)->postJson('/api/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/call',
+            'params' => ['name' => 'create_invoice', 'arguments' => $this->invoiceArguments('fnirsi:FN-999001')],
+        ])->assertOk()->json('result');
+
+        $this->assertFalse($createResponse['isError'] ?? true);
+        $created = json_decode($createResponse['content'][0]['text'], true);
+        $invoice = Invoice::withoutGlobalScopes()->findOrFail($created['id']);
+
+        $this->user->givePermissionTo(Permission::findOrCreate('invoices.edit', 'web'));
+        $this->user->givePermissionTo(Permission::findOrCreate('invoices.update', 'web'));
+
+        $this->actingAs($this->user)
+            ->withSession(['active-fiscal-year-id' => $this->year->id])
+            ->put(route('invoices.update', $invoice), [
+                'invoice_id' => $invoice->id,
+                'title' => 'Edited From Web',
+                'description' => 'Updated description',
+                'date' => convertToJalali('2026-05-01', true),
+                'invoice_type' => 'sell',
+                'customer_id' => $this->customer->id,
+                'warehouse_id' => $this->warehouse->id,
+                'invoice_number' => (int) $invoice->number,
+                'document_number' => 1,
+                'subtraction' => '0',
+                'transactions' => [[
+                    'item_id' => 'product-'.$this->product->id,
+                    'quantity' => '1',
+                    'unit' => '1000',
+                    'discount' => '0',
+                    'vat' => '0',
+                    'desc' => null,
+                    'total' => '1000',
+                ]],
+            ])
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $invoice->refresh();
+        $this->assertSame('Edited From Web', $invoice->title);
+        $this->assertSame('fnirsi:FN-999001', $invoice->external_reference_id);
+
+        $summaryResponse = $this->withToken($this->token)->postJson('/api/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 2,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'get_invoices_summary',
+                'arguments' => [
+                    'fiscal_year_id' => $this->year->id,
+                    'status' => 'pre_invoice',
+                ],
+            ],
+        ])->assertOk()->json('result');
+
+        $this->assertFalse($summaryResponse['isError'] ?? true);
+        $summaryPayload = json_decode($summaryResponse['content'][0]['text'], true);
+        $this->assertSame('fnirsi:FN-999001', $summaryPayload['recent_invoices'][0]['external_reference_id'] ?? null);
+
+        $duplicateResponse = $this->withToken($this->token)->postJson('/api/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 3,
+            'method' => 'tools/call',
+            'params' => ['name' => 'create_invoice', 'arguments' => $this->invoiceArguments('fnirsi:FN-999001')],
+        ])->assertOk()->json('result');
+
+        $this->assertTrue($duplicateResponse['isError']);
+        $duplicatePayload = json_decode($duplicateResponse['content'][0]['text'], true);
+        $this->assertSame($invoice->id, $duplicatePayload['existing_invoice']['id']);
+        $this->assertSame('fnirsi:FN-999001', $duplicatePayload['existing_invoice']['external_reference_id']);
+    }
 }

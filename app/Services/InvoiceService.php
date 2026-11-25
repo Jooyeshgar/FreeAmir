@@ -1373,7 +1373,7 @@ class InvoiceService
      */
     public static function extractInvoiceData(array $validated): array
     {
-        return [
+        $data = [
             'title' => $validated['title'],
             'date' => $validated['date'],
             'invoice_type' => InvoiceType::fromName($validated['invoice_type']),
@@ -1382,11 +1382,17 @@ class InvoiceService
             'returned_invoice_id' => $validated['returned_invoice_id'] ?? null,
             'document_number' => $validated['document_number'] ?? null,
             'number' => $validated['invoice_number'],
-            'external_reference_id' => isset($validated['external_reference_id']) && trim((string) $validated['external_reference_id']) !== '' ? trim((string) $validated['external_reference_id']) : null,
             'subtraction' => $validated['subtractions'] ?? 0,
             'invoice_id' => $validated['invoice_id'] ?? null,
             'description' => $validated['description'] ?? null,
         ];
+
+        if (array_key_exists('external_reference_id', $validated)) {
+            $externalReferenceId = trim((string) ($validated['external_reference_id'] ?? ''));
+            $data['external_reference_id'] = $externalReferenceId !== '' ? $externalReferenceId : null;
+        }
+
+        return $data;
     }
 
     /**
