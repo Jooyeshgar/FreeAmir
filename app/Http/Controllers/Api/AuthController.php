@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Services\ApiTokenAbilityService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -23,28 +24,21 @@ class AuthController extends Controller
 
         $credentials['email'] = strtolower(trim($credentials['email']));
 
-        if (! Auth::attempt([
-            'email' => $credentials['email'],
-            'password' => $credentials['password'],
-        ])) {
+        $user = User::query()->where('email', $credentials['email'])->first();
+
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             throw ValidationException::withMessages([
                 'email' => __('The provided credentials do not match our records.'),
             ]);
         }
 
-        $user = Auth::user();
-
         if (config('app.email_verification') && ! $user->hasVerifiedEmail()) {
-            Auth::logout();
-
             throw ValidationException::withMessages([
                 'email' => __('Please verify your account before continuing.'),
             ]);
         }
 
         if (! $user->can('api.access')) {
-            Auth::logout();
-
             throw ValidationException::withMessages([
                 'email' => __('You do not have permission to access the API.'),
             ]);
@@ -53,8 +47,6 @@ class AuthController extends Controller
         $availablePermissions = $apiTokenAbilityService->userAbilities($user)->all();
 
         if (empty($availablePermissions)) {
-            Auth::logout();
-
             throw ValidationException::withMessages([
                 'email' => __('No API permissions are available for this user.'),
             ]);
@@ -65,8 +57,6 @@ class AuthController extends Controller
         $tokenAbilities = array_values(array_intersect($requestedPermissions, $availablePermissions));
 
         if (empty($tokenAbilities)) {
-            Auth::logout();
-
             throw ValidationException::withMessages([
                 'permissions' => __('None of the requested permissions are allowed for this user.'),
             ]);
