@@ -6,11 +6,14 @@ use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreInvoiceRequest;
+use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Services\InvoiceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Rule;
 
 class InvoiceController extends Controller
 {
@@ -90,6 +93,7 @@ class InvoiceController extends Controller
             ] : null,
             'creator_id' => $invoice->creator_id,
             'approver_id' => $invoice->approver_id,
+            'external_reference_id' => $invoice->external_reference_id,
             'items' => $items,
             'created_at' => $invoice->created_at,
             'updated_at' => $invoice->updated_at,
@@ -102,11 +106,35 @@ class InvoiceController extends Controller
 
     public function index(Request $request, $company): JsonResponse
     {
+        $dateFilterRule = function (string $attribute, mixed $value, $fail): void {
+            $normalized = toEnglish(str_replace('-', '/', trim((string) $value)));
+
+            if (! preg_match('/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/', $normalized)) {
+                $fail(__('The :attribute must be a valid date in Jalali (1405/08/10) or Gregorian (2026-11-01) format.', ['attribute' => $attribute]));
+
+                return;
+            }
+
+            [$year, $month, $day] = array_map('intval', explode('/', $normalized));
+
+            if ($year < 1700) {
+                if (! jcheckdate($month, $day, $year)) {
+                    $fail(__('The :attribute must be a valid date in Jalali (1405/08/10) or Gregorian (2026-11-01) format.', ['attribute' => $attribute]));
+                }
+
+                return;
+            }
+
+            if (! checkdate($month, $day, $year)) {
+                $fail(__('The :attribute must be a valid date in Jalali (1405/08/10) or Gregorian (2026-11-01) format.', ['attribute' => $attribute]));
+            }
+        };
+
         $request->validate([
-            'invoice_type' => ['nullable', 'string'],
-            'status' => ['nullable', 'string'],
-            'start_date' => ['nullable', 'string'],
-            'end_date' => ['nullable', 'string'],
+            'invoice_type' => ['nullable', 'string', Rule::in(InvoiceType::valueNames())],
+            'status' => ['nullable', 'string', Rule::in(InvoiceStatus::valueNames())],
+            'start_date' => ['nullable', 'string', $dateFilterRule],
+            'end_date' => ['nullable', 'string', $dateFilterRule],
             'number' => ['nullable', 'string', 'max:50'],
             'q' => ['nullable', 'string', 'max:100'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
@@ -115,77 +143,33 @@ class InvoiceController extends Controller
         $invoiceType = InvoiceType::tryFromName($request->input('invoice_type'));
         $status = InvoiceStatus::tryFromName($request->input('status'));
 
-        $query = Invoice::query()
-            ->with(['customer:id,name'])
-            ->orderByDesc('date')
-            ->orderByDesc('number');
+        $canReadCustomers = $request->user()->can('customers.index');
+        $currency = (string) (FiscalYear::query()->find(getActiveFiscalYear())?->company?->currency ?: 'Rial');
 
-        if ($invoiceType !== null) {
-            $query->where('invoice_type', $invoiceType);
-        }
+        $invoices = InvoiceService::searchQuery([
+            'q' => $request->input('q'),
+            'exact_number' => $request->filled('number') ? $request->input('number') : null,
+            'invoice_type' => $invoiceType,
+            'status' => $status,
+            'date_from' => $request->filled('start_date') ? $this->normalizeDateFilter($request->input('start_date')) : null,
+            'date_to' => $request->filled('end_date') ? $this->normalizeDateFilter($request->input('end_date')) : null,
+            'with_customer' => $canReadCustomers,
+        ])->paginate($request->integer('per_page', 15));
 
-        if ($status !== null) {
-            $query->where('status', $status);
-        }
-
-        if ($request->filled('number')) {
-            $query->where('number', $request->input('number'));
-        }
-
-        if ($request->filled('start_date')) {
-            $query->where('date', '>=', $this->normalizeDateFilter($request->input('start_date')));
-        }
-
-        if ($request->filled('end_date')) {
-            $query->where('date', '<=', $this->normalizeDateFilter($request->input('end_date')));
-        }
-
-        if ($request->filled('q')) {
-            $q = $request->input('q');
-            $query->where(function ($builder) use ($q) {
-                $builder->where('title', 'like', "%{$q}%")
-                    ->orWhereHas('customer', function ($customer) use ($q) {
-                        $customer->where('name', 'like', "%{$q}%");
-                    });
-            });
-        }
-
-        $perPage = $request->integer('per_page', 15);
-        $invoices = $query->paginate($perPage);
-
-        $data = $invoices->map(function (Invoice $invoice) {
-            return [
-                'id' => $invoice->id,
-                'number' => $invoice->number,
-                'date' => $invoice->date?->format('Y-m-d'),
-                'title' => $invoice->title,
-                'invoice_type' => $invoice->invoice_type?->valueName(),
-                'invoice_type_label' => $invoice->invoice_type?->label(),
-                'status' => $invoice->status?->valueName(),
-                'status_label' => $invoice->status?->label(),
-                'amount' => $invoice->amount,
-                'vat' => $invoice->vat,
-                'subtraction' => $invoice->subtraction,
-                'customer_id' => $invoice->customer_id,
-                'customer' => $invoice->customer ? [
-                    'id' => $invoice->customer->id,
-                    'name' => $invoice->customer->name,
-                ] : null,
-                'warehouse_id' => $invoice->warehouse_id,
-                'document_id' => $invoice->document_id,
-                'returned_invoice_id' => $invoice->returned_invoice_id,
-                'description' => $invoice->description,
-                'created_at' => $invoice->created_at,
-                'updated_at' => $invoice->updated_at,
-            ];
-        });
+        $data = collect($invoices->items())
+            ->map(fn (Invoice $invoice) => InvoiceService::formatSummary($invoice, $currency, $canReadCustomers))
+            ->all();
 
         return response()->json([
             'data' => $data,
-            'current_page' => $invoices->currentPage(),
-            'total' => $invoices->total(),
-            'per_page' => $invoices->perPage(),
-            'last_page' => $invoices->lastPage(),
+            'meta' => [
+                'current_page' => $invoices->currentPage(),
+                'per_page' => $invoices->perPage(),
+                'total' => $invoices->total(),
+                'last_page' => $invoices->lastPage(),
+                'from' => $invoices->firstItem(),
+                'to' => $invoices->lastItem(),
+            ],
         ]);
     }
 
@@ -198,15 +182,33 @@ class InvoiceController extends Controller
         }
 
         $validated = $request->validated();
+        $fiscalYearId = getActiveFiscalYear();
+        $shouldApprove = $request->boolean('approve');
 
-        $result = InvoiceService::createInvoice(
-            $request->user(),
-            InvoiceService::extractInvoiceData($validated),
-            InvoiceService::mapTransactionsToItems($validated['transactions']),
-            $request->boolean('approve')
-        );
+        $result = DB::transaction(function () use ($request, $validated, $fiscalYearId, $shouldApprove) {
+            $externalReferenceId = trim((string) ($validated['external_reference_id'] ?? ''));
 
-        $invoice = $result['invoice']->load(['customer', 'items.itemable', 'warehouse']);
+            if ($externalReferenceId !== '') {
+                InvoiceService::lockExternalReferenceScope($fiscalYearId);
+
+                if (InvoiceService::findActiveInvoiceByExternalReference($fiscalYearId, $externalReferenceId, lockForUpdate: true) !== null) {
+                    throw ValidationException::withMessages([
+                        'external_reference_id' => __('An invoice with this external reference ID already exists in the selected fiscal year.'),
+                    ]);
+                }
+            }
+
+            return InvoiceService::createInvoice(
+                $request->user(),
+                InvoiceService::extractInvoiceData($validated),
+                InvoiceService::mapTransactionsToItems($validated['transactions']),
+                $shouldApprove
+            );
+        });
+
+        $invoice = $result['invoice'];
+        $document = $result['document'];
+        $invoice->load(['customer', 'items.itemable', 'warehouse']);
 
         return response()->json([
             'data' => [
@@ -223,13 +225,14 @@ class InvoiceController extends Controller
                 'warehouse_id' => $invoice->warehouse_id,
                 'document_id' => $invoice->document_id,
                 'returned_invoice_id' => $invoice->returned_invoice_id,
+                'external_reference_id' => $invoice->external_reference_id,
                 'description' => $invoice->description,
                 'items_count' => $invoice->items->count(),
                 'created_at' => $invoice->created_at,
             ],
             'meta' => [
                 'approved' => $invoice->status?->valueName() === 'approved',
-                'document_id' => $result['document']?->id,
+                'document_id' => $document?->id,
                 'next_action' => $invoice->status?->valueName() === 'ready_to_approve'
                     ? 'POST /api/companies/{fiscal_year}/invoices/{id}/approve'
                     : null,
@@ -270,17 +273,16 @@ class InvoiceController extends Controller
             ]);
         }
 
-        $invoiceService->changeInvoiceStatus($invoice, $status);
+        $approverId = $status === 'approved' ? $request->user()->id : null;
 
-        if ($status === 'approved') {
-            $invoice->approver_id = $request->user()->id;
-            $invoice->save();
-        }
+        $invoice = DB::transaction(function () use ($invoiceService, $invoice, $status, $approverId) {
+            $invoiceService->changeInvoiceStatus($invoice, $status);
 
-        if ($status === 'unapproved') {
-            $invoice->approver_id = null;
+            $invoice->approver_id = $approverId;
             $invoice->save();
-        }
+
+            return $invoice;
+        });
 
         $invoice->refresh();
 

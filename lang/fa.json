@@ -3795,5 +3795,6 @@
     "Paid leave balance pending confirmation": "مانده مرخصی با حقوق در انتظار تأیید",
     "Enter the verified remaining balance after removing any prepaid leave, before posting new attendance.": "پیش از ثبت کارکرد جدید، مانده تأییدشده مرخصی با حقوق را پس از کسر پیش‌پرداخت وارد کنید.",
     "This employee no longer has a prepaid leave balance to reconcile.": "مانده پیش‌پرداخت مرخصی با حقوق این کارمند قبلاً تعیین تکلیف شده است.",
-    "An invoice with this external reference ID already exists in the selected fiscal year.": "فاکتوری با این شناسه مرجع خارجی در سال مالی انتخاب‌شده قبلاً ثبت شده است."
+    "An invoice with this external reference ID already exists in the selected fiscal year.": "فاکتوری با این شناسه مرجع خارجی در سال مالی انتخاب‌شده قبلاً ثبت شده است.",
+    "The :attribute must be a valid date in Jalali (1405/08/10) or Gregorian (2026-11-01) format.": ":attribute باید تاریخی معتبر به شمسی (1405/08/10) یا میلادی (2026-11-01) باشد."
 }

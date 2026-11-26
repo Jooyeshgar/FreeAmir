@@ -195,8 +195,59 @@ class InvoiceApiTest extends TestCase
             $this->apiUrl('/invoices'),
             $this->apiHeaders($this->user, $permissions)
         )->assertOk()
-            ->assertJsonPath('total', 0)
+            ->assertJsonPath('meta.total', 0)
             ->assertJsonCount(0, 'data');
+    }
+
+    public function test_index_rejects_invalid_type_status_and_date_filters(): void
+    {
+        $permissions = ['api.access', 'invoices.index'];
+        $this->grant($this->user, $permissions);
+        $headers = $this->apiHeaders($this->user, $permissions);
+
+        $this->getJson($this->apiUrl('/invoices').'?invoice_type=not_a_type', $headers)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['invoice_type']);
+
+        $this->getJson($this->apiUrl('/invoices').'?status=not_a_status', $headers)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['status']);
+
+        $this->getJson($this->apiUrl('/invoices').'?start_date=garbage', $headers)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['start_date']);
+
+        $this->getJson($this->apiUrl('/invoices').'?end_date=1405/13/40', $headers)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['end_date']);
+    }
+
+    public function test_store_invoice_accepts_external_reference_id_and_blocks_duplicates(): void
+    {
+        $permissions = ['api.access', 'invoices.store', 'invoices.show', 'invoices.index'];
+        $this->grant($this->user, $permissions);
+        $headers = $this->apiHeaders($this->user, $permissions);
+
+        $payload = $this->invoicePayload(['external_reference_id' => 'shop:ORDER-1', 'invoice_number' => 2001, 'document_number' => 2001]);
+
+        $response = $this->postJson($this->apiUrl('/invoices'), $payload, $headers)
+            ->assertCreated()
+            ->assertJsonPath('data.external_reference_id', 'shop:ORDER-1');
+
+        $invoiceId = $response->json('data.id');
+
+        $this->getJson($this->apiUrl("/invoices/{$invoiceId}"), $headers)
+            ->assertOk()
+            ->assertJsonPath('data.external_reference_id', 'shop:ORDER-1');
+
+        $this->getJson($this->apiUrl('/invoices'), $headers)
+            ->assertOk()
+            ->assertJsonPath('data.0.external_reference_id', 'shop:ORDER-1');
+
+        $this->postJson($this->apiUrl('/invoices'), array_merge($payload, ['invoice_number' => 2002, 'document_number' => 2002]), $headers)
+            ->assertStatus(422);
+
+        $this->assertDatabaseCount('invoices', 1);
     }
 
     public function test_approve_requires_approve_permission(): void

@@ -3803,5 +3803,6 @@
     "Paid leave balance pending confirmation": "Paid leave balance pending confirmation",
     "Enter the verified remaining balance after removing any prepaid leave, before posting new attendance.": "Enter the verified remaining balance after removing any prepaid leave, before posting new attendance.",
     "This employee no longer has a prepaid leave balance to reconcile.": "This employee no longer has a prepaid leave balance to reconcile.",
-    "An invoice with this external reference ID already exists in the selected fiscal year.": "An invoice with this external reference ID already exists in the selected fiscal year."
+    "An invoice with this external reference ID already exists in the selected fiscal year.": "An invoice with this external reference ID already exists in the selected fiscal year.",
+    "The :attribute must be a valid date in Jalali (1405/08/10) or Gregorian (2026-11-01) format.": "The :attribute must be a valid date in Jalali (1405/08/10) or Gregorian (2026-11-01) format."
 }

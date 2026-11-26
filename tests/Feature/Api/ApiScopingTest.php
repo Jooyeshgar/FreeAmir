@@ -188,4 +188,95 @@ class ApiScopingTest extends TestCase
             $this->headers()
         )->assertOk()->assertJsonPath('data.status', 'approved');
     }
+
+    public function test_product_and_service_store_reuse_identity_and_reject_code_conflicts(): void
+    {
+        $productGroupId = DB::table('product_groups')->where('fiscal_year_id', $this->fiscalYear->id)->value('id');
+        $serviceGroupId = DB::table('service_groups')->where('fiscal_year_id', $this->fiscalYear->id)->value('id');
+
+        $productPayload = ['name' => 'کالای تستی', 'code' => 'P-1', 'group' => $productGroupId];
+        $servicePayload = ['name' => 'خدمت تستی', 'code' => 'S-1', 'group' => $serviceGroupId];
+
+        $createdProduct = $this->postJson($this->apiUrl('/products'), $productPayload, $this->headers())
+            ->assertCreated()
+            ->assertJsonPath('reused', false);
+
+        $createdService = $this->postJson($this->apiUrl('/services'), $servicePayload, $this->headers())
+            ->assertCreated()
+            ->assertJsonPath('reused', false);
+
+        // Same identity is reused instead of creating a duplicate
+        $this->postJson($this->apiUrl('/products'), $productPayload, $this->headers())
+            ->assertOk()
+            ->assertJsonPath('reused', true)
+            ->assertJsonPath('data.id', $createdProduct->json('data.id'));
+
+        $this->postJson($this->apiUrl('/services'), $servicePayload, $this->headers())
+            ->assertOk()
+            ->assertJsonPath('reused', true)
+            ->assertJsonPath('data.id', $createdService->json('data.id'));
+
+        // Same code with a different identity is rejected with 409
+        $this->postJson($this->apiUrl('/products'), ['name' => 'کالای دیگر', 'code' => 'P-1', 'group' => $productGroupId], $this->headers())
+            ->assertStatus(409);
+
+        $this->postJson($this->apiUrl('/services'), ['name' => 'خدمت دیگر', 'code' => 'S-1', 'group' => $serviceGroupId], $this->headers())
+            ->assertStatus(409);
+
+        $this->assertDatabaseCount('products', 1);
+        $this->assertDatabaseCount('services', 1);
+    }
+
+    public function test_product_and_service_store_validate_group_in_fiscal_year(): void
+    {
+        $otherYear = FiscalYear::create(['company_id' => $this->fiscalYear->company_id, 'year' => 1405]);
+        $foreignGroup = ProductGroup::factory()->create(['fiscal_year_id' => $otherYear->id]);
+
+        $this->postJson($this->apiUrl('/products'), [
+            'name' => 'کالای خارج از سال',
+            'code' => 'P-FORBIDDEN',
+            'group' => $foreignGroup->id,
+        ], $this->headers())->assertStatus(422)->assertJsonValidationErrors(['group']);
+
+        $this->postJson($this->apiUrl('/services'), [
+            'name' => 'خدمت با گروه نامعتبر',
+            'code' => 'S-FORBIDDEN',
+            'group' => 999999,
+        ], $this->headers())->assertStatus(422)->assertJsonValidationErrors(['group']);
+    }
+
+    public function test_document_store_requires_ledger_confirmation_when_commercial_ledger_covers_the_date(): void
+    {
+        \App\Models\CommercialLedgerExport::create([
+            'fiscal_year_id' => $this->fiscalYear->id,
+            'creator_id' => $this->user->id,
+            'from_date' => now()->subDays(5)->toDateString(),
+            'to_date' => now()->addDays(5)->toDateString(),
+            'format' => 'pdf',
+            'seal_tracking_code' => 'TEST-0001',
+            'ledger_type' => \App\Enums\CommercialLedgerType::ALL_GENERAL,
+            'status' => 'ready',
+            'file_path' => 'commercial-ledgers/test.pdf',
+        ]);
+
+        $payload = [
+            'title' => 'سند تستی',
+            'date' => now()->toDateString(),
+            'transactions' => [
+                ['subject_id' => 1, 'desc' => 'بدهکار', 'value' => -1000],
+                ['subject_id' => 2, 'desc' => 'بستانکار', 'value' => 1000],
+            ],
+        ];
+
+        $this->postJson($this->apiUrl('/documents'), $payload, $this->headers())
+            ->assertStatus(409)
+            ->assertJsonPath('needs_confirmation', true);
+
+        $this->assertDatabaseCount('documents', 0);
+
+        $this->postJson($this->apiUrl('/documents'), array_merge($payload, ['ledger_confirmation' => true]), $this->headers())
+            ->assertCreated();
+
+        $this->assertDatabaseCount('documents', 1);
+    }
 }
