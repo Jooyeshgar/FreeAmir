@@ -15,14 +15,114 @@ use App\Models\Product;
 use App\Models\Service;
 use App\Models\User;
 use App\Models\WarehouseProductStock;
+use Brick\Math\BigDecimal;
+use Brick\Math\RoundingMode;
 use Closure;
 use Exception;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class InvoiceService
 {
+    /**
+     * Shared invoice search/filter used by both the REST API and the MCP read tools.
+     * Filter keys: q (number/title/id search), number (exact), invoice_type,
+     * status, customer_id, date_from, date_to (Gregorian Y-m-d).
+     */
+    public static function searchQuery(array $filters = []): Builder
+    {
+        $search = trim((string) ($filters['q'] ?? ''));
+        $invoiceType = $filters['invoice_type'] ?? null;
+        $status = $filters['status'] ?? null;
+        $customerId = isset($filters['customer_id']) && $filters['customer_id'] !== null && $filters['customer_id'] !== '' ? (int) $filters['customer_id'] : null;
+
+        $query = Invoice::query();
+
+        if (! empty($filters['with_customer'])) {
+            $query->with('customer:id,name');
+        }
+
+        if (! empty($filters['exact_number'])) {
+            $query->where('number', $filters['exact_number']);
+        }
+
+        if ($search !== '') {
+            $escaped = addcslashes($search, '%_\\');
+            $query->where(function ($q) use ($search, $escaped) {
+                $q->where('number', 'like', "%{$escaped}%")
+                    ->orWhere('title', 'like', "%{$escaped}%");
+
+                if (ctype_digit($search) && (int) $search > 0) {
+                    $q->orWhere('id', (int) $search);
+                }
+            });
+        }
+
+        if ($invoiceType !== null && $invoiceType !== '') {
+            $query->where('invoice_type', $invoiceType instanceof InvoiceType ? $invoiceType->value : $invoiceType);
+        }
+
+        if ($status !== null && $status !== '') {
+            $query->where('status', $status instanceof InvoiceStatus ? $status->value : $status);
+        }
+
+        if ($customerId !== null && $customerId > 0) {
+            $query->where('customer_id', $customerId);
+        }
+
+        if (! empty($filters['date_from'])) {
+            $query->whereDate('date', '>=', $filters['date_from']);
+        }
+
+        if (! empty($filters['date_to'])) {
+            $query->whereDate('date', '<=', $filters['date_to']);
+        }
+
+        return $query->orderByDesc('date')->orderByDesc('id');
+    }
+
+    public static function formatSummary(Invoice $invoice, string $currency, bool $includeCustomerName = true): array
+    {
+        $invoiceType = InvoiceType::tryFrom((int) ($invoice->invoice_type?->value ?? $invoice->invoice_type));
+        $status = $invoice->status instanceof InvoiceStatus
+            ? $invoice->status
+            : InvoiceStatus::tryFrom((int) $invoice->status);
+
+        $rawDate = $invoice->date?->format('Y-m-d');
+        $jalaliDate = $rawDate !== null ? (gregorian_to_jalali_date($rawDate, '/', '-') ?: null) : null;
+        $amount = self::decimalAmount($invoice->amount);
+        [$whole, $fraction] = explode('.', $amount);
+        $whole = preg_replace('/\B(?=(?:[0-9]{3})+\z)/', ',', $whole);
+        $fraction = rtrim($fraction, '0');
+        $formattedAmount = $fraction === '' ? $whole : $whole.'.'.$fraction;
+
+        return [
+            'id' => (int) $invoice->id,
+            'number' => $invoice->number !== null ? (string) $invoice->number : null,
+            'title' => $invoice->title,
+            'type' => $invoiceType?->valueName(),
+            'type_label' => $invoiceType?->label(),
+            'status' => $status?->valueName(),
+            'status_label' => $status?->label(),
+            'customer_id' => $invoice->customer_id !== null ? (int) $invoice->customer_id : null,
+            'customer_name' => $includeCustomerName ? ($invoice->customer?->name ?? null) : null,
+            'date' => $rawDate,
+            'jalali_date' => $jalaliDate,
+            'amount' => $amount,
+            'formatted_amount' => $formattedAmount.' '.$currency,
+            'vat' => self::decimalAmount($invoice->vat),
+            'subtraction' => self::decimalAmount($invoice->subtraction),
+            'external_reference_id' => $invoice->external_reference_id,
+        ];
+    }
+
+    public static function decimalAmount(string|int|float|null $amount): string
+    {
+        return (string) BigDecimal::of((string) ($amount ?? 0))->toScale(2, RoundingMode::HALF_UP);
+    }
+
     /**
      * Create a document, its transactions, an invoice and invoice items.
      * The document and transactions are generated automatically from invoice data.

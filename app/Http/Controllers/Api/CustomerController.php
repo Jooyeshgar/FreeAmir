@@ -6,6 +6,7 @@ use App\Enums\CustomerType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreCustomerRequest;
 use App\Models\Customer;
+use App\Models\FiscalYear;
 use App\Services\CustomerService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,62 +30,41 @@ class CustomerController extends Controller
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        $query = Customer::query()
-            ->orderBy('name')
-            ->orderBy('id');
+        $customers = CustomerService::searchQuery([
+            'q' => $validated['q'] ?? '',
+            'type' => $validated['type'] ?? null,
+        ])
+            ->paginate($validated['per_page'] ?? 20, ['*'], 'page', $validated['page'] ?? 1);
 
-        if (! empty($validated['type'])) {
-            $query->where(
-                'type',
-                CustomerType::fromName($validated['type'])->value
-            );
-        }
-
-        if (! empty($validated['q'])) {
-            $search = trim($validated['q']);
-
-            $query->where(function ($query) use ($search) {
-                $query->where('name', 'like', "%{$search}%")
-                    ->orWhere('mobile', 'like', "%{$search}%")
-                    ->orWhere('personal_code', 'like', "%{$search}%")
-                    ->orWhere('ecnmcs_code', 'like', "%{$search}%");
-            });
-        }
-
-        $customers = $query->paginate(
-            $validated['per_page'] ?? 20,
-            [
-                'id',
-                'name',
-                'type',
-                'mobile',
-                'phone',
-                'personal_code',
-                'ecnmcs_code',
-                'balance',
-                'credit',
-                'created_at',
-                'updated_at',
+        return response()->json([
+            'data' => collect($customers->items())
+                ->map(fn (Customer $customer) => CustomerService::formatSummary($customer))
+                ->all(),
+            'meta' => [
+                'current_page' => $customers->currentPage(),
+                'per_page' => $customers->perPage(),
+                'total' => $customers->total(),
+                'last_page' => $customers->lastPage(),
+                'from' => $customers->firstItem(),
+                'to' => $customers->lastItem(),
             ],
-            'page',
-            $validated['page'] ?? 1
-        );
-
-        return response()->json($customers);
+        ]);
     }
 
     public function show($company, $id): JsonResponse
     {
         $customer = Customer::query()
             ->with([
+                'group:id,name',
                 'subject',
-                'group',
                 'introducer:id,name',
             ])
             ->findOrFail($id);
 
+        $currency = (string) (FiscalYear::query()->find(getActiveFiscalYear())?->company?->currency ?: 'Rial');
+
         return response()->json([
-            'data' => $customer,
+            'data' => CustomerService::formatDetail($customer, $currency),
         ]);
     }
 

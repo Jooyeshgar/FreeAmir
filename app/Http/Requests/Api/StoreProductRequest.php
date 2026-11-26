@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreProductRequest extends FormRequest
 {
@@ -17,7 +18,12 @@ class StoreProductRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'code' => ['required', 'string', 'max:100'],
             'sstid' => ['nullable', 'string', 'max:100'],
-            'group' => ['required', 'integer', 'min:1'],
+            'group' => [
+                'required',
+                'integer',
+                'min:1',
+                Rule::exists('product_groups', 'id')->where('fiscal_year_id', getActiveFiscalYear()),
+            ],
             'location' => ['nullable', 'string', 'max:255'],
             'quantity' => ['nullable', 'numeric', 'min:0'],
             'quantity_warning' => ['nullable', 'numeric', 'min:0'],
@@ -27,6 +33,13 @@ class StoreProductRequest extends FormRequest
             'description' => ['nullable', 'string', 'max:500'],
             'vat' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'average_cost' => ['nullable', 'numeric', 'min:0'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'group.exists' => __('The selected product group was not found in the current fiscal year.'),
         ];
     }
 }

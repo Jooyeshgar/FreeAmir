@@ -6,6 +6,7 @@ use App\Enums\InvoiceType;
 use App\Mcp\Support\ContextResolver;
 use App\Models\FiscalYear;
 use App\Models\Invoice;
+use App\Services\InvoiceService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Response;
 
@@ -89,7 +90,7 @@ class GetInvoiceTool extends AccountingTool
                     'number' => $match->number !== null ? (string) $match->number : null,
                     'invoice_type' => $match->invoice_type?->valueName(),
                     'date' => $match->date?->format('Y-m-d'),
-                    'amount' => ListInvoicesTool::decimalAmount($match->amount),
+                    'amount' => InvoiceService::decimalAmount($match->amount),
                 ])->values()->all(),
             ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
         }
@@ -106,16 +107,16 @@ class GetInvoiceTool extends AccountingTool
                 'item_code' => $itemable?->code ?? null,
                 'item_name' => $itemable?->name ?? null,
                 'quantity' => (float) ($item->quantity ?? 0),
-                'unit_price' => ListInvoicesTool::decimalAmount($item->unit_price),
-                'discount' => ListInvoicesTool::decimalAmount($item->discount),
-                'vat' => ListInvoicesTool::decimalAmount($item->vat),
-                'amount' => ListInvoicesTool::decimalAmount($item->amount),
+                'unit_price' => InvoiceService::decimalAmount($item->unit_price),
+                'discount' => InvoiceService::decimalAmount($item->discount),
+                'vat' => InvoiceService::decimalAmount($item->vat),
+                'amount' => InvoiceService::decimalAmount($item->amount),
                 'description' => $item->description,
             ];
         })->values()->all();
 
         $shipDate = $invoice->ship_date?->format('Y-m-d');
-        $summary = ListInvoicesTool::formatSummary($invoice, $currency, $canReadCustomers);
+        $summary = InvoiceService::formatSummary($invoice, $currency, $canReadCustomers);
 
         return $this->success([
             'fiscal_year_id' => (int) $fiscalYear->id,

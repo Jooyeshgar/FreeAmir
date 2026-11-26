@@ -2,9 +2,9 @@
 
 namespace App\Mcp\Tools;
 
-use App\Enums\CustomerType;
 use App\Models\Customer;
 use App\Models\FiscalYear;
+use App\Services\CustomerService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Response;
 
@@ -43,39 +43,18 @@ class ListCustomersTool extends AccountingTool
     protected function report(array $arguments, FiscalYear $fiscalYear): Response
     {
         $currency = (string) ($fiscalYear->company?->currency ?: 'Rial');
-        $search = isset($arguments['query']) ? trim((string) $arguments['query']) : '';
         $limit = isset($arguments['limit']) ? max(1, min(50, (int) $arguments['limit'])) : 15;
         $page = isset($arguments['page']) ? max(1, (int) $arguments['page']) : 1;
 
-        $query = Customer::query()
-            ->with('group:id,name')
+        $paginator = CustomerService::searchQuery([
+            'q' => $arguments['query'] ?? '',
+            'group_id' => $arguments['group_id'] ?? null,
+        ])
             ->where('fiscal_year_id', $fiscalYear->id)
-            ->orderBy('name')
-            ->orderBy('id');
-
-        if ($search !== '') {
-            $escaped = addcslashes($search, '%_\\');
-            $query->where(function ($q) use ($search, $escaped) {
-                $q->where('name', 'like', "%{$escaped}%")
-                    ->orWhere('phone', 'like', "%{$escaped}%")
-                    ->orWhere('mobile', 'like', "%{$escaped}%")
-                    ->orWhere('personal_code', 'like', "%{$escaped}%")
-                    ->orWhere('ecnmcs_code', 'like', "%{$escaped}%");
-
-                if (ctype_digit($search) && (int) $search > 0) {
-                    $q->orWhere('id', (int) $search);
-                }
-            });
-        }
-
-        if (isset($arguments['group_id'])) {
-            $query->where('group_id', (int) $arguments['group_id']);
-        }
-
-        $paginator = $query->paginate($limit, ['*'], 'page', $page);
+            ->paginate($limit, ['*'], 'page', $page);
 
         $customers = collect($paginator->items())
-            ->map(fn (Customer $customer): array => self::formatSummary($customer))
+            ->map(fn (Customer $customer): array => CustomerService::formatSummary($customer))
             ->all();
 
         $humanSummary = $paginator->total() === 0
@@ -98,25 +77,5 @@ class ListCustomersTool extends AccountingTool
             'customers' => $customers,
             'human_summary' => $humanSummary,
         ]);
-    }
-
-    public static function formatSummary(Customer $customer): array
-    {
-        $rawType = $customer->getRawOriginal('type');
-        $customerType = is_numeric($rawType) ? CustomerType::tryFrom((int) $rawType) : null;
-
-        return [
-            'id' => (int) $customer->id,
-            'name' => (string) $customer->name,
-            'type' => $customerType?->valueName(),
-            'type_label' => $customerType?->label(),
-            'group_id' => $customer->group_id !== null ? (int) $customer->group_id : null,
-            'group_name' => $customer->group?->name,
-            'phone' => $customer->phone ?: null,
-            'mobile' => $customer->mobile ?: null,
-            'personal_code' => $customer->personal_code ?: null,
-            'ecnmcs_code' => $customer->ecnmcs_code ?: null,
-            'credit_limit' => (float) ($customer->credit ?? 0),
-        ];
     }
 }

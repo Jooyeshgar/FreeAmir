@@ -5,11 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreServiceRequest;
 use App\Models\Service;
-use App\Models\ServiceGroup;
 use App\Services\ServiceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class ServiceController extends Controller
 {
@@ -22,32 +20,16 @@ class ServiceController extends Controller
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
 
-        $perPage = (int) ($validated['per_page'] ?? 20);
-
-        $query = Service::query();
-
-        if (! empty($validated['group_id'])) {
-            $query->where('group', $validated['group_id']);
-        }
-
-        if (! empty($validated['q'])) {
-            $search = trim($validated['q']);
-
-            $query->where(function ($subQuery) use ($search) {
-                $subQuery->where('name', 'like', "%{$search}%")
-                    ->orWhere('code', 'like', "%{$search}%");
-            });
-        }
-
-        $services = $query
-            ->orderBy('name')
-            ->orderBy('id')
-            ->paginate($perPage)
-            ->withQueryString();
+        $services = ServiceService::searchQuery([
+            'q' => $validated['q'] ?? '',
+            'group_id' => $validated['group_id'] ?? null,
+        ])
+            ->paginate($validated['per_page'] ?? 20, ['*'], 'page', $validated['page'] ?? 1);
 
         return response()->json([
-            'data' => $services->items(),
-
+            'data' => collect($services->items())
+                ->map(fn (Service $service) => ServiceService::formatSummary($service))
+                ->all(),
             'meta' => [
                 'current_page' => $services->currentPage(),
                 'per_page' => $services->perPage(),
@@ -56,82 +38,29 @@ class ServiceController extends Controller
                 'from' => $services->firstItem(),
                 'to' => $services->lastItem(),
             ],
-
-            'links' => [
-                'first' => $services->url(1),
-                'last' => $services->url($services->lastPage()),
-                'prev' => $services->previousPageUrl(),
-                'next' => $services->nextPageUrl(),
-            ],
         ]);
     }
 
     public function store(StoreServiceRequest $request, ServiceService $serviceService): JsonResponse
     {
-        $data = $request->validated();
+        $result = $serviceService->storeReusable($request->validated());
 
-        $group = ServiceGroup::query()
-            ->find((int) $data['group']);
-
-        if (! $group) {
-            return response()->json([
-                'message' => __('The selected service group was not found in the current fiscal year.'),
-                'errors' => ['group' => [__('The service group ID is invalid.')]],
-            ], 422);
-        }
-
-        $name = trim($data['name']);
-        $code = trim($data['code']);
-        $sstid = trim((string) ($data['sstid'] ?? ''));
-
-        $existingByCode = Service::query()
-            ->where('code', $code)
-            ->first();
-
-        if ($existingByCode) {
-            $sameIdentity = trim((string) $existingByCode->name) === $name
-                && trim((string) ($existingByCode->sstid ?? '')) === $sstid;
-
-            if ($sameIdentity) {
-                return response()->json(['data' => $existingByCode->load('serviceGroup'), 'reused' => true], 200);
-            }
-
+        if (isset($result['conflict'])) {
             return response()->json([
                 'message' => __('The service code is already used by another service.'),
                 'errors' => ['code' => [__('The service code has already been taken.')]],
             ], 409);
         }
 
-        $existingQuery = Service::query()
-            ->where('name', $name)
-            ->where('group', (int) $data['group']);
-
-        if ($sstid !== '') {
-            $existingQuery->where('sstid', $sstid);
-        } else {
-            $existingQuery->where(function ($q) {
-                $q->whereNull('sstid')->orWhere('sstid', '');
-            });
+        if ($result['reused']) {
+            return response()->json([
+                'data' => $result['service']->load('serviceGroup'),
+                'reused' => true,
+            ], 200);
         }
-
-        $existingByIdentity = $existingQuery->first();
-
-        if ($existingByIdentity) {
-            return response()->json(['data' => $existingByIdentity->load('serviceGroup'), 'reused' => true], 200);
-        }
-
-        $data['name'] = $name;
-        $data['code'] = $code;
-        $data['sstid'] = $sstid !== '' ? $sstid : null;
-        $data['selling_price'] = $data['selling_price'] ?? 0;
-        $data['vat'] = $data['vat'] ?? 0;
-
-        $service = DB::transaction(function () use ($serviceService, $data) {
-            return $serviceService->create($data);
-        });
 
         return response()->json([
-            'data' => $service->fresh()->load('serviceGroup'),
+            'data' => $result['service']->load('serviceGroup'),
             'message' => __('Service created successfully.'),
             'reused' => false,
         ], 201);
