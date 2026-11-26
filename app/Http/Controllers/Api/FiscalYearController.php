@@ -20,13 +20,9 @@ class FiscalYearController extends Controller
             ->with('company:id,name,currency')
             ->orderByDesc('year');
 
-        $onlyAccessible = $request->boolean('only_accessible', true);
+        $accessibleFiscalYearIds = $user->fiscalYears()->pluck('fiscal_years.id')->all();
 
-        if ($onlyAccessible) {
-            $accessibleFiscalYearIds = $user->fiscalYears()->pluck('fiscal_years.id')->all();
-
-            $query->whereIn('fiscal_years.id', $accessibleFiscalYearIds);
-        }
+        $query->whereIn('fiscal_years.id', $accessibleFiscalYearIds);
 
         if ($request->boolean('only_open')) {
             $query->whereNull('closed_at');
@@ -53,7 +49,7 @@ class FiscalYearController extends Controller
                 'start_date' => $start->toDateString(),
                 'end_date' => $end->toDateString(),
                 'start_date_jalali' => sprintf('%d/01/01', (int) $fiscalYear->year),
-                'end_date_jalali' => sprintf('%d/12/29', (int) $fiscalYear->year),
+                'end_date_jalali' => (string) (gregorian_to_jalali_date($end->toDateString(), '/', '-') ?: sprintf('%d/12/29', (int) $fiscalYear->year)),
                 'is_current_context' => $fiscalYear->id === $company,
                 'pl_document_id' => $fiscalYear->pl_document_id,
                 'closing_document_id' => $fiscalYear->closing_document_id,
@@ -76,7 +72,6 @@ class FiscalYearController extends Controller
             'data' => [
                 'fiscal_years' => $pageItems,
                 'filters' => [
-                    'only_accessible' => $onlyAccessible,
                     'only_open' => $request->boolean('only_open'),
                     'only_closed' => $request->boolean('only_closed'),
                 ],

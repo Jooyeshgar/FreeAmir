@@ -12,6 +12,17 @@ class StoreDocumentRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $date = trim((string) $this->input('date'));
+
+        if (preg_match('/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/', $date, $matches) && (int) $matches[1] < 1700) {
+            $this->merge(['date' => str_replace('/', '-', convertToGregorian(str_replace('-', '/', $date)))]);
+        }
+
+        parent::prepareForValidation();
+    }
+
     public function rules(): array
     {
         return [
@@ -29,7 +40,7 @@ class StoreDocumentRequest extends FormRequest
                 Rule::exists('subjects', 'id')->where('fiscal_year_id', getActiveFiscalYear()),
             ],
             'transactions.*.value' => ['required', 'decimal:0,2'],
-            'transactions.*.desc' => ['required', 'string'],
+            'transactions.*.desc' => ['nullable', 'string'],
             'ledger_confirmation' => ['nullable', 'boolean'],
         ];
     }

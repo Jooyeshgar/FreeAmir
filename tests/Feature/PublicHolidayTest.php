@@ -100,7 +100,8 @@ class PublicHolidayTest extends TestCase
 
         $this->assertDatabaseHas('public_holidays', [
             'fiscal_year_id' => $this->fiscalYearId,
-            'date' => jalali_to_gregorian_date('2026-03-21', '-', '-'),
+            // Gregorian input (four-digit year >= 1700) is stored as-is.
+            'date' => '2026-03-21',
             'name' => 'Nowruz',
         ]);
     }

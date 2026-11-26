@@ -57,7 +57,12 @@ class ConfigController extends Controller
             $items = $items->values();
         }
 
+        $titleMap = collect(ConfigTitle::cases())->mapWithKeys(
+            fn (ConfigTitle $t) => [strtolower($t->value) => $t->label()]
+        );
+
         $subjectIds = $items
+            ->filter(fn (Config $config) => $titleMap->has($config->key))
             ->pluck('value')
             ->filter(fn ($v) => is_numeric($v) && (int) $v > 0)
             ->map(fn ($v) => (int) $v)
@@ -69,15 +74,12 @@ class ConfigController extends Controller
             ? Subject::query()->whereIn('id', $subjectIds)->get(['id', 'code', 'name', 'parent_id'])->keyBy('id')
             : collect();
 
-        $titleMap = collect(ConfigTitle::cases())->mapWithKeys(
-            fn (ConfigTitle $t) => [strtolower($t->value) => $t->label()]
-        );
-
         $mapped = $items->map(function (Config $config) use ($subjects, $titleMap) {
             $value = $config->value;
             $subject = null;
+            $isAccountMapping = $titleMap->has($config->key);
 
-            if (is_numeric($value) && (int) $value > 0 && $subjects->has((int) $value)) {
+            if ($isAccountMapping && $subjects->has((int) $value)) {
                 $s = $subjects->get((int) $value);
                 $subject = [
                     'id' => $s->id,
@@ -93,14 +95,14 @@ class ConfigController extends Controller
                 'id' => $config->id,
                 'key' => $config->key,
                 'value' => $value,
-                'typed_value' => $this->castValue($value, $config->type),
+                'typed_value' => $this->castValue($value, $isAccountMapping),
                 'desc' => $config->desc ?: ($titleMap[$config->key] ?? null),
                 'label' => $titleMap[$config->key] ?? $config->desc,
                 'type' => $config->type,
                 'category' => $config->category,
                 'fiscal_year_id' => $config->fiscal_year_id,
                 'scope' => $isGlobal ? 'global' : 'fiscal_year',
-                'is_account_mapping' => $titleMap->has($config->key),
+                'is_account_mapping' => $isAccountMapping,
                 'subject' => $subject,
             ];
         })->values();
@@ -152,18 +154,15 @@ class ConfigController extends Controller
         return response()->json(['data' => $payload]);
     }
 
-    private function castValue(mixed $value, mixed $type): mixed
+    private function castValue(mixed $value, bool $isAccountMapping): mixed
     {
         if ($value === null || $value === '') {
             return null;
         }
 
-        if (is_numeric($value) && ! str_contains((string) $value, '.')) {
-            return (int) $value;
-        }
-
-        if (is_numeric($value)) {
-            return (float) $value;
+        // Account mapping values keep their raw form so codes like '010' are preserved.
+        if ($isAccountMapping) {
+            return (string) $value;
         }
 
         $lower = strtolower((string) $value);
@@ -172,6 +171,14 @@ class ConfigController extends Controller
         }
         if (in_array($lower, ['0', 'false', 'no', 'off'], true)) {
             return false;
+        }
+
+        if (is_numeric($value) && ! str_contains((string) $value, '.')) {
+            return (int) $value;
+        }
+
+        if (is_numeric($value)) {
+            return (float) $value;
         }
 
         return (string) $value;
