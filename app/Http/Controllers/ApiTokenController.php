@@ -26,7 +26,7 @@ class ApiTokenController extends Controller
 
     public function store(Request $request, ApiTokenAbilityService $apiTokenAbilityService): RedirectResponse
     {
-        $availablePermissions = $apiTokenAbilityService->userAbilities($request->user())->all();
+        $availablePermissions = $apiTokenAbilityService->grantableAbilities($request->user())->all();
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -34,7 +34,10 @@ class ApiTokenController extends Controller
             'permissions.*' => ['required', 'string', Rule::in($availablePermissions)],
         ]);
 
-        $token = $request->user()->createToken($validated['name'], $validated['permissions']);
+        $token = $request->user()->createToken(
+            $validated['name'],
+            $apiTokenAbilityService->normalize($validated['permissions']),
+        );
 
         return redirect()->route('api-tokens.index')
             ->with('success', __('API token created successfully.'))

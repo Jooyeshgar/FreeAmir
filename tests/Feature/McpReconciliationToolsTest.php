@@ -245,4 +245,22 @@ class McpReconciliationToolsTest extends TestCase
         $this->assertFalse($response['error'], json_encode($response['data']));
         $this->assertSame('fnirsi:FN-9', $invoice->fresh()->external_reference_id);
     }
+
+    public function test_full_access_token_lists_update_tools_but_never_exceeds_user_permissions(): void
+    {
+        $full = $this->user->createToken('Full access', ['*'])->plainTextToken;
+        $names = fn (): array => array_column($this->withToken($full)->postJson('/api/mcp', [
+            'jsonrpc' => '2.0', 'id' => 1, 'method' => 'tools/list',
+        ])->assertOk()->json('result.tools'), 'name');
+
+        self::assertContains('update_invoice', $names());
+        self::assertContains('update_product', $names());
+        self::assertNotContains('approve_invoice', $names());
+
+        $this->user->revokePermissionTo('invoices.edit');
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        app('auth')->forgetGuards();
+        self::assertNotContains('update_invoice', $names());
+        self::assertContains('update_product', $names());
+    }
 }

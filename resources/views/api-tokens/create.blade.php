@@ -11,6 +11,7 @@
                 @csrf
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5" x-data="{
+                    fullAccess: {{ Js::from(in_array(\App\Services\ApiTokenAbilityService::FULL_ACCESS, old('permissions', []), true)) }},
                     permissionSearch: '',
                     matches(permission) {
                         return permission.toLowerCase().includes(this.permissionSearch.trim().toLowerCase());
@@ -34,7 +35,21 @@
                         <x-input name="permission_search" id="permission-search" placeholder="{{ __('Search') }}" title="" x-model="permissionSearch" />
                     </div>
 
-                    <div class="col-span-full">
+                    <div class="col-span-full rounded-xl border border-warning/50 bg-warning/10 p-4">
+                        <label for="permissions-full-access" class="flex cursor-pointer items-start justify-between gap-3">
+                            <span class="min-w-0">
+                                <span class="block font-semibold">{{ __('Full access') }} <code class="text-xs">*</code></span>
+                                <span class="mt-1 block text-sm leading-relaxed">
+                                    {{ __('The token gets every permission you have, including invoice approval and abilities added later. It never exceeds your own permissions.') }}
+                                </span>
+                            </span>
+                            <input class="checkbox checkbox-warning shrink-0" type="checkbox" name="permissions[]" id="permissions-full-access"
+                                value="{{ \App\Services\ApiTokenAbilityService::FULL_ACCESS }}" x-model="fullAccess"
+                                @checked(in_array(\App\Services\ApiTokenAbilityService::FULL_ACCESS, old('permissions', []), true)) />
+                        </label>
+                    </div>
+
+                    <div class="col-span-full" :class="fullAccess && 'pointer-events-none opacity-50'">
                         <div class="mt-5 grid gap-4 xl:grid-cols-2">
                             @foreach ($permissionGroups as $group => $groupPermissions)
                                 <section class="rounded-xl border border-base-300 bg-base-100/80 p-4 shadow-sm"
@@ -79,7 +94,7 @@
                                                     @endif
                                                 </span>
                                                 <input class="checkbox relative z-10 shrink-0" type="checkbox" name="permissions[]" id="{{ $permissionId }}"
-                                                    value="{{ $permission }}" @checked(in_array($permission, old('permissions', []), true)) />
+                                                    value="{{ $permission }}" :disabled="fullAccess" @checked(in_array($permission, old('permissions', []), true)) />
                                             </div>
                                         @endforeach
                                     </div>
