@@ -246,10 +246,14 @@ class HomeOnboardingTest extends TestCase
         $afterCustomer->assertSee('data-prerequisite-item="customer" data-prerequisite-done="1"', false);
         $afterCustomer->assertSee('data-prerequisite-item="catalog" data-prerequisite-done="0"', false);
 
-        // Verify safeReturnUrl rejects external/protocol-relative URLs and allows internal paths.
+        // Verify safeReturnUrl rejects external, protocol-relative, and control-character bypass URLs.
         $this->assertSame('/invoices?invoice_type=sell', OnboardingService::safeReturnUrl('/invoices?invoice_type=sell'));
         $this->assertNull(OnboardingService::safeReturnUrl('https://evil.example/phish'));
         $this->assertNull(OnboardingService::safeReturnUrl('//evil.example/phish'));
         $this->assertNull(OnboardingService::safeReturnUrl('/\\evil.example'));
+        $this->assertNull(OnboardingService::safeReturnUrl("/\t/evil.example"));
+        $this->assertNull(OnboardingService::safeReturnUrl("/\n/evil.example"));
+        $this->assertNull(OnboardingService::safeReturnUrl("/\r/evil.example"));
+        $this->assertNull(OnboardingService::safeReturnUrl('/ /evil.example'));
     }
 }

@@ -21,7 +21,22 @@ class OnboardingService
             return null;
         }
 
+        if (preg_match('/[\x00-\x20\x7f]/', $returnTo) === 1) {
+            return null;
+        }
+
         if (! str_starts_with($returnTo, '/') || str_starts_with($returnTo, '//') || str_contains($returnTo, '\\')) {
+            return null;
+        }
+
+        $parts = parse_url($returnTo);
+        if (
+            $parts === false
+            || isset($parts['scheme'])
+            || isset($parts['host'])
+            || isset($parts['user'])
+            || isset($parts['pass'])
+        ) {
             return null;
         }
 
