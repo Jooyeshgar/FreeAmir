@@ -17,7 +17,7 @@ class UpdateInvoiceTool extends AccountingTool
 {
     protected string $name = 'update_invoice';
 
-    protected string $description = 'Set, change, or clear the external reference ID of an existing invoice (approved or draft) in the selected authorized open fiscal year. Does not change items, amounts, or accounting documents.';
+    protected string $description = 'Set, change, or clear the external reference ID of an existing invoice (approved or draft) in the selected authorized open fiscal year. Only this reference field is changed (items, amounts, accounting documents and Moadian data are untouched), so it is also allowed for invoices already sent to Moadian.';
 
     protected array $permissionGroups = [['invoices.edit']];
 

@@ -10,14 +10,14 @@ return new class extends Migration
     {
         Schema::table('products', function (Blueprint $table) {
             $table->string('external_sku', 100)->nullable()->after('code');
-            $table->index(['fiscal_year_id', 'external_sku'], 'products_fiscal_year_external_sku_index');
+            $table->unique(['fiscal_year_id', 'external_sku'], 'products_fiscal_year_external_sku_unique');
         });
     }
 
     public function down(): void
     {
         Schema::table('products', function (Blueprint $table) {
-            $table->dropIndex('products_fiscal_year_external_sku_index');
+            $table->dropUnique('products_fiscal_year_external_sku_unique');
             $table->dropColumn('external_sku');
         });
     }

@@ -8,6 +8,7 @@ use App\Models\Customer;
 use App\Models\CustomerGroup;
 use App\Models\FiscalYear;
 use App\Models\Invoice;
+use App\Models\MoadianHistory;
 use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\User;
@@ -212,5 +213,36 @@ class McpReconciliationToolsTest extends TestCase
 
         $this->assertNull($invoice->fresh()->external_reference_id);
         $this->assertNull($this->product->fresh()->external_sku);
+    }
+
+    public function test_external_sku_must_be_unique_per_fiscal_year(): void
+    {
+        $this->product->update(['external_sku' => 'FNIRSI-A']);
+
+        $duplicateCreate = $this->mcp('create_product', ['name' => 'Other', 'code' => '201', 'external_sku' => 'FNIRSI-A']);
+        $this->assertTrue($duplicateCreate['error']);
+
+        $other = $this->mcp('create_product', ['name' => 'Other', 'code' => '202', 'external_sku' => 'FNIRSI-B']);
+        $this->assertFalse($other['error'], json_encode($other['data']));
+
+        $duplicateUpdate = $this->mcp('update_product', ['product_id' => $other['data']['id'], 'external_sku' => 'FNIRSI-A']);
+        $this->assertTrue($duplicateUpdate['error']);
+        $this->assertSame('FNIRSI-B', Product::find($other['data']['id'])->external_sku);
+
+        // Re-saving the same value on the owning product and clearing are allowed.
+        $this->assertFalse($this->mcp('update_product', ['product_id' => $this->product->id, 'external_sku' => 'FNIRSI-A'])['error']);
+        $this->assertFalse($this->mcp('update_product', ['product_id' => $this->product->id, 'external_sku' => ''])['error']);
+        $this->assertNull($this->product->fresh()->external_sku);
+    }
+
+    public function test_update_invoice_reference_is_allowed_for_invoice_sent_to_moadian(): void
+    {
+        $invoice = $this->makeInvoice(null);
+        MoadianHistory::create(['invoice_id' => $invoice->id, 'data' => ['status' => 'success', 'referenceNumber' => 'REF-1']]);
+
+        $response = $this->mcp('update_invoice', ['invoice_id' => $invoice->id, 'external_reference_id' => 'fnirsi:FN-9']);
+
+        $this->assertFalse($response['error'], json_encode($response['data']));
+        $this->assertSame('fnirsi:FN-9', $invoice->fresh()->external_reference_id);
     }
 }

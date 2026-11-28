@@ -6,6 +6,7 @@ use App\Models\FiscalYear;
 use App\Models\Product;
 use App\Services\FiscalYearMutationGuard;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Validation\ValidationException;
 use Laravel\Mcp\Response;
 
 class UpdateProductTool extends AccountingTool
@@ -49,6 +50,17 @@ class UpdateProductTool extends AccountingTool
         }
 
         $sku = trim((string) ($arguments['external_sku'] ?? ''));
+
+        if ($sku !== '' && Product::query()
+            ->where('fiscal_year_id', $fiscalYear->id)
+            ->where('external_sku', $sku)
+            ->whereKeyNot($product->id)
+            ->exists()) {
+            throw ValidationException::withMessages([
+                'external_sku' => __('A product with this external SKU already exists in the selected fiscal year.'),
+            ]);
+        }
+
         $product->external_sku = $sku === '' ? null : $sku;
         $product->save();
 
