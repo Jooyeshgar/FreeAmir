@@ -133,6 +133,16 @@ class InvoiceNumberChronologyTest extends TestCase
         $service->lockAndAssertNoConflicts(30, '2026-11-25', null, $this->year->id);
     }
 
+    public function test_lock_and_assert_checks_the_given_fiscal_year_not_the_active_one(): void
+    {
+        $other = FiscalYear::factory()->create(['year' => 1404, 'company_id' => $this->year->company_id]);
+        $this->invoice(InvoiceType::SELL, 40, '2026-11-24');
+        config(['active-fiscal-year-id' => $other->id]);
+
+        $this->expectException(ValidationException::class);
+        app(InvoiceNumberService::class)->lockAndAssertNoConflicts(40, '2026-11-25', null, $this->year->id);
+    }
+
     public function test_same_date_with_distinct_numbers_is_not_a_conflict(): void
     {
         $this->invoice(InvoiceType::SELL, 1, '2026-11-24');

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Invoice;
+use App\Models\Scopes\FiscalYearScope;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
@@ -26,12 +27,13 @@ class InvoiceNumberService
      *
      * @return Collection<int, array{invoice: Invoice, reason: string}>
      */
-    public function conflictsFor(int|float|string $number, CarbonInterface|string $date, ?int $ignoreInvoiceId = null): Collection
+    public function conflictsFor(int|float|string $number, CarbonInterface|string $date, ?int $ignoreInvoiceId = null, ?int $fiscalYearId = null): Collection
     {
         $date = Carbon::parse($date)->toDateString();
         $number = (float) $number;
 
         $query = Invoice::query()
+            ->when($fiscalYearId, fn ($q) => $q->withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $fiscalYearId))
             ->when($ignoreInvoiceId, fn ($q) => $q->whereKeyNot($ignoreInvoiceId))
             ->where(function ($q) use ($number, $date) {
                 $q->where('number', $number)
@@ -113,12 +115,30 @@ class InvoiceNumberService
             return;
         }
 
-        InvoiceService::lockExternalReferenceScope($fiscalYearId ?? (int) getActiveFiscalYear());
+        $fiscalYearId ??= (int) getActiveFiscalYear();
+        InvoiceService::lockExternalReferenceScope($fiscalYearId);
 
-        $conflicts = $this->conflictsFor($number, $date, $ignoreInvoiceId);
+        // Check the same fiscal year that was locked, regardless of the active fiscal year.
+        $conflicts = $this->conflictsFor($number, $date, $ignoreInvoiceId, $fiscalYearId);
         if ($conflicts->isNotEmpty()) {
             throw ValidationException::withMessages(['invoice_number' => $this->conflictMessage($conflicts)]);
         }
+    }
+
+    /**
+     * Lowest free number that keeps the fiscal year chronological for an invoice with the given date:
+     * above every number dated on or before it, below every number dated after it.
+     * Must run after the fiscal-year lock. Returns null when no integer fits.
+     */
+    public function nextNumberFor(CarbonInterface|string $date, int $fiscalYearId): ?int
+    {
+        $date = Carbon::parse($date)->toDateString();
+        $base = fn () => Invoice::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $fiscalYearId);
+
+        $candidate = ((int) floor((float) ($base()->whereDate('date', '<=', $date)->max('number') ?? 0))) + 1;
+        $nextLater = $base()->whereDate('date', '>', $date)->min('number');
+
+        return $nextLater !== null && (float) $nextLater <= $candidate ? null : $candidate;
     }
 
     /** Localized validation message naming up to MAX_LISTED conflicting invoices. */

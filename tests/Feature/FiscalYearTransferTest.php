@@ -701,7 +701,7 @@ class FiscalYearTransferTest extends TestCase
         $this->assertNotEquals($invoice->number, $newInvoice->number);
     }
 
-    public function test_invoice_transfer_is_rejected_when_the_next_number_would_be_out_of_chronological_order(): void
+    public function test_invoice_transfer_picks_a_chronological_number_below_later_dated_target_invoices(): void
     {
         $customer = $this->makeCustomer($this->source, 'ACME');
         $product = $this->makeProduct($this->source, 'Widget', 'P1');
@@ -712,13 +712,27 @@ class FiscalYearTransferTest extends TestCase
         $this->makeProduct($this->target, 'Widget', 'P1');
         $this->makeInvoice($this->target, ['customer_id' => $targetCustomer->id, 'invoice_type' => InvoiceType::SELL, 'number' => 5, 'date' => '2023-07-01']);
 
-        try {
-            $result = FiscalYearTransferService::transferInvoice($invoice, $this->target->id, $this->user);
-            $this->assertFalse($result['success'] ?? false);
-        } catch (ValidationException $e) {
-            $this->assertArrayHasKey('invoice_number', $e->errors());
-        }
+        $result = FiscalYearTransferService::transferInvoice($invoice, $this->target->id, $this->user);
 
+        $this->assertTrue($result['success'], json_encode($result));
+        $this->assertNotNull(Invoice::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->where('invoice_type', InvoiceType::BUY)->where('number', 1)->first());
+    }
+
+    public function test_invoice_transfer_fails_cleanly_when_no_chronological_number_exists(): void
+    {
+        $customer = $this->makeCustomer($this->source, 'ACME');
+        $product = $this->makeProduct($this->source, 'Widget', 'P1');
+        $invoice = $this->makeInvoice($this->source, ['customer_id' => $customer->id, 'invoice_type' => InvoiceType::BUY, 'amount' => 100, 'date' => '2023-06-01']);
+        $this->addProductItem($invoice, $product);
+
+        $targetCustomer = $this->makeCustomer($this->target, 'ACME');
+        $this->makeProduct($this->target, 'Widget', 'P1');
+        $this->makeInvoice($this->target, ['customer_id' => $targetCustomer->id, 'invoice_type' => InvoiceType::SELL, 'number' => 1, 'date' => '2023-07-01']);
+
+        $result = FiscalYearTransferService::transferInvoice($invoice, $this->target->id, $this->user);
+
+        $this->assertFalse($result['success']);
+        $this->assertNotEmpty($result['errors']);
         $this->assertCount(1, $this->targetInvoices());
     }
 

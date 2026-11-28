@@ -3778,6 +3778,7 @@
     "This employee no longer has a prepaid leave balance to reconcile.": "This employee no longer has a prepaid leave balance to reconcile.",
     "An invoice with this external reference ID already exists in the selected fiscal year.": "An invoice with this external reference ID already exists in the selected fiscal year.",
     "Invoice number :number is already used by an invoice dated :date.": "Invoice number :number is already used by an invoice dated :date.",
+    "No invoice number is available for the date :date in the target fiscal year without breaking chronological numbering.": "No invoice number is available for the date :date in the target fiscal year without breaking chronological numbering.",
     "Invoice :number dated :date conflicts with this number and date. A later date must have a higher number.": "Invoice :number dated :date conflicts with this number and date. A later date must have a higher number.",
     "Numbering conflicts": "Numbering conflicts",
     "Affected invoices": "Affected invoices",

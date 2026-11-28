@@ -144,6 +144,15 @@ class FiscalYearTransferService
             return ['success' => false, 'errors' => $errors];
         }
 
+        try {
+            return self::_runInvoiceChainTransaction($invoice, $targetFiscalYearId, $user, $invValidation, $acValidations, $returnedCheck, $transferDependencies);
+        } catch (ValidationException $e) {
+            return ['success' => false, 'errors' => collect($e->errors())->flatten()->values()->all()];
+        }
+    }
+
+    private static function _runInvoiceChainTransaction(Invoice $invoice, int $targetFiscalYearId, User $user, array $invValidation, array $acValidations, array $returnedCheck, bool $transferDependencies): array
+    {
         return DB::transaction(function () use ($invoice, $targetFiscalYearId, $user, $invValidation, $acValidations, $returnedCheck, $transferDependencies) {
             $warnings = [];
             $returnedInvoiceId = null;
@@ -261,7 +270,6 @@ class FiscalYearTransferService
     private static function _createInvoiceInTarget(Invoice $invoice, int $targetFiscalYearId, User $user, array $validation, ?int $returnedInvoiceId = null): Invoice
     {
         $newInvoice = new Invoice;
-        $newInvoice->number = self::_nextInvoiceNumber($targetFiscalYearId);
         $newInvoice->date = $invoice->date;
         $newInvoice->ship_date = $invoice->ship_date;
         $newInvoice->ship_via = $invoice->ship_via;
@@ -279,8 +287,15 @@ class FiscalYearTransferService
         $newInvoice->returned_invoice_id = $returnedInvoiceId;
 
         self::_withActiveFiscalYear($targetFiscalYearId, function () use ($newInvoice, $targetFiscalYearId) {
-            // The target year uses one numbering sequence for every type; never create a duplicate or out-of-order number.
-            app(InvoiceNumberService::class)->lockAndAssertNoConflicts($newInvoice->number, $newInvoice->date, null, $targetFiscalYearId);
+            // The target year uses one numbering sequence for every type; pick a number that keeps it chronological.
+            $numbers = app(InvoiceNumberService::class);
+            InvoiceService::lockExternalReferenceScope($targetFiscalYearId);
+            $number = $numbers->nextNumberFor($newInvoice->date, $targetFiscalYearId);
+            if ($number === null) {
+                throw ValidationException::withMessages(['invoice_number' => __('No invoice number is available for the date :date in the target fiscal year without breaking chronological numbering.', ['date' => formatDate($newInvoice->date)])]);
+            }
+            $newInvoice->number = $number;
+            $numbers->lockAndAssertNoConflicts($number, $newInvoice->date, null, $targetFiscalYearId);
             $newInvoice->save();
         });
 
@@ -391,13 +406,6 @@ class FiscalYearTransferService
     private static function _nextDocumentNumber(int $targetFiscalYearId): int
     {
         $maxNumber = Document::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $targetFiscalYearId)->max('number');
-
-        return ((int) floor((float) ($maxNumber ?? 0))) + 1;
-    }
-
-    private static function _nextInvoiceNumber(int $targetFiscalYearId): int
-    {
-        $maxNumber = Invoice::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $targetFiscalYearId)->max('number');
 
         return ((int) floor((float) ($maxNumber ?? 0))) + 1;
     }
