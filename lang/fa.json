@@ -3697,9 +3697,6 @@
     "View product details": "مشاهده جزئیات کالاها",
     "net margin": "حاشیه سود خالص",
     "percentage points": "واحد درصد",
-    "Sort invoice numbers": "مرتب‌سازی شماره فاکتورها",
-    "Sort all invoice numbers in the active fiscal year? Existing printed invoice numbers will change.": "شماره همه فاکتورهای سال مالی فعال مرتب شود؟ شماره فاکتورهای چاپ‌شده تغییر خواهد کرد.",
-    "Invoice numbers sorted successfully.": "شماره فاکتورها با موفقیت مرتب شد.",
     "Select valid entries from this document.": "ردیف‌های معتبر همین سند را انتخاب کنید.",
     "Could not copy document attachments.": "کپی پیوست‌های سند انجام نشد.",
     "Select all entries": "انتخاب همه ردیف‌ها",
@@ -3772,5 +3769,13 @@
     "Paid leave balance pending confirmation": "مانده مرخصی با حقوق در انتظار تأیید",
     "Enter the verified remaining balance after removing any prepaid leave, before posting new attendance.": "پیش از ثبت کارکرد جدید، مانده تأییدشده مرخصی با حقوق را پس از کسر پیش‌پرداخت وارد کنید.",
     "This employee no longer has a prepaid leave balance to reconcile.": "مانده پیش‌پرداخت مرخصی با حقوق این کارمند قبلاً تعیین تکلیف شده است.",
-    "An invoice with this external reference ID already exists in the selected fiscal year.": "فاکتوری با این شناسه مرجع خارجی در سال مالی انتخاب‌شده قبلاً ثبت شده است."
+    "An invoice with this external reference ID already exists in the selected fiscal year.": "فاکتوری با این شناسه مرجع خارجی در سال مالی انتخاب‌شده قبلاً ثبت شده است.",
+    "Invoice number :number is already used by an invoice dated :date.": "شماره فاکتور :number قبلاً برای فاکتوری با تاریخ :date استفاده شده است.",
+    "Invoice :number dated :date conflicts with this number and date. A later date must have a higher number.": "فاکتور شماره :number با تاریخ :date با این شماره و تاریخ تداخل دارد. تاریخ دیرتر باید شماره بزرگ‌تری داشته باشد.",
+    "Numbering conflicts": "تداخل در شماره‌گذاری",
+    "Affected invoices": "فاکتورهای دارای تداخل",
+    "Duplicate number": "شماره تکراری",
+    "Out of order by date": "ترتیب شماره و تاریخ نادرست",
+    "All types": "همه انواع",
+    "No numbering conflicts found.": "تداخلی در شماره‌گذاری یافت نشد."
 }

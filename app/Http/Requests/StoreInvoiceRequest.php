@@ -7,6 +7,7 @@ use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\Service;
 use App\Models\WarehouseProductStock;
+use App\Services\InvoiceNumberService;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -349,12 +350,18 @@ class StoreInvoiceRequest extends FormRequest
             'invoice_number' => [
                 'required',
                 'integer',
-                Rule::unique('invoices', 'number')
-                    ->where(function ($query) {
-                        return $query->where('fiscal_year_id', getActiveFiscalYear())
-                            ->where('invoice_type', InvoiceType::fromName($this->effectiveInvoiceType()));
-                    })
-                    ->ignore($isEditing ? $invoice->id : null),
+                function ($attribute, $value, $fail) use ($isEditing, $invoice) {
+                    $date = $this->input('date');
+                    if (! is_numeric($value) || ! is_string($date) || strtotime($date) === false) {
+                        return;
+                    }
+
+                    $service = app(InvoiceNumberService::class);
+                    $conflicts = $service->conflictsFor($value, $date, $isEditing ? $invoice->id : null);
+                    if ($conflicts->isNotEmpty()) {
+                        $fail($service->conflictMessage($conflicts));
+                    }
+                },
             ],
 
             'subtractions' => $isBeginningInventory ? 'nullable|in:0' : 'nullable|numeric|min:0|max:'.self::DECIMAL_10_2_MAX,

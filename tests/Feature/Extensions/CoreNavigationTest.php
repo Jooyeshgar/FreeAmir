@@ -24,8 +24,8 @@ class CoreNavigationTest extends TestCase
         $nodes = $this->flatten($tree);
         $coreNodes = array_values(array_filter($nodes, static fn (MenuItem $item): bool => str_starts_with($item->id, 'core.')));
 
-        self::assertCount(84, $coreNodes);
-        self::assertCount(70, array_filter($coreNodes, static fn (MenuItem $item): bool => $item->route !== null));
+        self::assertCount(85, $coreNodes);
+        self::assertCount(71, array_filter($coreNodes, static fn (MenuItem $item): bool => $item->route !== null));
         self::assertCount(14, array_filter($coreNodes, static fn (MenuItem $item): bool => $item->route === null));
         foreach ($coreNodes as $item) {
             if ($item->route !== null) {
@@ -39,7 +39,7 @@ class CoreNavigationTest extends TestCase
 
         $variants = array_values(array_filter($nodes, static fn (MenuItem $item): bool => $item->route === 'invoices.index'));
         self::assertSame([
-            ['invoice_type' => 'sell'], ['invoice_type' => 'return_sell'], ['invoice_type' => 'void'],
+            [], ['invoice_type' => 'sell'], ['invoice_type' => 'return_sell'], ['invoice_type' => 'void'],
             ['invoice_type' => 'buy'], ['invoice_type' => 'buy', 'service_buy' => '1'],
             ['invoice_type' => 'return_buy'], ['invoice_type' => 'return_buy', 'service_buy' => '1'],
             ['invoice_type' => 'beginning_inventory'],

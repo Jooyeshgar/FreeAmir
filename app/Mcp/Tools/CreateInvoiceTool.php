@@ -2,7 +2,6 @@
 
 namespace App\Mcp\Tools;
 
-use App\Enums\InvoiceType;
 use App\Extensions\InvoiceExtensionRegistry;
 use App\Http\Requests\StoreInvoiceRequest;
 use App\Mcp\Support\ContextResolver;
@@ -47,7 +46,7 @@ class CreateInvoiceTool extends AccountingTool
             'invoice_type' => $schema->string()->enum(['buy', 'sell'])->required(),
             'customer_id' => $schema->integer()->min(1)->required(),
             'warehouse_id' => $schema->integer()->min(1)->description('Optional warehouse ID. Defaults to the first warehouse in the selected fiscal year.'),
-            'number' => $schema->integer()->min(1)->description('Optional invoice number. Defaults to the next number for this invoice type in the selected fiscal year.'),
+            'number' => $schema->integer()->min(1)->description('Optional invoice number. Defaults to the next number in the single numbering sequence of the fiscal year shared by all invoice types. A lower date must have a lower number.'),
             'external_reference_id' => $schema->string()->max(100)->description('Optional external reference ID to prevent duplicate invoices for external orders (recommended format: "<source>:<order_code>", e.g. "fnirsi:FN-180625").'),
             'date' => $schema->string()->description('Gregorian date in YYYY-MM-DD format, regardless of locale. Defaults to today if it falls within the selected fiscal year.'),
             'title' => $schema->string()->max(255),
@@ -132,9 +131,7 @@ class CreateInvoiceTool extends AccountingTool
         }
 
         $invoiceNumber = $arguments['number'] ?? (
-            (Invoice::where('fiscal_year_id', $yearId)
-                ->where('invoice_type', InvoiceType::fromName($arguments['invoice_type']))
-                ->max('number') ?? 0) + 1
+            (Invoice::where('fiscal_year_id', $yearId)->max('number') ?? 0) + 1
         );
 
         $items = collect($arguments['items']);

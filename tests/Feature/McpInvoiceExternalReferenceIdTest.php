@@ -153,7 +153,7 @@ class McpInvoiceExternalReferenceIdTest extends TestCase
         config(['active-fiscal-year-id' => $this->year->id]);
         $invoiceService = app(InvoiceService::class);
         $invoiceService->changeInvoiceStatus($replacementInvoice, 'approved');
-        $invoiceService->voidInvoice($replacementInvoice->fresh(['items.itemable']), $this->user, '2026-05-02', 99);
+        $invoiceService->voidInvoice($replacementInvoice->fresh(['items.itemable']), $this->user, '2026-05-01', 99);
         config(['active-fiscal-year-id' => null]);
 
         // Original sell invoice stays SELL, yet its effective void releases the external_reference_id

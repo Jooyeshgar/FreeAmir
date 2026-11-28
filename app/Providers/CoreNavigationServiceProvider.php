@@ -45,6 +45,7 @@ class CoreNavigationServiceProvider extends ServiceProvider
             'ancillary-costs.index', 'invoices.moadian-histories.index',
         ]);
         $link('core.invoices.dashboard', 'Invoice Dashboard', 'invoices.dashboard', 'core.invoices', 100, ['invoices.dashboard']);
+        $link('core.invoices.all', 'All Invoices', 'invoices.index', 'core.invoices', 150, ['invoices.index']);
         $group('core.invoices.sales', 'Sales', 'core.invoices', 200, ['invoices.index', 'invoices.moadian-histories.index']);
         $link('core.invoices.sales.sell', 'Sell List', 'invoices.index', 'core.invoices.sales', 100, ['invoices.index'], ['invoice_type' => 'sell']);
         $link('core.invoices.sales.return-sell', 'Return Sell List', 'invoices.index', 'core.invoices.sales', 200, ['invoices.index'], ['invoice_type' => 'return_sell']);

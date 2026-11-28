@@ -28,7 +28,7 @@ Permission migrations no longer create or assign new permissions. For an existin
 
 - Check for `cheques.*`, `chequebooks.*`, and `budgets.*` in older installations; migrations no longer add them.
 - A resource wildcard such as `products.*` covers new operations such as `products.recalculate-quantity`; no separate exact record is needed.
-- For a restricted role, create the exact operation, for example `invoices.dashboard`, `invoices.bookmark`, or `invoices.sort-numbers`.
+- For a restricted role, create the exact operation, for example `invoices.dashboard` or `invoices.bookmark`.
 - Add `invoices.payments.update` for payment editing. `invoices.payments.store` only grants recording payments.
 - Add `companies.closing-wizard.recalculate` for the closing workflow and `companies.test-moadian-connection` for testing the Moadian connection when a restricted role needs them.
 - Review `reports.inventory-turnover` and `reports.inventory-turnover.pdf` for inventory reports. `reports.*` covers both.

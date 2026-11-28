@@ -28,7 +28,7 @@
                 @break
 
                 @default
-                    <x-show-messages message="{{ __('Please select invoice type to show invoices') }}" type="info" />
+                    @include('invoices.index.all')
             @endswitch
         </div>
     </div>

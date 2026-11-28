@@ -22,7 +22,6 @@ use App\Models\Subject;
 use App\Models\Warehouse;
 use App\Services\AncillaryCostService;
 use App\Services\ChequeService;
-use App\Services\FiscalYearMutationGuard;
 use App\Services\FiscalYearTransferService;
 use App\Services\GroupActionService;
 use App\Services\InvoiceNumberService;
@@ -79,6 +78,12 @@ class InvoiceController extends Controller
 
         $builder->when($status !== null, fn ($invoice) => $invoice->where('status', $status));
 
+        if (in_array($request->query('sort'), ['number', 'date'], true)) {
+            $direction = $request->query('direction') === 'asc' ? 'asc' : 'desc';
+            $secondary = $request->query('sort') === 'number' ? 'date' : 'number';
+            $builder->reorder()->orderBy($request->query('sort'), $direction)->orderBy($secondary, $direction)->orderBy('id', $direction);
+        }
+
         $invoices = $builder->paginate(25);
 
         $statusCounts = $statsBuilder->reorder()->toBase()->select('status', DB::raw('count(*) as total'))->groupBy('status')->pluck('total', 'status');
@@ -101,7 +106,9 @@ class InvoiceController extends Controller
         $canCreateBeginningInventory = $invoiceType === InvoiceType::BEGINNING_INVENTORY
             && Warehouse::whereNotIn('id', Invoice::where('invoice_type', InvoiceType::BEGINNING_INVENTORY)->whereNotNull('warehouse_id')->select('warehouse_id'))->exists();
 
-        return view('invoices.index', ['invoices' => $invoices, 'statusCounts' => $statusCounts, 'service_buy' => $isServiceBuy, 'canCreateBeginningInventory' => $canCreateBeginningInventory]);
+        $numberingConflicts = $invoiceType === null ? app(InvoiceNumberService::class)->existingConflicts() : collect();
+
+        return view('invoices.index', ['invoices' => $invoices, 'statusCounts' => $statusCounts, 'service_buy' => $isServiceBuy, 'canCreateBeginningInventory' => $canCreateBeginningInventory, 'numberingConflicts' => $numberingConflicts]);
     }
 
     public function export(Request $request, ReportExportService $reportExportService): StreamedResponse
@@ -270,8 +277,7 @@ class InvoiceController extends Controller
             }
         }
 
-        $numberType = InvoiceType::fromName($invoice_type);
-        $previousInvoiceNumber = floor(Invoice::where('invoice_type', $numberType)->max('number') ?? 0);
+        $previousInvoiceNumber = floor(Invoice::max('number') ?? 0);
 
         $warehouses = Warehouse::get();
 
@@ -990,7 +996,7 @@ class InvoiceController extends Controller
     public function showVoidForm(Invoice $invoice)
     {
         $voidInvoiceDecision = $this->invoiceService->validateVoidingInvoice($invoice);
-        $previousInvoiceNumber = floor(Invoice::where('invoice_type', InvoiceType::VOID)->max('number') ?? 0);
+        $previousInvoiceNumber = floor(Invoice::max('number') ?? 0);
 
         if ($voidInvoiceDecision->hasErrors()) {
             return redirect()->route('invoices.show', $invoice)->with('error', $voidInvoiceDecision->messages->pluck('text')->all());
@@ -1019,18 +1025,16 @@ class InvoiceController extends Controller
             return redirect()->back()->with('error', $voidInvoiceDecision->messages->pluck('text')->all());
         }
 
+        $numberService = app(InvoiceNumberService::class);
+        $conflicts = $numberService->conflictsFor($number, $date);
+        if ($conflicts->isNotEmpty()) {
+            return redirect()->back()->withInput()->with('error', $numberService->conflictMessage($conflicts));
+        }
+
         $voidInvoice = $this->invoiceService->voidInvoice($invoice, auth()->user(), $date, $number);
 
         [$msgType, $msg] = $this->invoiceMessage($voidInvoice, 'voided', true);
 
         return redirect()->route('invoices.show', $invoice)->with($msgType, $msg);
-    }
-
-    public function sortNumbers(InvoiceNumberService $invoiceNumberService): RedirectResponse
-    {
-        app(FiscalYearMutationGuard::class)->ensureOpen();
-        $invoiceNumberService->sort();
-
-        return redirect()->back()->with('success', __('Invoice numbers sorted successfully.'));
     }
 }
