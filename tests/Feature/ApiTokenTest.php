@@ -182,4 +182,44 @@ class ApiTokenTest extends TestCase
             ->assertSee('role="tooltip" x-show="warningOpen" style="display: none"', false)
             ->assertSee($warning);
     }
+
+    public function test_mcp_edit_abilities_can_be_selected_only_with_user_permission(): void
+    {
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $user = User::factory()->create();
+        foreach (['api-tokens.*', 'api.access', 'invoices.edit', 'products.edit'] as $permission) {
+            $user->givePermissionTo(Permission::findOrCreate($permission, 'web'));
+        }
+
+        $this->actingAs($user)->get(route('api-tokens.create'))->assertOk()
+            ->assertSee('invoices.edit')->assertSee('products.edit');
+        $this->post(route('api-tokens.store'), [
+            'name' => 'MCP editor', 'permissions' => ['invoices.edit', 'products.edit'],
+        ])->assertRedirect(route('api-tokens.index'));
+        self::assertSame(['invoices.edit', 'products.edit'], $user->tokens()->first()->abilities);
+
+        $user->revokePermissionTo('products.edit');
+        $this->post(route('api-tokens.store'), [
+            'name' => 'Forbidden editor', 'permissions' => ['products.edit'],
+        ])->assertSessionHasErrors('permissions.0');
+    }
+
+    public function test_full_access_option_stores_a_single_wildcard_ability(): void
+    {
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $user = User::factory()->create();
+        foreach (['api-tokens.*', 'api.access', 'documents.show'] as $permission) {
+            $user->givePermissionTo(Permission::findOrCreate($permission, 'web'));
+        }
+
+        $this->actingAs($user)->get(route('api-tokens.create'))->assertOk()
+            ->assertSee(__('Full access'))
+            ->assertSee('id="permissions-full-access"', false)
+            ->assertSee('value="*"', false);
+
+        $this->post(route('api-tokens.store'), [
+            'name' => 'Everything', 'permissions' => ['*', 'documents.show'],
+        ])->assertRedirect(route('api-tokens.index'));
+        self::assertSame(['*'], $user->tokens()->first()->abilities);
+    }
 }

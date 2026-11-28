@@ -37,6 +37,7 @@ MCP server security is built upon Laravel Sanctum personal access tokens and Spa
 2. **Two-Layer Authorization (User Permissions & Token Abilities):** Tools are exposed and executed only if:
    - The token owner holds the underlying permission.
    - The token was granted the matching ability at creation time.
+   - The **Full access** option on the token form stores a single `*` ability that matches every permission, including `invoices.approve` and abilities added later. Such a token still never exceeds the owner's current permissions. `update_invoice` and `update_product` need `invoices.edit` and `products.edit`, or full access.
 3. **Operation Hints:** Reports use `readOnlyHint: true`. Creation tools use `readOnlyHint: false`, `destructiveHint: false` and require explicit access to an open fiscal year.
 4. **Fiscal-Year Scoping:** Tool calls temporarily activate the requested fiscal year and company context, safely restoring the previous state in a `finally` block. If accessible fiscal years span multiple companies, reports require an explicit `fiscal_year_id` or a `year` that identifies a single company. For a single company, omission uses its active authorized fiscal year or the latest assigned year. On a fiscal-year selection error, `get_current_context` returns `isError: true` and JSON text containing `message` and `available_fiscal_years`; no report or active fiscal year is selected. Use the returned company and fiscal-year IDs to ask the user which one they intended.
 
