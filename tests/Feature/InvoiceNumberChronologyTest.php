@@ -11,8 +11,8 @@ use App\Models\Invoice;
 use App\Models\User;
 use App\Services\InvoiceNumberService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
@@ -119,9 +119,30 @@ class InvoiceNumberChronologyTest extends TestCase
         $this->assertCount(0, app(InvoiceNumberService::class)->existingConflicts());
     }
 
-    public function test_sort_numbers_action_is_removed(): void
+    public function test_sort_route_renumbers_one_chronological_sequence_across_types(): void
     {
-        $this->assertFalse(Route::has('invoices.sort-numbers'));
+        $this->user->givePermissionTo(Permission::findOrCreate('invoices.sort-numbers'));
+        $late = $this->invoice(InvoiceType::SELL, 1, '2026-11-30');
+        $early = $this->invoice(InvoiceType::BUY, 1, '2026-11-20');
+        $middle = $this->invoice(InvoiceType::RETURN_SELL, 7, '2026-11-25');
+
+        $this->actingAs($this->user)->post(route('invoices.sort-numbers'))->assertRedirect();
+
+        $this->assertEquals([1, 2, 3], [$early->refresh()->number, $middle->refresh()->number, $late->refresh()->number]);
+        $this->assertCount(0, app(InvoiceNumberService::class)->existingConflicts());
+    }
+
+    public function test_sort_route_requires_permission_and_rejects_closed_year(): void
+    {
+        Permission::findOrCreate('invoices.sort-numbers');
+        Permission::findOrCreate('invoices.*');
+        $invoice = $this->invoice(InvoiceType::SELL, 25, '2026-11-24');
+        $this->actingAs($this->user)->post(route('invoices.sort-numbers'))->assertForbidden();
+
+        $this->year->update(['closed_at' => now()]);
+        $this->expectException(ValidationException::class);
+        app(InvoiceNumberService::class)->sort();
+        $this->assertEquals(25, $invoice->refresh()->number);
     }
 
     public function test_all_invoices_list_shows_every_type_and_status_with_conflict_count(): void

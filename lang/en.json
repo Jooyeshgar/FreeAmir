@@ -3784,5 +3784,8 @@
     "Duplicate number": "Duplicate number",
     "Out of order by date": "Out of order by date",
     "All types": "All types",
-    "No numbering conflicts found.": "No numbering conflicts found."
+    "No numbering conflicts found.": "No numbering conflicts found.",
+    "Sort invoice numbers": "Sort invoice numbers",
+    "Sort all invoice numbers in the active fiscal year? Existing printed invoice numbers will change.": "Sort all invoice numbers in the active fiscal year? Existing printed invoice numbers will change.",
+    "Invoice numbers sorted successfully.": "Invoice numbers sorted successfully."
 }
