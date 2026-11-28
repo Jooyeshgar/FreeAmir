@@ -815,6 +815,26 @@ class FiscalYearTransferTest extends TestCase
         $this->assertDatabaseHas('subjects', ['fiscal_year_id' => $this->target->id, 'code' => '900001', 'name' => 'Consulting']);
     }
 
+    public function test_invoice_transfer_reuses_target_product_with_same_external_sku(): void
+    {
+        $customer = $this->makeCustomer($this->source, 'ACME');
+        $this->makeCustomer($this->target, 'ACME');
+        $product = $this->makeProduct($this->source, 'Widget', 'P1');
+        $product->update(['external_sku' => 'FNIRSI-W']);
+        $targetProduct = $this->makeProduct($this->target, 'Renamed', 'P9');
+        $targetProduct->update(['external_sku' => 'FNIRSI-W']);
+
+        $invoice = $this->makeInvoice($this->source, ['customer_id' => $customer->id, 'amount' => 100]);
+        $this->addProductItem($invoice, $product);
+
+        $result = FiscalYearTransferService::transferInvoice($invoice, $this->target->id, $this->user, true);
+
+        $this->assertTrue($result['success'], json_encode($result));
+        $this->assertSame(1, Product::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->where('external_sku', 'FNIRSI-W')->count());
+        $newInvoice = $this->targetInvoices()->first();
+        $this->assertSame($targetProduct->id, InvoiceItem::where('invoice_id', $newInvoice->id)->first()->itemable_id);
+    }
+
     public function test_invoice_transfer_fails_when_customer_missing_in_target_and_rolls_back(): void
     {
         $customer = $this->makeCustomer($this->source, 'ACME');
