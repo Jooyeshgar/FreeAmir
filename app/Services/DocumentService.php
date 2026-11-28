@@ -44,11 +44,11 @@ class DocumentService
 
             $document = Document::create($data);
             self::syncDocumentable($document, $data['documentable'] ?? null);
-            if (! empty($data['approved_at']) && ! empty($data['approver_id'])) {
-                self::approveDocument($user, $document);
-            }
             foreach ($transactions as $transactionData) {
                 DocumentService::createTransaction($document, $transactionData);
+            }
+            if (! empty($data['approved_at']) && ! empty($data['approver_id'])) {
+                self::approveDocument($user, $document);
             }
         });
 
@@ -176,26 +176,30 @@ class DocumentService
         $document = Document::findOrFail($documentId);
         app(FiscalYearMutationGuard::class)->ensureOpen($document);
 
-        DB::beginTransaction();
-
-        $existingTransactionIds = [];
-        foreach ($transactionsData as $transactionData) {
-            $transaction = Transaction::updateOrCreate(
-                ['id' => $transactionData['transaction_id'] ?? null],
-                [
-                    'document_id' => $documentId,
-                    'subject_id' => $transactionData['subject_id'],
-                    'desc' => $transactionData['desc'],
-                    'value' => floatval($transactionData['value']),
-                ]
+        DB::transaction(function () use ($document, $documentId, $transactionsData) {
+            $existingTransactionIds = [];
+            foreach ($transactionsData as $transactionData) {
+                $transaction = Transaction::updateOrCreate(
+                    ['id' => $transactionData['transaction_id'] ?? null],
+                    [
+                        'document_id' => $documentId,
+                        'subject_id' => $transactionData['subject_id'],
+                        'desc' => $transactionData['desc'],
+                        'value' => floatval($transactionData['value']),
+                    ]
+                );
+                $existingTransactionIds[] = $transaction->id;
+            }
+            app(ActivityLogService::class)->deleteModels(
+                Transaction::where('document_id', $documentId)->whereNotIn('id', $existingTransactionIds)
             );
-            $existingTransactionIds[] = $transaction->id;
-        }
-        app(ActivityLogService::class)->deleteModels(
-            Transaction::where('document_id', $documentId)->whereNotIn('id', $existingTransactionIds)
-        );
 
-        DB::commit();
+            if ($document->approved_at && $document->transactions()->sum('value') != 0) {
+                throw ValidationException::withMessages([
+                    'transactions' => [__('The sum of transactions must be zero.')],
+                ]);
+            }
+        });
     }
 
     public static function deleteDocument(int $documentId): void

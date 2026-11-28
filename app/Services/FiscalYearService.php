@@ -76,6 +76,7 @@ use App\Models\WorkSiteContract;
 use Cookie;
 use Exception;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -266,6 +267,7 @@ class FiscalYearService
      */
     public static function importData(array $importData, array $newFiscalYearData): FiscalYear
     {
+        $importData = self::normalizeImportedDates($importData);
         $sectionsToImport = array_intersect(
             array_keys(self::getAvailableSections()),
             array_keys($importData)
@@ -750,6 +752,61 @@ class FiscalYearService
                 Model::reguard();
             }
         });
+    }
+
+    /**
+     * Restore exported UTC date and timestamp casts to the application timezone.
+     *
+     * @return array<string, array>
+     */
+    private static function normalizeImportedDates(array $data): array
+    {
+        // Eloquent exports date casts as UTC ISO strings. Convert back to the
+        // application timezone before a date-only database column truncates them.
+        $models = [
+            Subject::class, MonthlyBudget::class, Config::class, Bank::class, BankAccount::class,
+            CustomerGroup::class, Customer::class, Comment::class, ProductGroup::class, Product::class,
+            ProductWebsite::class, ServiceGroup::class, Service::class, Warehouse::class,
+            WarehouseProductStock::class, WarehouseTransfer::class, Document::class, Transaction::class,
+            DocumentFile::class, Chequebook::class, Cheque::class, ChequeHistory::class, Invoice::class,
+            InvoiceItem::class, AncillaryCost::class, AncillaryCostItem::class, Payment::class,
+            Employee::class, OrgChart::class, OrganizationUnit::class, WorkSite::class, WorkSiteContract::class,
+            WorkShift::class, SalaryDecree::class, MonthlyAttendance::class, AttendanceLog::class,
+            Payroll::class, PayrollItem::class, PayrollElement::class, PayrollStatusHistory::class,
+            PersonnelRequest::class, DecreeBenefit::class, PublicHoliday::class, TaxSlab::class,
+        ];
+
+        foreach ($models as $class) {
+            $model = new $class;
+            $table = $model->getTable();
+            if (empty($data[$table]) || ! is_array($data[$table])) {
+                continue;
+            }
+            $dateFields = array_fill_keys($model->getDates(), 'datetime');
+            foreach ($model->getCasts() as $field => $cast) {
+                $type = explode(':', $cast)[0];
+                if (in_array($type, ['date', 'datetime', 'immutable_date', 'immutable_datetime'], true)) {
+                    $dateFields[$field] = $type;
+                }
+            }
+            foreach ($data[$table] as &$row) {
+                if (! is_array($row)) {
+                    continue;
+                }
+                foreach ($dateFields as $field => $type) {
+                    $value = $row[$field] ?? null;
+                    if (! is_string($value) || ! preg_match('/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:?\d{2})$/i', $value)) {
+                        continue;
+                    }
+                    $row[$field] = Carbon::parse($value)->setTimezone(config('app.timezone'))->format(
+                        in_array($type, ['date', 'immutable_date'], true) ? 'Y-m-d' : 'Y-m-d H:i:s'
+                    );
+                }
+            }
+            unset($row);
+        }
+
+        return $data;
     }
 
     /**

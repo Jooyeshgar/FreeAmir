@@ -9,6 +9,8 @@ use App\Models\FiscalYear;
 use App\Services\FiscalYearMutationGuard;
 use App\Services\SubjectService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class BankAccountController extends Controller
 {
@@ -34,17 +36,19 @@ class BankAccountController extends Controller
 
         $validatedData = $request->validated();
 
-        $bankAccount = Models\BankAccount::create($validatedData);
+        DB::transaction(function () use ($validatedData) {
+            $bankAccount = Models\BankAccount::create($validatedData);
 
-        $bankSubject = $this->subjectService->createSubject([
-            'name' => $bankAccount->name,
-            'parent_id' => config('amir.bank'),
-        ]);
+            $bankSubject = $this->subjectService->createSubject([
+                'name' => $bankAccount->name,
+                'parent_id' => config('amir.bank'),
+            ]);
 
-        $bankAccount->subject()->save($bankSubject);
+            $bankAccount->subject()->save($bankSubject);
 
-        $bankAccount->subject_id = $bankSubject->id;
-        $bankAccount->saveQuietly();
+            $bankAccount->subject_id = $bankSubject->id;
+            $bankAccount->saveQuietly();
+        });
 
         return redirect()->route('bank-accounts.index')->with('success', __('Bank Account created successfully.'));
     }
@@ -69,9 +73,10 @@ class BankAccountController extends Controller
 
         $validatedData = $request->validated();
 
-        $bankAccount->update($validatedData);
-
-        $bankAccount->subject->update(['name' => $validatedData['name']]);
+        DB::transaction(function () use ($bankAccount, $validatedData) {
+            $bankAccount->update($validatedData);
+            $bankAccount->subject->update(['name' => $validatedData['name']]);
+        });
 
         return redirect()->route('bank-accounts.index')->with('success', __('Bank Account updated successfully.'));
     }
@@ -80,8 +85,22 @@ class BankAccountController extends Controller
     {
         app(FiscalYearMutationGuard::class)->ensureOpen($bankAccount);
 
-        $bankAccount->delete();
-        $bankAccount->subject->delete();
+        DB::transaction(function () use ($bankAccount) {
+            Models\BankAccount::whereKey($bankAccount->id)->lockForUpdate()->firstOrFail();
+            $subject = $bankAccount->subject;
+
+            if ($bankAccount->chequebooks()->exists()
+                || Models\Cheque::withoutGlobalScopes()->where('bank_account_id', $bankAccount->id)->exists()
+                || ($subject && ($subject->transactions()->exists() || $subject->children()->exists()
+                    || Models\Payment::where('settlement_subject_id', $subject->id)->exists()))) {
+                throw ValidationException::withMessages([
+                    'bank_account' => __('Cannot delete a bank account with related records.'),
+                ]);
+            }
+
+            $bankAccount->delete();
+            $subject?->delete();
+        });
 
         return redirect()->route('bank-accounts.index')->with('success', __('Bank Account deleted successfully.'));
     }

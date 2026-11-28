@@ -97,6 +97,11 @@ abstract class AccountingTool extends Tool
         return Response::error($message);
     }
 
+    protected function formatAmount(int|float|string $amount): string
+    {
+        return rtrim(rtrim(number_format((float) $amount, 2, '.', ','), '0'), '.');
+    }
+
     /** Run the web form's normalization, rules and after-validation checks in the selected fiscal context. */
     protected function validateFormRequest(string $class, array $data): FormRequest
     {

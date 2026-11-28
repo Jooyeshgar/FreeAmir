@@ -32,26 +32,24 @@ class InventoryTurnoverService
             ->when($filters['warehouse_id'], fn ($query, int $warehouseId) => $query->whereHas('warehouseStocks', fn ($stockQuery) => $stockQuery->where('warehouse_id', $warehouseId)))
             ->with('inventorySubject:id,code,name')
             ->orderBy('code')
-            ->get(['id', 'code', 'name', 'inventory_subject_id', 'average_cost']);
+            ->get(['id', 'code', 'name', 'inventory_subject_id']);
 
         $productIds = $products->pluck('id')->all();
         $subjectIds = $products->pluck('inventory_subject_id')->all();
         $quantities = $this->movementQuantities($productIds, $filters);
-        $averageCosts = $this->averageCosts($products, $filters);
-        $openingBalances = $this->invoiceMovementBalances(
-            $subjectIds,
-            [InvoiceType::BEGINNING_INVENTORY],
-            null,
-            $filters['start_date'],
-            $filters['warehouse_id']
-        );
+        $balances = $this->postedMovementBalances($subjectIds, $filters);
+        $transfers = $this->warehouseTransferMovements($productIds, $filters);
 
-        $rows = $products->map(function (Product $product) use ($quantities, $averageCosts, $openingBalances): array {
+        $rows = $products->map(function (Product $product) use ($quantities, $balances, $transfers): array {
             $quantity = $quantities[$product->id] ?? ['opening' => 0.0, 'imported' => 0.0, 'exported' => 0.0];
-            $averageCost = (float) ($averageCosts[$product->id] ?? 0);
-            $openingBalance = abs((float) ($openingBalances[$product->inventory_subject_id] ?? 0));
-            $importedBalance = $quantity['imported'] * $averageCost;
-            $exportedBalance = $quantity['exported'] * $averageCost;
+            $balance = $balances[$product->inventory_subject_id] ?? ['opening' => 0.0, 'imported' => 0.0, 'exported' => 0.0];
+            foreach (['opening', 'imported', 'exported'] as $bucket) {
+                $quantity[$bucket] += $transfers[$product->id][$bucket.'_quantity'] ?? 0;
+                $balance[$bucket] += $transfers[$product->id][$bucket.'_balance'] ?? 0;
+            }
+            $openingBalance = $balance['opening'];
+            $importedBalance = $balance['imported'];
+            $exportedBalance = $balance['exported'];
 
             return [
                 'product_id' => $product->id,
@@ -152,35 +150,7 @@ class InventoryTurnoverService
             'end_date' => $selectedEndDate,
             'warehouse_id' => ! empty($rawFilters['warehouse_id']) ? (int) $rawFilters['warehouse_id'] : null,
             'product_group' => ! empty($rawFilters['product_group']) ? (int) $rawFilters['product_group'] : null,
-            'is_interval' => $selectedStartDate !== $fiscalStartDate || $selectedEndDate !== $fiscalEndDate,
         ];
-    }
-
-    private function averageCosts(Collection $products, array $filters): Collection
-    {
-        if (! $filters['is_interval']) {
-            return $products->pluck('average_cost', 'id');
-        }
-
-        $productIds = $products->pluck('id')->all();
-        if ($productIds === []) {
-            return collect();
-        }
-
-        return DB::table('invoice_items')
-            ->join('invoices', 'invoices.id', '=', 'invoice_items.invoice_id')
-            ->where('invoice_items.itemable_type', Product::class)
-            ->whereIn('invoice_items.itemable_id', $productIds)
-            ->where('invoices.fiscal_year_id', getActiveFiscalYear())
-            ->whereIn('invoices.status', $this->enumValues(InvoiceStatus::approvedOrSettled()))
-            ->whereBetween('invoices.date', [$filters['start_date'], $filters['end_date']])
-            ->when($filters['warehouse_id'], fn (Builder $query, int $warehouseId) => $query->where('invoices.warehouse_id', $warehouseId))
-            ->orderByDesc('invoices.date')
-            ->orderByDesc('invoices.id')
-            ->orderByDesc('invoice_items.id')
-            ->get(['invoice_items.itemable_id as product_id', 'invoice_items.cog_after'])
-            ->unique('product_id')
-            ->pluck('cog_after', 'product_id');
     }
 
     private function movementQuantities(array $productIds, array $filters): Collection
@@ -216,12 +186,16 @@ class InventoryTurnoverService
                 if ($type === InvoiceType::BEGINNING_INVENTORY->value) {
                     if ($date <= $filters['start_date']) {
                         $opening += $quantity;
+                    } else {
+                        $imported += $quantity;
                     }
 
                     continue;
                 }
 
                 if ($date < $filters['start_date']) {
+                    $opening += in_array($type, $imports, true) ? $quantity : -$quantity;
+
                     continue;
                 }
 
@@ -236,25 +210,71 @@ class InventoryTurnoverService
         });
     }
 
-    private function invoiceMovementBalances(array $subjectIds, array $types, ?string $from, ?string $through, ?int $warehouseId = null): Collection
+    private function postedMovementBalances(array $subjectIds, array $filters): Collection
     {
         if ($subjectIds === []) {
             return collect();
         }
 
-        return DB::table('transactions')
+        $date = 'COALESCE(invoices.date, ancillary_costs.date)';
+        $type = 'COALESCE(invoices.invoice_type, cost_invoice.invoice_type)';
+        $warehouse = 'COALESCE(invoices.warehouse_id, cost_invoice.warehouse_id)';
+        $approved = $this->enumValues(InvoiceStatus::approvedOrSettled());
+
+        $movements = DB::table('transactions')
             ->join('documents', 'documents.id', '=', 'transactions.document_id')
-            ->join('invoices', 'invoices.document_id', '=', 'documents.id')
-            ->where('invoices.fiscal_year_id', getActiveFiscalYear())
-            ->whereIn('invoices.status', $this->enumValues(InvoiceStatus::approvedOrSettled()))
-            ->whereIn('invoices.invoice_type', $this->enumValues($types))
+            ->leftJoin('invoices', 'invoices.document_id', '=', 'documents.id')
+            ->leftJoin('ancillary_costs', 'ancillary_costs.document_id', '=', 'documents.id')
+            ->leftJoin('invoices as cost_invoice', 'cost_invoice.id', '=', 'ancillary_costs.invoice_id')
+            ->where('documents.fiscal_year_id', getActiveFiscalYear())
+            ->where(function (Builder $query) use ($approved) {
+                $query->where(fn (Builder $query) => $query->where('invoices.fiscal_year_id', getActiveFiscalYear())->whereIn('invoices.status', $approved))
+                    ->orWhere(fn (Builder $query) => $query->where('ancillary_costs.fiscal_year_id', getActiveFiscalYear())->where('cost_invoice.fiscal_year_id', getActiveFiscalYear())
+                        ->whereIn('ancillary_costs.status', $approved)->whereIn('cost_invoice.status', $approved));
+            })
             ->whereIn('transactions.subject_id', $subjectIds)
-            ->when($warehouseId, fn (Builder $query, int $id) => $query->where('invoices.warehouse_id', $id))
-            ->when($from, fn (Builder $query, string $date) => $query->whereDate('invoices.date', '>=', $date))
-            ->when($through, fn (Builder $query, string $date) => $query->whereDate('invoices.date', '<=', $date))
-            ->groupBy('transactions.subject_id')
-            ->selectRaw('transactions.subject_id, SUM(transactions.value) as balance')
-            ->pluck('balance', 'transactions.subject_id');
+            ->when($filters['warehouse_id'], fn (Builder $query, int $id) => $query->whereRaw($warehouse.' = ?', [$id]))
+            ->whereDate(DB::raw($date), '<=', $filters['end_date'])
+            ->select(['transactions.subject_id', 'transactions.value'])
+            ->selectRaw($date.' as movement_date, '.$type.' as invoice_type')
+            ->get();
+
+        return $movements->groupBy('subject_id')->map(function (Collection $rows) use ($filters): array {
+            $totals = ['opening' => 0.0, 'imported' => 0.0, 'exported' => 0.0];
+            foreach ($rows as $row) {
+                $date = Carbon::parse($row->movement_date)->toDateString();
+                $opening = $date < $filters['start_date'] || ((int) $row->invoice_type === InvoiceType::BEGINNING_INVENTORY->value && $date === $filters['start_date']);
+                $export = in_array((int) $row->invoice_type, $this->enumValues(self::EXPORT_TYPES), true);
+                $bucket = $opening ? 'opening' : ($export ? 'exported' : 'imported');
+                $totals[$bucket] += ($bucket === 'exported' ? 1 : -1) * (float) $row->value;
+            }
+
+            return $totals;
+        });
+    }
+
+    private function warehouseTransferMovements(array $productIds, array $filters): Collection
+    {
+        if (! $filters['warehouse_id'] || $productIds === []) {
+            return collect();
+        }
+
+        return DB::table('warehouse_transfers')->where('fiscal_year_id', getActiveFiscalYear())
+            ->whereIn('product_id', $productIds)->whereDate('transferred_at', '<=', $filters['end_date'])
+            ->where(fn (Builder $query) => $query->where('from_warehouse_id', $filters['warehouse_id'])->orWhere('to_warehouse_id', $filters['warehouse_id']))
+            ->get()->groupBy('product_id')->map(function (Collection $transfers) use ($filters): array {
+                $totals = [];
+                foreach ($transfers as $transfer) {
+                    $incoming = (int) $transfer->to_warehouse_id === (int) $filters['warehouse_id'];
+                    $beforeRange = Carbon::parse($transfer->transferred_at)->toDateString() < $filters['start_date'];
+                    $bucket = $beforeRange ? 'opening' : ($incoming ? 'imported' : 'exported');
+                    $quantity = (float) $transfer->quantity * ($beforeRange && ! $incoming ? -1 : 1);
+                    $totals[$bucket.'_quantity'] = ($totals[$bucket.'_quantity'] ?? 0) + $quantity;
+                    $totals[$bucket.'_balance'] = ($totals[$bucket.'_balance'] ?? 0) + $quantity * (float) $transfer->unit_cost;
+                }
+
+                return $totals;
+            });
     }
 
     private function enumValues(array $cases): array

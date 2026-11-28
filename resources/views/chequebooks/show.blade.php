@@ -67,11 +67,11 @@
                                 </button>
                             </span>
                         @else
-                            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('cheques.create', [
+                            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" :href="route('cheques.create', [
                                 'direction' => \App\Enums\ChequeType::PAYABLE->value,
                                 'bank_account_id' => $chequebook->bank_account_id,
                                 'chequebook_id' => $chequebook->id,
-                            ]) }}" class="btn btn-success btn-sm gap-1.5">
+                            ])" class="btn btn-success btn-sm gap-1.5">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6" />
                                 </svg>
@@ -183,11 +183,11 @@
                     </div>
                     @can('cheques.create')
                         @unless ($isExhausted)
-                            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('cheques.create', [
+                            <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" :href="route('cheques.create', [
                                 'direction' => \App\Enums\ChequeType::PAYABLE->value,
                                 'bank_account_id' => $chequebook->bank_account_id,
                                 'chequebook_id' => $chequebook->id,
-                            ]) }}" class="btn btn-primary btn-xs gap-1">
+                            ])" class="btn btn-primary btn-xs gap-1">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v12m6-6H6" />
                                 </svg>

@@ -599,7 +599,7 @@ class InvoiceController extends Controller
 
     private function invoiceMessage(array $result, string $action = 'created', bool $approved = false)
     {
-        if (! $approved) {
+        if (! $approved || $result['invoice']->status === InvoiceStatus::READY_TO_APPROVE) {
             return [
                 'success',
                 __("Invoice {$action} successfully."),

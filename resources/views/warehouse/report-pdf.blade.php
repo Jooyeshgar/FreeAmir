@@ -49,7 +49,7 @@
                     <td class="col-index">{{ localizeNumber($loop->iteration) }}</td>
                     @foreach ($visible as $col)
                         @if (in_array($col, $numeric, true))
-                            <td class="col-{{ $col }}">{{ formatNumber($row[$col]) }}</td>
+                            <td nowrap="nowrap" class="numeric col-{{ $col }}"><nobr>{{ formatNumber($row[$col]) }}</nobr></td>
                         @elseif ($col === 'code')
                             <td class="col-{{ $col }}"><bdi dir="rtl">{{ localizeNumber($row['code']) }}</bdi></td>
                         @else
@@ -72,7 +72,7 @@
                         @if ($cell['type'] === 'merge')
                             <td class="total-label" colspan="{{ $cell['colspan'] }}">{{ $cell['label'] }}</td>
                         @else
-                            <td class="col-{{ $cell['col'] }}">{{ formatNumber($cell['value']) }}</td>
+                            <td nowrap="nowrap" class="numeric col-{{ $cell['col'] }}"><nobr>{{ formatNumber($cell['value']) }}</nobr></td>
                         @endif
                     @endforeach
                 </tr>

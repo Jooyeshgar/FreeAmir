@@ -874,9 +874,9 @@
                 @if (auth()->user()->can('invoices.payments.store') || auth()->user()->can('invoices.payments.update'))
                     @can('invoices.payments.store')
                         <div class="flex flex-wrap gap-2 mt-4">
-                        @if ($fiscalYearClosed || $fiscalYearClosed || $paymentDecision->hasErrors())
+                        @if ($fiscalYearClosed || $paymentDecision->hasErrors())
                             <span class="tooltip"
-                                data-tip="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : $paymentDecision->messages->pluck('text')->implode(' ') }}">
+                                data-tip="{{ $fiscalYearClosed ? $fiscalYearClosedMessage : ($invoice->status->isPaid() ? __('This invoice is fully paid.') : $paymentDecision->messages->pluck('text')->implode(' ')) }}">
                                 <button
                                     class="btn btn-sm lg:btn-md btn-primary btn-disabled cursor-not-allowed">{{ __('Record Payment') }}</button>
                             </span>

@@ -11,7 +11,7 @@
 
         <div class="text-gray-700 text-xm mb-3">
             {{ __('Date range') }}: {{ $start_date ?: __('All') }} {{ $end_date ? ' to ' . $end_date : '' }} |
-            {{ __('Document range') }}: {{ __('From') }} {{ $start_document_number ?? 3 }}
+            {{ __('Document range') }}: {{ __('From') }} {{ $start_document_number ?? 1 }}
             {{ $end_document_number ? ' to ' . $end_document_number : '' }}
             {{ $include_children ? ' | ' . __('Two levels') : '' }}
         </div>
@@ -21,7 +21,7 @@
                 <tr>
                     <th class="bg-gray-100 border border-gray-300 text-bold" rowspan="2">{{ __('Code') }}</th>
                     <th class="bg-gray-100 border border-gray-300 text-bold" rowspan="2">{{ __('Name') }}</th>
-                    <th class="bg-gray-100 border border-gray-300 text-bold" colspan="2">{{ __('Opening') }}</th>
+                    <th class="bg-gray-100 border border-gray-300 text-bold" colspan="2">{{ $opening_label ?? __('Opening Balance') }}</th>
                     <th class="bg-gray-100 border border-gray-300 text-bold" colspan="2">{{ __('Turnover') }}</th>
                     <th class="bg-gray-100 border border-gray-300 text-bold" colspan="2">{{ __('Balance') }}</th>
                 </tr>
@@ -63,12 +63,12 @@
                 @if ($subjects->count())
                     <tr class="bg-gray-100 border border-gray-300 font-semibold">
                         <td class="border border-gray-300 pr-1 pd-2" colspan="2">{{ __('Total') }}</td>
-                        <td class="border border-gray-300 pr-1 pd-2">{{ formatNumber($subjects->sum(fn($s) => $s->opening < 0 ? abs($s->opening) : 0)) }}</td>
-                        <td class="border border-gray-300 pr-1 pd-2">{{ formatNumber($subjects->sum(fn($s) => $s->opening > 0 ? abs($s->opening) : 0)) }}</td>
-                        <td class="border border-gray-300 pr-1 pd-2">{{ formatNumber($subjects->sum(fn($s) => abs($s->turnover_debit))) }}</td>
-                        <td class="border border-gray-300 pr-1 pd-2">{{ formatNumber($subjects->sum(fn($s) => $s->turnover_credit)) }}</td>
-                        <td class="border border-gray-300 pr-1 pd-2">{{ formatNumber($subjects->sum(fn($s) => $s->balance < 0 ? abs($s->balance) : 0)) }}</td>
-                        <td class="border border-gray-300 pr-1 pd-2">{{ formatNumber($subjects->sum(fn($s) => $s->balance > 0 ? abs($s->balance) : 0)) }}</td>
+                        <td class="border border-gray-300 pr-1 pd-2">{{ formatNumber($totals['opening_debit']) }}</td>
+                        <td class="border border-gray-300 pr-1 pd-2">{{ formatNumber($totals['opening_credit']) }}</td>
+                        <td class="border border-gray-300 pr-1 pd-2">{{ formatNumber($totals['turnover_debit']) }}</td>
+                        <td class="border border-gray-300 pr-1 pd-2">{{ formatNumber($totals['turnover_credit']) }}</td>
+                        <td class="border border-gray-300 pr-1 pd-2">{{ formatNumber($totals['balance_debit']) }}</td>
+                        <td class="border border-gray-300 pr-1 pd-2">{{ formatNumber($totals['balance_credit']) }}</td>
                     </tr>
                 @endif
             </tbody>

@@ -108,13 +108,14 @@ class SubjectService
 
             $transactions = (clone $transactionQuery)
                 ->join('documents', 'documents.id', '=', 'transactions.document_id')
+                ->where('documents.fiscal_year_id', $subject->fiscal_year_id)
                 ->when($approvedOnly, fn ($query) => $query->whereNotNull('documents.approved_at'))
                 ->whereBetween('documents.date', [$startDate, $endDate])
                 ->selectRaw('DATE(documents.date) as date, SUM(transactions.value) as total')
                 ->groupBy('date')
                 ->orderBy('date')
                 ->pluck('total', 'date')
-                ->map(fn ($v) => (int) $v);
+                ->map(fn ($v) => (float) $v == (int) $v ? (int) $v : (float) $v);
 
             foreach ($transactions as $date => $total) {
                 $monthlySum[$month] = ($monthlySum[$month] ?? 0) + $total;
@@ -146,6 +147,7 @@ class SubjectService
         if ($approvedOnly) {
             return (float) Transaction::query()
                 ->join('documents', 'documents.id', '=', 'transactions.document_id')
+                ->where('documents.fiscal_year_id', $subject->fiscal_year_id)
                 ->whereNotNull('documents.approved_at')
                 ->whereIn('transactions.subject_id', self::subjectAndDescendantIds($subject))
                 ->when(! $both, fn ($query) => $query->where('transactions.value', $debit ? '<' : '>', 0))

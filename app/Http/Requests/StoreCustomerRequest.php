@@ -37,7 +37,7 @@ class StoreCustomerRequest extends FormRequest
                 'required',
                 'max:100',
                 'string',
-                'regex:/^[\w\d\s]*$/u',
+                'regex:/^[\w\d\s\x{200C}]*$/u',
                 Rule::unique('customers', 'name')
                     ->where('group_id', $this->input('group_id'))
                     ->ignore($customerId),

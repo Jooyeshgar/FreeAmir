@@ -17,6 +17,7 @@ use App\Models\ProductGroup;
 use App\Models\Subject;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\DocumentService;
 use App\Services\HomeService;
 use App\Services\SubjectService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -305,6 +306,7 @@ class HomeServiceChartTest extends TestCase
     public function test_company_overview_applies_profit_and_loss_date_filters(): void
     {
         $this->signInWith(['reports.company-overview', 'documents.show']);
+        $cash = Subject::create(['code' => '999', 'name' => 'صندوق آزمون', 'parent_id' => null, 'type' => SubjectType::BOTH, 'is_permanent' => true]);
         $incomeSubject = Subject::create([
             'code' => '900',
             'name' => 'Filtered income',
@@ -323,6 +325,11 @@ class HomeServiceChartTest extends TestCase
                 'user_id' => $this->user->id,
                 'desc' => 'filtered income',
             ]);
+            Transaction::create([
+                'value' => -$value, 'subject_id' => $cash->id,
+                'document_id' => $document->id, 'user_id' => $this->user->id, 'desc' => 'balanced cash entry',
+            ]);
+            DocumentService::changeDocumentStatus($document, $this->user, 'approved');
         }
 
         $this->get(route('reports.company-overview', [
@@ -340,6 +347,7 @@ class HomeServiceChartTest extends TestCase
     public function test_company_overview_defaults_missing_profit_dates_to_the_fiscal_year(): void
     {
         $this->signInWith(['reports.company-overview', 'documents.show']);
+        $cash = Subject::create(['code' => '999', 'name' => 'صندوق آزمون', 'parent_id' => null, 'type' => SubjectType::BOTH, 'is_permanent' => true]);
         $incomeSubject = Subject::create([
             'code' => '901',
             'name' => 'Fiscal year income',
@@ -364,6 +372,11 @@ class HomeServiceChartTest extends TestCase
                 'user_id' => $this->user->id,
                 'desc' => 'fiscal year income',
             ]);
+            Transaction::create([
+                'value' => -$value, 'subject_id' => $cash->id,
+                'document_id' => $document->id, 'user_id' => $this->user->id, 'desc' => 'balanced cash entry',
+            ]);
+            DocumentService::changeDocumentStatus($document, $this->user, 'approved');
         }
 
         foreach ([

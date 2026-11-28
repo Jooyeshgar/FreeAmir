@@ -348,6 +348,10 @@ class BackupControllerTest extends TestCase
             ->findOrFail($restoredPayment->invoice_id);
 
         $this->assertSame('1234567890123456', $restoredCheque->sayad_number);
+        $this->assertSame('2026-07-01', $restoredCheque->write_date->toDateString());
+        $this->assertSame('2026-08-01', $restoredCheque->due_date->toDateString());
+        $this->assertSame('2026-07-01', $restoredPayment->date->toDateString());
+        $this->assertSame('2026-07-01', $restoredInvoice->date->toDateString());
         $this->assertSame('Backup customer', $restoredCustomer->name);
         $this->assertSame('Backup account', $restoredAccount->name);
         $this->assertSame('BACKUP', $restoredChequebook->serial_prefix);

@@ -51,8 +51,8 @@ class GetProfitLossTool extends AccountingTool
         $monthsList = [];
         for ($m = 1; $m <= 12; $m++) {
             $mName = __(ContextResolver::MONTH_NAMES[$m]);
-            $mIncome = (int) ($monthlyRaw['income'][$m] ?? 0);
-            $mCost = (int) (-1 * ($monthlyRaw['cost'][$m] ?? 0));
+            $mIncome = $monthlyRaw['income'][$m] ?? 0;
+            $mCost = -1 * ($monthlyRaw['cost'][$m] ?? 0);
             $mProfit = $mIncome - $mCost;
             $monthsList[$m] = [
                 'month_number' => $m,
@@ -66,17 +66,17 @@ class GetProfitLossTool extends AccountingTool
         }
 
         if ($periodInfo['mode'] === 'month' && $targetMonth !== null) {
-            $income = (int) ($monthlyRaw['income'][$targetMonth] ?? 0);
-            $cost = -1 * (int) ($monthlyRaw['cost'][$targetMonth] ?? 0);
+            $income = $monthlyRaw['income'][$targetMonth] ?? 0;
+            $cost = -1 * ($monthlyRaw['cost'][$targetMonth] ?? 0);
             $profit = $income - $cost;
             $margin = $income > 0 ? (int) round(($profit / $income) * 100) : 0;
             $monthName = $periodInfo['month_name'];
 
             $humanSummary = __('For :month (:start to :end): income was :income :currency, expenses were :cost :currency, and :result was :profit :currency (profit margin: :margin%).',
                 ['month' => $monthName, 'start' => $periodInfo['start_date'], 'end' => $periodInfo['end_date'],
-                    'income' => number_format($income), 'cost' => number_format($cost),
+                    'income' => $this->formatAmount($income), 'cost' => $this->formatAmount($cost),
                     'result' => $profit >= 0 ? __('net profit') : __('net loss'),
-                    'profit' => number_format(abs($profit)), 'currency' => $currency, 'margin' => $margin]);
+                    'profit' => $this->formatAmount(abs($profit)), 'currency' => $currency, 'margin' => $margin]);
 
             return $this->success([
                 'context' => $contextBlock,
@@ -102,15 +102,15 @@ class GetProfitLossTool extends AccountingTool
         }
 
         $summary = $service->summary();
-        $totalIncome = (int) ($summary['totalIncome'] ?? 0);
-        $totalCost = (int) ($summary['totalCost'] ?? 0);
-        $profit = (int) ($summary['profit'] ?? 0);
+        $totalIncome = $summary['totalIncome'] ?? 0;
+        $totalCost = $summary['totalCost'] ?? 0;
+        $profit = $summary['profit'] ?? 0;
         $margin = (int) ($summary['margin'] ?? 0);
 
         $humanSummary = __('Fiscal year :year: total income was :income :currency, total expenses were :cost :currency, and :result was :profit :currency (profit margin: :margin%).',
-            ['year' => $contextBlock['active_fiscal_year']['title'], 'income' => number_format($totalIncome),
-                'cost' => number_format($totalCost), 'result' => $profit >= 0 ? __('net profit') : __('net loss'),
-                'profit' => number_format(abs($profit)), 'currency' => $currency, 'margin' => $margin]);
+            ['year' => $contextBlock['active_fiscal_year']['title'], 'income' => $this->formatAmount($totalIncome),
+                'cost' => $this->formatAmount($totalCost), 'result' => $profit >= 0 ? __('net profit') : __('net loss'),
+                'profit' => $this->formatAmount(abs($profit)), 'currency' => $currency, 'margin' => $margin]);
 
         return $this->success([
             'context' => $contextBlock,

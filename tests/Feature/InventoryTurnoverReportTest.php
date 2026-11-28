@@ -101,18 +101,18 @@ class InventoryTurnoverReportTest extends TestCase
         $row = $report['rows']->first();
 
         $this->assertSame($this->product->code, $row['product_code']);
-        $this->assertEquals(10, $row['opening_quantity']);
-        $this->assertEquals(1000, $row['opening_balance']);
-        $this->assertEquals(6, $row['imported_quantity']);
-        $this->assertEquals(600, $row['imported_balance']);
+        $this->assertEquals(12, $row['opening_quantity']);
+        $this->assertEquals(1200, $row['opening_balance']);
+        $this->assertEquals(83, $row['imported_quantity']);
+        $this->assertEquals(8400, $row['imported_balance']);
         $this->assertEquals(6, $row['exported_quantity']);
-        $this->assertEquals(600, $row['exported_balance']);
-        $this->assertEquals(10, $row['remaining_quantity']);
-        $this->assertEquals(1000, $row['remaining_balance']);
-        $this->assertEquals(10, $report['totals']['remaining_quantity']);
+        $this->assertEquals(650, $row['exported_balance']);
+        $this->assertEquals(89, $row['remaining_quantity']);
+        $this->assertEquals(8950, $row['remaining_balance']);
+        $this->assertEquals(89, $report['totals']['remaining_quantity']);
     }
 
-    public function test_full_fiscal_year_values_imports_and_exports_at_the_product_average_cost(): void
+    public function test_full_fiscal_year_values_imports_and_exports_at_their_posted_costs(): void
     {
         $this->product->update(['average_cost' => 135]);
         $this->movement(InvoiceType::BUY, '2026-02-05', 4, -400, 1, cogAfter: 100);
@@ -123,20 +123,20 @@ class InventoryTurnoverReportTest extends TestCase
         $row = $report['rows']->first();
 
         $this->assertEquals(4, $row['imported_quantity']);
-        $this->assertEquals(540, $row['imported_balance']);
+        $this->assertEquals(400, $row['imported_balance']);
         $this->assertEquals(2, $row['exported_quantity']);
-        $this->assertEquals(270, $row['exported_balance']);
+        $this->assertEquals(200, $row['exported_balance']);
 
         $rowWithSubmittedDefaults = $service->report([
             'start_date' => $report['filters']['start_date'],
             'end_date' => $report['filters']['end_date'],
         ])['rows']->first();
 
-        $this->assertEquals(540, $rowWithSubmittedDefaults['imported_balance']);
-        $this->assertEquals(270, $rowWithSubmittedDefaults['exported_balance']);
+        $this->assertEquals(400, $rowWithSubmittedDefaults['imported_balance']);
+        $this->assertEquals(200, $rowWithSubmittedDefaults['exported_balance']);
     }
 
-    public function test_interval_values_imports_and_exports_at_the_last_approved_invoice_item_cost(): void
+    public function test_interval_values_imports_and_exports_at_their_posted_costs(): void
     {
         $this->product->update(['average_cost' => 500]);
         $this->movement(InvoiceType::BUY, '2026-02-05', 5, -500, 1, cogAfter: 90);
@@ -150,12 +150,12 @@ class InventoryTurnoverReportTest extends TestCase
         ])['rows']->first();
 
         $this->assertEquals(5, $row['imported_quantity']);
-        $this->assertEquals(625, $row['imported_balance']);
+        $this->assertEquals(500, $row['imported_balance']);
         $this->assertEquals(2, $row['exported_quantity']);
-        $this->assertEquals(250, $row['exported_balance']);
+        $this->assertEquals(200, $row['exported_balance']);
     }
 
-    public function test_interval_average_cost_respects_the_warehouse_filter(): void
+    public function test_interval_posted_cost_respects_the_warehouse_filter(): void
     {
         $this->movement(InvoiceType::BUY, '2026-02-05', 3, -300, 1, cogAfter: 110);
         $this->movement(InvoiceType::SELL, '2026-02-10', 1, 100, 2, cogAfter: 120);
@@ -168,9 +168,9 @@ class InventoryTurnoverReportTest extends TestCase
         ])['rows']->first();
 
         $this->assertEquals(3, $row['imported_quantity']);
-        $this->assertEquals(360, $row['imported_balance']);
+        $this->assertEquals(300, $row['imported_balance']);
         $this->assertEquals(1, $row['exported_quantity']);
-        $this->assertEquals(120, $row['exported_balance']);
+        $this->assertEquals(100, $row['exported_balance']);
     }
 
     public function test_report_includes_only_approved_or_settled_invoice_statuses(): void
@@ -197,7 +197,7 @@ class InventoryTurnoverReportTest extends TestCase
         $this->assertEquals(810, $row['remaining_balance']);
     }
 
-    public function test_beginning_inventory_on_start_date_is_opening_but_later_records_are_ignored(): void
+    public function test_beginning_inventory_on_start_date_is_opening_and_later_records_are_imports(): void
     {
         $this->movement(InvoiceType::BEGINNING_INVENTORY, '2026-02-01', 10, -1000, 1);
         $this->movement(InvoiceType::BEGINNING_INVENTORY, '2026-02-02', 50, -5000, 2);
@@ -209,10 +209,10 @@ class InventoryTurnoverReportTest extends TestCase
 
         $this->assertEquals(10, $row['opening_quantity']);
         $this->assertEquals(1000, $row['opening_balance']);
-        $this->assertEquals(0, $row['imported_quantity']);
-        $this->assertEquals(0, $row['imported_balance']);
-        $this->assertEquals(10, $row['remaining_quantity']);
-        $this->assertEquals(1000, $row['remaining_balance']);
+        $this->assertEquals(50, $row['imported_quantity']);
+        $this->assertEquals(5000, $row['imported_balance']);
+        $this->assertEquals(60, $row['remaining_quantity']);
+        $this->assertEquals(6000, $row['remaining_balance']);
     }
 
     public function test_product_group_filter_excludes_products_from_other_groups(): void

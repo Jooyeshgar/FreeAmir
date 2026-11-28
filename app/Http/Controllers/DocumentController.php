@@ -20,6 +20,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -289,13 +290,20 @@ class DocumentController extends Controller
 
         $document = Document::findOrFail($id);
 
+        if ($document->documentable_type && $document->documentable_id) {
+            throw ValidationException::withMessages([
+                'document' => __('Cannot edit this document because it is linked to another record.'),
+            ]);
+        }
+
         if ($prompt = $this->commercialLedgerPrompt($request->date)) {
             return redirect()->back()->withInput()->with('ledger_confirmation_prompt', $prompt);
         }
 
-        DocumentService::updateDocument($document, $request->toArray());
-
-        DocumentService::updateDocumentTransactions($document->id, $request->input('transactions'));
+        DB::transaction(function () use ($document, $request) {
+            DocumentService::updateDocument($document, $request->safe()->only(['title', 'number', 'date']));
+            DocumentService::updateDocumentTransactions($document->id, $request->input('transactions'));
+        });
 
         return redirect()->route('documents.index')->with('success', __('Document updated successfully.'));
     }

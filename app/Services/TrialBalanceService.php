@@ -31,12 +31,9 @@ class TrialBalanceService
         $subjects = $this->buildTrialBalanceSubjects($currentParent, $includeChildren, $subjectName);
 
         $subjects = $subjects->map(function (Subject $subject) use ($filters) {
-            // Opening columns: only documents 1 and 2
-            $documentNumbers = $filters['start_document_number'] <= 2 ? [$filters['start_document_number'] - 1] : [1, 2];
-
-            [$openingDebit, $openingCredit] = $this->aggregateSubjectColumns($subject, $filters, $documentNumbers);
-
-            // Turnover columns: respect filters, by default starting from document 3 and excluding 1 and 2
+            // These columns describe the balance before the selected range.
+            // A document's number does not identify an opening document.
+            [$openingDebit, $openingCredit] = $this->aggregateSubjectColumns($subject, $filters, true);
             [$turnoverDebit, $turnoverCredit] = $this->aggregateSubjectColumns($subject, $filters);
 
             $subject->opening = $openingDebit + $openingCredit;
@@ -49,27 +46,34 @@ class TrialBalanceService
             return $subject;
         });
 
+        // In the two-level view parent balances already contain their children.
+        // Only the current-level rows contribute to the report totals.
+        $summarySubjects = $subjects->filter(fn (Subject $subject): bool => (int) ($subject->getAttribute('depth') ?? 0) === 0);
+
         return [
             'subjects' => $subjects,
+            'totals' => [
+                'opening_debit' => $summarySubjects->sum(fn (Subject $subject) => $subject->opening < 0 ? abs($subject->opening) : 0),
+                'opening_credit' => $summarySubjects->sum(fn (Subject $subject) => $subject->opening > 0 ? $subject->opening : 0),
+                'turnover_debit' => $summarySubjects->sum(fn (Subject $subject) => abs($subject->turnover_debit)),
+                'turnover_credit' => $summarySubjects->sum('turnover_credit'),
+                'balance_debit' => $summarySubjects->sum(fn (Subject $subject) => $subject->balance < 0 ? abs($subject->balance) : 0),
+                'balance_credit' => $summarySubjects->sum(fn (Subject $subject) => $subject->balance > 0 ? $subject->balance : 0),
+            ],
+            'opening_label' => in_array(app()->getLocale(), ['fa', 'fa_IR'], true) ? 'مانده ابتدای بازه' : __('Opening Balance'),
             'subject_name' => $subjectName,
             'currentParent' => $currentParent,
             'include_children' => $includeChildren,
             'start_date' => convertToJalali($filters['start_date'], true),
             'end_date' => convertToJalali($filters['end_date'], true),
-            'start_document_number' => $request->input('start_document_number', 3),
-            'end_document_number' => $request->input('end_document_number'),
+            'start_document_number' => $filters['start_document_number'],
+            'end_document_number' => $filters['end_document_number'],
         ];
     }
 
     public function exportCsv(Request $request): StreamedResponse
     {
-        $this->validateTrialBalanceFilters($request);
-
-        $currentParent = $request->filled('parent_id') ? Subject::findOrFail($request->integer('parent_id')) : null;
-        $includeChildren = $request->boolean('include_children', false);
-        $subjectName = $request->input('subject_name');
-        $filters = $this->normalizeTrialBalanceFilters($request);
-        $subjects = $this->buildTrialBalanceSubjects($currentParent, $includeChildren, $subjectName);
+        $data = $this->getTrialBalanceData($request);
         $filename = 'trial_balance_'.Carbon::now()->format('Ymd_His').'.csv';
 
         $headers = [
@@ -77,26 +81,26 @@ class TrialBalanceService
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ];
 
-        return response()->stream(function () use ($subjects, $filters) {
+        return response()->stream(function () use ($data) {
             $handle = fopen('php://output', 'w');
             fprintf($handle, chr(0xEF).chr(0xBB).chr(0xBF));
 
-            fputcsv($handle, [__('Account Code'), __('Account Name'), __('Sum Debit'), __('Sum Credit'), __('Remaining Debit'), __('Remaining Credit')]);
+            fputcsv($handle, [
+                __('Account Code'), __('Account Name'),
+                $data['opening_label'].' '.__('Debtor'), $data['opening_label'].' '.__('Creditor'),
+                __('Sum Debit'), __('Sum Credit'), __('Remaining Debit'), __('Remaining Credit'),
+            ]);
 
-            foreach ($subjects as $subject) {
-                [$debitSum, $creditSum] = $this->aggregateSubjectColumns($subject, $filters);
-
-                $sumBed = abs($debitSum);
-                $sumBes = $creditSum;
-                $net = $debitSum + $creditSum;
-
+            foreach ($data['subjects'] as $subject) {
                 fputcsv($handle, [
                     csvNumber($subject->code),
                     $subject->name,
-                    csvNumber($sumBed),
-                    csvNumber($sumBes),
-                    csvNumber($net < 0 ? abs($net) : 0),
-                    csvNumber($net > 0 ? $net : 0),
+                    csvNumber($subject->opening < 0 ? abs($subject->opening) : 0),
+                    csvNumber($subject->opening > 0 ? $subject->opening : 0),
+                    csvNumber(abs($subject->turnover_debit)),
+                    csvNumber($subject->turnover_credit),
+                    csvNumber($subject->balance < 0 ? abs($subject->balance) : 0),
+                    csvNumber($subject->balance > 0 ? $subject->balance : 0),
                 ]);
             }
 
@@ -123,8 +127,8 @@ class TrialBalanceService
         };
 
         Validator::make($request->all(), [
-            'start_document_number' => 'nullable|numeric',
-            'end_document_number' => 'nullable|numeric',
+            'start_document_number' => 'nullable|integer|min:1',
+            'end_document_number' => 'nullable|integer|min:1',
             'start_date' => ['bail', 'nullable', 'string', $dateRule],
             'end_date' => ['bail', 'nullable', 'string', $dateRule],
         ])->after(function ($validator) use ($request, $fiscalStartDate, $fiscalEndDate) {
@@ -165,38 +169,36 @@ class TrialBalanceService
         [$fiscalStart, $fiscalEnd] = $fiscalYear->range();
 
         return [
+            'fiscal_year_id' => $fiscalYear->id,
+            'fiscal_start_date' => $fiscalStart->toDateString(),
             'start_date' => $request->filled('start_date') ? jalaliInputToGregorian($request->input('start_date'), 'start_date') : $fiscalStart->toDateString(),
             'end_date' => $request->filled('end_date') ? jalaliInputToGregorian($request->input('end_date'), 'end_date') : $fiscalEnd->toDateString(),
-            'start_document_number' => $request->filled('start_document_number') ? (int) $request->input('start_document_number') : 3,
+            'start_document_number' => $request->filled('start_document_number') ? (int) $request->input('start_document_number') : 1,
             'end_document_number' => $request->filled('end_document_number') ? (int) $request->input('end_document_number') : null,
         ];
     }
 
-    private function aggregateSubjectColumns(Subject $subject, array $filters, ?array $documentNumbers = null): array
+    private function aggregateSubjectColumns(Subject $subject, array $filters, bool $beforeRange = false): array
     {
         $ids = $subject->getAllDescendantIds();
 
-        $query = Transaction::query()->whereIn('transactions.subject_id', $ids)->join('documents', 'documents.id', '=', 'transactions.document_id');
+        $query = Transaction::query()
+            ->whereIn('transactions.subject_id', $ids)
+            ->join('documents', 'documents.id', '=', 'transactions.document_id')
+            ->where('documents.fiscal_year_id', $filters['fiscal_year_id'])
+            ->whereBetween('documents.date', [$filters['fiscal_start_date'], $filters['end_date']])
+            ->when($filters['end_document_number'], fn ($query, int $number) => $query->where('documents.number', '<=', $number));
 
-        if ($documentNumbers !== null) {
-            $query->whereIn('documents.number', $documentNumbers);
+        if ($beforeRange) {
+            // Partition the selected upper-bound population once: a row is
+            // either before a lower boundary or belongs to the turnover range.
+            $query->where(function ($query) use ($filters) {
+                $query->where('documents.date', '<', $filters['start_date'])
+                    ->orWhere('documents.number', '<', $filters['start_document_number']);
+            });
         } else {
-            $startDocument = $filters['start_document_number'] ?? 3;
-
-            $query->where('documents.number', '>=', $startDocument);
-
-            if ($filters['end_document_number']) {
-                $query->where('documents.number', '<=', $filters['end_document_number']);
-            }
-
-        }
-
-        if ($filters['start_date']) {
-            $query->where('documents.date', '>=', $filters['start_date']);
-        }
-
-        if ($filters['end_date']) {
-            $query->where('documents.date', '<=', $filters['end_date']);
+            $query->where('documents.date', '>=', $filters['start_date'])
+                ->where('documents.number', '>=', $filters['start_document_number']);
         }
 
         $sums = $query->selectRaw('
