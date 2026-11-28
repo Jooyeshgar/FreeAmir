@@ -26,7 +26,7 @@ class StoreBankAccountRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
+            'name' => 'required|max:20|string|regex:/^[\w\d\s\x{200C}]*$/u',
             'number' => ['required', 'string', 'max:40', Rule::unique('bank_accounts', 'number')->where('fiscal_year_id', getActiveFiscalYear())->ignore($this->bank_account)],
             'iban' => ['nullable', Rule::unique('bank_accounts', 'iban')->where('fiscal_year_id', getActiveFiscalYear())->ignore($this->bank_account),
                 function ($attribute, $value, $fail) {
@@ -67,9 +67,9 @@ class StoreBankAccountRequest extends FormRequest
                 },
             ],
             'type' => ['required', new Enum(BankAccountType::class)],
-            'owner' => ['nullable', 'string', 'regex:/^[\w\d\s]*$/u'],
-            'bank_id' => ['required', 'integer', 'exists:banks,id'],
-            'bank_branch' => ['nullable', 'string', 'regex:/^[\w\d\s]*$/u'],
+            'owner' => ['nullable', 'string', 'regex:/^[\w\d\s\x{200C}]*$/u'],
+            'bank_id' => ['required', 'integer', Rule::exists('banks', 'id')->where('fiscal_year_id', getActiveFiscalYear())],
+            'bank_branch' => ['nullable', 'string', 'regex:/^[\w\d\s\x{200C}]*$/u'],
             'bank_address' => ['nullable', 'string', 'max:150'],
             'bank_phone' => ['nullable', 'numeric'],
             'bank_web_page' => ['nullable', 'url', 'max:200'],

@@ -50,8 +50,8 @@ class GetFinancialSummaryTool extends AccountingTool
         foreach ($topIncome as $subject => $amount) {
             $formattedTopIncome[] = [
                 'subject' => $subject,
-                'amount' => (int) $amount,
-                'formatted' => number_format((int) $amount).' '.$currency,
+                'amount' => $amount,
+                'formatted' => $this->formatAmount($amount).' '.$currency,
             ];
         }
 
@@ -59,8 +59,8 @@ class GetFinancialSummaryTool extends AccountingTool
         foreach ($topCost as $subject => $amount) {
             $formattedTopCost[] = [
                 'subject' => $subject,
-                'amount' => (int) $amount,
-                'formatted' => number_format((int) $amount).' '.$currency,
+                'amount' => $amount,
+                'formatted' => $this->formatAmount($amount).' '.$currency,
             ];
         }
 
@@ -74,8 +74,8 @@ class GetFinancialSummaryTool extends AccountingTool
             'top_income_sources' => $formattedTopIncome,
             'top_expense_categories' => $formattedTopCost,
             'human_summary' => __('Financial summary: total income :income :currency, total expenses :cost :currency, net profit :profit :currency, with a :margin% margin.',
-                ['income' => number_format($summary['totalIncome'] ?? 0), 'cost' => number_format($summary['totalCost'] ?? 0),
-                    'profit' => number_format($summary['profit'] ?? 0), 'currency' => $currency, 'margin' => $summary['margin'] ?? 0]),
+                ['income' => $this->formatAmount($summary['totalIncome'] ?? 0), 'cost' => $this->formatAmount($summary['totalCost'] ?? 0),
+                    'profit' => $this->formatAmount($summary['profit'] ?? 0), 'currency' => $currency, 'margin' => $summary['margin'] ?? 0]),
         ];
 
         return $this->success($result);

@@ -213,32 +213,24 @@ class FiscalYearOverviewServiceTest extends TestCase
         $this->assertSame(400.0, $this->service()->totalBuyAmount());
     }
 
-    public function test_monthly_product_stat_places_and_aggregates_transactions(): void
+    public function test_monthly_product_stat_uses_approved_and_settled_sales_totals_with_decimals(): void
     {
-        $productA = $this->makeProduct();
-        $productB = $this->makeProduct();
-        $subjectA = Subject::withoutGlobalScopes()->find($productA->inventory_subject_id);
-        $subjectB = Subject::withoutGlobalScopes()->find($productB->inventory_subject_id);
+        $this->makeInvoice(jalali_to_gregorian(1405, 9, 5, '-'), InvoiceType::SELL, InvoiceStatus::APPROVED, 300.25);
+        $this->makeInvoice(jalali_to_gregorian(1405, 9, 6, '-'), InvoiceType::SELL, InvoiceStatus::PARTIALLY_PAID, 200.50);
+        $this->makeInvoice(jalali_to_gregorian(1405, 9, 7, '-'), InvoiceType::SELL, InvoiceStatus::PAID, 499.99);
+        $this->makeInvoice(jalali_to_gregorian(1405, 9, 8, '-'), InvoiceType::SELL, InvoiceStatus::PRE_INVOICE, 9000);
+        $this->makeInvoice(jalali_to_gregorian(1405, 9, 8, '-'), InvoiceType::BUY, InvoiceStatus::APPROVED, 9000);
+        $subject = Subject::withoutGlobalScopes()->find($this->makeProduct()->inventory_subject_id);
         $document = $this->makeDocument(jalali_to_gregorian(1405, 9, 5, '-'));
-
-        Transaction::create(['value' => 300, 'subject_id' => $subjectA->id, 'document_id' => $document->id, 'user_id' => $this->user->id, 'desc' => 'a']);
-        Transaction::create(['value' => 700, 'subject_id' => $subjectB->id, 'document_id' => $document->id, 'user_id' => $this->user->id, 'desc' => 'b']);
-
-        $this->assertSame(1000, $this->service()->getMonthlyProductsStat()['آذر']);
+        Transaction::create(['value' => -12345, 'subject_id' => $subject->id, 'document_id' => $document->id, 'user_id' => $this->user->id, 'desc' => 'inventory is not sales']);
+        $this->assertEqualsWithDelta(1000.74, $this->service()->getMonthlyProductsStat()['آذر'], 0.001);
     }
 
-    public function test_monthly_product_stat_excludes_transactions_outside_fiscal_year(): void
+    public function test_monthly_product_stat_excludes_sales_outside_fiscal_year(): void
     {
-        $product = $this->makeProduct();
-        $subject = Subject::withoutGlobalScopes()->find($product->inventory_subject_id);
-
-        $before = $this->makeDocument('2026-01-01');
-        Transaction::create(['value' => 500, 'subject_id' => $subject->id, 'document_id' => $before->id, 'user_id' => $this->user->id, 'desc' => 'before']);
-
-        $after = $this->makeDocument('2027-04-01');
-        Transaction::create(['value' => 500, 'subject_id' => $subject->id, 'document_id' => $after->id, 'user_id' => $this->user->id, 'desc' => 'after']);
-
-        $this->assertSame(0, array_sum($this->service()->getMonthlyProductsStat()));
+        $this->makeInvoice('2026-01-01', InvoiceType::SELL, InvoiceStatus::APPROVED, 500);
+        $this->makeInvoice('2027-04-01', InvoiceType::SELL, InvoiceStatus::APPROVED, 500);
+        $this->assertSame(0.0, array_sum($this->service()->getMonthlyProductsStat()));
     }
 
     public function test_balance_response_uses_final_running_balance_and_expected_shape(): void
@@ -282,8 +274,8 @@ class FiscalYearOverviewServiceTest extends TestCase
         $subjectB = Subject::withoutGlobalScopes()->find($productB->inventory_subject_id);
         $document = $this->makeDocument(jalali_to_gregorian(1405, 3, 1, '-'));
 
-        Transaction::create(['value' => 600, 'subject_id' => $subjectA->id, 'document_id' => $document->id, 'user_id' => $this->user->id, 'desc' => 'a']);
-        Transaction::create(['value' => 400, 'subject_id' => $subjectB->id, 'document_id' => $document->id, 'user_id' => $this->user->id, 'desc' => 'b']);
+        Transaction::create(['value' => -600, 'subject_id' => $subjectA->id, 'document_id' => $document->id, 'user_id' => $this->user->id, 'desc' => 'a']);
+        Transaction::create(['value' => -400, 'subject_id' => $subjectB->id, 'document_id' => $document->id, 'user_id' => $this->user->id, 'desc' => 'b']);
 
         $this->assertSame(1000.0, $this->service()->totalWarehouseValue());
     }
@@ -308,10 +300,12 @@ class FiscalYearOverviewServiceTest extends TestCase
         ]);
 
         $inside = $this->makeDocument(jalali_to_gregorian(1405, 3, 10, '-'));
+        $inside->update(['approved_at' => now(), 'approver_id' => $this->user->id]);
         Transaction::create(['value' => 1200, 'subject_id' => $incomeSubject->id, 'document_id' => $inside->id, 'user_id' => $this->user->id, 'desc' => 'inside income']);
         Transaction::create(['value' => -350, 'subject_id' => $costSubject->id, 'document_id' => $inside->id, 'user_id' => $this->user->id, 'desc' => 'inside cost']);
 
         $outside = $this->makeDocument(jalali_to_gregorian(1405, 4, 1, '-'));
+        $outside->update(['approved_at' => now(), 'approver_id' => $this->user->id]);
         Transaction::create(['value' => 5000, 'subject_id' => $incomeSubject->id, 'document_id' => $outside->id, 'user_id' => $this->user->id, 'desc' => 'outside income']);
 
         $result = $this->service()->profitFromNonPermanentSubjects(

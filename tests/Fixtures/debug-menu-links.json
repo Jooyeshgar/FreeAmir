@@ -1,0 +1,440 @@
+[
+  {
+    "id": "core.home",
+    "route": "home",
+    "route_parameters": [],
+    "label_fa": "صفحه اصلی"
+  },
+  {
+    "id": "core.portal.dashboard",
+    "route": "employee-portal.dashboard",
+    "route_parameters": [],
+    "label_fa": "میز کار"
+  },
+  {
+    "id": "core.portal.attendance",
+    "route": "employee-portal.attendance-logs",
+    "route_parameters": [],
+    "label_fa": "حضور من"
+  },
+  {
+    "id": "core.portal.monthly-attendance",
+    "route": "employee-portal.monthly-attendances",
+    "route_parameters": [],
+    "label_fa": "حضور و غیاب ماهانه"
+  },
+  {
+    "id": "core.portal.payrolls",
+    "route": "employee-portal.payrolls",
+    "route_parameters": [],
+    "label_fa": "حقوق و دستمزد من"
+  },
+  {
+    "id": "core.portal.requests",
+    "route": "employee-portal.personnel-requests.index",
+    "route_parameters": [],
+    "label_fa": "درخواست های من"
+  },
+  {
+    "id": "core.portal.information",
+    "route": "employee-portal.employee.show",
+    "route_parameters": [],
+    "label_fa": "اطلاعات من"
+  },
+  {
+    "id": "core.invoices.dashboard",
+    "route": "invoices.dashboard",
+    "route_parameters": [],
+    "label_fa": "داشبورد خرید و فروش"
+  },
+  {
+    "id": "core.invoices.sales.sell",
+    "route": "invoices.index",
+    "route_parameters": {
+      "invoice_type": "sell"
+    },
+    "label_fa": "فروش"
+  },
+  {
+    "id": "core.invoices.sales.return-sell",
+    "route": "invoices.index",
+    "route_parameters": {
+      "invoice_type": "return_sell"
+    },
+    "label_fa": "فروش برگشتی"
+  },
+  {
+    "id": "core.invoices.sales.voided-sell",
+    "route": "invoices.index",
+    "route_parameters": {
+      "invoice_type": "void"
+    },
+    "label_fa": "فروش ابطالی"
+  },
+  {
+    "id": "core.invoices.sales.moadian-histories",
+    "route": "invoices.moadian-histories.index",
+    "route_parameters": [],
+    "label_fa": "تاریخچه مودیان"
+  },
+  {
+    "id": "core.invoices.purchases.buy",
+    "route": "invoices.index",
+    "route_parameters": {
+      "invoice_type": "buy"
+    },
+    "label_fa": "خرید"
+  },
+  {
+    "id": "core.invoices.purchases.buy-service",
+    "route": "invoices.index",
+    "route_parameters": {
+      "invoice_type": "buy",
+      "service_buy": "1"
+    },
+    "label_fa": "خرید خدمات"
+  },
+  {
+    "id": "core.invoices.purchases.return-buy",
+    "route": "invoices.index",
+    "route_parameters": {
+      "invoice_type": "return_buy"
+    },
+    "label_fa": "خرید برگشتی"
+  },
+  {
+    "id": "core.invoices.purchases.service-buy-return",
+    "route": "invoices.index",
+    "route_parameters": {
+      "invoice_type": "return_buy",
+      "service_buy": "1"
+    },
+    "label_fa": "برگشت از خرید خدمات"
+  },
+  {
+    "id": "core.invoices.purchases.ancillary-costs",
+    "route": "ancillary-costs.index",
+    "route_parameters": [],
+    "label_fa": "هزینه های جانبی"
+  },
+  {
+    "id": "core.invoices.beginning-inventory",
+    "route": "invoices.index",
+    "route_parameters": {
+      "invoice_type": "beginning_inventory"
+    },
+    "label_fa": "موجودی ابتدای دوره"
+  },
+  {
+    "id": "core.invoices.inactive",
+    "route": "invoices.inactive",
+    "route_parameters": [],
+    "label_fa": "فعال‌سازی تایید شده‌ها"
+  },
+  {
+    "id": "core.invoices.add-customer",
+    "route": "customers.create",
+    "route_parameters": [],
+    "label_fa": "ثبت طرف حساب"
+  },
+  {
+    "id": "core.accounting.create-document",
+    "route": "documents.create",
+    "route_parameters": [],
+    "label_fa": "ایجاد سند"
+  },
+  {
+    "id": "core.accounting.documents",
+    "route": "documents.index",
+    "route_parameters": [],
+    "label_fa": "فهرست اسناد"
+  },
+  {
+    "id": "core.accounting.cheques",
+    "route": "cheques.index",
+    "route_parameters": [],
+    "label_fa": "مدیریت چک‌ها"
+  },
+  {
+    "id": "core.reports.company-overview",
+    "route": "reports.company-overview",
+    "route_parameters": [],
+    "label_fa": "نمای کلی شرکت"
+  },
+  {
+    "id": "core.reports.cost-income",
+    "route": "reports.cost-income",
+    "route_parameters": [],
+    "label_fa": "میز کار درآمد و هزینه"
+  },
+  {
+    "id": "core.reports.monthly-workbench",
+    "route": "budgets.index",
+    "route_parameters": [],
+    "label_fa": "میز کار درآمد و هزینه ماهانه"
+  },
+  {
+    "id": "core.reports.commercial-ledgers",
+    "route": "commercial-ledgers.index",
+    "route_parameters": [],
+    "label_fa": "دفاتر الکترونیکی"
+  },
+  {
+    "id": "core.reports.accounting.documents",
+    "route": "reports.documents",
+    "route_parameters": [],
+    "label_fa": "گزارش اسناد"
+  },
+  {
+    "id": "core.reports.accounting.journal",
+    "route": "reports.journal",
+    "route_parameters": [],
+    "label_fa": "روزنامه"
+  },
+  {
+    "id": "core.reports.accounting.ledger",
+    "route": "reports.ledger",
+    "route_parameters": [],
+    "label_fa": "کل"
+  },
+  {
+    "id": "core.reports.accounting.sub-ledger",
+    "route": "reports.sub-ledger",
+    "route_parameters": [],
+    "label_fa": "معین"
+  },
+  {
+    "id": "core.reports.accounting.trial-balance",
+    "route": "reports.trial-balance",
+    "route_parameters": [],
+    "label_fa": "تراز آزمایشی"
+  },
+  {
+    "id": "core.reports.accounting.inventory-turnover",
+    "route": "reports.inventory-turnover",
+    "route_parameters": [],
+    "label_fa": "گردش موجودی"
+  },
+  {
+    "id": "core.warehouse.dashboard",
+    "route": "warehouse.dashboard",
+    "route_parameters": [],
+    "label_fa": "میز کار انبار"
+  },
+  {
+    "id": "core.warehouse.warehouses",
+    "route": "warehouses.index",
+    "route_parameters": [],
+    "label_fa": "انبارها"
+  },
+  {
+    "id": "core.warehouse.products",
+    "route": "products.index",
+    "route_parameters": [],
+    "label_fa": "محصولات"
+  },
+  {
+    "id": "core.warehouse.product-groups",
+    "route": "product-groups.index",
+    "route_parameters": [],
+    "label_fa": "گروه‌های کالا"
+  },
+  {
+    "id": "core.warehouse.services",
+    "route": "services.index",
+    "route_parameters": [],
+    "label_fa": "خدمات"
+  },
+  {
+    "id": "core.warehouse.service-groups",
+    "route": "service-groups.index",
+    "route_parameters": [],
+    "label_fa": "گروه های خدماتی"
+  },
+  {
+    "id": "core.hr.payroll-dashboard",
+    "route": "salary.payrolls.dashboard",
+    "route_parameters": [],
+    "label_fa": "میز کار حقوق و دستمزد"
+  },
+  {
+    "id": "core.hr.payrolls",
+    "route": "salary.payrolls.index",
+    "route_parameters": [],
+    "label_fa": "حقوق و دستمزد"
+  },
+  {
+    "id": "core.hr.employees",
+    "route": "hr.employees.index",
+    "route_parameters": [],
+    "label_fa": "کارکنان"
+  },
+  {
+    "id": "core.hr.personnel-requests",
+    "route": "hr.personnel-requests.index",
+    "route_parameters": [],
+    "label_fa": "درخواست‌های پرسنلی"
+  },
+  {
+    "id": "core.hr.attendance-logs",
+    "route": "attendance.attendance-logs.index",
+    "route_parameters": [],
+    "label_fa": "لاگ‌های حضور و غیاب"
+  },
+  {
+    "id": "core.hr.monthly-attendances",
+    "route": "attendance.monthly-attendances.index",
+    "route_parameters": [],
+    "label_fa": "حضور و غیاب ماهانه"
+  },
+  {
+    "id": "core.crm.dashboard",
+    "route": "crm.dashboard",
+    "route_parameters": [],
+    "label_fa": "میز کار ارتباط با مشتری"
+  },
+  {
+    "id": "core.crm.customers",
+    "route": "customers.index",
+    "route_parameters": [],
+    "label_fa": "مشتریان"
+  },
+  {
+    "id": "core.crm.customer-groups",
+    "route": "customer-groups.index",
+    "route_parameters": [],
+    "label_fa": "گروه‌های مشتریان"
+  },
+  {
+    "id": "core.management.hr-organization.organization-charts",
+    "route": "hr.org-charts.index",
+    "route_parameters": [],
+    "label_fa": "چارت سازمانی"
+  },
+  {
+    "id": "core.management.hr-organization.organization-units",
+    "route": "hr.organization-units.index",
+    "route_parameters": [],
+    "label_fa": "واحدهای سازمانی"
+  },
+  {
+    "id": "core.management.hr-organization.work-shifts",
+    "route": "attendance.work-shifts.index",
+    "route_parameters": [],
+    "label_fa": "شیفت‌های کاری"
+  },
+  {
+    "id": "core.management.hr-organization.payrolls",
+    "route": "salary.payrolls.index",
+    "route_parameters": [],
+    "label_fa": "حقوق و دستمزد"
+  },
+  {
+    "id": "core.management.hr-organization.tax-slabs",
+    "route": "salary.tax-slabs.index",
+    "route_parameters": [],
+    "label_fa": "جدول مالیاتی سالیانه"
+  },
+  {
+    "id": "core.management.hr-organization.work-sites",
+    "route": "salary.work-sites.index",
+    "route_parameters": [],
+    "label_fa": "کارگاه‌ها"
+  },
+  {
+    "id": "core.management.hr-organization.work-site-contracts",
+    "route": "salary.work-site-contracts.index",
+    "route_parameters": [],
+    "label_fa": "پیمان‌ها"
+  },
+  {
+    "id": "core.management.hr-organization.public-holidays",
+    "route": "salary.public-holidays.index",
+    "route_parameters": [],
+    "label_fa": "تعطیلات رسمی"
+  },
+  {
+    "id": "core.management.hr-organization.payroll-elements",
+    "route": "salary.payroll-elements.index",
+    "route_parameters": [],
+    "label_fa": "عناصر حقوق و دستمزد"
+  },
+  {
+    "id": "core.management.hr-organization.salary-decrees",
+    "route": "salary.salary-decrees.index",
+    "route_parameters": [],
+    "label_fa": "احکام کارگزینی"
+  },
+  {
+    "id": "core.management.finance.subjects",
+    "route": "subjects.index",
+    "route_parameters": [],
+    "label_fa": "سرفصل ها"
+  },
+  {
+    "id": "core.management.finance.bank-accounts",
+    "route": "bank-accounts.index",
+    "route_parameters": [],
+    "label_fa": "حساب‌های بانکی"
+  },
+  {
+    "id": "core.management.finance.banks",
+    "route": "banks.index",
+    "route_parameters": [],
+    "label_fa": "بانک ها"
+  },
+  {
+    "id": "core.management.finance.chequebooks",
+    "route": "chequebooks.index",
+    "route_parameters": [],
+    "label_fa": "دسته‌چک‌ها"
+  },
+  {
+    "id": "core.management.finance.sort-documents",
+    "route": "documents.sort-numbers",
+    "route_parameters": [],
+    "label_fa": "مرتب‌سازی شماره اسناد"
+  },
+  {
+    "id": "core.management.system.companies",
+    "route": "companies.index",
+    "route_parameters": [],
+    "label_fa": "شرکت ها"
+  },
+  {
+    "id": "core.management.system.fiscal-years",
+    "route": "fiscal-years.index",
+    "route_parameters": [],
+    "label_fa": "سال‌های مالی"
+  },
+  {
+    "id": "core.management.system.users",
+    "route": "users.index",
+    "route_parameters": [],
+    "label_fa": "کاربران"
+  },
+  {
+    "id": "core.management.system.configs",
+    "route": "configs.index",
+    "route_parameters": [],
+    "label_fa": "پیکربندی ها"
+  },
+  {
+    "id": "core.management.system.backup",
+    "route": "backups.create",
+    "route_parameters": [],
+    "label_fa": "پشتیبان گیری"
+  },
+  {
+    "id": "core.management.system.upload-backup",
+    "route": "backups.upload",
+    "route_parameters": [],
+    "label_fa": "بارگذاری پشتیبان"
+  },
+  {
+    "id": "core.management.about",
+    "route": "about",
+    "route_parameters": [],
+    "label_fa": "درباره"
+  }
+]

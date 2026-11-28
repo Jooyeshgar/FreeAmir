@@ -41,7 +41,7 @@ class CostIncomeService
         $costBreakdown = [];
 
         foreach ($roots as $root) {
-            $rootBalance = (int) $this->subjectService->sumSubject($root, true, false, true);
+            $rootBalance = $this->reportAmount($this->subjectService->sumSubject($root, true, false, true));
 
             if ($rootBalance > 0) {
                 $totalIncome += $rootBalance;
@@ -53,7 +53,7 @@ class CostIncomeService
 
             if ($children->isNotEmpty()) {
                 foreach ($children as $child) {
-                    $balance = (int) $this->subjectService->sumSubject($child, true, false, true);
+                    $balance = $this->reportAmount($this->subjectService->sumSubject($child, true, false, true));
                     $this->placeBreakdown($balance, $child->name, $incomeBreakdown, $costBreakdown);
                 }
             } else {
@@ -73,7 +73,7 @@ class CostIncomeService
     /**
      * Route a signed balance into the income or cost breakdown bucket by sign.
      */
-    private function placeBreakdown(int $balance, string $name, array &$income, array &$cost): void
+    private function placeBreakdown(int|float $balance, string $name, array &$income, array &$cost): void
     {
         if ($balance > 0) {
             $income[$name] = ($income[$name] ?? 0) + $balance;
@@ -108,7 +108,7 @@ class CostIncomeService
      * Expense totals retain their negative accounting sign.
      * Presentation boundaries convert them to positive chart values with -1 * value.
      *
-     * @return array{income: array<int, int>, cost: array<int, int>}
+     * @return array{income: array<int, int|float>, cost: array<int, int|float>}
      */
     public function monthlyIncomeAndCostByMonth(): array
     {
@@ -121,7 +121,7 @@ class CostIncomeService
             $classificationBalance = (float) $this->subjectService->sumSubject($subject, true, false, true);
 
             foreach (self::MONTHS as $number => $name) {
-                $amount = (int) ($monthly[$number] ?? 0);
+                $amount = $monthly[$number] ?? 0;
                 $type = $classificationBalance != 0 ? ($classificationBalance < 0 ? 'expense' : 'income') : ($amount < 0 ? 'expense' : 'income');
 
                 if ($type === 'expense') {
@@ -140,10 +140,10 @@ class CostIncomeService
      */
     public function invoiceSummary(): array
     {
-        $sell = (int) Invoice::where('invoice_type', InvoiceType::SELL)->sum('amount');
-        $returnSell = (int) Invoice::where('invoice_type', InvoiceType::RETURN_SELL)->sum('amount');
-        $buy = (int) Invoice::where('invoice_type', InvoiceType::BUY)->sum('amount');
-        $returnBuy = (int) Invoice::where('invoice_type', InvoiceType::RETURN_BUY)->sum('amount');
+        $sell = $this->reportAmount(Invoice::where('invoice_type', InvoiceType::SELL)->sum('amount'));
+        $returnSell = $this->reportAmount(Invoice::where('invoice_type', InvoiceType::RETURN_SELL)->sum('amount'));
+        $buy = $this->reportAmount(Invoice::where('invoice_type', InvoiceType::BUY)->sum('amount'));
+        $returnBuy = $this->reportAmount(Invoice::where('invoice_type', InvoiceType::RETURN_BUY)->sum('amount'));
 
         $sellCount = (int) Invoice::where('invoice_type', InvoiceType::SELL)->count();
         $buyCount = (int) Invoice::where('invoice_type', InvoiceType::BUY)->count();
@@ -174,7 +174,7 @@ class CostIncomeService
             ->selectRaw('subject_id, SUM(value) as balance')
             ->groupBy('subject_id')
             ->pluck('balance', 'subject_id')
-            ->map(fn ($v) => (int) $v);
+            ->map(fn ($v) => $this->reportAmount($v));
 
         $debtors = [];
         $creditors = [];
@@ -204,5 +204,13 @@ class CostIncomeService
             'debtors' => array_slice($debtors, 0, $limit),
             'creditors' => array_slice($creditors, 0, $limit),
         ];
+    }
+
+    private function reportAmount(int|float|string $amount): int|float
+    {
+        $number = (float) $amount;
+
+        // Keep whole-number report/API values compatible without dropping cents.
+        return $number == (int) $number ? (int) $number : $number;
     }
 }

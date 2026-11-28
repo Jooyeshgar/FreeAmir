@@ -38,7 +38,7 @@
                         <x-date-picker name="end_date" value="{{ $end_date }}" class="w-full" placeholder="{{ __('End date') }}" />
                     </div>
                     <div class="[&_.input]:input-sm w-30">
-                        <x-input name="start_document_number" value="{{ $start_document_number ?? 3 }}" class="w-full" placeholder="{{ __('Document start number') }}" />
+                        <x-input name="start_document_number" value="{{ $start_document_number ?? 1 }}" class="w-full" placeholder="{{ __('Document start number') }}" />
                     </div>
                     <div class="[&_.input]:input-sm w-30">
                         <x-input name="end_document_number" value="{{ $end_document_number }}" class="w-full" placeholder="{{ __('Document end number') }}" />
@@ -58,7 +58,7 @@
                         <tr class="bg-base-200">
                             <th rowspan="2" class="px-4 py-2 text-center align-middle border-gray-300">{{ __('Code') }}</th>
                             <th rowspan="2" class="px-4 py-2 text-center border-r align-middle border-gray-300">{{ __('Name') }}</th>
-                            <th colspan="2" class="px-4 py-2 text-center border-r border-gray-300">{{ __('Opening') }}</th>
+                            <th colspan="2" class="px-4 py-2 text-center border-r border-gray-300">{{ $opening_label ?? __('Opening Balance') }}</th>
                             <th colspan="2" class="px-4 py-2 text-center border-r border-gray-300">{{ __('Turnover') }}</th>
                             <th colspan="2" class="px-4 py-2 text-center border-r border-gray-300">{{ __('Balance') }}</th>
                         </tr>
@@ -112,12 +112,12 @@
                         @if($subjects->count())
                             <tr class="font-bold bg-base-200">
                                 <td class="px-4 py-2 border-gray-300 text-center" colspan="2">{{ __('Total') }}</td>
-                                <td class="px-4 py-2 border-r border-gray-300">{{ formatNumber($subjects->sum(fn($s) => $s->opening < 0 ? abs($s->opening) : 0)) }}</td>
-                                <td class="px-4 py-2 border-r border-gray-300">{{ formatNumber($subjects->sum(fn($s) => $s->opening > 0 ? abs($s->opening) : 0)) }}</td>
-                                <td class="px-4 py-2 border-r border-gray-300">{{ formatNumber($subjects->sum(fn($s) => abs($s->turnover_debit))) }}</td>
-                                <td class="px-4 py-2 border-r border-gray-300">{{ formatNumber($subjects->sum(fn($s) => abs($s->turnover_credit))) }}</td>
-                                <td class="px-4 py-2 border-r border-gray-300">{{ formatNumber($subjects->sum(fn($s) => $s->balance < 0 ? abs($s->balance) : 0)) }}</td>
-                                <td class="px-4 py-2 border-r border-gray-300">{{ formatNumber($subjects->sum(fn($s) => $s->balance > 0 ? abs($s->balance) : 0)) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-300">{{ formatNumber($totals['opening_debit']) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-300">{{ formatNumber($totals['opening_credit']) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-300">{{ formatNumber($totals['turnover_debit']) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-300">{{ formatNumber($totals['turnover_credit']) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-300">{{ formatNumber($totals['balance_debit']) }}</td>
+                                <td class="px-4 py-2 border-r border-gray-300">{{ formatNumber($totals['balance_credit']) }}</td>
                             </tr>
                         @endif
                     </tbody>

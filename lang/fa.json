@@ -503,6 +503,8 @@
     "Cannot delete subject with children": "نمی توان سرفصل را با زیرمجموعه حذف کرد",
     "Cannot delete subject with monthly budgets": "سرفصل دارای بودجه ماهانه قابل حذف نیست",
     "Cannot delete subject with relationships": "نمی توان سرفصل را با روابط حذف کرد",
+    "Cannot delete a bank with bank accounts.": "بانک دارای حساب بانکی قابل حذف نیست.",
+    "Cannot delete a bank account with related records.": "حساب بانکی دارای گردش یا اطلاعات وابسته قابل حذف نیست.",
     "Cannot delete subject with transactions": "نمی توان سرفصل را با تراکنش حذف کرد",
     "Cannot delete this document because it is approved": "نمی توان این سند را حذف کرد زیرا تأیید شده است",
     "Cannot delete this document because it is approved.": "نمی توان این سند را حذف کرد زیرا تأیید شده است.",

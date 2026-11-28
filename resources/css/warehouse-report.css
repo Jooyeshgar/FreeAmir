@@ -50,7 +50,7 @@ body {
 table.report {
     width: 100%;
     border-collapse: collapse;
-    table-layout: fixed;
+    table-layout: auto;
 }
 
 li:nth-child(odd) {
@@ -77,9 +77,17 @@ table.report tbody td {
     text-align: center;
 }
 
-table.report .col-name,
-table.report .col-category {
+table.report td.numeric {
+    white-space: nowrap;
+}
+
+table.report .col-name {
     width: 15%;
+    text-align: right;
+}
+
+table.report .col-category {
+    width: 5%;
     text-align: right;
 }
 

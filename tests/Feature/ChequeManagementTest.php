@@ -108,6 +108,33 @@ class ChequeManagementTest extends TestCase
         $this->service = app(ChequeService::class);
     }
 
+    public function test_chequebook_register_links_preserve_account_and_book_during_navigation(): void
+    {
+        $this->withoutMiddleware(CheckPermission::class);
+        FiscalYear::findOrFail($this->fiscalYearId)->users()->syncWithoutDetaching([$this->user->id]);
+        $this->withCookies(['active-fiscal-year-id' => (string) $this->fiscalYearId]);
+        $this->user->givePermissionTo(Permission::findOrCreate('cheques.create', 'web'));
+        $book = Chequebook::create(['bank_account_id' => $this->account->id, 'serial_prefix' => 'آزمون', 'first_leaf' => 1, 'last_leaf' => 25, 'next_leaf' => 1]);
+        $response = $this->get(route('chequebooks.show', $book))->assertOk();
+        $document = new \DOMDocument;
+        $previous = libxml_use_internal_errors(true);
+        try {
+            $document->loadHTML('<meta charset="UTF-8">'.$response->getContent());
+        } finally {
+            libxml_clear_errors();
+            libxml_use_internal_errors($previous);
+        }
+        $links = (new \DOMXPath($document))->query('//a[contains(@href, "/cheques/create?")]');
+        $this->assertCount(2, $links);
+        foreach ($links as $link) {
+            $href = $link->getAttribute('href');
+            parse_str(parse_url($href, PHP_URL_QUERY), $parameters);
+            $this->assertSame((string) $this->account->id, $parameters['bank_account_id'] ?? null);
+            $this->assertSame((string) $book->id, $parameters['chequebook_id'] ?? null);
+            $this->get($href)->assertOk()->assertViewHas('selectedBankAccountId', $this->account->id)->assertViewHas('selectedChequebookId', $book->id);
+        }
+    }
+
     public function test_received_cheque_posts_balanced_registration_deposit_and_clearance_documents(): void
     {
         $cheque = $this->receivedCheque();

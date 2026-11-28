@@ -6,6 +6,8 @@ use App\Models;
 use App\Models\FiscalYear;
 use App\Services\FiscalYearMutationGuard;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class BankController extends Controller
 {
@@ -28,7 +30,7 @@ class BankController extends Controller
         app(FiscalYearMutationGuard::class)->ensureOpen();
 
         $validatedData = $request->validate([
-            'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
+            'name' => 'required|max:50|string|regex:/^[\w\d\s\x{200C}]*$/u',
         ]);
 
         $validatedData['fiscal_year_id'] = getActiveFiscalYear();
@@ -47,7 +49,7 @@ class BankController extends Controller
         app(FiscalYearMutationGuard::class)->ensureOpen($bank);
 
         $validatedData = $request->validate([
-            'name' => 'required|max:20|string|regex:/^[\w\d\s]*$/u',
+            'name' => 'required|max:50|string|regex:/^[\w\d\s\x{200C}]*$/u',
         ]);
 
         $bank->update($validatedData);
@@ -59,7 +61,17 @@ class BankController extends Controller
     {
         app(FiscalYearMutationGuard::class)->ensureOpen($bank);
 
-        $bank->delete();
+        DB::transaction(function () use ($bank) {
+            Models\Bank::whereKey($bank->id)->lockForUpdate()->firstOrFail();
+
+            if (Models\BankAccount::withoutGlobalScopes()->where('bank_id', $bank->id)->exists()) {
+                throw ValidationException::withMessages([
+                    'bank' => __('Cannot delete a bank with bank accounts.'),
+                ]);
+            }
+
+            $bank->delete();
+        });
 
         return redirect()->route('banks.index')->with('success', __('Bank deleted successfully.'));
     }

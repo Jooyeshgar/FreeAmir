@@ -353,7 +353,7 @@ class InvoiceCsvExportTest extends TestCase
         Transaction::create(['document_id' => $document->id, 'subject_id' => $subject->id,
             'value' => -123.45, 'user_id' => $this->user->id]);
 
-        $this->assertSame(['001', 'حساب ۲', '123.45', '0', '123.45', '0'], $this->exportRows('trial_balance_csv')[1]);
+        $this->assertSame(['001', 'حساب ۲', '0', '0', '123.45', '0', '123.45', '0'], $this->exportRows('trial_balance_csv')[1]);
     }
 
     public function test_csv_numbers_preserve_separators_leading_zeros_and_empty_values_in_every_locale(): void

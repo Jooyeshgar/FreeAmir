@@ -127,7 +127,7 @@ class TrialBalanceExportTest extends TestCase
         $this->assertCount(2, $rows);
         $this->assertSame($detail->code, $rows[1][0]);
         $this->assertSame($detail->name, $rows[1][1]);
-        $this->assertSame(csvNumber(750000), $rows[1][2]);
+        $this->assertSame(csvNumber(750000), $rows[1][4]);
     }
 
     public function test_trial_balance_export_remain_bed_and_bes_reflect_net_balance(): void
@@ -147,10 +147,12 @@ class TrialBalanceExportTest extends TestCase
         $rows = array_map('str_getcsv', array_filter(explode("\n", $csv)));
         $dataRow = $rows[1]; // first data row after header
 
-        $this->assertSame(csvNumber(300), $dataRow[2], 'SumBed should be 300');
-        $this->assertSame(csvNumber(100), $dataRow[3], 'SumBes should be 100');
-        $this->assertSame(csvNumber(200), $dataRow[4], 'RemainBed should be 200 (net debit balance)');
-        $this->assertSame(csvNumber(0), $dataRow[5], 'RemainBes should be 0');
+        $this->assertSame(csvNumber(0), $dataRow[2], 'Balance before the range should be zero');
+        $this->assertSame(csvNumber(0), $dataRow[3], 'Balance before the range should be zero');
+        $this->assertSame(csvNumber(300), $dataRow[4], 'SumBed should be 300');
+        $this->assertSame(csvNumber(100), $dataRow[5], 'SumBes should be 100');
+        $this->assertSame(csvNumber(200), $dataRow[6], 'RemainBed should be 200 (net debit balance)');
+        $this->assertSame(csvNumber(0), $dataRow[7], 'RemainBes should be 0');
     }
 
     public function test_trial_balance_export_route_returns_csv(): void
@@ -241,8 +243,8 @@ class TrialBalanceExportTest extends TestCase
         $html = $this->get(route('reports.trial-balance'));
         $html->assertOk();
         $htmlSubject = $html->viewData('subjects')->firstWhere('id', $subjectId);
-        $this->assertSame(-22.0, $htmlSubject->opening);
-        $this->assertSame(-222.0, $htmlSubject->turnover_debit);
+        $this->assertSame(0.0, $htmlSubject->opening);
+        $this->assertSame(-244.0, $htmlSubject->turnover_debit);
         $this->assertSame(-244.0, $htmlSubject->balance);
         $this->assertSame(convertToJalali($fiscalStart, true), $html->viewData('start_date'));
         $this->assertSame(convertToJalali($fiscalEnd, true), $html->viewData('end_date'));
@@ -252,14 +254,14 @@ class TrialBalanceExportTest extends TestCase
         ]));
         $print->assertOk();
         $printSubject = $print->viewData('subjects')->firstWhere('id', $subjectId);
-        $this->assertSame(-22.0, $printSubject->opening);
-        $this->assertSame(-222.0, $printSubject->turnover_debit);
+        $this->assertSame(0.0, $printSubject->opening);
+        $this->assertSame(-244.0, $printSubject->turnover_debit);
         $this->assertSame(-244.0, $printSubject->balance);
 
         $csv = $this->get(route('reports.trial-balance.export-csv', [
             'end_date' => convertToJalali($fiscalEnd, true),
         ]))->streamedContent();
-        $this->assertStringContainsString(csvNumber(222), $csv);
+        $this->assertStringContainsString(csvNumber(244), $csv);
         $this->assertStringNotContainsString(csvNumber(111), $csv);
         $this->assertStringNotContainsString(csvNumber(333), $csv);
     }

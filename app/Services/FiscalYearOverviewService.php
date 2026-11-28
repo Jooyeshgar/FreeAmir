@@ -87,7 +87,8 @@ class FiscalYearOverviewService
             $total += $this->subjectService->sumSubject($inventorySubjectId);
         }
 
-        return $total;
+        // Ledger debits are negative; inventory is presented as a debit asset balance.
+        return -$total;
     }
 
     /**
@@ -235,12 +236,14 @@ class FiscalYearOverviewService
 
             $balance = (float) Transaction::query()
                 ->join('documents', 'documents.id', '=', 'transactions.document_id')
+                ->where('documents.fiscal_year_id', getActiveFiscalYear())
+                ->whereNotNull('documents.approved_at')
                 ->whereIn('transactions.subject_id', $subjectIds)
                 ->when($startDate, fn ($query, string $date) => $query->where('documents.date', '>=', $date))
                 ->when($endDate, fn ($query, string $date) => $query->where('documents.date', '<=', $date))
                 ->sum('transactions.value');
 
-            if ($balance === 0) {
+            if ($balance === 0.0) {
                 continue;
             }
 
@@ -282,7 +285,7 @@ class FiscalYearOverviewService
     {
         $subject = Subject::find(config('amir.cost'));
 
-        return $this->mapMonths($this->subjectService->sumSubjectWithDateRange($subject));
+        return $this->mapMonths($this->subjectService->sumApprovedSubjectWithDateRange($subject));
     }
 
     public function getMonthlyIncome()
@@ -297,7 +300,7 @@ class FiscalYearOverviewService
         foreach ($incomeSubjectIds as $index => $incomeSubjectId) {
             $subject = Subject::find($incomeSubjectId);
             $monthlyIncomes[$index] = $subject
-                ? $this->mapMonths($this->subjectService->sumSubjectWithDateRange($subject))
+                ? $this->mapMonths($this->subjectService->sumApprovedSubjectWithDateRange($subject))
                 : $this->mapMonths([]);
         }
 
@@ -346,32 +349,23 @@ class FiscalYearOverviewService
 
     public function getMonthlyProductsStat()
     {
-        $productInventorySubjectIds = Product::pluck('inventory_subject_id')->all();
-        $monthlyProductsStat = [];
+        [$start, $end] = FiscalYear::findOrFail(getActiveFiscalYear())->range();
+        $sales = Invoice::query()
+            ->where('invoice_type', InvoiceType::SELL)
+            ->whereIn('status', InvoiceStatus::approvedOrSettled())
+            ->whereBetween('date', [$start, $end])
+            ->selectRaw('DATE(date) as sale_date, SUM(amount) as total')
+            ->groupBy('sale_date')
+            ->get();
 
-        foreach ($productInventorySubjectIds as $productInventorySubjectId) {
-            $productSubject = Subject::find($productInventorySubjectId);
-            if (! is_null($productSubject)) {
-                $monthlyProductsStat[] = $this->subjectService->sumSubjectWithDateRange($productSubject);
-            }
+        $monthlySales = array_fill(1, 12, 0.0);
+        foreach ($sales as $sale) {
+            $month = (int) toEnglish(jdate('m', strtotime($sale->sale_date)));
+            $monthlySales[$month] += (float) $sale->total;
         }
 
-        $productsStat = [];
-        foreach ($monthlyProductsStat as $monthlyProductStat) {
-            if (empty($monthlyProductStat)) {
-                continue;
-            }
-
-            foreach ($monthlyProductStat as $month => $stat) {
-                if (! isset($productsStat[$month])) {
-                    $productsStat[$month] = 0;
-                }
-
-                $productsStat[$month] += $stat;
-            }
-        }
-
-        return $this->mapMonths($productsStat);
+        // Preserve fractional rials; mapMonths truncates values used by older charts.
+        return array_combine(array_keys($this->mapMonths([])), array_values($monthlySales));
     }
 
     public function balanceForSubjectIds(array $subjectIds, int $duration, bool $inverse = true)
@@ -491,7 +485,8 @@ class FiscalYearOverviewService
         $result = [];
 
         foreach ($months as $number => $name) {
-            $result[$name] = (int) abs($data[$number] ?? 0);
+            $value = abs($data[$number] ?? 0);
+            $result[$name] = $value == (int) $value ? (int) $value : $value;
         }
 
         return $result;
