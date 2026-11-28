@@ -10,6 +10,7 @@ use App\Models\FiscalYear;
 use App\Models\Invoice;
 use App\Models\User;
 use App\Services\InvoiceNumberService;
+use App\Services\InvoiceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
@@ -179,6 +180,35 @@ class InvoiceNumberChronologyTest extends TestCase
         $this->assertSame([1, 2, 3], $asc->viewData('invoices')->pluck('number')->map(fn ($n) => (int) $n)->all());
         $desc = $this->actingAs($this->user)->get(route('invoices.index', ['sort' => 'number', 'direction' => 'desc']))->assertOk();
         $this->assertSame([3, 2, 1], $desc->viewData('invoices')->pluck('number')->map(fn ($n) => (int) $n)->all());
+    }
+
+    public function test_void_route_rejects_a_number_and_date_that_break_chronological_numbering(): void
+    {
+        $this->user->givePermissionTo(Permission::findOrCreate('invoices.void'));
+        $sale = $this->invoice(InvoiceType::SELL, 10, '2026-11-24', InvoiceStatus::APPROVED);
+        $this->invoice(InvoiceType::BUY, 50, '2026-11-30');
+
+        $response = $this->actingAs($this->user)->post(route('invoices.void', $sale), ['date' => formatDate('2026-11-25'), 'invoice_number' => 60]);
+
+        $response->assertRedirect();
+        $this->assertStringContainsString(formatDocumentNumber(50), session('error'));
+        $this->assertSame(0, Invoice::where('invoice_type', InvoiceType::VOID)->count());
+    }
+
+    public function test_void_service_rechecks_conflicts_inside_its_transaction(): void
+    {
+        $sale = $this->invoice(InvoiceType::SELL, 10, '2026-11-24', InvoiceStatus::APPROVED);
+        // Simulates a concurrent save that took the number after the controller pre-check passed.
+        $this->invoice(InvoiceType::BUY, 11, '2026-11-25');
+
+        try {
+            (new InvoiceService)->voidInvoice($sale, $this->user, '2026-11-25', 11);
+            $this->fail('Voiding with a taken number must be rejected.');
+        } catch (ValidationException $e) {
+            $this->assertStringContainsString(formatDocumentNumber(11), $e->errors()['invoice_number'][0]);
+        }
+
+        $this->assertSame(0, Invoice::where('invoice_type', InvoiceType::VOID)->count());
     }
 
     private function numberError(InvoiceType $type, int $number, string $date, ?Invoice $editing = null): ?string

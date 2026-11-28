@@ -1618,6 +1618,7 @@ class InvoiceService
         $voidInvoice = null;
 
         DB::transaction(function () use ($invoice, $user, $date, $number, &$voidInvoice) {
+            app(InvoiceNumberService::class)->lockAndAssertNoConflicts($number, $date, null, (int) $invoice->fiscal_year_id);
             $voidInvoice = new Invoice;
             $voidInvoice->fill(collect($invoice)->except(['id', 'date', 'creator_id', 'document_id', 'number', 'status'])->toArray());
             $voidInvoice->status = InvoiceStatus::PENDING;

@@ -262,19 +262,14 @@ class BeginningInventoryTest extends TestCase
         $this->assertEqualsWithDelta(0, (float) $invoice->items()->firstOrFail()->quantity_at, 0.001);
     }
 
-    public function test_later_buy_with_equal_number_uses_approved_beginning_inventory_snapshot(): void
+    public function test_later_buy_uses_approved_beginning_inventory_snapshot(): void
     {
-        $this->assertLaterBuyCost(1, 1);
-    }
-
-    public function test_later_buy_with_lower_number_uses_approved_beginning_inventory_snapshot(): void
-    {
-        $this->assertLaterBuyCost(2, 1);
+        $this->assertLaterBuyCost(1, 2);
     }
 
     public function test_approved_beginning_inventory_cannot_be_unapproved_after_a_later_approved_buy_with_equal_number(): void
     {
-        [$opening] = $this->openingThenBuy(1, 1);
+        [$opening] = $this->openingThenBuy(1, 2);
         $decision = InvoiceService::getChangeStatusDecision($opening->fresh(), 'unapproved');
 
         $this->assertFalse($decision->canProceed);
@@ -514,7 +509,7 @@ class BeginningInventoryTest extends TestCase
             'ancillaryCosts' => [['product_id' => $product->id, 'amount' => 300]],
         ], true)['ancillaryCost'];
         $this->assertSame(InvoiceStatus::APPROVED, $ancillary->status);
-        $sale = $this->createApprovedInvoice($product, $customer, InvoiceType::SELL, $this->mainWarehouse, 4, 500, 1, '2026-01-02');
+        $sale = $this->createApprovedInvoice($product, $customer, InvoiceType::SELL, $this->mainWarehouse, 4, 500, 21, '2026-01-02');
         $cashParent = $this->subject('010', 'Cash');
         $cash = Subject::create(['code' => '010001', 'name' => 'Settlement', 'parent_id' => $cashParent, 'type' => SubjectType::BOTH, 'fiscal_year_id' => $this->fiscalYear->id]);
         foreach ([$buy, $sale] as $invoice) {
@@ -574,7 +569,7 @@ class BeginningInventoryTest extends TestCase
 
     public function test_editing_an_approved_purchase_keeps_beginning_inventory_in_its_cost_inputs(): void
     {
-        [, $buy, $product] = $this->openingThenBuy(1, 1);
+        [, $buy, $product] = $this->openingThenBuy(1, 2);
 
         InvoiceService::updateInvoice($buy->id, [
             'title' => 'Replacement purchase',
@@ -583,7 +578,7 @@ class BeginningInventoryTest extends TestCase
             'customer_id' => $buy->customer_id,
             'warehouse_id' => $this->mainWarehouse->id,
             'document_number' => 2,
-            'number' => 1,
+            'number' => 2,
         ], [$this->item($product, 10, 300)], true);
 
         $item = $buy->fresh('items')->items->first();
@@ -595,7 +590,7 @@ class BeginningInventoryTest extends TestCase
 
     public function test_purchase_reversal_restores_opening_cost_after_an_ordinary_save(): void
     {
-        [, $buy, $product] = $this->openingThenBuy(1, 1);
+        [, $buy, $product] = $this->openingThenBuy(1, 2);
         InvoiceService::updateInvoice($buy->id, [
             'title' => $buy->title, 'date' => '2026-01-02', 'invoice_type' => InvoiceType::BUY,
             'customer_id' => $buy->customer_id, 'warehouse_id' => $buy->warehouse_id, 'number' => $buy->number,
@@ -680,7 +675,7 @@ class BeginningInventoryTest extends TestCase
     {
         [$product, $customer] = $this->costingContext();
         $approvedOpening = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 100, true, 1, '2026-01-01');
-        $buy = $this->createApprovedInvoice($product, $customer, InvoiceType::BUY, $this->otherWarehouse, 5, 200, 1, '2026-01-02');
+        $buy = $this->createApprovedInvoice($product, $customer, InvoiceType::BUY, $this->otherWarehouse, 5, 200, 3, '2026-01-02');
         $opening = $this->createBeginningInventory($this->product, 5, $this->otherWarehouse, 100, false, 2, '2026-01-01');
         foreach (InvoiceStatus::approvedOrSettled() as $status) {
             $buy->update(['status' => $status]);
@@ -700,7 +695,7 @@ class BeginningInventoryTest extends TestCase
     public function test_draft_opening_and_normal_drafts_can_be_saved_but_posting_is_checked_later(): void
     {
         [$product, $customer] = $this->costingContext();
-        $buy = $this->createApprovedInvoice($product, $customer, InvoiceType::BUY, $this->otherWarehouse, 5, 200, 1, '2026-01-02');
+        $buy = $this->createApprovedInvoice($product, $customer, InvoiceType::BUY, $this->otherWarehouse, 5, 200, 2, '2026-01-02');
         $opening = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 100, false, 1, '2026-01-01');
         InvoiceService::updateInvoice($opening->id, [...$this->invoiceData($this->mainWarehouse, 1), 'date' => '2026-01-01'], [$this->item($this->product, 6, 100)]);
         $this->assertSame(InvoiceStatus::PENDING, $opening->fresh()->status);
@@ -729,7 +724,7 @@ class BeginningInventoryTest extends TestCase
     public function test_same_day_opening_requires_an_earlier_date_even_after_movements_are_deactivated(): void
     {
         [$product, $customer] = $this->costingContext();
-        $buy = $this->createApprovedInvoice($product, $customer, InvoiceType::BUY, $this->mainWarehouse, 5, 200, 1, '2026-01-02');
+        $buy = $this->createApprovedInvoice($product, $customer, InvoiceType::BUY, $this->mainWarehouse, 5, 200, 2, '2026-01-02');
         $opening = $this->createBeginningInventory($product, 5, $this->mainWarehouse, 100, false, 1, '2026-01-02');
         app(GroupActionService::class)->inactivateDependentInvoices($opening);
         $this->assertOpeningRejected(fn () => (new InvoiceService)->changeInvoiceStatus($opening->fresh(), 'approved'));
@@ -741,12 +736,12 @@ class BeginningInventoryTest extends TestCase
 
     public function test_normal_movements_cannot_be_approved_or_backdated_to_or_before_an_opening(): void
     {
-        [$opening, $buy, $product] = $this->openingThenBuy(1, 2);
+        [$opening, $buy, $product] = $this->openingThenBuy(5, 6);
         foreach (['2025-12-31', '2026-01-01'] as $date) {
             foreach ([false, true] as $approve) {
                 $this->assertOpeningRejected(fn () => InvoiceService::updateInvoice($buy->id, [
                     'title' => 'Backdated buy', 'date' => $date, 'invoice_type' => InvoiceType::BUY, 'customer_id' => $buy->customer_id,
-                    'warehouse_id' => $buy->warehouse_id, 'number' => $buy->number,
+                    'warehouse_id' => $buy->warehouse_id, 'number' => $opening->number - 1,
                 ], [$this->item($product, 5, 200)], $approve));
             }
         }
@@ -820,7 +815,7 @@ class BeginningInventoryTest extends TestCase
     public function test_other_fiscal_years_do_not_block_opening_inventory(): void
     {
         [$product, $customer] = $this->costingContext();
-        $buy = $this->createApprovedInvoice($product, $customer, InvoiceType::BUY, $this->otherWarehouse, 5, 200, 1, '2026-01-02');
+        $buy = $this->createApprovedInvoice($product, $customer, InvoiceType::BUY, $this->otherWarehouse, 5, 200, 2, '2026-01-02');
         $buy->update(['fiscal_year_id' => FiscalYear::factory()->create()->id]);
         $opening = $this->createBeginningInventory($this->product, 5, $this->mainWarehouse, 100, true, 1, '2026-01-01');
         $this->assertSame(InvoiceStatus::APPROVED, $opening->status);
@@ -828,7 +823,7 @@ class BeginningInventoryTest extends TestCase
 
     public function test_group_approval_blocks_an_inactive_opening_while_movements_exist(): void
     {
-        [$opening, $buy] = $this->openingThenBuy(1, 2);
+        [$opening, $buy] = $this->openingThenBuy(1, 3);
         $other = $this->createBeginningInventory($this->product, 5, $this->otherWarehouse, 100, false, 2, '2026-01-01');
         $other->update(['status' => InvoiceStatus::APPROVED_INACTIVE]);
         $this->expectException(ValidationException::class);
@@ -839,7 +834,7 @@ class BeginningInventoryTest extends TestCase
     {
         [$product, $customer] = $this->costingContext();
         $this->createBeginningInventory($product, 5, $this->mainWarehouse, 100, true, 1, '2026-01-01');
-        $buy = $this->createApprovedInvoice($product, $customer, InvoiceType::BUY, $this->mainWarehouse, 5, 200, 1, '2026-01-02');
+        $buy = $this->createApprovedInvoice($product, $customer, InvoiceType::BUY, $this->mainWarehouse, 5, 200, 3, '2026-01-02');
         $opening = $this->createBeginningInventory($product, 5, $this->otherWarehouse, 300, false, 2, '2026-01-01');
         $this->assertOpeningRejected(fn () => (new InvoiceService)->changeInvoiceStatus($opening->fresh(), 'approved'));
         app(GroupActionService::class)->inactivateDependentInvoices($opening);
@@ -882,7 +877,7 @@ class BeginningInventoryTest extends TestCase
     public function test_direct_create_with_approval_is_rejected_atomically_while_movements_are_posted(): void
     {
         [$product, $customer] = $this->costingContext();
-        $this->createApprovedInvoice($product, $customer, InvoiceType::BUY, $this->otherWarehouse, 5, 200, 1, '2026-01-02');
+        $this->createApprovedInvoice($product, $customer, InvoiceType::BUY, $this->otherWarehouse, 5, 200, 2, '2026-01-02');
         $invoiceCount = Invoice::count();
         $documentCount = Document::count();
         $this->assertOpeningRejected(fn () => $this->createBeginningInventory($product, 5, $this->mainWarehouse, 100, true, 1, '2026-01-01'));

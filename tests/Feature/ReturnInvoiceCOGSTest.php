@@ -203,7 +203,7 @@ class ReturnInvoiceCOGSTest extends TestCase
         $this->unapproveInvoice($laterBuy);
 
         $this->assertEqualsWithDelta(7933156, $product->fresh()->average_cost, 0.01);
-        $sale = $this->sell([$this->productItem($product, 1, 14510000)], true, 30, '2026-06-02')['invoice'];
+        $sale = $this->sell([$this->productItem($product, 1, 14510000)], true, 6, '2026-06-02')['invoice'];
         $this->assertEqualsWithDelta(7933156, $this->findInvoiceItem($sale, $product)->cog_after, 0.01);
         $this->assertEqualsWithDelta(7933156, $sale->document->transactions()->where('subject_id', $product->inventory_subject_id)->sum('value'), 0.01);
         $this->assertEqualsWithDelta(-7933156, $sale->document->transactions()->where('subject_id', $product->cogs_subject_id)->sum('value'), 0.01);

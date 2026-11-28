@@ -240,7 +240,7 @@ class InvoiceGroupActionTest extends TestCase
     {
         $product = $this->createProduct(['quantity' => 0, 'average_cost' => 0]);
         $date = now()->toDateString();
-        $buy = $this->buy([$this->productItem($product, 20, 100)], true, 2000, now()->subDay()->toDateString())['invoice'];
+        $buy = $this->buy([$this->productItem($product, 20, 100)], true, 1271, now()->subDay()->toDateString())['invoice'];
         $firstSell = $this->sell([$this->productItem($product, 3, 150)], true, 1273, $date)['invoice'];
         $secondSell = $this->sell([$this->productItem($product, 2, 150)], true, 1272, $date)['invoice'];
 
@@ -405,7 +405,7 @@ class InvoiceGroupActionTest extends TestCase
             [$this->productItem($product, 4, 100)],
             $buyInvoice->id,
             false,
-            2312,
+            2310,
             $baseDate->copy()->addDay()->toDateString()
         )['invoice'];
 

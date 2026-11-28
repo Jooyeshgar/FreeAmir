@@ -37,6 +37,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class InvoiceController extends Controller
@@ -1031,7 +1032,11 @@ class InvoiceController extends Controller
             return redirect()->back()->withInput()->with('error', $numberService->conflictMessage($conflicts));
         }
 
-        $voidInvoice = $this->invoiceService->voidInvoice($invoice, auth()->user(), $date, $number);
+        try {
+            $voidInvoice = $this->invoiceService->voidInvoice($invoice, auth()->user(), $date, $number);
+        } catch (ValidationException $e) {
+            return redirect()->back()->withInput()->with('error', collect($e->errors())->flatten()->first());
+        }
 
         [$msgType, $msg] = $this->invoiceMessage($voidInvoice, 'voided', true);
 
