@@ -2,12 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\FiscalYear;
 use App\Models\Invoice;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 /**
  * One numbering sequence per fiscal year for every invoice type.
@@ -19,37 +17,6 @@ class InvoiceNumberService
     public const REASON_DUPLICATE = 'duplicate';
 
     public const REASON_OUT_OF_ORDER = 'out_of_order';
-
-    /**
-     * Explicitly renumber the active fiscal year into one gapless chronological sequence (1..n) across all types,
-     * ordered by date, then current number, then id. Never runs automatically.
-     *
-     * @return int number of invoices in the sequence
-     */
-    public function sort(): int
-    {
-        return DB::transaction(function (): int {
-            $fiscalYear = FiscalYear::query()->whereKey(getActiveFiscalYear())->lockForUpdate()->firstOrFail();
-            app(FiscalYearMutationGuard::class)->ensureOpen($fiscalYear);
-
-            $invoices = Invoice::query()->lockForUpdate()->orderBy('date')->orderBy('number')->orderBy('id')->get();
-            $temporary = (int) ceil($invoices->max(fn (Invoice $i) => abs((float) $i->number)) ?? 0) + $invoices->count() + 1;
-
-            // Numbers are unique per type, so move changed invoices out of the way first to avoid collisions mid-reorder.
-            foreach ($invoices as $index => $invoice) {
-                if ((float) $invoice->number !== (float) ($index + 1)) {
-                    Invoice::whereKey($invoice->id)->toBase()->update(['number' => $temporary++]);
-                }
-            }
-            foreach ($invoices as $index => $invoice) {
-                if ((float) $invoice->number !== (float) ($index + 1)) {
-                    Invoice::whereKey($invoice->id)->toBase()->update(['number' => $index + 1]);
-                }
-            }
-
-            return $invoices->count();
-        });
-    }
 
     /**
      * Find the invoices in the active fiscal year that would conflict with the given number/date.

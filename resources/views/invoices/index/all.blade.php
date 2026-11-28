@@ -35,16 +35,6 @@
     <button type="submit" class="btn btn-sm btn-neutral">{{ __('Filter') }}</button>
 </form>
 
-@can('invoices.sort-numbers')
-    <form method="POST" action="{{ route('invoices.sort-numbers') }}" class="mb-4"
-        onsubmit="return confirm(@js(__('Sort all invoice numbers in the active fiscal year? Existing printed invoice numbers will change.')))">
-        @csrf
-        <button class="btn btn-secondary" type="submit" @disabled(\App\Models\FiscalYear::find(getActiveFiscalYear())?->isClosed())>
-            {{ __('Sort invoice numbers') }}
-        </button>
-    </form>
-@endcan
-
 <div class="mb-6">
     <h3 class="text-lg font-bold mb-2">{{ __('Numbering conflicts') }}: {{ localizeNumber($numberingConflicts->count()) }}</h3>
     @if ($numberingConflicts->isEmpty())

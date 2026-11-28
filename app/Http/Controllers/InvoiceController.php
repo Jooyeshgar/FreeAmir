@@ -1037,11 +1037,4 @@ class InvoiceController extends Controller
 
         return redirect()->route('invoices.show', $invoice)->with($msgType, $msg);
     }
-
-    public function sortNumbers(InvoiceNumberService $invoiceNumberService): RedirectResponse
-    {
-        $invoiceNumberService->sort();
-
-        return redirect()->back()->with('success', __('Invoice numbers sorted successfully.'));
-    }
 }
