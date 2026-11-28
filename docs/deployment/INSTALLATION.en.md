@@ -129,7 +129,7 @@ docker stop freeamir && docker rm freeamir
 Install directly on your server or workstation with PHP, Composer, Node.js, and MariaDB.
 
 ### Prerequisites
-- PHP >= 8.2 with extensions: `pdo_mysql`, `gd`, `intl`, `zip`, `bcmath`, `mbstring`, `xml`, `opcache`
+- PHP >= 8.3 with extensions: `pdo_mysql`, `gd`, `intl`, `zip`, `bcmath`, `mbstring`, `xml`, `opcache`
 - Composer
 - MariaDB >= 10.6 (or MySQL >= 8.0)
 - Node.js >= 18.0.0
