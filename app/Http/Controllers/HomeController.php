@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Services\HomeService;
+use App\Services\OnboardingService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -25,7 +27,10 @@ class HomeController extends Controller
         'reports.ledger',
     ];
 
-    public function __construct(private readonly HomeService $service) {}
+    public function __construct(
+        private readonly HomeService $service,
+        private readonly OnboardingService $onboardingService,
+    ) {}
 
     public function managementDashboard(Request $request): View
     {
@@ -74,6 +79,7 @@ class HomeController extends Controller
             'canSales' => $canSales,
             'canInventory' => $canInventory,
             'homeVariant' => $homeVariant,
+            'onboarding' => $hasBusinessPerms ? $this->onboardingService->forUser($user) : null,
         ];
 
         if ($canFinancial) {
@@ -142,5 +148,21 @@ class HomeController extends Controller
             'formattedValue' => formatNumber($value),
             'unit' => config('amir.currency') ?? __('Rial'),
         ]);
+    }
+
+    /**
+     * Permanently dismiss the dashboard onboarding checklist for the authenticated user.
+     */
+    public function dismissOnboarding(Request $request): JsonResponse|RedirectResponse
+    {
+        $request->user()->forceFill([
+            'onboarding_dismissed_at' => now(),
+        ])->save();
+
+        if ($request->expectsJson()) {
+            return response()->json(['dismissed' => true]);
+        }
+
+        return redirect()->route('home');
     }
 }

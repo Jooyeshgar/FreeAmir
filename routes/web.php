@@ -25,6 +25,7 @@ Route::get('/verify/{id}/{hash}', [Controllers\Auth\RegisterController::class, '
 
 Route::middleware(['auth', 'ensure-feature-enabled:email_verification'])->group(function () {
     Route::get('/about', [Controllers\AboutController::class, 'index'])->name('about');
+    Route::post('/home/onboarding/dismiss', [Controllers\HomeController::class, 'dismissOnboarding'])->name('home.onboarding.dismiss');
     Route::get('/registered-user/company', [Controllers\CompanyController::class, 'createCompanyForRegisteredUser'])->name('registered-user.company.create');
     Route::post('/registered-user/company', [Controllers\CompanyController::class, 'storeCompanyForRegisteredUser'])->name('registered-user.company.store');
 });

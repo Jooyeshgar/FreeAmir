@@ -50,7 +50,13 @@ class User extends Authenticatable implements MustVerifyEmail
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'email_verification_otp_expires_at' => 'datetime',
+        'onboarding_dismissed_at' => 'datetime',
     ];
+
+    public function hasDismissedOnboarding(): bool
+    {
+        return ! is_null($this->onboarding_dismissed_at);
+    }
 
     /**
      * Determine if the user has verified their email address.
