@@ -270,4 +270,62 @@ class MoadianSentInvoiceSafeguardTest extends TestCase
         $this->assertSame(InvoiceStatus::PAID, $invoice->fresh()->status);
         $this->assertSame($before, $this->snapshot());
     }
+
+    public function test_legacy_sent_invoice_without_document_is_reactivated_through_the_normal_approve_flow(): void
+    {
+        $product = $this->createProduct(['quantity' => 10]);
+        $invoice = $this->sell([$this->productItem($product, 2, 150)])['invoice'];
+        // Legacy state: fully deactivated before the UNKNOWN history existed (document deleted, stock reversed).
+        (new InvoiceService)->changeInvoiceStatus($invoice, 'approved_inactive');
+        $invoice = $this->markSent($invoice, 'UNKNOWN');
+        $this->assertSame(InvoiceStatus::APPROVED_INACTIVE, $invoice->status);
+        $this->assertNull($invoice->document_id);
+
+        (new InvoiceService)->changeInvoiceStatus($invoice, 'approved');
+
+        $invoice->refresh();
+        $this->assertSame(InvoiceStatus::APPROVED, $invoice->status);
+        $this->assertNotNull($invoice->document_id);
+    }
+
+    public function test_bulk_approve_inactive_reactivates_a_sent_invoice_by_status_only(): void
+    {
+        $product = $this->createProduct(['quantity' => 10]);
+        $invoice = $this->markSent($this->sell([$this->productItem($product, 2, 150)])['invoice']);
+        (new InvoiceService)->changeInvoiceStatus($invoice, 'approved_inactive');
+        $this->assertSame(InvoiceStatus::APPROVED_INACTIVE, $invoice->fresh()->status);
+        $documentId = $invoice->fresh()->document_id;
+        $before = $this->snapshot();
+        $before['invoices'] = DB::table('invoices')->orderBy('id')->get()->map(fn ($row) => Arr::except((array) $row, ['updated_at', 'status']))->toJson();
+
+        app(GroupActionService::class)->approveInactiveInvoices();
+
+        $invoice->refresh();
+        $this->assertSame(InvoiceStatus::APPROVED, $invoice->status);
+        $this->assertSame($documentId, $invoice->document_id);
+        $after = $this->snapshot();
+        $after['invoices'] = DB::table('invoices')->orderBy('id')->get()->map(fn ($row) => Arr::except((array) $row, ['updated_at', 'status']))->toJson();
+        $this->assertSame($before, $after);
+    }
+
+    public function test_service_refuses_update_and_delete_of_a_sent_invoice(): void
+    {
+        $product = $this->createProduct(['quantity' => 10]);
+        $invoice = $this->markSent($this->sell([$this->productItem($product, 2, 150)])['invoice']);
+        $before = $this->snapshot();
+
+        try {
+            InvoiceService::deleteInvoice($invoice->id);
+            $this->fail('Deleting a sent invoice must be refused.');
+        } catch (ValidationException) {
+        }
+
+        try {
+            InvoiceService::updateInvoice($invoice->id, ['invoice_type' => $invoice->invoice_type->valueName()]);
+            $this->fail('Updating a sent invoice must be refused.');
+        } catch (ValidationException) {
+        }
+
+        $this->assertSame($before, $this->snapshot());
+    }
 }

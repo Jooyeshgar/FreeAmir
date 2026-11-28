@@ -1279,11 +1279,7 @@
                         $needsStatusConfirm = $changeStatusValidation->hasWarning() || ($isSentToMoadian && $isSettled);
 
                         $originalHasMoadianSuccess = !$invoice->invoice_type->isVoid() ||
-                            ($invoice->voidedInvoice?->moadianHistories->contains(function ($history) {
-                                $data = $history->data;
-
-                                return strtoupper($data['status'] ?? '') === 'SUCCESS';
-                            }) ?? false);
+                            ($invoice->voidedInvoice?->hasMoadianSuccess() ?? false);
 
                         $canChangeStatus = ($canApprove || $canUnapprove) && !$isSentToMoadian;
                     @endphp

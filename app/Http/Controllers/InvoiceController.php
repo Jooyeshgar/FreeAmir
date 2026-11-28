@@ -909,8 +909,7 @@ class InvoiceController extends Controller
             'products' => $productsConflicts,
         ];
 
-        $allowedToResolve = $this->groupActionService->canResolveConflicts($invoice);
-        $sentConflictsExist = $this->groupActionService->hasSentConflictingInvoices($invoice);
+        ['allowedToResolve' => $allowedToResolve, 'sentConflictsExist' => $sentConflictsExist] = $this->groupActionService->conflictResolutionSummary($invoice);
 
         return view('invoices.conflicts.group', compact('invoice', 'conflicts', 'allowedToResolve', 'sentConflictsExist'));
     }

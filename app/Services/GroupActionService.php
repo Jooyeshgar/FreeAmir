@@ -7,6 +7,7 @@ use App\Enums\InvoiceType;
 use App\Models\AncillaryCost;
 use App\Models\Invoice;
 use App\Models\Product;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
@@ -85,17 +86,29 @@ class GroupActionService
     /** Conflicts are resolvable only when every conflicting product allows overselling. */
     public function canResolveConflicts(Invoice $invoice): bool
     {
-        [, , $products] = $this->findAllConflictsRecursively($invoice);
-
-        return collect($products)->every(fn ($product) => (bool) $product->oversell);
+        return $this->conflictResolutionSummary($invoice)['allowedToResolve'];
     }
 
     /** Whether any dependent invoice was sent to Moadian and will be inactivated by status only. */
     public function hasSentConflictingInvoices(Invoice $invoice): bool
     {
-        [$invoices] = $this->findAllConflictsRecursively($invoice);
+        return $this->conflictResolutionSummary($invoice)['sentConflictsExist'];
+    }
 
-        return collect($invoices)->contains(fn (Invoice $conflict) => $conflict->isSentToMoadian());
+    /**
+     * Resolvability and sent-invoice flags from a single conflict walk.
+     *
+     * @return array{allowedToResolve: bool, sentConflictsExist: bool}
+     */
+    public function conflictResolutionSummary(Invoice $invoice): array
+    {
+        [$invoices, , $products] = $this->findAllConflictsRecursively($invoice);
+
+        return [
+            'allowedToResolve' => collect($products)->every(fn ($product) => (bool) $product->oversell),
+            'sentConflictsExist' => EloquentCollection::make($invoices)->loadMissing('moadianHistories')
+                ->contains(fn (Invoice $conflict) => $conflict->isSentToMoadian()),
+        ];
     }
 
     public function inactivateDependentInvoices(Invoice $invoice): void
@@ -117,6 +130,7 @@ class GroupActionService
                 ['date', 'desc'],
                 ['id', 'desc'],
             ])->values()->all();
+        EloquentCollection::make($sortedInvoices)->loadMissing('moadianHistories');
 
         DB::transaction(function () use ($sortedInvoices) {
             foreach ($sortedInvoices as $conflictInvoice) {

@@ -183,6 +183,7 @@ class InvoiceService
 
         $invoice = Invoice::findOrFail($invoiceId);
         app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
+        self::assertNotSentToMoadian($invoice, __('This invoice was sent to Moadian and cannot be edited.'));
         $requestedInvoiceType = InvoiceType::tryFromName($invoiceData['invoice_type'] ?? null);
 
         if ($requestedInvoiceType !== $invoice->invoice_type) {
@@ -444,6 +445,7 @@ class InvoiceService
     {
         $invoice = Invoice::withoutGlobalScopes()->find($invoiceId);
         app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
+        self::assertNotSentToMoadian($invoice, __('This invoice was sent to Moadian and cannot be deleted.'));
 
         DB::transaction(function () use ($invoiceId) {
             $invoice = Invoice::withoutGlobalScopes()->findOrFail($invoiceId);
@@ -696,7 +698,8 @@ class InvoiceService
             }
 
             // Moadian holds this invoice's data: only its status may change, so the document, stock, average cost, quantity_at and cog_after stay as they are.
-            if (($status === 'approved_inactive' || $reactivating) && $invoice->isSentToMoadian()) {
+            // Reactivation needs the document to still exist; a legacy invoice that was fully deactivated goes through the normal approve flow.
+            if (($status === 'approved_inactive' || ($reactivating && $invoice->document_id !== null)) && $invoice->isSentToMoadian()) {
                 $this->changeSentInvoiceStatusOnly($invoice, $status);
 
                 return;
@@ -726,6 +729,13 @@ class InvoiceService
         });
 
         $invoice->refresh();
+    }
+
+    private static function assertNotSentToMoadian(Invoice $invoice, string $message): void
+    {
+        if ($invoice->isSentToMoadian()) {
+            throw ValidationException::withMessages(['invoice' => [$message]]);
+        }
     }
 
     /**
@@ -1267,7 +1277,7 @@ class InvoiceService
                 return $decision;
             }
 
-            if ($nextStatus->isApproved() && $invoice->status->isApprovedInactive()) {
+            if ($nextStatus->isApproved() && $invoice->status->isApprovedInactive() && $invoice->document_id !== null) {
                 return new InvoiceStatusDecision;
             }
         }
