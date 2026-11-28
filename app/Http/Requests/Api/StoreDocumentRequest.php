@@ -12,6 +12,17 @@ class StoreDocumentRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $date = trim((string) $this->input('date'));
+
+        if (preg_match('/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})$/', $date, $matches) && (int) $matches[1] < 1700) {
+            $this->merge(['date' => str_replace('/', '-', convertToGregorian(str_replace('-', '/', $date)))]);
+        }
+
+        parent::prepareForValidation();
+    }
+
     public function rules(): array
     {
         return [
@@ -30,6 +41,27 @@ class StoreDocumentRequest extends FormRequest
             ],
             'transactions.*.value' => ['required', 'decimal:0,2'],
             'transactions.*.desc' => ['nullable', 'string'],
+            'ledger_confirmation' => ['nullable', 'boolean'],
         ];
+    }
+
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($validator) {
+            $transactions = $this->input('transactions');
+
+            if (! is_array($transactions)) {
+                return;
+            }
+
+            $sum = collect($transactions)->sum(fn ($t) => (float) ($t['value'] ?? 0));
+
+            if (round($sum, 2) != 0) {
+                $validator->errors()->add(
+                    'transactions',
+                    __('The sum of amounts must be zero (debit negative, credit positive).')
+                );
+            }
+        });
     }
 }

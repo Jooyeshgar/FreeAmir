@@ -4,6 +4,7 @@ namespace App\Mcp\Tools;
 
 use App\Models\FiscalYear;
 use App\Models\Product;
+use App\Services\ProductService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Response;
 
@@ -42,36 +43,18 @@ class ListProductsTool extends AccountingTool
     protected function report(array $arguments, FiscalYear $fiscalYear): Response
     {
         $currency = (string) ($fiscalYear->company?->currency ?: 'Rial');
-        $search = isset($arguments['query']) ? trim((string) $arguments['query']) : '';
         $limit = isset($arguments['limit']) ? max(1, min(50, (int) $arguments['limit'])) : 15;
         $page = isset($arguments['page']) ? max(1, (int) $arguments['page']) : 1;
 
-        $query = Product::query()
-            ->with('productGroup:id,name')
+        $paginator = ProductService::searchQuery([
+            'q' => $arguments['query'] ?? '',
+            'group_id' => $arguments['group_id'] ?? null,
+        ])
             ->where('fiscal_year_id', $fiscalYear->id)
-            ->orderBy('code')
-            ->orderBy('id');
-
-        if ($search !== '') {
-            $escaped = addcslashes($search, '%_\\');
-            $query->where(function ($q) use ($search, $escaped) {
-                $q->where('name', 'like', "%{$escaped}%")
-                    ->orWhere('code', 'like', "%{$escaped}%");
-
-                if (ctype_digit($search) && (int) $search > 0) {
-                    $q->orWhere('id', (int) $search);
-                }
-            });
-        }
-
-        if (isset($arguments['group_id'])) {
-            $query->where('group', (int) $arguments['group_id']);
-        }
-
-        $paginator = $query->paginate($limit, ['*'], 'page', $page);
+            ->paginate($limit, ['*'], 'page', $page);
 
         $products = collect($paginator->items())
-            ->map(fn (Product $product): array => self::formatSummary($product))
+            ->map(fn (Product $product): array => ProductService::formatSummary($product))
             ->all();
 
         $humanSummary = $paginator->total() === 0
@@ -94,23 +77,5 @@ class ListProductsTool extends AccountingTool
             'products' => $products,
             'human_summary' => $humanSummary,
         ]);
-    }
-
-    public static function formatSummary(Product $product): array
-    {
-        return [
-            'id' => (int) $product->id,
-            'name' => (string) $product->name,
-            'code' => $product->code !== null ? (string) $product->code : null,
-            'group_id' => $product->group !== null ? (int) $product->group : null,
-            'group_name' => $product->productGroup?->name,
-            'selling_price' => (float) ($product->selling_price ?? 0),
-            'vat' => (float) ($product->vat ?? 0),
-            'quantity' => (float) ($product->quantity ?? 0),
-            'quantity_warning' => (float) ($product->quantity_warning ?? 0),
-            'oversell' => (bool) $product->oversell,
-            'location' => $product->location,
-            'description' => $product->description,
-        ];
     }
 }

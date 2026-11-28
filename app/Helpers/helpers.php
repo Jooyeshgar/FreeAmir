@@ -367,6 +367,24 @@ function jalaliInputToGregorian(?string $date, string $field = 'date'): string
 
     [$year, $month, $day] = array_map('intval', explode('/', $normalized));
     $locale = App::getLocale();
+
+    // Four-digit years >= 1700 are Gregorian; smaller years are Jalali regardless of locale.
+    if ($year >= 1700) {
+        if (! checkdate($month, $day, $year)) {
+            throw ValidationException::withMessages([
+                $field => [__('validation.date', ['attribute' => $field])],
+            ]);
+        }
+
+        try {
+            return Carbon::createFromFormat('Y/m/d', $normalized)->format('Y-m-d');
+        } catch (Exception) {
+            throw ValidationException::withMessages([
+                $field => [__('validation.date', ['attribute' => $field])],
+            ]);
+        }
+    }
+
     $isValidDate = ($locale === 'fa' || $locale === 'fa_IR') ? jcheckdate($month, $day, $year) : checkdate($month, $day, $year);
     if (! $isValidDate) {
         throw ValidationException::withMessages([

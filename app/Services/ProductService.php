@@ -12,12 +12,78 @@ use App\Models\Product;
 use App\Models\Warehouse;
 use App\Models\WarehouseProductStock;
 use App\Models\WarehouseTransfer;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class ProductService
 {
     public function __construct(private readonly SubjectService $subjectService) {}
+
+    /**
+     * Shared product search/filter used by both the REST API and the MCP read tools.
+     */
+    public static function searchQuery(array $filters = []): Builder
+    {
+        $search = trim((string) ($filters['q'] ?? ''));
+        $groupId = isset($filters['group_id']) && $filters['group_id'] !== null && $filters['group_id'] !== '' ? (int) $filters['group_id'] : null;
+
+        $query = Product::query()
+            ->with('productGroup:id,name');
+
+        if ($groupId !== null && $groupId > 0) {
+            $query->where('group', $groupId);
+        }
+
+        if ($search !== '') {
+            $escaped = addcslashes($search, '%_\\');
+            $query->where(function ($q) use ($search, $escaped) {
+                $q->where('name', 'like', "%{$escaped}%")
+                    ->orWhere('code', 'like', "%{$escaped}%");
+
+                if (ctype_digit($search) && (int) $search > 0) {
+                    $q->orWhere('id', (int) $search);
+                }
+            });
+        }
+
+        return $query->orderBy('code')->orderBy('id');
+    }
+
+    public static function formatSummary(Product $product): array
+    {
+        return [
+            'id' => (int) $product->id,
+            'name' => (string) $product->name,
+            'code' => $product->code !== null ? (string) $product->code : null,
+            'group_id' => $product->group !== null ? (int) $product->group : null,
+            'group_name' => $product->productGroup?->name,
+            'selling_price' => (float) ($product->selling_price ?? 0),
+            'vat' => (float) ($product->vat ?? 0),
+            'quantity' => (float) ($product->quantity ?? 0),
+            'quantity_warning' => (float) ($product->quantity_warning ?? 0),
+            'oversell' => (bool) $product->oversell,
+            'location' => $product->location,
+            'description' => $product->description,
+        ];
+    }
+
+    public static function formatDetail(Product $product, string $currency): array
+    {
+        $warehouseStocks = $product->warehouseStocks->map(fn ($stock): array => [
+            'warehouse_id' => (int) $stock->warehouse_id,
+            'warehouse_name' => $stock->warehouse?->name,
+            'quantity' => (float) ($stock->quantity ?? 0),
+            'average_cost' => (float) ($stock->average_cost ?? 0),
+        ])->values()->all();
+
+        return array_merge(self::formatSummary($product), [
+            'sstid' => $product->sstid,
+            'average_cost' => (float) ($product->average_cost ?? 0),
+            'weight' => $product->weight !== null ? (float) $product->weight : null,
+            'warehouse_stocks' => $warehouseStocks,
+        ]);
+    }
 
     public function create(array $data): Product
     {
@@ -36,6 +102,73 @@ class ProductService
             $this->syncWebsites($product, $websites);
 
             return $product;
+        });
+    }
+
+    /**
+     * Create a product from the API payload, reusing an existing product with
+     * the same identity (code/name/sstid) and refusing conflicting code reuse.
+     * Runs inside a transaction with row locks so concurrent requests cannot
+     * create duplicate products.
+     *
+     * @return array{product: Product, reused: bool}|array{conflict: string}
+     */
+    public function storeReusable(array $data): array
+    {
+        return DB::transaction(function () use ($data): array {
+            $name = trim((string) $data['name']);
+            $code = trim((string) $data['code']);
+            $sstid = trim((string) ($data['sstid'] ?? ''));
+            $group = (int) $data['group'];
+
+            $existingByCode = Product::query()->where('code', $code)->lockForUpdate()->first();
+
+            if ($existingByCode) {
+                $sameIdentity = trim((string) $existingByCode->name) === $name
+                    && trim((string) ($existingByCode->sstid ?? '')) === $sstid;
+
+                if ($sameIdentity) {
+                    return ['product' => $existingByCode, 'reused' => true];
+                }
+
+                return ['conflict' => 'code'];
+            }
+
+            $identityQuery = Product::query()
+                ->where('name', $name)
+                ->where('group', $group);
+
+            if ($sstid !== '') {
+                $identityQuery->where('sstid', $sstid);
+            } else {
+                $identityQuery->where(function ($q) {
+                    $q->whereNull('sstid')->orWhere('sstid', '');
+                });
+            }
+
+            $existingByIdentity = $identityQuery->lockForUpdate()->first();
+
+            if ($existingByIdentity) {
+                return ['product' => $existingByIdentity, 'reused' => true];
+            }
+
+            $product = $this->create([
+                'name' => $name,
+                'code' => $code,
+                'sstid' => $sstid !== '' ? $sstid : null,
+                'group' => $group,
+                'location' => $data['location'] ?? null,
+                'quantity' => $data['quantity'] ?? 0,
+                'quantity_warning' => $data['quantity_warning'] ?? 0,
+                'oversell' => $data['oversell'] ?? 0,
+                'selling_price' => $data['selling_price'] ?? 0,
+                'discount_formula' => $data['discount_formula'] ?? null,
+                'description' => $data['description'] ?? null,
+                'vat' => $data['vat'] ?? 0,
+                'average_cost' => $data['average_cost'] ?? 0,
+            ]);
+
+            return ['product' => $product, 'reused' => false];
         });
     }
 

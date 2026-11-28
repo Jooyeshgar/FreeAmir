@@ -4,6 +4,7 @@ namespace App\Mcp\Tools;
 
 use App\Models\FiscalYear;
 use App\Models\Product;
+use App\Services\ProductService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Response;
 
@@ -57,22 +58,10 @@ class GetProductTool extends AccountingTool
             return $this->error(__('Product not found in the selected fiscal year.'));
         }
 
-        $warehouseStocks = $product->warehouseStocks->map(fn ($stock): array => [
-            'warehouse_id' => (int) $stock->warehouse_id,
-            'warehouse_name' => $stock->warehouse?->name,
-            'quantity' => (float) ($stock->quantity ?? 0),
-            'average_cost' => (float) ($stock->average_cost ?? 0),
-        ])->values()->all();
-
         return $this->success([
             'fiscal_year_id' => (int) $fiscalYear->id,
             'currency' => $currency,
-            'product' => array_merge(ListProductsTool::formatSummary($product), [
-                'sstid' => $product->sstid,
-                'average_cost' => (float) ($product->average_cost ?? 0),
-                'weight' => $product->weight !== null ? (float) $product->weight : null,
-                'warehouse_stocks' => $warehouseStocks,
-            ]),
+            'product' => ProductService::formatDetail($product, $currency),
             'human_summary' => __('Product :name (ID :id, code :code): selling price :price :currency, quantity :quantity.', [
                 'name' => $product->name,
                 'id' => $product->id,

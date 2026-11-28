@@ -4,11 +4,10 @@ namespace App\Mcp\Tools;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
-use App\Mcp\Support\ContextResolver;
 use App\Models\FiscalYear;
 use App\Models\Invoice;
-use Brick\Math\BigDecimal;
-use Brick\Math\RoundingMode;
+use App\Mcp\Support\ContextResolver;
+use App\Services\InvoiceService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Response;
 
@@ -55,9 +54,10 @@ class ListInvoicesTool extends AccountingTool
     protected function report(array $arguments, FiscalYear $fiscalYear): Response
     {
         $currency = (string) ($fiscalYear->company?->currency ?: 'Rial');
-        $search = isset($arguments['query']) ? trim((string) $arguments['query']) : '';
         $limit = isset($arguments['limit']) ? max(1, min(50, (int) $arguments['limit'])) : 15;
         $page = isset($arguments['page']) ? max(1, (int) $arguments['page']) : 1;
+
+        $canReadCustomers = ContextResolver::authContext()?->can('customers.index') ?? false;
 
         $invoiceType = isset($arguments['type']) ? InvoiceType::tryFromName((string) $arguments['type']) : null;
         if (isset($arguments['type']) && $invoiceType === null) {
@@ -69,53 +69,20 @@ class ListInvoicesTool extends AccountingTool
             return $this->error(__('Invalid invoice status.'));
         }
 
-        $canReadCustomers = ContextResolver::authContext()?->can('customers.index') ?? false;
-
-        $query = Invoice::query()
+        $paginator = InvoiceService::searchQuery([
+            'q' => $arguments['query'] ?? '',
+            'invoice_type' => $invoiceType,
+            'status' => $invoiceStatus,
+            'customer_id' => $arguments['customer_id'] ?? null,
+            'date_from' => $arguments['date_from'] ?? null,
+            'date_to' => $arguments['date_to'] ?? null,
+            'with_customer' => $canReadCustomers,
+        ])
             ->where('fiscal_year_id', $fiscalYear->id)
-            ->orderByDesc('date')
-            ->orderByDesc('id');
-
-        if ($canReadCustomers) {
-            $query->with('customer:id,name');
-        }
-
-        if ($search !== '') {
-            $escaped = addcslashes($search, '%_\\');
-            $query->where(function ($q) use ($search, $escaped) {
-                $q->where('number', 'like', "%{$escaped}%")
-                    ->orWhere('title', 'like', "%{$escaped}%");
-
-                if (ctype_digit($search) && (int) $search > 0) {
-                    $q->orWhere('id', (int) $search);
-                }
-            });
-        }
-
-        if ($invoiceType !== null) {
-            $query->where('invoice_type', $invoiceType->value);
-        }
-
-        if ($invoiceStatus !== null) {
-            $query->where('status', $invoiceStatus->value);
-        }
-
-        if (isset($arguments['customer_id'])) {
-            $query->where('customer_id', (int) $arguments['customer_id']);
-        }
-
-        if (isset($arguments['date_from'])) {
-            $query->whereDate('date', '>=', $arguments['date_from']);
-        }
-
-        if (isset($arguments['date_to'])) {
-            $query->whereDate('date', '<=', $arguments['date_to']);
-        }
-
-        $paginator = $query->paginate($limit, ['*'], 'page', $page);
+            ->paginate($limit, ['*'], 'page', $page);
 
         $invoices = collect($paginator->items())
-            ->map(fn (Invoice $invoice): array => self::formatSummary($invoice, $currency, $canReadCustomers))
+            ->map(fn (Invoice $invoice): array => InvoiceService::formatSummary($invoice, $currency, $canReadCustomers))
             ->all();
 
         $humanSummary = $paginator->total() === 0
@@ -138,44 +105,5 @@ class ListInvoicesTool extends AccountingTool
             'invoices' => $invoices,
             'human_summary' => $humanSummary,
         ]);
-    }
-
-    public static function formatSummary(Invoice $invoice, string $currency, bool $includeCustomerName): array
-    {
-        $invoiceType = InvoiceType::tryFrom((int) ($invoice->invoice_type?->value ?? $invoice->invoice_type));
-        $status = $invoice->status instanceof InvoiceStatus
-            ? $invoice->status
-            : InvoiceStatus::tryFrom((int) $invoice->status);
-
-        $rawDate = $invoice->date?->format('Y-m-d');
-        $jalaliDate = $rawDate !== null ? (gregorian_to_jalali_date($rawDate, '/', '-') ?: null) : null;
-        $amount = self::decimalAmount($invoice->amount);
-        [$whole, $fraction] = explode('.', $amount);
-        $whole = preg_replace('/\B(?=(?:[0-9]{3})+\z)/', ',', $whole);
-        $fraction = rtrim($fraction, '0');
-        $formattedAmount = $fraction === '' ? $whole : $whole.'.'.$fraction;
-
-        return [
-            'id' => (int) $invoice->id,
-            'number' => $invoice->number !== null ? (string) $invoice->number : null,
-            'title' => $invoice->title,
-            'type' => $invoiceType?->valueName(),
-            'type_label' => $invoiceType?->label(),
-            'status' => $status?->valueName(),
-            'status_label' => $status?->label(),
-            'customer_id' => $invoice->customer_id !== null ? (int) $invoice->customer_id : null,
-            'customer_name' => $includeCustomerName ? ($invoice->customer?->name ?? null) : null,
-            'date' => $rawDate,
-            'jalali_date' => $jalaliDate,
-            'amount' => $amount,
-            'formatted_amount' => $formattedAmount.' '.$currency,
-            'vat' => self::decimalAmount($invoice->vat),
-            'subtraction' => self::decimalAmount($invoice->subtraction),
-        ];
-    }
-
-    public static function decimalAmount(string|int|float|null $amount): string
-    {
-        return (string) BigDecimal::of((string) ($amount ?? 0))->toScale(2, RoundingMode::HALF_UP);
     }
 }
