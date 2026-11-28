@@ -229,6 +229,19 @@ class MoadianSentInvoiceSafeguardTest extends TestCase
         $this->assertEqualsWithDelta($averageCost, $product->fresh()->average_cost, 0.001);
     }
 
+    public function test_detail_page_shows_no_invalid_status_error_for_an_unapproved_sent_invoice(): void
+    {
+        $product = $this->createProduct(['quantity' => 10]);
+        $invoice = $this->sell([$this->productItem($product, 2, 150)])['invoice'];
+        // Legacy state: unapproved before the UNKNOWN history existed.
+        (new InvoiceService)->changeInvoiceStatus($invoice, 'unapproved');
+        $invoice = $this->markSent($invoice, 'UNKNOWN');
+        $this->assertSame(InvoiceStatus::UNAPPROVED, $invoice->status);
+
+        $this->get(route('invoices.show', $invoice))->assertOk()
+            ->assertDontSeeText(__('Invalid status action.'));
+    }
+
     public function test_sent_invoice_cannot_be_fully_unapproved(): void
     {
         $product = $this->createProduct(['quantity' => 10]);

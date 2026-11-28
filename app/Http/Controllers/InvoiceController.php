@@ -318,7 +318,13 @@ class InvoiceController extends Controller
             return view('invoices.show.beginning_inventory', compact('invoice', 'changeStatusValidation'));
         }
 
-        $changeStatusValidation = $invoice->isSentToMoadian()
+        // Load once so the repeated isSentToMoadian() / hasMoadianSuccess() calls here and in the view don't re-query.
+        $invoice->loadMissing('moadianHistories');
+
+        // Sent invoices only get status-only changes, and only once approved; other statuses keep the regular validation.
+        $statusOnlyChange = $invoice->isSentToMoadian()
+            && ($invoice->status->isApprovedOrSettled() || $invoice->status->isApprovedInactive());
+        $changeStatusValidation = $statusOnlyChange
             ? InvoiceService::getChangeStatusDecision($invoice, $invoice->status->isApprovedInactive() ? 'approved' : 'approved_inactive')
             : InvoiceService::getChangeStatusValidation($invoice);
 
