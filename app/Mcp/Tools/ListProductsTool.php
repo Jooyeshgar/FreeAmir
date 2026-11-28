@@ -20,7 +20,8 @@ class ListProductsTool extends AccountingTool
         return [
             'fiscal_year_id' => $schema->integer()->min(1)->description('Authorized fiscal year ID to query products from.'),
             'year' => $schema->integer()->min(1300)->max(1500)->description('Optional four-digit Jalali year.'),
-            'query' => $schema->string()->max(255)->description('Optional search text matching product name, product code, or exact numeric ID.'),
+            'query' => $schema->string()->max(255)->description('Optional search text matching product name, product code, external SKU, or exact numeric ID.'),
+            'external_sku' => $schema->string()->max(100)->description('Optional exact external SKU filter.'),
             'group_id' => $schema->integer()->min(1)->description('Optional product group ID filter.'),
             'page' => $schema->integer()->min(1)->description('Page number (default: 1).'),
             'limit' => $schema->integer()->min(1)->max(50)->description('Maximum number of products per page (default: 15, max: 50).'),
@@ -33,6 +34,7 @@ class ListProductsTool extends AccountingTool
             'fiscal_year_id' => ['sometimes', 'integer', 'min:1'],
             'year' => ['sometimes', 'integer', 'min:1300', 'max:1500'],
             'query' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'external_sku' => ['sometimes', 'nullable', 'string', 'max:100'],
             'group_id' => ['sometimes', 'integer', 'min:1'],
             'page' => ['sometimes', 'integer', 'min:1'],
             'limit' => ['sometimes', 'integer', 'min:1', 'max:50'],
@@ -56,12 +58,17 @@ class ListProductsTool extends AccountingTool
             $escaped = addcslashes($search, '%_\\');
             $query->where(function ($q) use ($search, $escaped) {
                 $q->where('name', 'like', "%{$escaped}%")
-                    ->orWhere('code', 'like', "%{$escaped}%");
+                    ->orWhere('code', 'like', "%{$escaped}%")
+                    ->orWhere('external_sku', 'like', "%{$escaped}%");
 
                 if (ctype_digit($search) && (int) $search > 0) {
                     $q->orWhere('id', (int) $search);
                 }
             });
+        }
+
+        if (isset($arguments['external_sku']) && trim((string) $arguments['external_sku']) !== '') {
+            $query->where('external_sku', trim((string) $arguments['external_sku']));
         }
 
         if (isset($arguments['group_id'])) {
@@ -102,6 +109,7 @@ class ListProductsTool extends AccountingTool
             'id' => (int) $product->id,
             'name' => (string) $product->name,
             'code' => $product->code !== null ? (string) $product->code : null,
+            'external_sku' => $product->external_sku,
             'group_id' => $product->group !== null ? (int) $product->group : null,
             'group_name' => $product->productGroup?->name,
             'selling_price' => (float) ($product->selling_price ?? 0),

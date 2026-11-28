@@ -19,6 +19,8 @@ use App\Mcp\Tools\GetProfitLossTool;
 use App\Mcp\Tools\ListCustomersTool;
 use App\Mcp\Tools\ListInvoicesTool;
 use App\Mcp\Tools\ListProductsTool;
+use App\Mcp\Tools\UpdateInvoiceTool;
+use App\Mcp\Tools\UpdateProductTool;
 use Illuminate\Auth\AuthenticationException;
 use Laravel\Mcp\Server;
 
@@ -46,6 +48,8 @@ class AccountingServer extends Server
         CreateProductTool::class,
         CreateInvoiceTool::class,
         ApproveInvoiceTool::class,
+        UpdateInvoiceTool::class,
+        UpdateProductTool::class,
     ];
 
     private ?string $token = null;

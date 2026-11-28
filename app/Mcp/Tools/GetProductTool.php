@@ -11,7 +11,7 @@ class GetProductTool extends AccountingTool
 {
     protected string $name = 'get_product';
 
-    protected string $description = 'Retrieve full details for a single product by product ID or exact product code within the selected authorized fiscal year. Monetary values use the selected fiscal year company currency.';
+    protected string $description = 'Retrieve full details for a single product by product ID, exact product code, or exact external SKU within the selected authorized fiscal year. Monetary values use the selected fiscal year company currency.';
 
     protected array $permissionGroups = [['products.show']];
 
@@ -20,8 +20,9 @@ class GetProductTool extends AccountingTool
         return [
             'fiscal_year_id' => $schema->integer()->min(1)->description('Authorized fiscal year ID to inspect the product in.'),
             'year' => $schema->integer()->min(1300)->max(1500)->description('Optional four-digit Jalali year.'),
-            'product_id' => $schema->integer()->min(1)->description('Product ID (provide product_id or code).'),
-            'code' => $schema->string()->max(50)->description('Exact product code (provide product_id or code).'),
+            'product_id' => $schema->integer()->min(1)->description('Product ID (provide product_id, code, or external_sku).'),
+            'code' => $schema->string()->max(50)->description('Exact product code (provide product_id, code, or external_sku).'),
+            'external_sku' => $schema->string()->max(100)->description('Exact external SKU (provide product_id, code, or external_sku).'),
         ];
     }
 
@@ -30,8 +31,9 @@ class GetProductTool extends AccountingTool
         return [
             'fiscal_year_id' => ['sometimes', 'integer', 'min:1'],
             'year' => ['sometimes', 'integer', 'min:1300', 'max:1500'],
-            'product_id' => ['required_without:arguments.code', 'integer', 'min:1'],
-            'code' => ['required_without:arguments.product_id', 'string', 'max:50'],
+            'product_id' => ['required_without_all:arguments.code,arguments.external_sku', 'integer', 'min:1'],
+            'code' => ['required_without_all:arguments.product_id,arguments.external_sku', 'string', 'max:50'],
+            'external_sku' => ['required_without_all:arguments.product_id,arguments.code', 'string', 'max:100'],
         ];
     }
 
@@ -49,6 +51,10 @@ class GetProductTool extends AccountingTool
 
         if (isset($arguments['code'])) {
             $query->where('code', trim((string) $arguments['code']));
+        }
+
+        if (isset($arguments['external_sku'])) {
+            $query->where('external_sku', trim((string) $arguments['external_sku']));
         }
 
         $product = $query->first();

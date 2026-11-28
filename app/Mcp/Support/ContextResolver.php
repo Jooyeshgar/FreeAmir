@@ -174,6 +174,7 @@ class ContextResolver
         return self::accessibleFiscalYears()->with('company')->orderByDesc('fiscal_years.year')->get()->map(fn ($fy) => [
             'id' => (int) $fy->id,
             'company_id' => (int) $fy->company_id,
+            'company_name' => $fy->company?->name,
             'currency' => (string) ($fy->company?->currency ?: 'Rial'),
             'year' => (int) $fy->year,
             'title' => (string) ($fy->title ?? $fy->year),
@@ -338,6 +339,8 @@ class ContextResolver
             'currency' => $currency,
             'active_fiscal_year' => [
                 'id' => $fiscalYearId,
+                'company_id' => (int) $fiscalYear->company_id,
+                'company_name' => $fiscalYear->company?->name,
                 'currency' => $currency,
                 'year' => $fiscalYearNumber,
                 'title' => $fiscalYearTitle,
