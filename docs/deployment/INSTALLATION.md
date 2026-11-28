@@ -131,7 +131,7 @@ docker stop freeamir && docker rm freeamir
 مستقیما روی سرور یا سیستم شخصی با PHP، Composer، Node.js و MariaDB نصب کنید.
 
 ### پیش‌نیازها
-- PHP >= 8.2 با افزونه‌های: `pdo_mysql`، `gd`، `intl`، `zip`، `bcmath`، `mbstring`، `xml`، `opcache`
+- PHP >= 8.3 با افزونه‌های: `pdo_mysql`، `gd`، `intl`، `zip`، `bcmath`، `mbstring`، `xml`، `opcache`
 - Composer
 - MariaDB >= 10.6 (یا MySQL >= 8.0)
 - Node.js >= 18.0.0

@@ -9,7 +9,7 @@
     ],
     "license": "MIT",
     "require": {
-        "php": "^8.2",
+        "php": "^8.3",
         "barryvdh/laravel-debugbar": "^3.13",
         "carlos-meneses/laravel-mpdf": "^2.1",
         "doctrine/dbal": "^3.10",
