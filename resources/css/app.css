@@ -622,6 +622,14 @@ main {
 }
 
 /* Dashboard onboarding arrow-steps checklist */
+[dir="ltr"] [data-onboarding-checklist] {
+    direction: ltr;
+}
+
+[dir="rtl"] [data-onboarding-checklist] {
+    direction: rtl;
+}
+
 .onboarding-steps-grid {
     display: flex;
     flex-direction: column;
