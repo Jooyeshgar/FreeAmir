@@ -151,6 +151,12 @@
                     </div>
                 </div>
 
+                @if ($invoice->isSentToMoadian())
+                    <div class="stats bg-base-100 gap-2 shadow col-span-full">
+                        <x-show-messages type="warning" :message="__('This invoice was sent to Moadian. It cannot be edited or deleted, and deactivating or reactivating it only changes its status: product stock and cost of goods are not adjusted.')" />
+                    </div>
+                @endif
+
                 @if ($changeStatusValidation->hasErrors() || $changeStatusValidation->hasWarning())
                     <div class="stats bg-base-100 gap-2 shadow col-span-full">
                         <x-show-messages :message="$changeStatusValidation->toDetailText()" type="alert" />
@@ -1265,11 +1271,12 @@
                         $canToggleActivation = $invoice->status->isApproved() || $invoice->status->isApprovedInactive();
                         $isSettled = $invoice->status->isPartiallyPaid() || $invoice->status->isPaid();
 
-                        $hasMoadianSuccess = $invoice->moadianHistories->contains(function ($history) {
-                            $data = $history->data;
-
-                            return strtoupper($data['status'] ?? '') === 'SUCCESS';
-                        });
+                        $hasMoadianSuccess = $invoice->hasMoadianSuccess();
+                        // SUCCESS or UNKNOWN: Moadian holds the data, so only status-only inactivation is offered.
+                        $isSentToMoadian = $invoice->isSentToMoadian();
+                        $canDeactivate = $canUnapprove || ($isSentToMoadian && $isSettled);
+                        $canToggleActivation = $canToggleActivation || ($isSentToMoadian && $isSettled);
+                        $needsStatusConfirm = $changeStatusValidation->hasWarning() || ($isSentToMoadian && $isSettled);
 
                         $originalHasMoadianSuccess = !$invoice->invoice_type->isVoid() ||
                             ($invoice->voidedInvoice?->moadianHistories->contains(function ($history) {
@@ -1278,7 +1285,7 @@
                                 return strtoupper($data['status'] ?? '') === 'SUCCESS';
                             }) ?? false);
 
-                        $canChangeStatus = ($canApprove || $canUnapprove) && !$hasMoadianSuccess;
+                        $canChangeStatus = ($canApprove || $canUnapprove) && !$isSentToMoadian;
                     @endphp
 
                     @can('invoices.send-moadian')
@@ -1375,7 +1382,7 @@
                             </form>
                         @endif
 
-                        @if (($canChangeStatus || $canToggleActivation) && !$hasMoadianSuccess && !$fiscalYearClosed)
+                        @if (($canChangeStatus || $canToggleActivation) && !$fiscalYearClosed)
                             @if ($changeStatusValidation->hasErrors())
                                 <a data-tip="{{ $changeStatusValidation->toText() }}"
                                     href="{{ route('invoices.conflicts', $invoice) }}"
@@ -1388,13 +1395,13 @@
                                 </span>
                             @else
                                 @if ($canToggleActivation)
-                                    <form action="{{ $canUnapprove ? route('invoices.approve', $invoice) : route('invoices.change-status', [$invoice, 'approved']) }}{{ $changeStatusValidation->hasWarning() ? '?confirm=1' : '' }}"
-                                        method="POST" class="inline-block {{ $changeStatusValidation->hasWarning() ? 'change-status-form' : '' }}"
-                                        data-confirm-message="{{ __('This invoice has warnings for change its status, are you sure to change status?') }}">
+                                    <form action="{{ $canDeactivate ? route('invoices.approve', $invoice) : route('invoices.change-status', [$invoice, 'approved']) }}{{ $needsStatusConfirm ? '?confirm=1' : '' }}"
+                                        method="POST" class="inline-block {{ $needsStatusConfirm ? 'change-status-form' : '' }}"
+                                        data-confirm-message="{{ ($isSentToMoadian && $isSettled) ? __('Deactivating this paid or partially paid invoice sent to Moadian only changes its status. Its payments, accounting documents, product stock and cost of goods stay unchanged. Are you sure?') : __('This invoice has warnings for change its status, are you sure to change status?') }}">
                                         @csrf
                                         <button type="submit" data-tip="{{ $changeStatusValidation->toText() }}"
-                                            class="btn btn-sm lg:btn-md inline-flex {{ $canUnapprove ? 'btn-warning' : 'btn-success' }} {{ $changeStatusValidation->hasWarning() ? 'btn-outline' : '' }}">
-                                            {{ $canUnapprove ? __('Approve inactive') : __('Activate') }}
+                                            class="btn btn-sm lg:btn-md inline-flex {{ $canDeactivate ? 'btn-warning' : 'btn-success' }} {{ $needsStatusConfirm ? 'btn-outline' : '' }}">
+                                            {{ $canDeactivate ? __('Approve inactive') : __('Activate') }}
                                         </button>
                                     </form>
                                 @endif
@@ -1425,7 +1432,7 @@
                         @endif
                     @endcan
 
-                    @if (!$fiscalYearClosed && !$fiscalYearClosed && !$invoice->status->isApprovedOrSettled() && !$invoice->invoice_type->isVoid() && !$hasMoadianSuccess)
+                    @if (!$fiscalYearClosed && !$fiscalYearClosed && !$invoice->status->isApprovedOrSettled() && !$invoice->invoice_type->isVoid() && !$isSentToMoadian)
                         <a href="{{ route('invoices.edit', $invoice) }}" class="btn btn-sm lg:btn-md btn-primary gap-2">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 lg:h-5 lg:w-5" fill="none"
                                 viewBox="0 0 24 24" stroke="currentColor">

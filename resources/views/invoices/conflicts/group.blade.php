@@ -12,6 +12,10 @@
         <div class="card-body">
             <x-show-messages type="warning" message="{{ __('conflict_notice') }}" />
 
+            @if ($sentConflictsExist)
+                <x-show-messages type="warning" :message="__('Some conflicting invoices were sent to Moadian. They will only be inactivated by status: their product stock and cost of goods are not adjusted.')" />
+            @endif
+
             @include('invoices.conflicts.header', ['invoice' => $invoice])
 
             @foreach ($conflicts as $type => $conflict)

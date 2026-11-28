@@ -524,17 +524,19 @@ class InvoiceActivationTest extends TestCase
         $this->assertSame(InvoiceStatus::APPROVED, $invoice->fresh()->status);
     }
 
-    public function test_successful_moadian_submission_blocks_deactivation(): void
+    public function test_successful_moadian_submission_allows_status_only_deactivation(): void
     {
         $product = $this->createProduct(['quantity' => 10]);
         $invoice = $this->sell([$this->productItem($product, 2, 150)])['invoice'];
         $invoice->moadianHistories()->create(['data' => ['status' => 'SUCCESS']]);
         $url = route('invoices.approve', $invoice);
-        $this->get(route('invoices.show', $invoice))->assertOk()->assertDontSee($url, false);
+        $this->get(route('invoices.show', $invoice))->assertOk()->assertSee($url, false);
         $before = $this->accountingAndInventoryState();
-        $this->post($url)->assertSessionHas('error');
-        $this->assertSame($before, $this->accountingAndInventoryState());
-        $this->assertSame(InvoiceStatus::APPROVED, $invoice->fresh()->status);
+        $this->post($url)->assertSessionHas('success');
+        $this->assertSame(InvoiceStatus::APPROVED_INACTIVE, $invoice->fresh()->status);
+        $after = $this->accountingAndInventoryState();
+        unset($before['invoices'], $after['invoices']);
+        $this->assertSame($before, $after);
     }
 
     private function accountingAndInventoryState(): array

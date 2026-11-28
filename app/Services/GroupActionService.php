@@ -82,9 +82,31 @@ class GroupActionService
         });
     }
 
+    /** Conflicts are resolvable only when every conflicting product allows overselling. */
+    public function canResolveConflicts(Invoice $invoice): bool
+    {
+        [, , $products] = $this->findAllConflictsRecursively($invoice);
+
+        return collect($products)->every(fn ($product) => (bool) $product->oversell);
+    }
+
+    /** Whether any dependent invoice was sent to Moadian and will be inactivated by status only. */
+    public function hasSentConflictingInvoices(Invoice $invoice): bool
+    {
+        [$invoices] = $this->findAllConflictsRecursively($invoice);
+
+        return collect($invoices)->contains(fn (Invoice $conflict) => $conflict->isSentToMoadian());
+    }
+
     public function inactivateDependentInvoices(Invoice $invoice): void
     {
         app(FiscalYearMutationGuard::class)->ensureOpen($invoice);
+
+        if ($invoice->isSentToMoadian()) {
+            throw ValidationException::withMessages([
+                'invoice' => [__('This invoice was sent to Moadian, so conflicts cannot be resolved for it.')],
+            ]);
+        }
 
         // Find all conflicting invoices recursively (only invoices, not products or ancillary costs)
         $conflictingInvoices = $this->getConflictingInvoices($invoice);
@@ -98,6 +120,13 @@ class GroupActionService
 
         DB::transaction(function () use ($sortedInvoices) {
             foreach ($sortedInvoices as $conflictInvoice) {
+                // Moadian holds this invoice's data: inactivate by status only, leaving its document, stock, average cost, quantity_at and cog_after unchanged.
+                if ($conflictInvoice->isSentToMoadian()) {
+                    $conflictInvoice->update(['status' => InvoiceStatus::APPROVED_INACTIVE]);
+
+                    continue;
+                }
+
                 // First, unapprove all ancillary costs for this invoice
                 foreach ($conflictInvoice->ancillaryCosts as $ancillaryCost) {
                     if ($ancillaryCost->status->isApproved()) {

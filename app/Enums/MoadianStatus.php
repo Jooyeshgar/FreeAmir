@@ -42,6 +42,11 @@ enum MoadianStatus: string
         return $this === self::SUCCESS;
     }
 
+    public function isSent(): bool
+    {
+        return $this === self::SUCCESS || $this === self::UNKNOWN;
+    }
+
     public function isFailed(): bool
     {
         return $this === self::FAILED;

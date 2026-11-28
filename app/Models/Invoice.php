@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\InvoiceStatus;
 use App\Enums\InvoiceType;
+use App\Enums\MoadianStatus;
 use App\Models\Scopes\FiscalYearScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -102,6 +103,28 @@ class Invoice extends Model
         }
 
         return null;
+    }
+
+    /**
+     * Whether Moadian holds (SUCCESS) or may hold (UNKNOWN) this invoice's data.
+     * Such invoices must not be edited, deleted or reversed in accounting.
+     */
+    public function isSentToMoadian(): bool
+    {
+        return $this->hasMoadianHistoryWithStatus(static fn (?MoadianStatus $status) => $status?->isSent() === true);
+    }
+
+    /** Resending to Moadian is only refused once a SUCCESS history exists. */
+    public function hasMoadianSuccess(): bool
+    {
+        return $this->hasMoadianHistoryWithStatus(static fn (?MoadianStatus $status) => $status?->isSuccess() === true);
+    }
+
+    private function hasMoadianHistoryWithStatus(callable $matches): bool
+    {
+        $histories = $this->relationLoaded('moadianHistories') ? $this->moadianHistories : $this->moadianHistories()->get();
+
+        return $histories->contains(fn ($history) => $matches(MoadianStatus::fromData($history->data['status'] ?? null)));
     }
 
     public function moadianHistories()

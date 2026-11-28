@@ -108,11 +108,7 @@ class MoadianService
             $decision->addMessage('error', __('Moadian credentials are not fully configured. Please set the username, tax ID, certificate and private key in company settings.'));
         }
 
-        $hasMoadianSuccess = $invoice->moadianHistories->contains(function ($history) {
-            $data = $history->data;
-
-            return strtoupper($data['status'] ?? '') === 'SUCCESS';
-        });
+        $hasMoadianSuccess = $invoice->hasMoadianSuccess();
 
         if ($hasMoadianSuccess) {
             $decision->addMessage('error', __('Cannot send an invoice to moadian that already has successful status from moadian.'));

@@ -318,7 +318,9 @@ class InvoiceController extends Controller
             return view('invoices.show.beginning_inventory', compact('invoice', 'changeStatusValidation'));
         }
 
-        $changeStatusValidation = InvoiceService::getChangeStatusValidation($invoice);
+        $changeStatusValidation = $invoice->isSentToMoadian()
+            ? InvoiceService::getChangeStatusDecision($invoice, $invoice->status->isApprovedInactive() ? 'approved' : 'approved_inactive')
+            : InvoiceService::getChangeStatusValidation($invoice);
 
         $isServiceBuy = $invoice->invoice_type === InvoiceType::BUY && $invoice->items->where('itemable_type', Product::class)->isEmpty();
         $isReturnServiceBuy = $invoice->invoice_type === InvoiceType::RETURN_BUY && $invoice->items->where('itemable_type', Product::class)->isEmpty();
@@ -428,6 +430,10 @@ class InvoiceController extends Controller
      */
     public function edit(Invoice $invoice)
     {
+        if ($invoice->isSentToMoadian()) {
+            return redirect()->back()->with('error', __('This invoice was sent to Moadian and cannot be edited.'));
+        }
+
         if ($invoice->invoice_type->isVoid()) {
             return redirect()->back()->with('error', __('Editing is not allowed for void invoices.'));
         }
@@ -506,6 +512,10 @@ class InvoiceController extends Controller
      */
     public function update(StoreInvoiceRequest $request, Invoice $invoice)
     {
+        if ($invoice->isSentToMoadian()) {
+            return redirect()->back()->with('error', __('This invoice was sent to Moadian and cannot be edited.'));
+        }
+
         if ($invoice->invoice_type->isVoid()) {
             return redirect()->back()->with('error', __('Editing is not allowed for void invoices.'));
         }
@@ -573,6 +583,10 @@ class InvoiceController extends Controller
 
     public function destroy(Request $request, Invoice $invoice)
     {
+        if ($invoice->isSentToMoadian()) {
+            return redirect()->back()->with('error', __('This invoice was sent to Moadian and cannot be deleted.'));
+        }
+
         $isBeginningInventory = $invoice->invoice_type->isBeginningInventory();
         $indexType = $invoice->invoice_type->valueName();
 
@@ -812,8 +826,17 @@ class InvoiceController extends Controller
     private function applyInvoiceStatusChange(Invoice $invoice, string $status): RedirectResponse
     {
         $settled = $invoice->status->isPartiallyPaid() || $invoice->status->isPaid();
+        $sent = $invoice->isSentToMoadian();
+        if ($sent && $status === 'unapproved') {
+            return redirect()->back()->with('error', __('This invoice was sent to Moadian and cannot be unapproved. Deactivate it instead.'));
+        }
+
         if ($settled && ! request()->boolean('confirm')) {
-            return redirect()->back()->with('warning', __('Deactivating this paid or partially paid invoice will remove its payment accounting documents while keeping the payment records. Please confirm this action.'));
+            $warning = $sent
+                ? __('Deactivating this paid or partially paid invoice sent to Moadian only changes its status. Its payments, accounting documents, product stock and cost of goods stay unchanged. Please confirm this action.')
+                : __('Deactivating this paid or partially paid invoice will remove its payment accounting documents while keeping the payment records. Please confirm this action.');
+
+            return redirect()->back()->with('warning', $warning);
         }
 
         $decision = $this->invoiceService->getChangeStatusDecision($invoice, $status);
@@ -844,7 +867,7 @@ class InvoiceController extends Controller
 
     public function approveInactive(Invoice $invoice): RedirectResponse
     {
-        if (! $invoice->status->isApproved()) {
+        if (! $invoice->status->isApproved() && ! ($invoice->status->isApprovedOrSettled() && $invoice->isSentToMoadian())) {
             return redirect()->back()->with('error', __('Invalid status action.'));
         }
 
@@ -875,6 +898,10 @@ class InvoiceController extends Controller
 
     public function conflicts(Invoice $invoice)
     {
+        if ($invoice->isSentToMoadian()) {
+            return redirect()->route('invoices.show', $invoice)->with('error', __('This invoice was sent to Moadian, so conflicts cannot be resolved for it.'));
+        }
+
         [$invoicesConflicts, $ancillaryConflicts, $productsConflicts] = $this->groupActionService->findAllConflictsRecursively($invoice, true);
         $conflicts = [
             'invoices' => $invoicesConflicts,
@@ -882,9 +909,10 @@ class InvoiceController extends Controller
             'products' => $productsConflicts,
         ];
 
-        $allowedToResolve = $conflicts['products']->every(fn ($product) => $product->oversell === 1);
+        $allowedToResolve = $this->groupActionService->canResolveConflicts($invoice);
+        $sentConflictsExist = $this->groupActionService->hasSentConflictingInvoices($invoice);
 
-        return view('invoices.conflicts.group', compact('invoice', 'conflicts', 'allowedToResolve'));
+        return view('invoices.conflicts.group', compact('invoice', 'conflicts', 'allowedToResolve', 'sentConflictsExist'));
     }
 
     public function showMoreConflictsByType(Invoice $invoice, string $type)
@@ -903,6 +931,14 @@ class InvoiceController extends Controller
 
     public function groupAction(Invoice $invoice)
     {
+        if ($invoice->isSentToMoadian()) {
+            return redirect()->route('invoices.show', $invoice)->with('error', __('This invoice was sent to Moadian, so conflicts cannot be resolved for it.'));
+        }
+
+        if (! $this->groupActionService->canResolveConflicts($invoice)) {
+            return redirect()->route('invoices.conflicts', $invoice)->with('error', __('The conflicts of this invoice cannot be resolved automatically.'));
+        }
+
         $this->groupActionService->inactivateDependentInvoices($invoice);
 
         return redirect()->route('invoices.show', $invoice);

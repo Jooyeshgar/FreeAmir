@@ -687,6 +687,21 @@ class InvoiceService
             }
 
             $reactivating = $status === 'approved' && $invoice->status->isApprovedInactive();
+
+            // A full reversal would delete the document and adjust stock for data Moadian already holds.
+            if ($status === 'unapproved' && $invoice->isSentToMoadian()) {
+                throw ValidationException::withMessages([
+                    'invoice' => [__('This invoice was sent to Moadian and cannot be unapproved. Deactivate it instead.')],
+                ]);
+            }
+
+            // Moadian holds this invoice's data: only its status may change, so the document, stock, average cost, quantity_at and cog_after stay as they are.
+            if (($status === 'approved_inactive' || $reactivating) && $invoice->isSentToMoadian()) {
+                $this->changeSentInvoiceStatusOnly($invoice, $status);
+
+                return;
+            }
+
             if ($status === 'approved_inactive' || $reactivating) {
                 $decision = self::getChangeStatusDecision($invoice, $status);
                 if ($decision->hasErrors()) {
@@ -711,6 +726,26 @@ class InvoiceService
         });
 
         $invoice->refresh();
+    }
+
+    /**
+     * Inactivate or reactivate an invoice sent to Moadian without touching accounting or inventory.
+     * Reactivation re-derives paid / partially paid from the existing payments.
+     */
+    private function changeSentInvoiceStatusOnly(Invoice $invoice, string $status): void
+    {
+        if ($status === 'approved_inactive') {
+            if (! $invoice->status->isApprovedOrSettled()) {
+                throw ValidationException::withMessages(['invoice' => [__('Invalid status action.')]]);
+            }
+
+            $invoice->update(['status' => InvoiceStatus::APPROVED_INACTIVE]);
+
+            return;
+        }
+
+        $invoice->update(['status' => InvoiceStatus::APPROVED]);
+        app(PaymentService::class)->syncInvoiceStatus($invoice->fresh());
     }
 
     /**
@@ -1221,8 +1256,24 @@ class InvoiceService
 
         $nextStatus = $nextStatus instanceof InvoiceStatus ? $nextStatus : InvoiceStatus::fromName($nextStatus);
 
+        // Status-only changes for invoices sent to Moadian need no stock or cost checks.
+        if ($invoice->isSentToMoadian()) {
+            if ($nextStatus->isApprovedInactive()) {
+                $decision = new InvoiceStatusDecision;
+                if (! $invoice->status->isApprovedOrSettled()) {
+                    $decision->addMessage('error', __('Invalid status action.'));
+                }
+
+                return $decision;
+            }
+
+            if ($nextStatus->isApproved() && $invoice->status->isApprovedInactive()) {
+                return new InvoiceStatusDecision;
+            }
+        }
+
         if ($nextStatus->isApprovedInactive()) {
-            if (! $invoice->status->isApproved() || $invoice->moadianHistories->contains(fn ($history) => strtoupper($history->data['status'] ?? '') === 'SUCCESS')) {
+            if (! $invoice->status->isApproved()) {
                 $decision = new InvoiceStatusDecision;
                 $decision->addMessage('error', __('Invalid status action.'));
 

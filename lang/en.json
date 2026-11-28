@@ -3780,5 +3780,14 @@
     "Paid leave balance pending confirmation": "Paid leave balance pending confirmation",
     "Enter the verified remaining balance after removing any prepaid leave, before posting new attendance.": "Enter the verified remaining balance after removing any prepaid leave, before posting new attendance.",
     "This employee no longer has a prepaid leave balance to reconcile.": "This employee no longer has a prepaid leave balance to reconcile.",
-    "An invoice with this external reference ID already exists in the selected fiscal year.": "An invoice with this external reference ID already exists in the selected fiscal year."
+    "An invoice with this external reference ID already exists in the selected fiscal year.": "An invoice with this external reference ID already exists in the selected fiscal year.",
+    "This invoice was sent to Moadian and cannot be edited.": "This invoice was sent to Moadian and cannot be edited.",
+    "This invoice was sent to Moadian and cannot be deleted.": "This invoice was sent to Moadian and cannot be deleted.",
+    "This invoice was sent to Moadian and cannot be unapproved. Deactivate it instead.": "This invoice was sent to Moadian and cannot be unapproved. Deactivate it instead.",
+    "This invoice was sent to Moadian, so conflicts cannot be resolved for it.": "This invoice was sent to Moadian, so conflicts cannot be resolved for it.",
+    "The conflicts of this invoice cannot be resolved automatically.": "The conflicts of this invoice cannot be resolved automatically.",
+    "Deactivating this paid or partially paid invoice sent to Moadian only changes its status. Its payments, accounting documents, product stock and cost of goods stay unchanged. Please confirm this action.": "Deactivating this paid or partially paid invoice sent to Moadian only changes its status. Its payments, accounting documents, product stock and cost of goods stay unchanged. Please confirm this action.",
+    "Deactivating this paid or partially paid invoice sent to Moadian only changes its status. Its payments, accounting documents, product stock and cost of goods stay unchanged. Are you sure?": "Deactivating this paid or partially paid invoice sent to Moadian only changes its status. Its payments, accounting documents, product stock and cost of goods stay unchanged. Are you sure?",
+    "This invoice was sent to Moadian. It cannot be edited or deleted, and deactivating or reactivating it only changes its status: product stock and cost of goods are not adjusted.": "This invoice was sent to Moadian. It cannot be edited or deleted, and deactivating or reactivating it only changes its status: product stock and cost of goods are not adjusted.",
+    "Some conflicting invoices were sent to Moadian. They will only be inactivated by status: their product stock and cost of goods are not adjusted.": "Some conflicting invoices were sent to Moadian. They will only be inactivated by status: their product stock and cost of goods are not adjusted."
 }

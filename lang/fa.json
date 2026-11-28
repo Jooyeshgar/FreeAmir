@@ -3772,5 +3772,14 @@
     "Paid leave balance pending confirmation": "مانده مرخصی با حقوق در انتظار تأیید",
     "Enter the verified remaining balance after removing any prepaid leave, before posting new attendance.": "پیش از ثبت کارکرد جدید، مانده تأییدشده مرخصی با حقوق را پس از کسر پیش‌پرداخت وارد کنید.",
     "This employee no longer has a prepaid leave balance to reconcile.": "مانده پیش‌پرداخت مرخصی با حقوق این کارمند قبلاً تعیین تکلیف شده است.",
-    "An invoice with this external reference ID already exists in the selected fiscal year.": "فاکتوری با این شناسه مرجع خارجی در سال مالی انتخاب‌شده قبلاً ثبت شده است."
+    "An invoice with this external reference ID already exists in the selected fiscal year.": "فاکتوری با این شناسه مرجع خارجی در سال مالی انتخاب‌شده قبلاً ثبت شده است.",
+    "This invoice was sent to Moadian and cannot be edited.": "این فاکتور به مودیان ارسال شده و قابل ویرایش نیست.",
+    "This invoice was sent to Moadian and cannot be deleted.": "این فاکتور به مودیان ارسال شده و قابل حذف نیست.",
+    "This invoice was sent to Moadian and cannot be unapproved. Deactivate it instead.": "این فاکتور به مودیان ارسال شده و قابل لغو تأیید نیست. به‌جای آن آن را غیرفعال کنید.",
+    "This invoice was sent to Moadian, so conflicts cannot be resolved for it.": "این فاکتور به مودیان ارسال شده است، بنابراین تداخل‌های آن قابل رفع نیست.",
+    "The conflicts of this invoice cannot be resolved automatically.": "تداخل‌های این فاکتور به‌صورت خودکار قابل رفع نیست.",
+    "Deactivating this paid or partially paid invoice sent to Moadian only changes its status. Its payments, accounting documents, product stock and cost of goods stay unchanged. Please confirm this action.": "غیرفعال‌سازی این فاکتور پرداخت‌شده یا نیمه‌پرداخت‌شده که به مودیان ارسال شده فقط وضعیت آن را تغییر می‌دهد. پرداخت‌ها، اسناد حسابداری، موجودی کالا و بهای تمام‌شده بدون تغییر می‌مانند. لطفاً این اقدام را تأیید کنید.",
+    "Deactivating this paid or partially paid invoice sent to Moadian only changes its status. Its payments, accounting documents, product stock and cost of goods stay unchanged. Are you sure?": "غیرفعال‌سازی این فاکتور پرداخت‌شده یا نیمه‌پرداخت‌شده که به مودیان ارسال شده فقط وضعیت آن را تغییر می‌دهد. پرداخت‌ها، اسناد حسابداری، موجودی کالا و بهای تمام‌شده بدون تغییر می‌مانند. مطمئن هستید؟",
+    "This invoice was sent to Moadian. It cannot be edited or deleted, and deactivating or reactivating it only changes its status: product stock and cost of goods are not adjusted.": "این فاکتور به مودیان ارسال شده است. قابل ویرایش یا حذف نیست و غیرفعال یا فعال‌سازی آن فقط وضعیت را تغییر می‌دهد: موجودی کالا و بهای تمام‌شده تعدیل نمی‌شود.",
+    "Some conflicting invoices were sent to Moadian. They will only be inactivated by status: their product stock and cost of goods are not adjusted.": "برخی از فاکتورهای متداخل به مودیان ارسال شده‌اند. آن‌ها فقط از نظر وضعیت غیرفعال می‌شوند: موجودی کالا و بهای تمام‌شده آن‌ها تعدیل نمی‌شود."
 }
