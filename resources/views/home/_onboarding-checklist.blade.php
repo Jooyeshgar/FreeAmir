@@ -23,11 +23,12 @@
             this.menuOpen = false;
             this.dismissed = true;
         },
-        async dismissPermanently() {
+        async dismissPermanently(event) {
             if (this.dismissing) {
                 return;
             }
             this.dismissing = true;
+            const form = event?.target;
             try {
                 const token = document.querySelector('meta[name=csrf_token]')?.getAttribute('content') || '';
                 const response = await fetch(@js($onboarding['dismissUrl']), {
@@ -41,10 +42,16 @@
                 if (response.ok) {
                     this.menuOpen = false;
                     this.dismissed = true;
+                    this.dismissing = false;
+                    return;
                 }
-            } finally {
-                this.dismissing = false;
+            } catch (error) {
+                // Fall through to the regular form submission below.
             }
+            // Request failed (e.g. expired CSRF token or network error): submit the form
+            // normally so the server can respond instead of failing silently.
+            this.dismissing = false;
+            form?.submit();
         },
     }"
     x-show="!dismissed"
@@ -125,7 +132,7 @@
                         <span>{{ __('Hide for now') }}</span>
                     </button>
 
-                    <form method="POST" action="{{ $onboarding['dismissUrl'] }}" @submit.prevent="dismissPermanently()">
+                    <form method="POST" action="{{ $onboarding['dismissUrl'] }}" @submit.prevent="dismissPermanently($event)">
                         @csrf
                         <button
                             type="submit"
