@@ -267,12 +267,34 @@
             </table>
             </div>
             @else
-                <div class="flex flex-col items-center justify-center py-16 text-base-content/35">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="mb-4 h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                    </svg>
-                    <p class="text-base font-medium">{{ __('No documents found.') }}</p>
-                    <p class="mt-1 text-sm text-base-content/30">{{ __('Try adjusting your search filters.') }}</p>
+                @php
+                    $hasDocumentFilters = ($status ?? 'all') !== 'all'
+                        || request()->filled('number')
+                        || request()->filled('date')
+                        || request()->filled('text');
+                @endphp
+                <div class="p-4 sm:p-5">
+                    <x-empty-state
+                        :filtered="$hasDocumentFilters"
+                        :filtered-title="__('No documents found.')"
+                        :reset-url="route('documents.index')"
+                        :title="__('No accounting documents yet')"
+                        :description="__('Accounting documents record your balanced debit and credit entries. Documents are also generated automatically when you approve invoices.')"
+                        :tip="__('Until you approve a document, you can edit or delete it at any time without worry.')"
+                    >
+                        <x-slot:icon>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                            </svg>
+                        </x-slot:icon>
+                        @if (auth()->user()?->can('invoices.create') || auth()->user()?->can('invoices.*'))
+                            <x-slot:actions>
+                                <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('invoices.create', ['invoice_type' => 'sell']) }}" class="btn btn-outline btn-sm">
+                                    {{ __('Create sell invoice') }}
+                                </x-closed-year-action-link>
+                            </x-slot:actions>
+                        @endif
+                    </x-empty-state>
                 </div>
             @endif
 

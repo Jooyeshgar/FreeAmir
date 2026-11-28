@@ -206,14 +206,26 @@
                         @endforeach
                     </div>
                 @else
-                    <div class="flex flex-col items-center justify-center py-16 text-base-content/35">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="mb-4 h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
-                            <path stroke-linecap="round" stroke-linejoin="round"
-                                d="M17 20h5v-2a3 3 0 0 0-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 0 1 5.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 0 1 9.288 0M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                        </svg>
-                        <p class="text-base font-medium">{{ __('No customers found.') }}</p>
-                        <p class="mt-1 text-sm text-base-content/30">{{ __('Try adjusting your search filters.') }}</p>
-                    </div>
+                    @php
+                        $hasCustomerFilters = request()->filled('name')
+                            || request()->filled('phone')
+                            || ($balanceFilter ?? 'all') !== 'all'
+                            || (isset($groupId) && $groupId !== 'all' && $groupId !== '');
+                    @endphp
+                    <x-empty-state
+                        :filtered="$hasCustomerFilters"
+                        :filtered-title="__('No customers found.')"
+                        :reset-url="route('customers.index')"
+                        :title="__('No customers registered yet')"
+                        :description="__('Add your customers and suppliers here to issue invoices and track their account balances automatically.')"
+                        :tip="__('Use the buttons above to add your first customer manually or import a list from CSV.')"
+                    >
+                        <x-slot:icon>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 0 0-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 0 1 5.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 0 1 9.288 0M15 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                            </svg>
+                        </x-slot:icon>
+                    </x-empty-state>
                 @endif
             </div>
 

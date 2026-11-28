@@ -10,6 +10,7 @@
                 <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('bank-accounts.create') }}" class="btn btn-primary">{{ __('Create Bank Account') }}</x-closed-year-action-link>
             </div>
             <div class="overflow-auto">
+                @if ($bankAccounts->count())
                 <table class="table w-full mt-4">
                     <thead>
                         <tr>
@@ -51,6 +52,27 @@
                         @endforeach
                     </tbody>
                 </table>
+                @else
+                    <div class="mt-4">
+                        <x-empty-state
+                            :title="__('No bank accounts defined yet')"
+                            :description="__('Add your business bank accounts here to record bank receipts, payments, and manage chequebooks.')"
+                        >
+                            <x-slot:icon>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z" />
+                                </svg>
+                            </x-slot:icon>
+                            @if (auth()->user()?->can('banks.index') || auth()->user()?->can('banks.*'))
+                                <x-slot:actions>
+                                    <a href="{{ route('banks.index') }}" class="btn btn-outline btn-sm">
+                                        {{ __('Banks') }}
+                                    </a>
+                                </x-slot:actions>
+                            @endif
+                        </x-empty-state>
+                    </div>
+                @endif
             </div>
             {!! $bankAccounts->links() !!}
         </div>

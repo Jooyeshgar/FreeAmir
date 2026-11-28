@@ -1,3 +1,4 @@
+@if ($invoices->count())
 <div class="overflow-x-auto lg:overflow-x-hidden"
     x-data="{
         tooltipText: '',
@@ -199,6 +200,86 @@
         </tbody>
     </table>
 </div>
+@else
+    @php
+        $hasInvoiceFilters = collect(request()->except(['page', 'invoice_type', 'service_buy']))
+            ->filter(fn ($v) => $v !== null && $v !== '' && $v !== 'all')
+            ->isNotEmpty();
+
+        $resetParams = ['invoice_type' => $invoiceType];
+        if (in_array($invoiceType, ['buy', 'return_buy']) && request()->has('service_buy')) {
+            $resetParams['service_buy'] = request('service_buy');
+        }
+
+        $isFiscalYearClosed = \App\Models\FiscalYear::find(getActiveFiscalYear())?->isClosed() ?? false;
+
+        $invoicePrerequisites = [];
+        if (! $hasInvoiceFilters && in_array($invoiceType, ['sell', 'buy'])) {
+            $returnTo = request()->getRequestUri();
+            $user = auth()->user();
+
+            $customerActions = [];
+            if ($user?->can('customers.create') || $user?->can('customers.*')) {
+                $customerActions[] = [
+                    'label' => __('Add customer'),
+                    'url' => route('customers.create', ['return_to' => $returnTo]),
+                ];
+            }
+
+            $catalogActions = [];
+            $isServiceOnlyBuy = $invoiceType === 'buy' && request()->boolean('service_buy');
+            if (! $isServiceOnlyBuy && ($user?->can('products.create') || $user?->can('products.*'))) {
+                $catalogActions[] = [
+                    'label' => __('Add product'),
+                    'url' => route('products.create', ['return_to' => $returnTo]),
+                ];
+            }
+            if ($user?->can('services.create') || $user?->can('services.*')) {
+                $catalogActions[] = [
+                    'label' => __('Add service'),
+                    'url' => route('services.create', ['return_to' => $returnTo]),
+                ];
+            }
+
+            $invoicePrerequisites = [
+                [
+                    'key' => 'customer',
+                    'title' => __('First customer'),
+                    'done' => \App\Models\Customer::query()->exists(),
+                    'actions' => $customerActions,
+                ],
+                [
+                    'key' => 'catalog',
+                    'title' => $isServiceOnlyBuy ? __('First service') : __('Product or service'),
+                    'done' => $isServiceOnlyBuy
+                        ? \App\Models\Service::query()->exists()
+                        : (\App\Models\Product::query()->exists() || \App\Models\Service::query()->exists()),
+                    'actions' => $catalogActions,
+                ],
+            ];
+        }
+    @endphp
+    <div class="mt-3">
+        <x-empty-state
+            :compact="true"
+            :filtered="$hasInvoiceFilters"
+            :filtered-title="__('No invoices found.')"
+            :reset-url="route('invoices.index', $resetParams)"
+            :title="__('No invoices recorded yet')"
+            :description="__('Approving an invoice automatically creates its accounting document and updates inventory.')"
+            :prerequisites="$invoicePrerequisites"
+            :prerequisites-title="__('Prepare these prerequisites first (after saving, you will return right here):')"
+            :tip="in_array($invoiceType, ['sell', 'buy']) ? __('Draft invoices can be edited or deleted anytime before final approval.') : null"
+            :fiscal-year-closed="$isFiscalYearClosed"
+        >
+            <x-slot:icon>
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2Z" />
+                </svg>
+            </x-slot:icon>
+        </x-empty-state>
+    </div>
+@endif
 
 @if (request('status') !== null)
     @php

@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\ProductGroup;
 use App\Models\Warehouse;
 use App\Services\ProductImportService;
+use App\Services\OnboardingService;
 use App\Services\ProductService;
 use App\Services\ReportExportService;
 use Illuminate\Http\RedirectResponse;
@@ -88,6 +89,10 @@ class ProductController extends Controller
         $validatedData = $request->getValidatedData();
 
         $product = $this->productService->create($validatedData);
+
+        if ($returnTo = OnboardingService::safeReturnUrl($request->input('return_to'))) {
+            return redirect($returnTo)->with('success', __('Product created successfully.'));
+        }
 
         return redirect()->route('products.index')->with('success', __('Product created successfully.'));
     }

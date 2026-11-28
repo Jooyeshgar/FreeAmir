@@ -12,6 +12,7 @@ use App\Models\Invoice;
 use App\Models\Transaction;
 use App\Services\CustomerImportService;
 use App\Services\CustomerService;
+use App\Services\OnboardingService;
 use App\Services\ReportExportService;
 use App\Services\SubjectService;
 use Illuminate\Http\RedirectResponse;
@@ -117,6 +118,10 @@ class CustomerController extends Controller
                 'subject' => $customer->subject->name,
             ])
             : __('Customer created successfully.');
+
+        if ($returnTo = OnboardingService::safeReturnUrl($request->input('return_to'))) {
+            return redirect($returnTo)->with('success', $message);
+        }
 
         return redirect()->route('customers.index')->with('success', $message);
     }

@@ -9,6 +9,7 @@ use App\Models\Service;
 use App\Models\ServiceGroup;
 use App\Services\ReportExportService;
 use App\Services\ServiceImportService;
+use App\Services\OnboardingService;
 use App\Services\ServiceService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -56,6 +57,10 @@ class ServiceController extends Controller
         $validatedData = $request->getValidatedData();
 
         $service = $this->serviceService->create($validatedData);
+
+        if ($returnTo = OnboardingService::safeReturnUrl($request->input('return_to'))) {
+            return redirect($returnTo)->with('success', __('Service created successfully.'));
+        }
 
         return redirect()->route('services.index')->with('success', __('Service created successfully.'));
     }

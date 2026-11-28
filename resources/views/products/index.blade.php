@@ -176,6 +176,7 @@
             </div>
 
             <div class="p-4 sm:p-5 overflow-auto">
+                @if ($products->count())
                 <table class="table w-full">
                     <thead>
                         <tr>
@@ -245,6 +246,29 @@
                         @endforeach
                     </tbody>
                 </table>
+                @else
+                    <x-empty-state
+                        :filtered="request()->filled('name') || request()->filled('code') || request()->filled('group_name') || request()->filled('min_quantity') || request()->boolean('need_order')"
+                        :filtered-title="__('No products found.')"
+                        :reset-url="route('products.index')"
+                        :title="__('No products defined yet')"
+                        :description="__('Define your goods here to track warehouse inventory, average cost, and include them in purchase and sales invoices.')"
+                        :tip="__('If your business offers services instead of physical goods, you can define them in the Services section.')"
+                    >
+                        <x-slot:icon>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9" />
+                            </svg>
+                        </x-slot:icon>
+                        @if (auth()->user()?->can('services.create') || auth()->user()?->can('services.*'))
+                            <x-slot:actions>
+                                <x-closed-year-action-link :fiscal-year-closed="$fiscalYearClosed" href="{{ route('services.create') }}" class="btn btn-ghost btn-sm border border-base-300 bg-base-100">
+                                    {{ __('Add service') }}
+                                </x-closed-year-action-link>
+                            </x-slot:actions>
+                        @endif
+                    </x-empty-state>
+                @endif
             </div>
 
             {{-- Pagination --}}
