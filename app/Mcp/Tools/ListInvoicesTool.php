@@ -16,7 +16,7 @@ class ListInvoicesTool extends AccountingTool
 {
     protected string $name = 'list_invoices';
 
-    protected string $description = 'Search and list invoices in the selected authorized fiscal year by invoice number, title, ID, type, status, customer, or date range. Monetary values use the selected fiscal year company currency.';
+    protected string $description = 'Search and list invoices in the selected authorized fiscal year by invoice number, title, ID, external reference ID, type, status, customer, or date range. Optionally include line items. Monetary values use the selected fiscal year company currency.';
 
     protected array $permissionGroups = [['invoices.index'], ['invoices.show']];
 
@@ -25,8 +25,10 @@ class ListInvoicesTool extends AccountingTool
         return [
             'fiscal_year_id' => $schema->integer()->min(1)->description('Authorized fiscal year ID to query invoices from.'),
             'year' => $schema->integer()->min(1300)->max(1500)->description('Optional four-digit Jalali year.'),
-            'query' => $schema->string()->max(255)->description('Optional search text matching invoice number, title, or exact numeric ID.'),
+            'query' => $schema->string()->max(255)->description('Optional search text matching invoice number, title, external reference ID, or exact numeric ID.'),
             'type' => $schema->string()->description('Optional invoice type filter: buy, sell, return_buy, return_sell, void, or beginning_inventory.')->enum(['buy', 'sell', 'return_buy', 'return_sell', 'void', 'beginning_inventory']),
+            'external_reference_id' => $schema->string()->max(100)->description('Optional exact external reference ID filter (e.g. "fnirsi:FN-180625").'),
+            'include_items' => $schema->boolean()->description('Include line items for each invoice (default: false).'),
             'status' => $schema->string()->description('Optional invoice status filter (e.g. pending, pre_invoice, approved, rejected, partially_paid, paid; numeric status values are also accepted).'),
             'customer_id' => $schema->integer()->min(1)->description('Optional customer ID filter.'),
             'date_from' => $schema->string()->description('Optional Gregorian start date (YYYY-MM-DD).'),
@@ -43,6 +45,8 @@ class ListInvoicesTool extends AccountingTool
             'year' => ['sometimes', 'integer', 'min:1300', 'max:1500'],
             'query' => ['sometimes', 'nullable', 'string', 'max:255'],
             'type' => ['sometimes', 'string'],
+            'external_reference_id' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'include_items' => ['sometimes', 'nullable', 'boolean'],
             'status' => ['sometimes', 'string'],
             'customer_id' => ['sometimes', 'integer', 'min:1'],
             'date_from' => ['sometimes', 'date_format:Y-m-d'],
@@ -80,11 +84,22 @@ class ListInvoicesTool extends AccountingTool
             $query->with('customer:id,name');
         }
 
+        $includeItems = (bool) ($arguments['include_items'] ?? false);
+        if ($includeItems) {
+            $query->with('items.itemable');
+        }
+
+        $externalReferenceId = isset($arguments['external_reference_id']) ? trim((string) $arguments['external_reference_id']) : '';
+        if ($externalReferenceId !== '') {
+            $query->where('external_reference_id', $externalReferenceId);
+        }
+
         if ($search !== '') {
             $escaped = addcslashes($search, '%_\\');
             $query->where(function ($q) use ($search, $escaped) {
                 $q->where('number', 'like', "%{$escaped}%")
-                    ->orWhere('title', 'like', "%{$escaped}%");
+                    ->orWhere('title', 'like', "%{$escaped}%")
+                    ->orWhere('external_reference_id', 'like', "%{$escaped}%");
 
                 if (ctype_digit($search) && (int) $search > 0) {
                     $q->orWhere('id', (int) $search);
@@ -115,7 +130,14 @@ class ListInvoicesTool extends AccountingTool
         $paginator = $query->paginate($limit, ['*'], 'page', $page);
 
         $invoices = collect($paginator->items())
-            ->map(fn (Invoice $invoice): array => self::formatSummary($invoice, $currency, $canReadCustomers))
+            ->map(function (Invoice $invoice) use ($currency, $canReadCustomers, $includeItems): array {
+                $row = self::formatSummary($invoice, $currency, $canReadCustomers);
+                if ($includeItems) {
+                    $row['items'] = self::formatItems($invoice);
+                }
+
+                return $row;
+            })
             ->all();
 
         $humanSummary = $paginator->total() === 0
@@ -158,6 +180,7 @@ class ListInvoicesTool extends AccountingTool
         return [
             'id' => (int) $invoice->id,
             'number' => $invoice->number !== null ? (string) $invoice->number : null,
+            'external_reference_id' => $invoice->external_reference_id,
             'title' => $invoice->title,
             'type' => $invoiceType?->valueName(),
             'type_label' => $invoiceType?->label(),
@@ -172,6 +195,31 @@ class ListInvoicesTool extends AccountingTool
             'vat' => self::decimalAmount($invoice->vat),
             'subtraction' => self::decimalAmount($invoice->subtraction),
         ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public static function formatItems(Invoice $invoice): array
+    {
+        return $invoice->items->map(function ($item): array {
+            $itemable = $item->itemable;
+
+            return [
+                'id' => (int) $item->id,
+                'item_type' => $item->itemable_type ? strtolower(class_basename($item->itemable_type)) : null,
+                'item_id' => $item->itemable_id !== null ? (int) $item->itemable_id : null,
+                'item_code' => $itemable?->code ?? null,
+                'item_name' => $itemable?->name ?? null,
+                'item_external_sku' => $itemable?->external_sku ?? null,
+                'quantity' => (float) ($item->quantity ?? 0),
+                'unit_price' => self::decimalAmount($item->unit_price),
+                'discount' => self::decimalAmount($item->discount),
+                'vat' => self::decimalAmount($item->vat),
+                'amount' => self::decimalAmount($item->amount),
+                'description' => $item->description,
+            ];
+        })->values()->all();
     }
 
     public static function decimalAmount(string|int|float|null $amount): string

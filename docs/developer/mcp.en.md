@@ -59,6 +59,8 @@ MCP server security is built upon Laravel Sanctum personal access tokens and Spa
 | `create_product` | Product, pricing, category and accounting subjects | `products.store` |
 | `create_invoice` | Unapproved sales/purchase invoice with line items (and optional registered extensions) | `invoices.store` |
 | `approve_invoice` | Explicitly approve a draft/unapproved invoice (posts accounting document and stock) | `invoices.approve` |
+| `update_invoice` | Set, change, or clear the `external_reference_id` of an existing invoice | `invoices.edit` |
+| `update_product` | Set, change, or clear the `external_sku` of an existing product | `products.edit` |
 
 ---
 
@@ -157,6 +159,7 @@ The creation tools require an explicit `fiscal_year_id` assigned to the token ow
 
 - `create_customer`: required `fiscal_year_id` and `name`. Optional `group_id` (defaults to the first customer group), `type` (defaults to `individual`), `phone`, `mobile`, `email`, `personal_code`, `postal_code`, `address`, `description`, `subject_code`.
 - `create_product`: required `fiscal_year_id` and `name`. Optional `group_id` (defaults to the first product group), `oversell` (defaults to `false`), `code` (a string of up to 20 digits, generated when omitted), `quantity_warning`, `selling_price`, `vat`, `location`, `description`. Prices use the selected fiscal year company currency. Initial stock is zero.
+- Reconciliation helpers: `list_invoices` and `get_invoice` return `external_reference_id`; `list_invoices` accepts `external_reference_id` (exact match) and `include_items` (line items per invoice), and `get_invoice` can look up by `external_reference_id`. `get_current_context` includes `company_name` for every fiscal year. Products carry an optional `external_sku` (max 100 chars) set via `create_product`/`update_product` and readable/searchable via `list_products` (`external_sku` filter or `query`) and `get_product`. `update_invoice` only changes the external reference; item edits are not supported over MCP.
 - `create_invoice`: required `fiscal_year_id`, `invoice_type` (`sell` or `buy`), `customer_id`, `items` (1–500 lines). Optional `warehouse_id` (defaults to the first warehouse), `number` (defaults to the next consecutive number), `external_reference_id` (max 100 chars, e.g. `fnirsi:FN-180625`, checked under a fiscal-year transaction lock to prevent duplicate active invoices while allowing reuse after rejection or voiding; preserved when the invoice is edited from the web form), `title`, `description`, `subtraction`. The Gregorian `date` must fall within the selected fiscal year. You may omit it if today falls within that year.
 
 Each invoice line requires `item_type` (`product` or `service`), `item_id`, `quantity` and `unit` (unit price). Optional `discount` is the absolute line discount in the selected fiscal year company currency, `vat` is a percentage from 0 to 100, and `description` is free text. The server computes totals with `InvoiceService`; duplicate items and invalid monetary bounds are rejected. The same minimum quantity rule as the web form applies (currently 1).

@@ -613,7 +613,10 @@ class FiscalYearTransferService
     private static function _findOrCreateProductInTarget(Product $source, int $targetFiscalYearId): Product
     {
         $existing = Product::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $targetFiscalYearId)->where('name', $source->name)->first()
-            ?? Product::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $targetFiscalYearId)->where('code', $source->code)->first();
+            ?? Product::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $targetFiscalYearId)->where('code', $source->code)->first()
+            ?? ($source->external_sku !== null && $source->external_sku !== ''
+                ? Product::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $targetFiscalYearId)->where('external_sku', $source->external_sku)->first()
+                : null);
 
         if ($existing) {
             return $existing;

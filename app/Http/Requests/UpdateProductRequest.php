@@ -25,6 +25,7 @@ class UpdateProductRequest extends FormRequest
     {
         return [
             'code' => ['nullable', Rule::unique('products', 'code')->ignore($this->route('product'))->where('fiscal_year_id', getActiveFiscalYear())],
+            'external_sku' => ['nullable', 'string', 'max:100', Rule::unique('products', 'external_sku')->ignore($this->route('product'))->where('fiscal_year_id', getActiveFiscalYear())],
             'name' => 'required|max:20|string|regex:/^[\w\d\s\-\:\.]*$/u',
             'group' => 'required|exists:product_groups,id|integer',
             'location' => 'nullable|max:50|string|regex:/^[\w\d\s]*$/u',
