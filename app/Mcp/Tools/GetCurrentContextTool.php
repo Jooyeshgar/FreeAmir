@@ -36,7 +36,7 @@ class GetCurrentContextTool extends AccountingTool
         $context = ContextResolver::getCurrentContext($fiscalYear);
 
         $availableList = array_map(function ($y) {
-            return $y['year'].($y['is_active'] ? ' ('.__('Active').')' : '');
+            return ($y['company_name'] ? $y['company_name'].' ' : '').$y['year'].($y['is_active'] ? ' ('.__('Active').')' : '');
         }, $context['available_fiscal_years'] ?? []);
 
         $humanSummary = __('Today is :jalali_date (:gregorian_date). Current month: :month (month :month_number). Fiscal year: :fiscal_year (from :start to :end), currency: :currency. Available fiscal years: :available_years.', [

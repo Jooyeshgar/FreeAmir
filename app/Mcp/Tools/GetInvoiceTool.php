@@ -13,7 +13,7 @@ class GetInvoiceTool extends AccountingTool
 {
     protected string $name = 'get_invoice';
 
-    protected string $description = 'Retrieve full details for a single invoice by invoice ID or exact invoice number within the selected authorized fiscal year, including line items, warehouse, and accounting document reference. Monetary values use the selected fiscal year company currency.';
+    protected string $description = 'Retrieve full details for a single invoice by invoice ID or exact invoice number (optionally an exact external reference ID) within the selected authorized fiscal year, including line items, warehouse, and accounting document reference. Monetary values use the selected fiscal year company currency.';
 
     protected array $permissionGroups = [['invoices.show']];
 
@@ -24,6 +24,7 @@ class GetInvoiceTool extends AccountingTool
             'year' => $schema->integer()->min(1300)->max(1500)->description('Optional four-digit Jalali year.'),
             'invoice_id' => $schema->integer()->min(1)->description('Invoice ID (provide invoice_id or number).'),
             'number' => $schema->string()->max(50)->description('Exact invoice number (provide invoice_id or number).'),
+            'external_reference_id' => $schema->string()->max(100)->description('Exact external reference ID (alternative to invoice_id or number).'),
             'invoice_type' => $schema->string()->description('Optional invoice type to disambiguate when querying by number: buy, sell, return_buy, return_sell, void, or beginning_inventory.')->enum(['buy', 'sell', 'return_buy', 'return_sell', 'void', 'beginning_inventory']),
         ];
     }
@@ -33,8 +34,9 @@ class GetInvoiceTool extends AccountingTool
         return [
             'fiscal_year_id' => ['sometimes', 'integer', 'min:1'],
             'year' => ['sometimes', 'integer', 'min:1300', 'max:1500'],
-            'invoice_id' => ['required_without:arguments.number', 'integer', 'min:1'],
-            'number' => ['required_without:arguments.invoice_id', 'string', 'max:50'],
+            'invoice_id' => ['required_without_all:arguments.number,arguments.external_reference_id', 'integer', 'min:1'],
+            'number' => ['required_without_all:arguments.invoice_id,arguments.external_reference_id', 'string', 'max:50'],
+            'external_reference_id' => ['required_without_all:arguments.invoice_id,arguments.number', 'string', 'max:100'],
             'invoice_type' => ['sometimes', 'string'],
         ];
     }
@@ -71,6 +73,10 @@ class GetInvoiceTool extends AccountingTool
             $query->where('number', trim((string) $arguments['number']));
         }
 
+        if (isset($arguments['external_reference_id'])) {
+            $query->where('external_reference_id', trim((string) $arguments['external_reference_id']));
+        }
+
         if ($invoiceType !== null) {
             $query->where('invoice_type', $invoiceType->value);
         }
@@ -87,6 +93,7 @@ class GetInvoiceTool extends AccountingTool
                 'matching_invoices' => $matches->map(fn (Invoice $match): array => [
                     'id' => (int) $match->id,
                     'number' => $match->number !== null ? (string) $match->number : null,
+                    'external_reference_id' => $match->external_reference_id,
                     'invoice_type' => $match->invoice_type?->valueName(),
                     'date' => $match->date?->format('Y-m-d'),
                     'amount' => ListInvoicesTool::decimalAmount($match->amount),
@@ -96,23 +103,7 @@ class GetInvoiceTool extends AccountingTool
 
         $invoice = $matches->first();
 
-        $items = $invoice->items->map(function ($item): array {
-            $itemable = $item->itemable;
-
-            return [
-                'id' => (int) $item->id,
-                'item_type' => $item->itemable_type ? strtolower(class_basename($item->itemable_type)) : null,
-                'item_id' => $item->itemable_id !== null ? (int) $item->itemable_id : null,
-                'item_code' => $itemable?->code ?? null,
-                'item_name' => $itemable?->name ?? null,
-                'quantity' => (float) ($item->quantity ?? 0),
-                'unit_price' => ListInvoicesTool::decimalAmount($item->unit_price),
-                'discount' => ListInvoicesTool::decimalAmount($item->discount),
-                'vat' => ListInvoicesTool::decimalAmount($item->vat),
-                'amount' => ListInvoicesTool::decimalAmount($item->amount),
-                'description' => $item->description,
-            ];
-        })->values()->all();
+        $items = ListInvoicesTool::formatItems($invoice);
 
         $shipDate = $invoice->ship_date?->format('Y-m-d');
         $summary = ListInvoicesTool::formatSummary($invoice, $currency, $canReadCustomers);

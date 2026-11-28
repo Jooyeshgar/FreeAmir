@@ -61,6 +61,8 @@ php artisan mcp:serve
 | `create_product` | تعریف کالا، قیمت، گروه و سرفصل‌های حسابداری | `products.store` |
 | `create_invoice` | ایجاد فاکتور خرید یا فروش تأییدنشده همراه اقلام (و اکستنشن‌های ثبت‌شده در صورت وجود) | `invoices.store` |
 | `approve_invoice` | تأیید صریح فاکتور پیش‌نویس (ثبت سند حسابداری و اعمال تغییرات انبار) | `invoices.approve` |
+| `update_invoice` | تنظیم، تغییر یا پاک‌کردن `external_reference_id` یک فاکتور موجود | `invoices.edit` |
+| `update_product` | تنظیم، تغییر یا پاک‌کردن `external_sku` یک کالای موجود | `products.edit` |
 
 ---
 
@@ -159,6 +161,7 @@ php artisan mcp:serve
 
 - `create_customer`: ورودی‌های الزامی `fiscal_year_id` و `name` هستند. `group_id` در صورت عدم ارسال از اولین گروه فعال سال مالی استفاده می‌کند؛ `type` در صورت عدم ارسال `individual` در نظر گرفته می‌شود. ورودی‌های اختیاری: `phone`، `mobile`، `email`، `personal_code`، `postal_code`، `address`، `description` و `subject_code`. اعتبارسنجی و ساخت سرفصل از مسیر فعلی برنامه انجام می‌شود.
 - `create_product`: ورودی‌های الزامی `fiscal_year_id` و `name` هستند. `group_id` در صورت عدم ارسال از اولین گروه کالای سال مالی استفاده می‌کند و `oversell` به صورت پیش‌فرض `false` است. ورودی‌های اختیاری: `code` (رشته‌ای حداکثر ۲۰ رقمی که در صورت عدم ارسال تولید می‌شود)، `quantity_warning`، `selling_price`، `vat`، `location` و `description`. قیمت‌ها با واحد پول شرکتِ سال مالی انتخاب‌شده هستند. موجودی اولیه صفر است؛ موجودی از مسیر عادی عملیات انبار ثبت می‌شود.
+- ابزارهای تطبیق با سیستم‌های بیرونی: `list_invoices` و `get_invoice` مقدار `external_reference_id` را برمی‌گردانند؛ `list_invoices` فیلتر `external_reference_id` (تطابق دقیق) و `include_items` (ردیف‌های هر فاکتور) را می‌پذیرد و `get_invoice` با `external_reference_id` هم جستجو می‌کند. `get_current_context` برای هر سال مالی `company_name` را برمی‌گرداند. کالا فیلد اختیاری `external_sku` (حداکثر ۱۰۰ کاراکتر) دارد که با `create_product`/`update_product` تنظیم می‌شود و در `list_products` (فیلتر `external_sku` یا `query`) و `get_product` قابل جستجو است. `update_invoice` فقط مرجع بیرونی را تغییر می‌دهد و ویرایش ردیف‌ها از طریق MCP پشتیبانی نمی‌شود.
 - `create_invoice`: ورودی‌های الزامی `fiscal_year_id`، `invoice_type` (فقط `sell` یا `buy`)، `customer_id` و `items` (۱ تا ۵۰۰ ردیف) هستند. `warehouse_id` در صورت عدم ارسال از اولین انبار سال مالی استفاده می‌کند و `number` در صورت عدم ارسال به طور خودکار شماره بعدی فاکتور تعیین می‌شود. ورودی اختیاری `external_reference_id` (حداکثر ۱۰۰ کاراکتر، مثلاً `fnirsi:FN-180625`) با قفل تراکنشی در سطح سال مالی بررسی می‌شود تا از ثبت فاکتور فعال تکراری جلوگیری کند (پس از رد یا ابطال قابل استفاده مجدد است) و هنگام ویرایش فاکتور از فرم وب حفظ می‌شود. تاریخ میلادی `date` باید در محدودهٔ سال مالی انتخاب‌شده باشد. اگر امروز در همین محدوده باشد، می‌توانید `date` را ارسال نکنید. `title`، `description` و `subtraction` اختیاری‌اند.
 
 هر ردیف فاکتور شامل `item_type` (`product` یا `service`)، `item_id`، `quantity` و `unit` (قیمت واحد) است. `discount` مبلغ تخفیف کل ردیف با واحد پول شرکتِ سال مالی انتخاب‌شده، `vat` درصد مالیات بین صفر و صد و `description` شرح اختیاری است. سرویس فعلی جمع مبالغ را محاسبه می‌کند؛ اقلام تکراری، تخفیف نامعتبر و مبالغ خارج از حدود رد می‌شوند. حداقل تعداد مانند فرم وب فعلی ۱ است.
