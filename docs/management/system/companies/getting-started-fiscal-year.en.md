@@ -125,6 +125,12 @@ After copying, compare the counts and relationships of accounts, customers, prod
 
 After sign-in or changing the active fiscal year, the **Home** dashboard is personalized by user permissions. Accounting, sales, warehouse, services, CRM, and employee roles may see different cards and shortcuts.
 
+### Getting started checklist
+
+- For new workspaces, a permission-aware 5-step checklist (company & fiscal year, first customer, product or service, invoice or document, and bank account) appears at the top of the dashboard and checks off steps automatically.
+- Completing all steps or choosing **Don't show again** permanently dismisses the checklist; **Hide for now** hides it until the current browser tab is closed.
+- Empty core listing pages (customers, products, services, invoices, documents, and bank accounts) display onboarding guidance, and empty invoice lists let you create missing prerequisites and return automatically.
+
 ### Financial amounts
 
 Sensitive amounts are initially hidden and fetched from the server when you select **Show** on each card. Viewing a value requires `home.summary` and its domain permission.
