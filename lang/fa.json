@@ -3770,6 +3770,7 @@
     "This employee no longer has a prepaid leave balance to reconcile.": "مانده پیش‌پرداخت مرخصی با حقوق این کارمند قبلاً تعیین تکلیف شده است.",
     "An invoice with this external reference ID already exists in the selected fiscal year.": "فاکتوری با این شناسه مرجع خارجی در سال مالی انتخاب‌شده قبلاً ثبت شده است.",
     "Invoice number :number is already used by an invoice dated :date.": "شماره فاکتور :number قبلاً برای فاکتوری با تاریخ :date استفاده شده است.",
+    "No invoice number is available for the date :date without breaking chronological numbering.": "شماره‌ای برای تاریخ :date وجود ندارد که ترتیب زمانی شماره‌گذاری را حفظ کند.",
     "No invoice number is available for the date :date in the target fiscal year without breaking chronological numbering.": "شماره‌ای برای تاریخ :date در سال مالی مقصد وجود ندارد که ترتیب زمانی شماره‌گذاری را حفظ کند.",
     "Invoice :number dated :date conflicts with this number and date. A later date must have a higher number.": "فاکتور شماره :number با تاریخ :date با این شماره و تاریخ تداخل دارد. تاریخ دیرتر باید شماره بزرگ‌تری داشته باشد.",
     "Numbering conflicts": "تداخل در شماره‌گذاری",

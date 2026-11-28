@@ -125,6 +125,32 @@ class InvoiceNumberService
         }
     }
 
+    /** True when the given number and date equal the invoice's stored ones, so a save does not touch its numbering. */
+    public function isUnchanged(Invoice $invoice, int|float|string|null $number, CarbonInterface|string|null $date): bool
+    {
+        return $number !== null && $date !== null && is_numeric($number)
+            && (float) $number === (float) $invoice->number
+            && Carbon::parse($date)->toDateString() === $invoice->date?->toDateString();
+    }
+
+    /**
+     * Update-path variant: skips the check when the invoice keeps its number and date, so an existing conflict
+     * does not block unrelated edits. Must run inside DB::transaction().
+     *
+     * @throws ValidationException
+     */
+    public function lockAndAssertNoConflictsForUpdate(Invoice $invoice, int|float|string|null $number, CarbonInterface|string|null $date): void
+    {
+        $number ??= $invoice->number;
+        $date ??= $invoice->date;
+
+        if ($this->isUnchanged($invoice, $number, $date)) {
+            return;
+        }
+
+        $this->lockAndAssertNoConflicts($number, $date, $invoice->id, (int) $invoice->fiscal_year_id);
+    }
+
     /**
      * Lowest free number that keeps the fiscal year chronological for an invoice with the given date:
      * above every number dated on or before it, below every number dated after it.

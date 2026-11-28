@@ -75,6 +75,10 @@ class InvoiceController extends Controller
         $isServiceBuy = $this->isServiceBuyFilterActive($request, $invoiceType);
         $this->applyInvoiceFilters($builder, $request, $invoiceType, $isServiceBuy);
 
+        // The All Invoices list filters by `type` so it stays in the all view (with its numbering conflicts panel).
+        $listType = $invoiceType === null ? InvoiceType::tryFromName($request->query('type')) : null;
+        $builder->when($listType !== null, fn ($q) => $q->where('invoice_type', $listType));
+
         $statsBuilder = $builder->clone();
 
         $builder->when($status !== null, fn ($invoice) => $invoice->where('status', $status));

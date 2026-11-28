@@ -104,6 +104,32 @@ class McpInvoiceExternalReferenceIdTest extends TestCase
         ];
     }
 
+    public function test_create_invoice_default_number_follows_the_invoice_date(): void
+    {
+        Invoice::withoutGlobalScopes()->create([
+            'fiscal_year_id' => $this->year->id,
+            'invoice_type' => InvoiceType::BUY,
+            'number' => 10,
+            'date' => '2026-05-10',
+            'customer_id' => $this->customer->id,
+            'creator_id' => $this->user->id,
+            'status' => InvoiceStatus::PENDING,
+            'subtraction' => 0,
+            'vat' => 0,
+        ]);
+
+        $response = $this->withToken($this->token)->postJson('/api/mcp', [
+            'jsonrpc' => '2.0',
+            'id' => 1,
+            'method' => 'tools/call',
+            'params' => ['name' => 'create_invoice', 'arguments' => $this->invoiceArguments('back-dated:1')],
+        ])->assertOk()->json('result');
+
+        $this->assertFalse($response['isError'] ?? false);
+        $created = json_decode($response['content'][0]['text'], true);
+        $this->assertSame(1, (int) Invoice::withoutGlobalScopes()->findOrFail($created['id'])->number);
+    }
+
     public function test_create_invoice_stores_external_reference_id_and_blocks_duplicates_until_rejected_or_voided(): void
     {
         $firstResponse = $this->withToken($this->token)->postJson('/api/mcp', [

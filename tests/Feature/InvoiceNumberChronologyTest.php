@@ -169,6 +169,36 @@ class InvoiceNumberChronologyTest extends TestCase
         $this->assertCount(2, $filtered->viewData('invoices'));
     }
 
+    public function test_editing_an_already_conflicting_invoice_without_changing_number_or_date_is_not_blocked(): void
+    {
+        $sale = $this->invoice(InvoiceType::SELL, 1381, '2026-11-24');
+        $this->invoice(InvoiceType::BUY, 1382, '2026-11-23');
+
+        $this->assertNull($this->numberError(InvoiceType::SELL, 1381, '2026-11-24', $sale));
+        $this->assertNotNull($this->numberError(InvoiceType::SELL, 1381, '2026-11-25', $sale->fresh()));
+
+        $service = app(InvoiceNumberService::class);
+        $service->lockAndAssertNoConflictsForUpdate($sale, null, null);
+        $service->lockAndAssertNoConflictsForUpdate($sale, 1381, '2026-11-24');
+
+        $this->expectException(ValidationException::class);
+        $service->lockAndAssertNoConflictsForUpdate($sale, 1381, '2026-11-25');
+    }
+
+    public function test_all_invoices_type_filter_keeps_the_conflicts_panel(): void
+    {
+        $this->user->givePermissionTo(Permission::findOrCreate('invoices.index'));
+        $this->invoice(InvoiceType::SELL, 1381, '2026-11-24');
+        $this->invoice(InvoiceType::BUY, 1382, '2026-11-23');
+        $this->invoice(InvoiceType::SELL, 1390, '2026-11-30');
+
+        $response = $this->actingAs($this->user)->get(route('invoices.index', ['type' => 'sell']))->assertOk();
+
+        $this->assertCount(2, $response->viewData('invoices'));
+        $this->assertCount(2, $response->viewData('numberingConflicts'));
+        $response->assertSeeText(__('Numbering conflicts').': '.localizeNumber(2));
+    }
+
     public function test_all_invoices_list_can_be_sorted_by_number(): void
     {
         $this->user->givePermissionTo(Permission::findOrCreate('invoices.index'));

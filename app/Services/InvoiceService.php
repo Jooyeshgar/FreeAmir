@@ -214,7 +214,7 @@ class InvoiceService
         if ($approved && $wasApproved) {
             $handledApprovedEdit = true;
             DB::transaction(function () use ($invoice, $invoiceData, $items, $buildResult, $oldItems, $extensionPersister, &$createdDocument) {
-                app(InvoiceNumberService::class)->lockAndAssertNoConflicts($invoiceData['number'] ?? $invoice->number, $invoiceData['date'] ?? $invoice->date, $invoice->id, (int) $invoice->fiscal_year_id);
+                app(InvoiceNumberService::class)->lockAndAssertNoConflictsForUpdate($invoice, $invoiceData['number'] ?? null, $invoiceData['date'] ?? null);
                 $replacement = clone $invoice;
                 $replacement->fill($invoiceData);
                 $replacement->setRelation('items', collect($items)->map(fn ($item) => new InvoiceItem([
@@ -312,7 +312,7 @@ class InvoiceService
     private static function updateInvoiceWithoutApproval(Invoice $invoice, array $invoiceData, array $items, array $buildResult, bool $approved = false, ?Closure $extensionPersister = null)
     {
         DB::transaction(function () use ($invoice, $invoiceData, $items, $buildResult, $extensionPersister) {
-            app(InvoiceNumberService::class)->lockAndAssertNoConflicts($invoiceData['number'] ?? $invoice->number, $invoiceData['date'] ?? $invoice->date, $invoice->id, (int) $invoice->fiscal_year_id);
+            app(InvoiceNumberService::class)->lockAndAssertNoConflictsForUpdate($invoice, $invoiceData['number'] ?? null, $invoiceData['date'] ?? null);
             if ($invoice->status->isApprovedOrSettled()) {
                 $replacement = clone $invoice;
                 $replacement->fill($invoiceData);
@@ -352,7 +352,7 @@ class InvoiceService
         $items = self::assignWarehouseToItems($items, $invoiceData['warehouse_id'] ?? null);
 
         DB::transaction(function () use ($invoice, $invoiceData, $items, $approved, $extensionPersister) {
-            app(InvoiceNumberService::class)->lockAndAssertNoConflicts($invoiceData['number'] ?? $invoice->number, $invoiceData['date'] ?? $invoice->date, $invoice->id, (int) $invoice->fiscal_year_id);
+            app(InvoiceNumberService::class)->lockAndAssertNoConflictsForUpdate($invoice, $invoiceData['number'] ?? null, $invoiceData['date'] ?? null);
             self::assertBeginningInventoryWarehouseAvailable($invoiceData['warehouse_id'], $invoice->id);
 
             $wasApproved = $invoice->status->isApprovedOrSettled();

@@ -12,6 +12,7 @@ use App\Models\Invoice;
 use App\Models\Product;
 use App\Models\Service;
 use App\Models\Warehouse;
+use App\Services\InvoiceNumberService;
 use App\Services\InvoiceService;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Http\Request as HttpRequest;
@@ -130,9 +131,10 @@ class CreateInvoiceTool extends AccountingTool
             throw ValidationException::withMessages(['warehouse_id' => __('The selected warehouse is invalid.')]);
         }
 
-        $invoiceNumber = $arguments['number'] ?? (
-            (Invoice::where('fiscal_year_id', $yearId)->max('number') ?? 0) + 1
-        );
+        $invoiceNumber = $arguments['number'] ?? app(InvoiceNumberService::class)->nextNumberFor($date, $yearId);
+        if ($invoiceNumber === null) {
+            throw ValidationException::withMessages(['number' => __('No invoice number is available for the date :date without breaking chronological numbering.', ['date' => formatDate($date)])]);
+        }
 
         $items = collect($arguments['items']);
         $products = Product::query()->where('fiscal_year_id', $yearId)

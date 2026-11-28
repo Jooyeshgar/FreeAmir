@@ -357,6 +357,10 @@ class StoreInvoiceRequest extends FormRequest
                     }
 
                     $service = app(InvoiceNumberService::class);
+                    if ($isEditing && $service->isUnchanged($invoice, $value, $date)) {
+                        return;
+                    }
+
                     $conflicts = $service->conflictsFor($value, $date, $isEditing ? $invoice->id : null);
                     if ($conflicts->isNotEmpty()) {
                         $fail($service->conflictMessage($conflicts));

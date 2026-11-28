@@ -15,10 +15,10 @@
 @endphp
 
 <form action="{{ route('invoices.index') }}" method="GET" class="flex flex-wrap items-end gap-2 mb-4">
-    <select name="invoice_type" class="select select-sm w-full lg:w-48">
+    <select name="type" class="select select-sm w-full lg:w-48">
         <option value="">{{ __('All types') }}</option>
         @foreach (\App\Enums\InvoiceType::cases() as $type)
-            <option value="{{ $type->valueName() }}" @selected(request('invoice_type') === $type->valueName())>{{ $type->label() }}</option>
+            <option value="{{ $type->valueName() }}" @selected(request('type') === $type->valueName())>{{ $type->label() }}</option>
         @endforeach
     </select>
     <select name="status" class="select select-sm w-full lg:w-48">
