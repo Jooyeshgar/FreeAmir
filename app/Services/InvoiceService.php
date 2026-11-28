@@ -109,6 +109,7 @@ class InvoiceService
     private static function createBeginningInventory(User $user, array $invoiceData, array $items, string $date, bool $approved, ?Closure $extensionPersister = null): array
     {
         $invoice = DB::transaction(function () use ($user, $invoiceData, $items, $date, $approved, $extensionPersister) {
+            app(InvoiceNumberService::class)->lockAndAssertNoConflicts($invoiceData['number'] ?? null, $date, null, isset($invoiceData['fiscal_year_id']) ? (int) $invoiceData['fiscal_year_id'] : null);
             self::assertBeginningInventoryWarehouseAvailable($invoiceData['warehouse_id']);
 
             $invoice = Invoice::create([
@@ -147,6 +148,7 @@ class InvoiceService
         $createdInvoice = null;
 
         DB::transaction(function () use ($user, $invoiceData, $items, $buildResult, $date, $extensionPersister, &$createdInvoice) {
+            app(InvoiceNumberService::class)->lockAndAssertNoConflicts($invoiceData['number'] ?? null, $date, null, isset($invoiceData['fiscal_year_id']) ? (int) $invoiceData['fiscal_year_id'] : null);
             $invoiceData['document_id'] = null;
             $invoiceData['vat'] = $buildResult['totalVat'];
             $invoiceData['amount'] = $buildResult['totalAmount'];
@@ -212,6 +214,7 @@ class InvoiceService
         if ($approved && $wasApproved) {
             $handledApprovedEdit = true;
             DB::transaction(function () use ($invoice, $invoiceData, $items, $buildResult, $oldItems, $extensionPersister, &$createdDocument) {
+                app(InvoiceNumberService::class)->lockAndAssertNoConflicts($invoiceData['number'] ?? $invoice->number, $invoiceData['date'] ?? $invoice->date, $invoice->id, (int) $invoice->fiscal_year_id);
                 $replacement = clone $invoice;
                 $replacement->fill($invoiceData);
                 $replacement->setRelation('items', collect($items)->map(fn ($item) => new InvoiceItem([
@@ -309,6 +312,7 @@ class InvoiceService
     private static function updateInvoiceWithoutApproval(Invoice $invoice, array $invoiceData, array $items, array $buildResult, bool $approved = false, ?Closure $extensionPersister = null)
     {
         DB::transaction(function () use ($invoice, $invoiceData, $items, $buildResult, $extensionPersister) {
+            app(InvoiceNumberService::class)->lockAndAssertNoConflicts($invoiceData['number'] ?? $invoice->number, $invoiceData['date'] ?? $invoice->date, $invoice->id, (int) $invoice->fiscal_year_id);
             if ($invoice->status->isApprovedOrSettled()) {
                 $replacement = clone $invoice;
                 $replacement->fill($invoiceData);
@@ -348,6 +352,7 @@ class InvoiceService
         $items = self::assignWarehouseToItems($items, $invoiceData['warehouse_id'] ?? null);
 
         DB::transaction(function () use ($invoice, $invoiceData, $items, $approved, $extensionPersister) {
+            app(InvoiceNumberService::class)->lockAndAssertNoConflicts($invoiceData['number'] ?? $invoice->number, $invoiceData['date'] ?? $invoice->date, $invoice->id, (int) $invoice->fiscal_year_id);
             self::assertBeginningInventoryWarehouseAvailable($invoiceData['warehouse_id'], $invoice->id);
 
             $wasApproved = $invoice->status->isApprovedOrSettled();

@@ -261,7 +261,7 @@ class FiscalYearTransferService
     private static function _createInvoiceInTarget(Invoice $invoice, int $targetFiscalYearId, User $user, array $validation, ?int $returnedInvoiceId = null): Invoice
     {
         $newInvoice = new Invoice;
-        $newInvoice->number = self::_nextInvoiceNumber($targetFiscalYearId, $invoice->invoice_type);
+        $newInvoice->number = self::_nextInvoiceNumber($targetFiscalYearId);
         $newInvoice->date = $invoice->date;
         $newInvoice->ship_date = $invoice->ship_date;
         $newInvoice->ship_via = $invoice->ship_via;
@@ -278,7 +278,11 @@ class FiscalYearTransferService
         $newInvoice->document_id = null;
         $newInvoice->returned_invoice_id = $returnedInvoiceId;
 
-        self::_withActiveFiscalYear($targetFiscalYearId, fn () => $newInvoice->save());
+        self::_withActiveFiscalYear($targetFiscalYearId, function () use ($newInvoice, $targetFiscalYearId) {
+            // The target year uses one numbering sequence for every type; never create a duplicate or out-of-order number.
+            app(InvoiceNumberService::class)->lockAndAssertNoConflicts($newInvoice->number, $newInvoice->date, null, $targetFiscalYearId);
+            $newInvoice->save();
+        });
 
         foreach ($invoice->items as $item) {
             $targetItemableId = null;
@@ -391,9 +395,9 @@ class FiscalYearTransferService
         return ((int) floor((float) ($maxNumber ?? 0))) + 1;
     }
 
-    private static function _nextInvoiceNumber(int $targetFiscalYearId, mixed $invoiceType): int
+    private static function _nextInvoiceNumber(int $targetFiscalYearId): int
     {
-        $maxNumber = Invoice::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $targetFiscalYearId)->where('invoice_type', self::_invoiceTypeValue($invoiceType))->max('number');
+        $maxNumber = Invoice::withoutGlobalScope(FiscalYearScope::class)->where('fiscal_year_id', $targetFiscalYearId)->max('number');
 
         return ((int) floor((float) ($maxNumber ?? 0))) + 1;
     }

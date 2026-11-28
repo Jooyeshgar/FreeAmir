@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\InvoiceNumberService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
@@ -108,6 +109,28 @@ class InvoiceNumberChronologyTest extends TestCase
         $this->assertCount(2, $conflicts);
         $this->assertSame(InvoiceNumberService::REASON_DUPLICATE, $conflicts[$sale->id]['reason']);
         $this->assertSame(InvoiceNumberService::REASON_DUPLICATE, $conflicts[$purchase->id]['reason']);
+    }
+
+    public function test_conflict_message_lists_several_conflicting_invoices(): void
+    {
+        $this->invoice(InvoiceType::SELL, 20, '2026-11-24');
+        $this->invoice(InvoiceType::BUY, 21, '2026-11-25');
+
+        $message = $this->numberError(InvoiceType::BUY, 22, '2026-11-20');
+
+        $this->assertStringContainsString(formatDocumentNumber(20), $message);
+        $this->assertStringContainsString(formatDocumentNumber(21), $message);
+    }
+
+    public function test_lock_and_assert_rechecks_conflicts_inside_the_transaction(): void
+    {
+        $this->invoice(InvoiceType::SELL, 30, '2026-11-24');
+        $service = app(InvoiceNumberService::class);
+
+        $service->lockAndAssertNoConflicts(31, '2026-11-24', null, $this->year->id);
+
+        $this->expectException(ValidationException::class);
+        $service->lockAndAssertNoConflicts(30, '2026-11-25', null, $this->year->id);
     }
 
     public function test_same_date_with_distinct_numbers_is_not_a_conflict(): void

@@ -6,6 +6,7 @@ use App\Models\Invoice;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\ValidationException;
 
 /**
  * One numbering sequence per fiscal year for every invoice type.
@@ -17,6 +18,8 @@ class InvoiceNumberService
     public const REASON_DUPLICATE = 'duplicate';
 
     public const REASON_OUT_OF_ORDER = 'out_of_order';
+
+    public const MAX_LISTED = 3;
 
     /**
      * Find the invoices in the active fiscal year that would conflict with the given number/date.
@@ -51,7 +54,7 @@ class InvoiceNumberService
      */
     public function existingConflicts(): Collection
     {
-        $invoices = Invoice::query()->orderBy('number')->orderBy('date')->orderBy('id')->get();
+        $invoices = Invoice::query()->select(['id', 'number', 'date', 'invoice_type'])->orderBy('number')->orderBy('date')->orderBy('id')->get();
         $reasons = [];
 
         foreach ($invoices->groupBy(fn (Invoice $i) => (string) (float) $i->number) as $group) {
@@ -98,20 +101,41 @@ class InvoiceNumberService
             ->map(fn (Invoice $i) => ['invoice' => $i, 'reason' => $reasons[$i->id]])->values();
     }
 
-    /** Localized validation message naming the first conflicting invoice. */
+    /**
+     * Serialize numbering checks within the fiscal year and re-validate inside the caller's transaction,
+     * so concurrent saves cannot both pass the request-level check. Must run inside DB::transaction().
+     *
+     * @throws ValidationException
+     */
+    public function lockAndAssertNoConflicts(int|float|string|null $number, CarbonInterface|string|null $date, ?int $ignoreInvoiceId = null, ?int $fiscalYearId = null): void
+    {
+        if ($number === null || $date === null || ! is_numeric($number)) {
+            return;
+        }
+
+        InvoiceService::lockExternalReferenceScope($fiscalYearId ?? (int) getActiveFiscalYear());
+
+        $conflicts = $this->conflictsFor($number, $date, $ignoreInvoiceId);
+        if ($conflicts->isNotEmpty()) {
+            throw ValidationException::withMessages(['invoice_number' => $this->conflictMessage($conflicts)]);
+        }
+    }
+
+    /** Localized validation message naming up to MAX_LISTED conflicting invoices. */
     public function conflictMessage(Collection $conflicts): ?string
     {
-        $first = $conflicts->first();
-        if ($first === null) {
+        if ($conflicts->isEmpty()) {
             return null;
         }
 
-        /** @var Invoice $invoice */
-        $invoice = $first['invoice'];
-        $key = $first['reason'] === self::REASON_DUPLICATE
-            ? 'Invoice number :number is already used by an invoice dated :date.'
-            : 'Invoice :number dated :date conflicts with this number and date. A later date must have a higher number.';
+        return $conflicts->take(self::MAX_LISTED)->map(function (array $conflict): string {
+            /** @var Invoice $invoice */
+            $invoice = $conflict['invoice'];
+            $key = $conflict['reason'] === self::REASON_DUPLICATE
+                ? 'Invoice number :number is already used by an invoice dated :date.'
+                : 'Invoice :number dated :date conflicts with this number and date. A later date must have a higher number.';
 
-        return __($key, ['number' => formatDocumentNumber($invoice->number), 'date' => formatDate($invoice->date)]);
+            return __($key, ['number' => formatDocumentNumber($invoice->number), 'date' => formatDate($invoice->date)]);
+        })->implode(' ');
     }
 }

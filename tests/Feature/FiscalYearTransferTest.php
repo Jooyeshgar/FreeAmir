@@ -679,7 +679,7 @@ class FiscalYearTransferTest extends TestCase
         }
     }
 
-    public function test_invoice_transfer_uses_the_next_target_number_for_the_same_invoice_type(): void
+    public function test_invoice_transfer_uses_the_next_target_number_across_all_invoice_types(): void
     {
         $customer = $this->makeCustomer($this->source, 'ACME');
         $product = $this->makeProduct($this->source, 'Widget', 'P1');
@@ -695,10 +695,31 @@ class FiscalYearTransferTest extends TestCase
 
         $this->assertTrue($result['success'], json_encode($result));
 
-        $newInvoice = Invoice::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->where('invoice_type', InvoiceType::BUY)->where('number', 38)->first();
+        $newInvoice = Invoice::withoutGlobalScopes()->where('fiscal_year_id', $this->target->id)->where('invoice_type', InvoiceType::BUY)->where('number', 100)->first();
 
         $this->assertNotNull($newInvoice);
         $this->assertNotEquals($invoice->number, $newInvoice->number);
+    }
+
+    public function test_invoice_transfer_is_rejected_when_the_next_number_would_be_out_of_chronological_order(): void
+    {
+        $customer = $this->makeCustomer($this->source, 'ACME');
+        $product = $this->makeProduct($this->source, 'Widget', 'P1');
+        $invoice = $this->makeInvoice($this->source, ['customer_id' => $customer->id, 'invoice_type' => InvoiceType::BUY, 'amount' => 100, 'date' => '2023-06-01']);
+        $this->addProductItem($invoice, $product);
+
+        $targetCustomer = $this->makeCustomer($this->target, 'ACME');
+        $this->makeProduct($this->target, 'Widget', 'P1');
+        $this->makeInvoice($this->target, ['customer_id' => $targetCustomer->id, 'invoice_type' => InvoiceType::SELL, 'number' => 5, 'date' => '2023-07-01']);
+
+        try {
+            $result = FiscalYearTransferService::transferInvoice($invoice, $this->target->id, $this->user);
+            $this->assertFalse($result['success'] ?? false);
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('invoice_number', $e->errors());
+        }
+
+        $this->assertCount(1, $this->targetInvoices());
     }
 
     public function test_invoice_transfer_remaps_service_items(): void
